@@ -28,6 +28,11 @@ async def main():
     VALUES ($1, $2, $3)
     """, user_id, username, hashed.decode('utf-8'))
 
+    await db.execute("""
+    INSERT INTO limits (user_id)
+    VALUES ($1)
+    """, user_id)
+
     # print the user & password
     print(f'user id: {user_id!r}')
     print(f'username: {username!r}')

@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS users (
 /* weekly limits */
 CREATE TABLE IF NOT EXISTS limits (
     user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
-    blimit bigint DEFAULT 104857600 /* 100 mb by default */
+    blimit bigint DEFAULT 104857600, /* 100 mb by default */
+    PRIMARY KEY (user_id)
 );
 
 /* all files */
