@@ -1,0 +1,15 @@
+services:
+    elixire:
+        build: .
+        depends_on:
+            - postgres
+        volumes:
+            - ./:/elixire
+        ports:
+            - "8080:8080"
+
+    postgres:
+        image: "postgres:10.1"
+        volumes:
+            - ./data/postgres:/var/lib/postgresql/data
+            - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
