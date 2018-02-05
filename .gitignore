@@ -1,3 +1,10 @@
+# Turds
+\#*\#
+*~
+# Node stuff
+frontend/node_modules
+frontend/output/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
