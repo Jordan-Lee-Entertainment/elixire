@@ -73,7 +73,10 @@ async def token_check(request, wanted_type=None):
     Check if a token is valid.
     By default does not care about the token type.
     """
-    token = request.json['token']
+    try:
+        token = request.json['token']
+    except (TypeError, KeyError):
+        raise BadInput('no token provided')
 
     token_type = token.count('.')
     if wanted_type and wanted_type != token_type:
@@ -224,13 +227,7 @@ async def setup_db(app, loop):
 
 
 def main():
-    # all static files
-    app.static('/static', './static')
-
-    # index page
-    app.static('/index.html', './static/index.html')
-    app.static('/', './static/index.html')
-
+    app.static('/', './frontend/output')
     app.run(host=config.HOST, port=config.PORT)
 
 if __name__ == '__main__':
