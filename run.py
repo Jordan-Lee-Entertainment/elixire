@@ -195,6 +195,7 @@ async def profile_handler(request):
     """, user_id)
 
     duser = dict(user)
+    duser['user_id'] = str(duser['user_id'])
     duser.pop('password_hash')
 
     return response.json(duser)
