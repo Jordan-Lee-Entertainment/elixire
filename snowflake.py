@@ -19,12 +19,14 @@ WORKER_ID = 1
 
 Snowflake = int
 
+
 def get_invite_code() -> str:
     """Get a random invite code."""
     random_stuff = hashlib.sha512(os.urandom(1024)).digest()
     code = base64.urlsafe_b64encode(random_stuff).decode().replace('=', '5') \
         .replace('_', 'W').replace('-', 'm')
     return code[:6]
+
 
 def _snowflake(timestamp: int) -> Snowflake:
     """Get a snowflake from a specific timestamp
@@ -61,6 +63,7 @@ def _snowflake(timestamp: int) -> Snowflake:
     _generated_ids += 1
     return int(snowflake_b, 2)
 
+
 def snowflake_time(snowflake: Snowflake) -> float:
     """Get the UNIX timestamp(with millisecond precision, as a float)
     from a specific snowflake.
@@ -81,7 +84,8 @@ def snowflake_time(snowflake: Snowflake) -> float:
     # since we don't want to break the entire
     # snowflake interface
     return timestamp / 1000
-    
+
+
 def get_snowflake():
     """Generate a snowflake"""
     return _snowflake(int(time.time() * 1000))
