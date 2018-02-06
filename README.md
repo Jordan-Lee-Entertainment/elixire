@@ -35,8 +35,8 @@ There are two types of tokens, timed (tokens) and non-timed (API keys).
 API keys should be used for your uploading program (KShare, sharenix, etc.).
 Timed tokens should be used for the frontend (they expire in 3 days).
 
-All tokens should be given in a JSON payload, with a `token` field.
-It does not matter which token you put in, both types will be on the same field.
+All tokens should be given in the `Authentication` header of your request.
+It does not matter which token you put in, both types will be in the same header.
 
 ## Status Codes
 
