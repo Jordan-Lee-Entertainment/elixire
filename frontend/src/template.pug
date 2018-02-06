@@ -2,26 +2,23 @@ html
   body
     .page-content
       .page-navbar
-	 nav.navbar.navbar-expand-lg.navbar-dark bg-dark
-	   a.navbar-brand#homebtn
-	     Elixire
-	   button(type="button", data-toggle="collapse", data-target="#navbar-toggle")
-	     span.navbar-toggler-icon
-	   div.collapse.navbar-collapse#homenav
-	     li.nav-item
-	       a.nav-link#homebtn2-nav
-                 | Home
+         nav.navbar.navbar-expand-lg.navbar-dark bg-dark
+           a.navbar-brand#homebtn Elixire
+           button(type="button", data-toggle="collapse", data-target="#navbar-toggle")
+             span.navbar-toggler-icon
+           div.collapse.navbar-collapse#homenav
+             li.nav-item
+               a.nav-link#homebtn2-nav Home
              //- This should be on far-right side
-	     li.nav-item.logged-in-only
-               a.nav-link#upload-nav
-                 | Upload
+             li.nav-item.logged-in-only
+               a.nav-link#upload-nav Upload
              li.nav-item.logged-out-only#login-nav
-	       a.nav-link#lnav
-	       | Login
-             li.nav-item.logged-in-only#logout-nav
-       .body
-         //- Errors and stuff go in this div.
-	 #alert-area
-         .content
-           //- Page stuff goes in here.
-	   block content
+               a.nav-link#login-nav Login
+             li.nav-item.logged-in-only
+               a.nav-link#logout-nav Logout
+      .body
+        //- Errors and stuff go in this div.
+        #alert-area
+        .content
+        //- Page stuff goes in here.
+        block content
