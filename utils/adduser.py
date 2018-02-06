@@ -7,7 +7,7 @@ import bcrypt
 import asyncpg
 
 sys.path.append('..')
-import snowflake
+import api.snowflake as snowflake
 import config
 
 
