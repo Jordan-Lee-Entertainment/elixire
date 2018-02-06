@@ -41,7 +41,7 @@ module.exports = {
         filename: `${page.chunkName}.html`,
         template: `${SRC_DIR}/${page.chunkName}.pug`,
         chunks: [page.chunkName],
-        inject: false,
+        inject: true,
         minify: {
           collapseWhitespace: true,
           removeComments: true,
@@ -66,6 +66,12 @@ module.exports = {
         test: /\.s?css$/,
         use: ["style-loader", "css-loader", "sass-loader"],
         exclude: /node_modules/
+      }
+    ],
+    rules: [
+      {
+        test: /\.s?css$/,
+        use: ["style-loader", "css-loader", "sass-loader"]
       },
       {
         test: /\.pug$/,
