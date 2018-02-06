@@ -29,7 +29,7 @@ async def profile_handler(request):
 
 @bp.get('/api/limits')
 async def limits_handler(request):
-    user_id = await request.app.token_check(request)
+    user_id = await token_check(request)
 
     byte_limit = await request.app.db.fetchval("""
     SELECT blimit

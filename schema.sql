@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS limits (
 /* all files */
 CREATE TABLE IF NOT EXISTS files (
     file_id bigint PRIMARY KEY, /* snowflake */
+    mimetype text,
     filename text, /* something like "d5Ym" */
     file_size bigint,
 
