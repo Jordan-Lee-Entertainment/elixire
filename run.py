@@ -60,6 +60,7 @@ async def setup_db(app, loop):
 def main():
     # map the entire frontend
     app.static('/', './frontend/output')
+    app.static('/', './frontend/output/index.html')
     app.run(host=config.HOST, port=config.PORT)
 
 if __name__ == '__main__':
