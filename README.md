@@ -89,3 +89,10 @@ and a `message` field (str)
  - Requires authentication
  - Input: None
  - Returns JSON with `limit` key, as bytes (the unit of measurement)
+
+
+# `POST /api/upload`
+ - Incomplete route
+ - Upload files
+ - Only receives multipart formdata, nothing else, any field, only one file.
+ - Returns: JSON with `url` key
