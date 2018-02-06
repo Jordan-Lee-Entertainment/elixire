@@ -5,6 +5,7 @@ import asyncpg
 
 from sanic import Sanic
 from sanic import response
+from sanic_cors import CORS, cross_origin
 
 import api.bp.auth
 import api.bp.profile
@@ -15,6 +16,9 @@ import config
 
 app = Sanic()
 app.econfig = config
+
+# enable cors sitewide
+CORS(app)
 
 # load blueprints
 app.blueprint(api.bp.auth.bp)
