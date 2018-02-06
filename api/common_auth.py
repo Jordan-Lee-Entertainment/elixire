@@ -6,7 +6,7 @@ import bcrypt
 import itsdangerous
 
 from .common import SIGNERS, TokenType
-from .errors import APIError, BadInput, FailedAuth
+from .errors import BadInput, FailedAuth
 
 
 async def login_user(request):
@@ -52,7 +52,7 @@ async def token_check(request, wanted_type=None):
     By default does not care about the token type.
     """
     try:
-        token = request.json['token']
+        token = request.headers['Authorization']
     except (TypeError, KeyError):
         raise BadInput('no token provided')
 

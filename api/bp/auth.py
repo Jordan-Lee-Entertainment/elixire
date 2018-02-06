@@ -65,5 +65,5 @@ async def revoke_handler(request):
     """, hashed.decode('utf-8'), user['user_id'])
 
     return response.json({
-        'ok': True
+        'success': True
     })

@@ -8,6 +8,7 @@ from sanic import response
 
 import api.bp.auth
 import api.bp.profile
+import api.bp.upload
 from api.errors import APIError
 
 import config
@@ -18,6 +19,7 @@ app.econfig = config
 # load blueprints
 app.blueprint(api.bp.auth.bp)
 app.blueprint(api.bp.profile.bp)
+app.blueprint(api.bp.upload.bp)
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
