@@ -28,10 +28,10 @@ module.exports = {
     upload: `${SRC_DIR}/upload.js`
   },
   output: {
-    filename: "assets/[hash].js",
+    filename: "assets/[chunkhash].js",
     path: BUILD_DIR,
-    chunkFilename: "assets/[hash].js",
-    sourceMapFilename: "assets/[hash].map.js",
+    chunkFilename: "assets/[chunkhash].js",
+    sourceMapFilename: "assets/[chunkhash].map.js",
     publicPath: "/"
   },
   plugins: pageList.map(
@@ -39,7 +39,7 @@ module.exports = {
       new HtmlWebpackPlugin({
         title: page.title,
         filename: `${page.chunkName}.html`,
-        template: `${SRC_DIR}/${page.chunkName}.ejs`,
+        template: `${SRC_DIR}/${page.chunkName}.pug`,
         chunks: [page.chunkName],
         inject: false,
         minify: {
@@ -59,12 +59,17 @@ module.exports = {
         loader: "babel-loader",
         options: {
           babelrc: false,
-          presets: ["babel-preset-env"]
+          presets: []
         }
       },
       {
         test: /\.s?css$/,
         use: ["style-loader", "css-loader", "sass-loader"],
+        exclude: /node_modules/
+      },
+      {
+        test: /\.pug$/,
+        use: ["pug-loader"],
         exclude: /node_modules/
       }
     ]
