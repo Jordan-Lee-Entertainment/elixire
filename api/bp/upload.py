@@ -72,15 +72,17 @@ async def upload_handler(request):
     file_rname = await gen_filename(request)
     file_id = get_snowflake()
 
+    fspath = f'./images/{file_rname}.{extension}'
+
     await request.app.db.execute("""
     INSERT INTO files (file_id, mimetype, filename,
         file_size, uploader, fspath)
     VALUES ($1, $2, $3, $4, $5, $6)
     """, file_id, filemime, file_rname,
-                                 filesize, user_id, "")
+                                 filesize, user_id, fspath)
 
     # write to fs
-    with open(f'./images/{file_rname}.{extension}', 'wb') as fd:
+    with open(fspath, 'wb') as fd:
         fd.write(filebody)
 
     # get domain ID from user and return it
