@@ -1,11 +1,12 @@
 import pathlib
+
 from sanic import Blueprint
 from sanic import response
 
 from ..common_auth import token_check
 from ..common import gen_filename
 from ..snowflake import get_snowflake
-from ..errors import BadImage, BadUpload, Ratelimited
+from ..errors import BadImage, Ratelimited
 
 bp = Blueprint('upload')
 
@@ -37,6 +38,7 @@ async def upload_handler(request):
     # filedata contains type, body and name
     filemime = filedata.type
     filebody = filedata.body
+    extension = filemime.split('/')[-1]
 
     # check mimetype
     if filemime not in ACCEPTED_MIMES:
@@ -55,13 +57,13 @@ async def upload_handler(request):
     WHERE user_id = $1
     """, user_id)
 
-    if used > byte_limit:
+    if used and used > byte_limit:
         cnv_limit = byte_limit / 1024 / 1024
         raise Ratelimited('You already blew your weekly'
                           f' limit of {cnv_limit}MB')
 
     filesize = len(filebody)
-    if used + filesize > byte_limit:
+    if used and used + filesize > byte_limit:
         cnv_limit = byte_limit / 1024 / 1024
         raise Ratelimited('This file blows the weekly limit of'
                           f' {cnv_limit}MB')
@@ -76,6 +78,10 @@ async def upload_handler(request):
     VALUES ($1, $2, $3, $4, $5, $6)
     """, file_id, filemime, file_rname,
                                  filesize, user_id, "")
+
+    # write to fs
+    with open(f'./images/{file_rname}.{extension}', 'wb') as fd:
+        fd.write(filebody)
 
     # get domain ID from user and return it
     domain_id = await request.app.db.fetchval("""
@@ -92,7 +98,6 @@ async def upload_handler(request):
 
     # appended to generated filename
     dpath = pathlib.Path(domain)
-    extension = filemime.split('/')[-1]
     fpath = dpath / f'{file_rname}.{extension}'
 
     return response.json({
