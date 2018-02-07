@@ -100,7 +100,7 @@ async def upload_handler(request):
 
     # appended to generated filename
     dpath = pathlib.Path(domain)
-    fpath = dpath / f'{file_rname}.{extension}'
+    fpath = dpath / 'i' / f'{file_rname}.{extension}'
 
     return response.json({
         'url': f'https://{str(fpath)}'

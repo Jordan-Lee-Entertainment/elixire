@@ -24,6 +24,7 @@ CORS(app)
 app.blueprint(api.bp.auth.bp)
 app.blueprint(api.bp.profile.bp)
 app.blueprint(api.bp.upload.bp)
+# TODO: app.blueprint(api.bp.fetch.bp)
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ async def setup_db(app, loop):
 
 def main():
     # map the entire frontend
+    app.static('/i', './images')
     app.static('/', './frontend/output')
     app.static('/', './frontend/output/index.html')
     app.run(host=config.HOST, port=config.PORT)
