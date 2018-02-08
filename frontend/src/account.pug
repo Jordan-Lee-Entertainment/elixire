@@ -1,0 +1,25 @@
+extends template.pug
+block content
+  h1 Account info
+  div.form-wrap
+    div.data-group
+      span.data-before Username: 
+      b#profile-username
+    div.data-group
+      span.data-before Quota 
+      b#profile-quota
+      span.data-after  MB per week
+    div.form-group
+      label(for="password", required="true") Current Password
+      input(type="password").form-control#password
+    div.form-group
+      label(for="new-password1", required="true") New Password
+      input(type="password").form-control#new-password1
+    div.form-group
+      label(for="new-password2", required="true") New Password (Repeat)
+      input(type="password").form-control#new-password2
+    div.seperator
+    div.form-group
+      label(for="domain-selector", required="true") Domain
+      select.form-control#domain-selector
+    button(type="submit").btn.btn-primary#submit-btn Update Account

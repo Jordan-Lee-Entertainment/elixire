@@ -1,2 +1,1 @@
 // Stub
-import "./theme.js";

@@ -1,6 +1,7 @@
 const BUILD_DIR = __dirname + "/output/";
 const SRC_DIR = __dirname + "/src/";
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
 const pageList = [
   {
     title: "Elixire",
@@ -17,6 +18,10 @@ const pageList = [
   {
     title: "Upload | Elixire",
     chunkName: "upload"
+  },
+  {
+    title: "My Account | Elixire",
+    chunkName: "account"
   }
 ];
 
@@ -25,7 +30,10 @@ module.exports = {
     index: `${SRC_DIR}/homepage.js`,
     login: `${SRC_DIR}/login.js`,
     signup: `${SRC_DIR}/signup.js`,
-    upload: `${SRC_DIR}/upload.js`
+    upload: `${SRC_DIR}/upload.js`,
+    account: `${SRC_DIR}/account.js`,
+    theme: `${SRC_DIR}/theme.js`,
+    themeCSS: `${SRC_DIR}/themeCSS.js`
   },
   output: {
     filename: "assets/[chunkhash].js",
@@ -34,38 +42,66 @@ module.exports = {
     sourceMapFilename: "assets/[chunkhash].map.js",
     publicPath: "/"
   },
-  plugins: pageList.map(
-    page =>
-      new HtmlWebpackPlugin({
-        title: page.title,
-        filename: `${page.chunkName}.html`,
-        template: `${SRC_DIR}/${page.chunkName}.pug`,
-        chunks: [page.chunkName],
-        inject: true,
-        minify: {
-          collapseWhitespace: true,
-          removeComments: true,
-          removeAttributeQuotes: true
+  plugins: [
+    new UglifyJsPlugin({
+      parallel: true,
+      sourceMap: true,
+      exclude: /node_modules\/webpack-dev-server/,
+      cache: true,
+      uglifyOptions: {
+        mangle: {
+          toplevel: true,
+          eval: true
         },
-        xhtml: true
-      })
-  ),
+        compress: {
+          ecma: 6,
+          keep_fargs: false,
+          keep_fnames: false,
+          passes: 1,
+          toplevel: true,
+          unsafe: true,
+          unsafe_arrows: true,
+          unsafe_comps: true,
+          unsafe_Function: true,
+          unsafe_math: true,
+          unsafe_proto: true,
+          unsafe_regexp: true,
+          unsafe_undefined: true
+        }
+      }
+    }),
+    ...pageList.map(
+      page =>
+        new HtmlWebpackPlugin({
+          title: page.title,
+          filename: `${page.chunkName}.html`,
+          template: `${SRC_DIR}/${page.chunkName}.pug`,
+          chunks: ["themeCSS", page.chunkName, "theme"],
+          inject: true,
+          minify: {
+            collapseWhitespace: true,
+            removeComments: true,
+            removeAttributeQuotes: true
+          },
+          xhtml: true
+        })
+    )
+  ],
   module: {
     loaders: [
       {
         test: /\.js$/,
-        exclude: /node_modules/,
+        // exclude: /node_modules/,
         include: [SRC_DIR],
         loader: "babel-loader",
         options: {
           babelrc: false,
-          presets: []
+          presets: ["@babel/preset-env"]
         }
       },
       {
         test: /\.s?css$/,
-        use: ["style-loader", "css-loader", "sass-loader"],
-        exclude: /node_modules/
+        use: ["style-loader", "css-loader", "sass-loader"]
       }
     ],
     rules: [
