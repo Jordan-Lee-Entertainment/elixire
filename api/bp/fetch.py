@@ -4,7 +4,7 @@ from sanic import response
 bp = Blueprint('fetch')
 
 
-@bp.route('/i/<filename:str>.<extension:str>', methods=['OPTIONS', 'POST'])
+@bp.get('/i/<filename:str>.<extension:str>')
 async def file_handler(request, filename, extension):
     """This blueprint is unused.
 
