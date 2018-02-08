@@ -3,20 +3,23 @@ html
     .page-content
       .page-navbar
          nav.navbar.navbar-expand-lg.navbar-dark.bg-dark
-           a(href="#", data-target="/").navbar-brand.intellectual-link#homebtn Elixire
-           button(type="button", data-toggle="collapse", data-target="#homenav")
+           a(href="#", data-target="/").navbar-brand.intellectual-link Elixire
+           button(type="button", data-toggle="collapse", data-target="#homenav").navbar-toggler
              span.navbar-toggler-icon
            div.collapse.navbar-collapse#homenav
              ul.navbar-nav.mr-auto
                li.nav-item
-                 a(href="#", data-target="/").nav-link.intellectual-link#homebtn2-nav Home
+                 a(href="#", data-target="/").nav-link.intellectual-link Home
+               li.nav-item.logged-in-only
+                 a(href="#", data-target="/upload.html").nav-link.intellectual-link Upload
                //- This should be on far-right side
-               li.nav-item.logged-in-only
-                 a(href="#", data-target="/upload.html").nav-link.intellectual-link#upload-nav Upload
-               li.nav-item.logged-out-only#login-nav
-                 a(href="#", data-target="/login.html").nav-link.intellectual-link#login-nav Login
-               li.nav-item.logged-in-only
-                 a(href="#", data-target="/logout.html").nav-link.intellectual-link#logout-nav Logout
+               li.nav-item.logged-out-only
+                 a(href="#", data-target="/login.html").nav-link.intellectual-link Login
+               li.nav-item.logged-in-only.dropdown
+                 a(href="#", role="button", data-toggle="dropdown", aria-haspopup="true", aria-expanded="false").nav-link.dropdown-toggle#nav-account Account
+                 div.dropdown-menu
+                   a(href="#", data-target="/account.html").dropdown-item.intellectual-link My Account
+                   a(href="#", data-target="/logout.html").dropdown-item.intellectual-link Log out
       .body
         //- Errors and stuff go in this div.
         #alert-area

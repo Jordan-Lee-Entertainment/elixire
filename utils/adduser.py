@@ -17,7 +17,7 @@ async def main():
 
     # generate password
     user_id = snowflake.get_snowflake()
-    password = secrets.token_urlsafe(25)
+    password = sys.argv[1] or secrets.token_urlsafe(25)
 
     _pwd = bytes(password, 'utf-8')
     hashed = bcrypt.hashpw(_pwd, bcrypt.gensalt(14))

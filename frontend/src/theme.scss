@@ -1,0 +1,27 @@
+.logged-in .logged-in-only {
+    display: block;
+}
+
+.logged-in-only {
+    display: none;
+}
+
+.logged-in .logged-out-only {
+    display: none;
+}
+
+.logged-out-only {
+    display: block;
+}
+
+#alert-area {
+    padding: 5px 4px;
+}
+
+.body {
+    padding: 8px 10px 0 10px;
+}
+
+h1 {
+    padding-left: 20px;
+}
