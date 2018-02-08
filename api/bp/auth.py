@@ -9,7 +9,7 @@ from ..common_auth import login_user, gen_token
 bp = Blueprint('auth')
 
 
-@bp.post('/api/login')
+@bp.route('/api/login', methods=['OPTIONS', 'POST'])
 async def login_handler(request):
     """
     Login one user to elixi.re
@@ -24,7 +24,7 @@ async def login_handler(request):
     })
 
 
-@bp.post('/api/apikey')
+@bp.route('/api/apikey', methods=['OPTIONS', 'POST'])
 async def apikey_handler(request):
     """
     Generate an API key.
@@ -38,7 +38,7 @@ async def apikey_handler(request):
     })
 
 
-@bp.post('/api/revoke')
+@bp.route('/api/revoke', methods=['OPTIONS', 'POST'])
 async def revoke_handler(request):
     """
     Revoke all generated tokens.

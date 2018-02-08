@@ -6,7 +6,7 @@ from ..common_auth import token_check
 bp = Blueprint('profile')
 
 
-@bp.get('/api/profile')
+@bp.route('/api/profile', methods=['OPTIONS', 'GET'])
 async def profile_handler(request):
     """
     Get your basic information as a user.
@@ -27,7 +27,7 @@ async def profile_handler(request):
     return response.json(duser)
 
 
-@bp.get('/api/limits')
+@bp.route('/api/limits', methods=['OPTIONS', 'GET'])
 async def limits_handler(request):
     user_id = await token_check(request)
 
