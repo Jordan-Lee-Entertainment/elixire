@@ -17,8 +17,8 @@ import config
 app = Sanic()
 app.econfig = config
 
-# enable cors sitewide
-CORS(app)
+# enable cors on api and images
+CORS(app, resources=[r"/api/*", r"/i/*"])
 
 # load blueprints
 app.blueprint(api.bp.auth.bp)
