@@ -19,3 +19,8 @@ class BadImage(APIError):
 class BadUpload(APIError):
     """Upload precondition failed"""
     status_code = 412
+
+
+class Ratelimited(APIError):
+    """Memes: here"""
+    status_code = 429
