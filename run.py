@@ -30,6 +30,10 @@ logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
 
+async def options_handler(request):
+    return response.text('ok')
+
+
 @app.exception(APIError)
 def handle_api_error(request, exception):
     """
@@ -66,6 +70,14 @@ async def setup_db(app, loop):
 
 def main():
     # map the entire frontend
+
+    routelist = list(app.router.routes_all.keys())
+    for uri in list(routelist):
+        try:
+            app.add_route(options_handler, uri, methods=['OPTIONS'])
+        except:
+            pass
+
     app.static('/i', './images')
     app.static('/', './frontend/output')
     app.static('/', './frontend/output/index.html')
