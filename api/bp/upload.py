@@ -18,7 +18,7 @@ ACCEPTED_MIMES = [
 ]
 
 
-@bp.route('/api/upload', methods=['OPTIONS', 'POST'])
+@bp.post('/api/upload')
 async def upload_handler(request):
     """
     True hell happens in this function.
