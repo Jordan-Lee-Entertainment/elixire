@@ -1,11 +1,12 @@
 import pathlib
+
 from sanic import Blueprint
 from sanic import response
 
 from ..common_auth import token_check
 from ..common import gen_filename
 from ..snowflake import get_snowflake
-from ..errors import BadImage, BadUpload
+from ..errors import BadImage, Ratelimited
 
 bp = Blueprint('upload')
 
@@ -37,23 +38,52 @@ async def upload_handler(request):
     # filedata contains type, body and name
     filemime = filedata.type
     filebody = filedata.body
+    extension = filemime.split('/')[-1]
 
     # check mimetype
     if filemime not in ACCEPTED_MIMES:
         return BadImage('bad image type')
 
-    filesize = len(filebody)
-    # TODO: check limits using filesize
+    used = await request.app.db.fetchval("""
+    SELECT SUM(file_size)
+    FROM files
+    WHERE uploader = $1
+    AND file_id > time_snowflake(now() - interval '7 hours')
+    """, user_id)
 
+    byte_limit = await request.app.db.fetchval("""
+    SELECT blimit
+    FROM limits
+    WHERE user_id = $1
+    """, user_id)
+
+    if used and used > byte_limit:
+        cnv_limit = byte_limit / 1024 / 1024
+        raise Ratelimited('You already blew your weekly'
+                          f' limit of {cnv_limit}MB')
+
+    filesize = len(filebody)
+    if used and used + filesize > byte_limit:
+        cnv_limit = byte_limit / 1024 / 1024
+        raise Ratelimited('This file blows the weekly limit of'
+                          f' {cnv_limit}MB')
+
+    # all good with limits
     file_rname = await gen_filename(request)
     file_id = get_snowflake()
+
+    fspath = f'./images/{file_rname}.{extension}'
 
     await request.app.db.execute("""
     INSERT INTO files (file_id, mimetype, filename,
         file_size, uploader, fspath)
     VALUES ($1, $2, $3, $4, $5, $6)
     """, file_id, filemime, file_rname,
-                                 filesize, user_id, "")
+                                 filesize, user_id, fspath)
+
+    # write to fs
+    with open(fspath, 'wb') as fd:
+        fd.write(filebody)
 
     # get domain ID from user and return it
     domain_id = await request.app.db.fetchval("""
@@ -70,8 +100,7 @@ async def upload_handler(request):
 
     # appended to generated filename
     dpath = pathlib.Path(domain)
-    extension = filemime.split('/')[-1]
-    fpath = dpath / f'{file_rname}.{extension}'
+    fpath = dpath / 'i' / f'{file_rname}.{extension}'
 
     return response.json({
         'url': f'https://{str(fpath)}'
