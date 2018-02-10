@@ -10,6 +10,7 @@ from sanic_cors import CORS, cross_origin
 import api.bp.auth
 import api.bp.profile
 import api.bp.upload
+import api.bp.files
 from api.errors import APIError
 
 import config
@@ -24,6 +25,7 @@ CORS(app, resources=[r"/api/*", r"/i/*"])
 app.blueprint(api.bp.auth.bp)
 app.blueprint(api.bp.profile.bp)
 app.blueprint(api.bp.upload.bp)
+app.blueprint(api.bp.files.bp)
 # TODO: app.blueprint(api.bp.fetch.bp)
 
 logging.basicConfig(level=logging.DEBUG)
