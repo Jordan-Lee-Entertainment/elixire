@@ -53,5 +53,6 @@ CREATE TABLE IF NOT EXISTS files (
     file_size bigint,
 
     uploader bigint REFERENCES users (user_id) ON DELETE CASCADE,
-    fspath text /* where the actual file is in fs */
+    fspath text, /* where the actual file is in fs */
+    deleted boolean
 );
