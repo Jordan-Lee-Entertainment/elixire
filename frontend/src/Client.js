@@ -4,7 +4,10 @@ class Client {
   constructor(options) {
     if (!options.endpoint) throw new Error("No endpoint specified!");
     this.token = options.token;
-    this.endpoint = "http://localhost:8080/api"; // options.endpoint;
+    this.endpoint =
+      (window.localStorage
+        ? window.localStorage.getItem("endpoint-override")
+        : null) || options.endpoint;
   }
   async getProfile() {
     if (!this.token) throw new Error("BAD_AUTH");
