@@ -7,7 +7,15 @@ window.addEventListener("load", async function() {
   const password = document.getElementById("password");
   const submit = document.getElementById("submit-btn");
   let alertId = null;
-  submit.addEventListener("click", async function() {
+  username.focus();
+  username.addEventListener("keydown", function(ev) {
+    if (ev.key == "Enter") password.focus();
+  });
+  submit.addEventListener("click", login);
+  password.addEventListener("keydown", function(ev) {
+    if (ev.key == "Enter") login();
+  });
+  async function login() {
     if (alertId) commonCode.removeAlert(alertId);
     try {
       const token = await commonCode.client.login(
@@ -28,5 +36,5 @@ window.addEventListener("load", async function() {
         throw err;
       }
     }
-  });
+  }
 });
