@@ -3,7 +3,6 @@ import commonCode from "./commonCode";
 import "./upload.scss";
 import filesize from "file-size";
 import Clipboard from "clipboard";
-import paperIcon from "./paperIcon.svg";
 
 window.addEventListener("load", function() {
   let error = null;
