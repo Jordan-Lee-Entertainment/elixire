@@ -5,6 +5,11 @@
   "repository": "https://gitlab.com/elixire/elixire.git",
   "author": "Ave Ozkal <avezone@ave.zone>",
   "license": "MIT",
+  "scripts": {
+    "start": "webpack-dev-server --port 8081 --compress --watch --cache --open",
+    "build:production": "NODE_ENV=production webpack",
+    "build:dev": "NODE_ENV=dev webpack"
+  },
   "private": true,
   "dependencies": {
     "bootstrap": "4",
