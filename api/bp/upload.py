@@ -42,7 +42,7 @@ async def upload_handler(request):
 
     # check mimetype
     if filemime not in ACCEPTED_MIMES:
-        return BadImage('bad image type')
+        raise BadImage('bad image type')
 
     used = await request.app.db.fetchval("""
     SELECT SUM(file_size)
