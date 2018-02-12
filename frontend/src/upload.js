@@ -12,10 +12,11 @@ window.addEventListener("load", function() {
   const progressBar = document.getElementById("progress-bar");
   const savedFiles = document.getElementById("saved-files");
   const uploadText = document.getElementById("uploading-text");
-  dropZone.addEventListener("drop", async function() {});
   dropZone.addEventListener("dragover", function(ev) {
-    ev.preventDefault();
-    dropZone.classList = "show-popover";
+    if (Array.from(ev.dataTransfer.items).find(item => item.kind == "file")) {
+      ev.preventDefault();
+      dropZone.classList = "show-popover";
+    }
   });
   dropZone.addEventListener("dragleave", function(ev) {
     if (ev.screenX == 0 && ev.screenY == 0) dropZone.classList = "";
