@@ -22,6 +22,10 @@ const pageList = [
   {
     title: "My Account | Elixire",
     chunkName: "account"
+  },
+  {
+    title: "Logout",
+    chunkName: "logout"
   }
 ];
 
@@ -32,6 +36,7 @@ module.exports = {
     signup: `${SRC_DIR}/signup.js`,
     upload: `${SRC_DIR}/upload.js`,
     account: `${SRC_DIR}/account.js`,
+    logout: `${SRC_DIR}/logout.js`,
     theme: `${SRC_DIR}/theme.js`,
     themeCSS: `${SRC_DIR}/themeCSS.js`
   },
@@ -43,33 +48,37 @@ module.exports = {
     publicPath: "/"
   },
   plugins: [
-    new UglifyJsPlugin({
-      parallel: true,
-      sourceMap: true,
-      exclude: /node_modules\/webpack-dev-server/,
-      cache: true,
-      uglifyOptions: {
-        mangle: {
-          toplevel: true,
-          eval: true
-        },
-        compress: {
-          ecma: 6,
-          keep_fargs: false,
-          keep_fnames: false,
-          passes: 1,
-          toplevel: true,
-          unsafe: true,
-          unsafe_arrows: true,
-          unsafe_comps: true,
-          unsafe_Function: true,
-          unsafe_math: true,
-          unsafe_proto: true,
-          unsafe_regexp: true,
-          unsafe_undefined: true
-        }
-      }
-    }),
+    ...(process.env.NODE_ENV == "production"
+      ? [
+          new UglifyJsPlugin({
+            parallel: true,
+            sourceMap: true,
+            exclude: /node_modules\/webpack-dev-server/,
+            cache: true,
+            uglifyOptions: {
+              mangle: {
+                toplevel: true,
+                eval: true
+              },
+              compress: {
+                ecma: 6,
+                keep_fargs: false,
+                keep_fnames: false,
+                passes: 1,
+                toplevel: true,
+                unsafe: true,
+                unsafe_arrows: true,
+                unsafe_comps: true,
+                unsafe_Function: true,
+                unsafe_math: true,
+                unsafe_proto: true,
+                unsafe_regexp: true,
+                unsafe_undefined: true
+              }
+            }
+          })
+        ]
+      : []),
     ...pageList.map(
       page =>
         new HtmlWebpackPlugin({
@@ -113,6 +122,10 @@ module.exports = {
         test: /\.pug$/,
         use: ["pug-loader"],
         exclude: /node_modules/
+      },
+      {
+        test: /\.svg$/,
+        use: ["file-loader"]
       }
     ]
   }

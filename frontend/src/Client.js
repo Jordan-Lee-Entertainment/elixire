@@ -23,6 +23,17 @@ class Client {
     return [];
   }
 
+  upload(file) {
+    if (!this.token) return Promise.reject(new Error("BAD_AUTH"));
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      return this.request("post", "/upload").send(formData);
+    } catch (err) {
+      return Promise.reject(this.handleErr(err));
+    }
+  }
+
   async getQuota() {
     if (!this.token) throw new Error("BAD_AUTH");
     try {
@@ -50,15 +61,6 @@ class Client {
     }
   }
 
-  async upload(file) {
-    if (!this.token) throw new Error("BAD_AUTH");
-    try {
-      this.request("post", "/upload").attach("file", file);
-    } catch (err) {
-      throw this.handleErr(err);
-    }
-  }
-
   async invalidateSessions(username, password) {
     if (!username || !password) throw new Error("BAD_AUTH");
 
@@ -75,10 +77,15 @@ class Client {
   }
 
   handleErr(err) {
+    console.log(err, err.status);
     if (err.status == 403) {
       return new Error("BAD_AUTH");
     } else if (err.status == 400) {
       return new Error("BAD_REQUEST");
+    } else if (err.status == 415) {
+      return new Error("BAD_IMAGE");
+    } else if (err.status == 429) {
+      return new Error("RATELIMITED");
     }
     return err;
   }
