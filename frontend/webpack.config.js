@@ -1,7 +1,7 @@
 const BUILD_DIR = __dirname + "/output/";
 const SRC_DIR = __dirname + "/src/";
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
+const MinifyPlugin = require("babel-minify-webpack-plugin");
 const pageList = [
   {
     title: "Elixire",
@@ -63,33 +63,15 @@ module.exports = {
   plugins: [
     ...(process.env.NODE_ENV == "production"
       ? [
-          new UglifyJsPlugin({
-            parallel: true,
-            sourceMap: true,
-            exclude: /node_modules\/webpack-dev-server/,
-            cache: true,
-            uglifyOptions: {
-              mangle: {
-                toplevel: true,
-                eval: true
-              },
-              compress: {
-                ecma: 6,
-                keep_fargs: false,
-                keep_fnames: false,
-                passes: 1,
-                toplevel: true,
-                unsafe: true,
-                unsafe_arrows: true,
-                unsafe_comps: true,
-                unsafe_Function: true,
-                unsafe_math: true,
-                unsafe_proto: true,
-                unsafe_regexp: true,
-                unsafe_undefined: true
-              }
+          new MinifyPlugin(
+            {
+              removeConsole: true,
+              removeDebugger: true
+            },
+            {
+              comments: false
             }
-          })
+          )
         ]
       : []),
     ...pageList.map(
