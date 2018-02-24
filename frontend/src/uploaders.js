@@ -1,6 +1,6 @@
 const uploaders = {};
 
-uploaders.elixireManager = config => `#!/bin/bash
+uploaders.elixireManager = token => `#!/bin/bash
 # https://gitlab.com/elixire/elixiremanager
 # based on https://github.com/aveao/ownshot
 # based on https://github.com/jomo/imgur-screenshot
