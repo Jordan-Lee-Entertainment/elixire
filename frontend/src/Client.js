@@ -26,6 +26,34 @@ class Client {
     return [];
   }
 
+  generateToken(password) {
+    if (!this.token) return Promise.reject(new Error("BAD_AUTH"));
+    try {
+      return this.request("post", "/apikey")
+        .send({
+          user: this.profile.username,
+          password: password
+        })
+        .then(res => res.body.api_key);
+    } catch (err) {
+      throw this.handleErr(err);
+      // TODO: handle the error properly !
+    }
+  }
+
+  revokeTokens(password) {
+    if (!this.token) return Promise.reject(new Error("BAD_AUTH"));
+    try {
+      return this.request("post", "/revoke").send({
+        user: this.profile.username,
+        password: password
+      });
+    } catch (err) {
+      throw this.handleErr(err);
+      // TODO: handle the error properly !
+    }
+  }
+
   upload(file) {
     if (!this.token) return Promise.reject(new Error("BAD_AUTH"));
     try {
@@ -53,6 +81,7 @@ class Client {
   async login(username, password) {
     if (!username || !password) throw new Error("BAD_AUTH");
     try {
+      this.user = username;
       const res = await this.request("post", "/login").send({
         user: username,
         password

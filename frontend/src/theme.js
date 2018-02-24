@@ -10,6 +10,7 @@ const profilePromise = window.client
     console.log(err);
     if (err.message != "BAD_AUTH") throw err;
   });
+window.profilePromise = profilePromise;
 
 window.addEventListener("load", async function() {
   console.log("Dom loaded");

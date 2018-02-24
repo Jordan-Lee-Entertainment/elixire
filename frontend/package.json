@@ -15,6 +15,7 @@
     "bootstrap": "4",
     "clipboard": "^1.7.1",
     "file-size": "^1.0.0",
+    "highlightjs": "^9.10.0",
     "jquery": "^3.3.1",
     "popper.js": "^1.12.9",
     "superagent": "^3.8.2"
