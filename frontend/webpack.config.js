@@ -83,6 +83,7 @@ module.exports = {
           chunks: ["themeCSS", page.chunkName, "theme"].concat(
             page.chunks || []
           ),
+          mobile: true,
           inject: true,
           minify: {
             collapseWhitespace: true,
@@ -122,7 +123,7 @@ module.exports = {
       },
       {
         test: /\.(?:sv|pn)g$/,
-        use: ["file-loader"]
+        use: ["file-loader?name=./assets/[hash].[ext]"]
       }
     ]
   }
