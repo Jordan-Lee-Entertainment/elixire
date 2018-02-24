@@ -95,10 +95,9 @@ module.exports = {
     )
   ],
   module: {
-    loaders: [
+    rules: [
       {
         test: /\.js$/,
-        // exclude: /node_modules/,
         include: [SRC_DIR],
         loader: "babel-loader",
         options: {
@@ -106,12 +105,6 @@ module.exports = {
           presets: ["@babel/preset-env"]
         }
       },
-      {
-        test: /\.s?css$/,
-        use: ["style-loader", "css-loader", "sass-loader"]
-      }
-    ],
-    rules: [
       {
         test: /\.s?css$/,
         use: ["style-loader", "css-loader", "sass-loader"]
