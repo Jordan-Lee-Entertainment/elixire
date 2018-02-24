@@ -40,6 +40,7 @@ const pageList = [
 
 module.exports = {
   entry: {
+    babelPolyfill: "babel-polyfill",
     index: `${SRC_DIR}/homepage.js`,
     login: `${SRC_DIR}/login.js`,
     signup: `${SRC_DIR}/signup.js`,
@@ -80,7 +81,7 @@ module.exports = {
           title: page.title,
           filename: `${page.chunkName}.html`,
           template: `${SRC_DIR}/${page.chunkName}.pug`,
-          chunks: ["themeCSS", page.chunkName, "theme"].concat(
+          chunks: ["babelPolyfill", "themeCSS", page.chunkName, "theme"].concat(
             page.chunks || []
           ),
           mobile: true,
