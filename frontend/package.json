@@ -25,6 +25,7 @@
     "@babel/preset-env": "^7.0.0-beta.39",
     "babel-loader": "8.0.0-beta.0",
     "babel-minify-webpack-plugin": "^0.3.0",
+    "babel-polyfill": "^6.26.0",
     "babel-preset-latest": "^6.24.1",
     "css-loader": "^0.28.9",
     "eslint": "^4.17.0",
