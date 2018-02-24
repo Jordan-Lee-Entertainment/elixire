@@ -1,0 +1,33 @@
+extends template.pug
+block content
+  h2 About us
+  h3 Our team
+  div.row.no-gutter.no-indent.no-margin
+    div.col-12.col-sm-12.col-md-6.col-lg-4
+      div.team-member
+        div.avatar-contain
+          img(src=require("./ave.svg")).team-member-avatar
+        div.team-member-brick
+          h3(data-discordtag="ao#5755").team-name Ave
+          span.specialties Ms Boss Lady
+    div.col-12.col-sm-12.col-md-6.col-lg-4
+      div.team-member
+        div.avatar-contain
+          img(src=require("./luna.png")).team-member-avatar
+        div.team-member-brick
+          h3(data-discordtag="luna#6969").team-name Luna
+          span.specialties Backend Developer
+    div.col-12.col-sm-12.col-md-6.col-lg-4
+      div.team-member
+        div.avatar-contain
+          img(src=require("./mary.svg")).team-member-avatar
+        div.team-member-brick
+          h3(data-discordtag="heatingdevice#1212").team-name Mary
+          span.specialties Frontend Developer
+
+
+  h4 So, you in?
+  p
+  | Great! Check out 
+  a(href="https://gitlab.com/elixire/elixire") the source
+  | ! Happy hacking!
