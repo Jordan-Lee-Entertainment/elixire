@@ -9,20 +9,20 @@ block content
       span.data-before Quota 
       b#profile-quota
       span.data-after  MB per week
-    div.form-group
+    div.form-group.update-account-ui-hidden
       label(for="password") Current Password
       input(type="password", required="true").form-control#password
-    div.form-group
+    div.form-group.update-account-ui-hidden
       label(for="new-password1") New Password
       input(type="password", required="true").form-control#new-password1
-    div.form-group
+    div.form-group.update-account-ui-hidden
       label(for="new-password2") New Password (Repeat)
       input(type="password", required="true").form-control#new-password2
-    hr
-    div.form-group
+    hr.update-account-ui-hidden
+    div.form-group.update-account-ui-hidden
       label(for="domain-selector") Domain
       select(required="true").form-control#domain-selector
-    button(type="submit").btn.btn-primary#submit-btn Update Account
+    button(type="submit").btn.btn-primary.update-account-ui-hidden#submit-btn Update Account
     hr
     button(type="button", data-toggle="modal", data-target="#password-modal").btn.btn-primary#generate-modal-btn Generate Uploader Token
     hr
