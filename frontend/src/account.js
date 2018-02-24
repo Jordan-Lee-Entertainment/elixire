@@ -9,7 +9,7 @@ window.addEventListener("load", async function() {
     const adminBadge = document.createElement("span");
     adminBadge.innerText = "ADMIN";
     adminBadge.classList = "badge badge-pill badge-primary";
-    username.appendChild(adminBadge);
+    username.parentNode.appendChild(adminBadge);
   }
   const domainSelector = document.getElementById("domain-selector");
   domainSelector.value = window.client.profile.domain;
