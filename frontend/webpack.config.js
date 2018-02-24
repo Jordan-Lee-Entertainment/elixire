@@ -31,6 +31,10 @@ const pageList = [
     title: "New Token | Elixire",
     chunkName: "token",
     chunks: ["highlight", "highlightTheme"]
+  },
+  {
+    title: "About Us | Elixire",
+    chunkName: "about"
   }
 ];
 
@@ -46,7 +50,8 @@ module.exports = {
     highlight: `${SRC_DIR}/highlight.js`,
     highlightTheme: `${SRC_DIR}/highlightTheme.js`,
     theme: `${SRC_DIR}/theme.js`,
-    themeCSS: `${SRC_DIR}/themeCSS.js`
+    themeCSS: `${SRC_DIR}/themeCSS.js`,
+    about: `${SRC_DIR}/about.js`
   },
   output: {
     filename: "assets/[chunkhash].js",
@@ -134,7 +139,7 @@ module.exports = {
         exclude: /node_modules/
       },
       {
-        test: /\.svg$/,
+        test: /\.(?:sv|pn)g$/,
         use: ["file-loader"]
       }
     ]

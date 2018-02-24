@@ -1,0 +1,33 @@
+.team-member-avatar {
+    border-radius: 100%;
+    width: 50%;
+    max-width: 100vw;
+    min-width: 128px;
+    bottom: 25%;
+    position: absolute;
+    box-shadow: rgba(100,100,100,0.25) 1.5px 1.5px;
+    right: 0%;
+}
+
+.avatar-contain {
+    height: 50%;
+}
+
+.team-member {
+    height: 50vh;
+    position: relative;
+    margin: 5px 0;
+}
+
+.team-member-brick {
+    background-color: rgb(114, 137, 218);
+    border-radius: 9px;
+    padding: 15px;
+    color: #fff;
+    box-shadow: rgba(100,100,100,0.25) 3.5px 3.5px 0 0;
+}
+
+.discrim {
+    color: hsla(0,0%,100%,.6);;
+    font-size: 50%;
+}
