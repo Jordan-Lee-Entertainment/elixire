@@ -21,6 +21,7 @@
     "superagent": "^3.8.2"
   },
   "devDependencies": {
+    "babel-minify-webpack-plugin": "^0.3.0",
     "@babel/core": "^7.0.0-beta.39",
     "@babel/preset-env": "^7.0.0-beta.39",
     "babel-loader": "8.0.0-beta.0",
@@ -35,7 +36,6 @@
     "pug-loader": "^2.3.0",
     "sass-loader": "^6.0.6",
     "style-loader": "^0.20.1",
-    "uglifyjs-webpack-plugin": "^1.1.8",
     "webpack": "^3.10.0",
     "webpack-dev-server": "^2.9.7"
   }
