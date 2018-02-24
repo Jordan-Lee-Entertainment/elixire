@@ -10,16 +10,69 @@ block content
       b#profile-quota
       span.data-after  MB per week
     div.form-group
-      label(for="password", required="true") Current Password
-      input(type="password").form-control#password
+      label(for="password") Current Password
+      input(type="password", required="true").form-control#password
     div.form-group
-      label(for="new-password1", required="true") New Password
-      input(type="password").form-control#new-password1
+      label(for="new-password1") New Password
+      input(type="password", required="true").form-control#new-password1
     div.form-group
-      label(for="new-password2", required="true") New Password (Repeat)
-      input(type="password").form-control#new-password2
-    div.seperator
+      label(for="new-password2") New Password (Repeat)
+      input(type="password", required="true").form-control#new-password2
+    hr
     div.form-group
-      label(for="domain-selector", required="true") Domain
-      select.form-control#domain-selector
+      label(for="domain-selector") Domain
+      select(required="true").form-control#domain-selector
     button(type="submit").btn.btn-primary#submit-btn Update Account
+    hr
+    button(type="button", data-toggle="modal", data-target="#password-modal").btn.btn-primary#generate-modal-btn Generate Uploader Token
+    hr
+    button(type="button", data-toggle="modal", data-target="#revoke-modal").btn.btn-danger#generate-modal-btn Revoke All Tokens
+
+
+  div(tabindex="-1", role="dialog").modal.fade#password-modal
+    div(role="document").modal-dialog
+      div.modal-content
+        div.modal-header
+          h5.modal-title Enter password
+          button(type="button", data-dismiss="modal").close
+            span &times;
+        div.modal-body.needs-validation
+          p.text-muted Enter your password below to create a new uploader token
+          form(novalidate=true).needs-validation#password-form
+            div.form-group
+              label(for="token-password") Password
+              input(type="password", required="true", placeholder="Password").form-control#token-password
+              div.invalid-feedback Incorrect password
+          div
+            span.font-weight-bold.text-danger Note:
+            span.font-weight-normal.text-danger Elixire staff will never ask you for your token!
+
+        div.modal-footer
+          button(type="button", data-dismiss="modal").btn.btn-link Cancel
+          button(type="button").btn.btn-primary#generate-token Generate
+
+  div(tabindex="-1", role="dialog").modal.fade#revoke-modal
+    div(role="document").modal-dialog
+      div.modal-content
+        div.modal-header
+          h5.modal-title Enter password
+          button(type="button", data-dismiss="modal").close
+            span &times;
+        div.modal-body.needs-validation
+          p.text-muted Enter your password below to deactivate all tokens
+          form(novalidate=true).needs-validation#revoke-form
+            div.form-group
+              label(for="revoke-password") Password
+              input(type="password", required="true", placeholder="Password").form-control#revoke-password
+              div.invalid-feedback Incorrect password
+            div.form-group
+              input(type="checkbox", checked="true").form-control#stay-logged-in
+              label(for="stay-logged-in") Keep me logged in!
+          div
+            span.font-weight-bold.text-danger Note:
+            span.font-weight-normal.text-danger This will sign you out of all your web sessions and make your uploaders stop working!
+
+        div.modal-footer
+          button(type="button", data-dismiss="modal").btn.btn-link Cancel
+          button(type="button").btn.btn-danger#revoke-btn I understand
+

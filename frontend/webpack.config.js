@@ -26,6 +26,11 @@ const pageList = [
   {
     title: "Logout",
     chunkName: "logout"
+  },
+  {
+    title: "New Token | Elixire",
+    chunkName: "token",
+    chunks: ["highlight", "highlightTheme"]
   }
 ];
 
@@ -37,6 +42,9 @@ module.exports = {
     upload: `${SRC_DIR}/upload.js`,
     account: `${SRC_DIR}/account.js`,
     logout: `${SRC_DIR}/logout.js`,
+    token: `${SRC_DIR}/token.js`,
+    highlight: `${SRC_DIR}/highlight.js`,
+    highlightTheme: `${SRC_DIR}/highlightTheme.js`,
     theme: `${SRC_DIR}/theme.js`,
     themeCSS: `${SRC_DIR}/themeCSS.js`
   },
@@ -85,7 +93,9 @@ module.exports = {
           title: page.title,
           filename: `${page.chunkName}.html`,
           template: `${SRC_DIR}/${page.chunkName}.pug`,
-          chunks: ["themeCSS", page.chunkName, "theme"],
+          chunks: ["themeCSS", page.chunkName, "theme"].concat(
+            page.chunks || []
+          ),
           inject: true,
           minify: {
             collapseWhitespace: true,
