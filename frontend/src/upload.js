@@ -3,6 +3,7 @@ import commonCode from "./commonCode";
 import "./upload.scss";
 import filesize from "file-size";
 import Clipboard from "clipboard";
+import volumeUpIcon from "./speaker.svg";
 
 window.addEventListener("load", function() {
   let error = null;
@@ -53,7 +54,6 @@ window.addEventListener("load", function() {
       dropZone.classList = "";
       progressBar.style.width = "0";
       const newFile = document.createElement("div");
-      const newFileIcon = document.createElement("img");
       const newFileLabel = document.createElement("span");
       const newFileSize = document.createElement("span");
       const newFileURL = document.createElement("a");
@@ -62,7 +62,34 @@ window.addEventListener("load", function() {
         ev.preventDefault();
       });
       newFileURL.innerText = url;
-      newFileIcon.src = url;
+
+      let newFileIcon = null;
+      if (file.type.startsWith("video/")) {
+        const imageBlob = new Blob([file], { type: file.type });
+        const objectUrl = URL.createObjectURL(imageBlob);
+        newFileIcon = document.createElement("video");
+        newFileIcon.loop = true;
+        newFileIcon.muted = true;
+        const source = document.createElement("source");
+        source.type = file.type;
+        source.src = objectUrl;
+        newFileIcon.appendChild(source);
+        newFileIcon.addEventListener("loadeddata", function() {
+          newFileIcon.play();
+        });
+      } else if (file.type.startsWith("audio/")) {
+        newFileIcon = document.createElement("img");
+        newFileIcon.src = volumeUpIcon;
+      } else {
+        const imageBlob = new Blob([file], { type: file.type });
+        const objectUrl = URL.createObjectURL(imageBlob);
+        newFileIcon = document.createElement("img");
+        newFileIcon.src = objectUrl;
+        newFileIcon.addEventListener("load", function() {
+          URL.revokeObjectURL(objectUrl);
+        });
+      }
+      newFileIcon.classList = "new-file-icon";
       newFileLabel.innerText = file.name;
       newFileSize.innerText = fileSize;
       newFile.classList = "saved-file";
