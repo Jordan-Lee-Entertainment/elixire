@@ -14,7 +14,11 @@ bp = Blueprint('upload')
 ACCEPTED_MIMES = [
     'image/png',
     'image/jpg',
-    'image/jpeg'
+    'image/jpeg',
+    'image/gif',
+    'image/webp',
+    'audio/webm',
+    'video/webm'
 ]
 
 
