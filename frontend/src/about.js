@@ -20,7 +20,6 @@ window.addEventListener("load", function() {
       discrim.classList = "discrim";
       discrim.innerText = "#" + discriminator;
       mem.appendChild(discrim);
-      console.log(discrim);
     }
     mem.addEventListener("mouseleave", hide);
     function hide(ev) {
