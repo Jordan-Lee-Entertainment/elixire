@@ -57,7 +57,10 @@ window.addEventListener("load", function() {
       const newFileLabel = document.createElement("span");
       const newFileSize = document.createElement("span");
       const newFileURL = document.createElement("a");
-      newFileURL.href = "#";
+      newFileURL.href = url;
+      newFileURL.addEventListener("click", function(ev) {
+        ev.preventDefault();
+      });
       newFileURL.innerText = url;
       newFileIcon.src = url;
       newFileLabel.innerText = uploadInput.files[0].name;
