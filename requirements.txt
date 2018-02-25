@@ -1,5 +1,8 @@
 sanic==0.7.0
+sanic-cors==0.9.3
+
 asyncpg==0.15.0
 bcrypt==3.1.4
 itsdangerous==0.24
-sanic-cors==0.9.3
+
+cerberus==1.1
