@@ -8,16 +8,36 @@ window.addEventListener("load", function() {
     const username = tagSplit[0];
     const discriminator = tagSplit[1];
     const oldName = mem.innerText;
-    mem.addEventListener("mouseenter", function() {
+    mem.addEventListener("mouseenter", show);
+    let shown = false;
+    function show(ev) {
+      if (touchTap(ev)) {
+        return;
+      }
+      shown = true;
       mem.innerText = username;
       const discrim = document.createElement("span");
       discrim.classList = "discrim";
       discrim.innerText = "#" + discriminator;
       mem.appendChild(discrim);
       console.log(discrim);
-    });
-    mem.addEventListener("mouseleave", function(ev) {
+    }
+    mem.addEventListener("mouseleave", hide);
+    function hide(ev) {
+      if (touchTap(ev)) {
+        return;
+      }
+      shown = false;
       mem.innerText = oldName;
+    }
+    mem.addEventListener("click", function(ev) {
+      if (!touchTap(ev)) return;
+      if (shown) hide();
+      else show();
     });
   }
 });
+
+function touchTap(ev) {
+  return ev && ev.sourceCapabilities && ev.sourceCapabilities.firesTouchEvents;
+}
