@@ -24,21 +24,21 @@ window.addEventListener("load", function() {
   dropZone.addEventListener("drop", function(ev) {
     ev.preventDefault();
     dropZone.classList = "show-popover";
-    uploadInput.files = ev.dataTransfer.files;
+    upload(ev.dataTransfer.files[0]);
   });
-  uploadInput.addEventListener("change", upload);
-  async function upload() {
-    if (!uploadInput.files.length) return console.log("gya!!");
-    const fileSize = filesize(uploadInput.files[0].size).human();
-    uploadText.innerText = `Uploading ${
-      uploadInput.files[0].name
-    } (${fileSize})`;
+  uploadInput.addEventListener("change", () => {
+    upload(uploadInput.files[0]);
+  });
+  async function upload(file) {
+    if (!file) return;
+    const fileSize = filesize(file.size).human();
+    uploadText.innerText = `Uploading ${file.name} (${fileSize})`;
     if (error) {
       commonCode.removeAlert(error);
       error = null;
     }
     dropZone.classList = "show-popover";
-    const uploadReq = window.client.upload(uploadInput.files[0]);
+    const uploadReq = window.client.upload(file);
     console.log(uploadReq);
     uploadReq.on("progress", function(prog) {
       console.log(prog);
@@ -63,7 +63,7 @@ window.addEventListener("load", function() {
       });
       newFileURL.innerText = url;
       newFileIcon.src = url;
-      newFileLabel.innerText = uploadInput.files[0].name;
+      newFileLabel.innerText = file.name;
       newFileSize.innerText = fileSize;
       newFile.classList = "saved-file";
       const clipboard = new Clipboard(newFileURL, {
