@@ -8,6 +8,40 @@ import itsdangerous
 from .common import SIGNERS, TokenType
 from .errors import BadInput, FailedAuth
 
+async def pwd_hash(request, password: str) -> str:
+    """Generate a hash for any given password"""
+    password_bytes = bytes(password, 'utf-8')
+    hashed = request.app.loop.run_in_executor(None,
+                                              bcrypt.hashpw,
+                                              password_bytes,
+                                              bcrypt.gensalt(14)
+                                              )
+
+    return (await hashed).decode('utf-8')
+
+
+async def pwd_check(request, stored: str, password: str):
+    """Raw version of password_check."""
+    pwd_bytes = bytes(password, 'utf-8')
+    pwd_orig = bytes(stored, 'utf-8')
+
+    future = request.app.loop.run_in_executor(None,
+                                              bcrypt.checkpw,
+                                              pwd_bytes, pwd_orig)
+
+    if not await future:
+        raise FailedAuth('user or password invalid')
+
+
+async def password_check(request, user_id: int, password: str):
+    stored = await request.app.db.fetchval("""
+        select password_hash
+        from users
+        where user_id = $1
+    """, user_id)
+
+    await pwd_check(request, stored, password)
+
 
 async def login_user(request):
     """
@@ -33,15 +67,7 @@ async def login_user(request):
     if not user['active']:
         raise FailedAuth('user or password invalid')
 
-    # check password validity
-    pb = bytes(password, 'utf-8')
-    ph = bytes(user['password_hash'], 'utf-8')
-    future = request.app.loop.run_in_executor(None,
-                                              bcrypt.checkpw,
-                                              pb, ph)
-
-    if not await future:
-        raise FailedAuth('user or password invalid')
+    pwd_check(request, user['password_hash'], password)
 
     return user
 

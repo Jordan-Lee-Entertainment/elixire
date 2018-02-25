@@ -84,6 +84,26 @@ and a `message` field (str)
 }
    ```
 
+# `PATCH /api/profile`
+ - Modify your profile, right now only changing password works.
+ - Keep in mind changing your password **will invalidate all your tokens.**
+ - Requires authentication with any token / API key.
+ - Input: a JSON payload, with `password` and `new_password` field.
+   - `new_password` is optional
+   - Example: ```javascript
+{
+    "password": "my old password",
+    "new_password": "my new password"
+}
+```
+ - Returns: JSON
+   - Example: ```javascript
+{
+    // A list of things you have updated successfully in your profile
+    "updated_fields": ["password"]
+}
+```
+
 # `GET /api/limits`
  - Get your limit information.
  - Requires authentication
