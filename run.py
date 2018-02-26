@@ -2,15 +2,17 @@ import logging
 import traceback
 
 import asyncpg
+import aiohttp
 
 from sanic import Sanic
 from sanic import response
-from sanic_cors import CORS, cross_origin
+from sanic_cors import CORS
 
 import api.bp.auth
 import api.bp.profile
 import api.bp.upload
 import api.bp.files
+
 from api.errors import APIError
 
 import config
@@ -65,14 +67,15 @@ def handle_exception(request, exception):
 @app.listener('before_server_start')
 async def setup_db(app, loop):
     """Initialize db connection before app start"""
+    app.session = aiohttp.ClientSession(loop=loop)
+
     log.info('connecting to db')
     app.db = await asyncpg.create_pool(**config.db)
     log.info('conntected to db')
 
 
 def main():
-    # map the entire frontend
-
+    # "fix" CORS.
     routelist = list(app.router.routes_all.keys())
     for uri in list(routelist):
         try:
@@ -80,9 +83,15 @@ def main():
         except:
             pass
 
+    # TODO: b2 / s3 support ????
     app.static('/i', './images')
-    app.static('/', './frontend/output')
-    app.static('/', './frontend/output/index.html')
+
+    if config.ENABLE_FRONTEND:
+        app.static('/', './frontend/output')
+        app.static('/', './frontend/output/index.html')
+    else:
+        log.info('Frontend link is disabled.')
+
     app.run(host=config.HOST, port=config.PORT)
 
 if __name__ == '__main__':
