@@ -2,6 +2,8 @@ const BUILD_DIR = __dirname + "/output/";
 const SRC_DIR = __dirname + "/src/";
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MinifyPlugin = require("babel-minify-webpack-plugin");
+const ExtractTextPlugin = require("extract-text-webpack-plugin");
+const extractCSS = new ExtractTextPlugin("assets/[chunkhash].css");
 const pageList = [
   {
     title: "Elixire",
@@ -62,6 +64,7 @@ module.exports = {
     publicPath: "/"
   },
   plugins: [
+    extractCSS,
     ...(process.env.NODE_ENV == "production"
       ? [
           new MinifyPlugin(
@@ -108,7 +111,10 @@ module.exports = {
       },
       {
         test: /\.s?css$/,
-        use: ["style-loader", "css-loader", "sass-loader"]
+        use: extractCSS.extract([
+          { loader: "css-loader", options: { minimize: true } },
+          "sass-loader"
+        ])
       },
       {
         test: /\.pug$/,
