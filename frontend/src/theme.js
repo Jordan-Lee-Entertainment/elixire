@@ -1,4 +1,3 @@
-import "bootstrap";
 import "./commonCode.js";
 
 const authenticatedPages = ["/upload.html", "/logout.html", "/account.html"];
@@ -12,7 +11,7 @@ const profilePromise = window.client
   });
 window.profilePromise = profilePromise;
 
-window.addEventListener("load", async function() {
+window.addEventListener("DOMContentLoaded", async function() {
   console.log("Dom loaded");
   const navLinks = document.getElementsByClassName("intellectual-link");
   for (const navLink of navLinks) {

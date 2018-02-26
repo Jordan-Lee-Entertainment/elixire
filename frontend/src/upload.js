@@ -67,6 +67,20 @@ window.addEventListener("load", function() {
       const newFileLabel = document.createElement("span");
       const newFileSize = document.createElement("span");
       const newFileURL = document.createElement("a");
+      const deleteFile = document.createElement("a");
+      deleteFile.href = "#";
+      deleteFile.classList = "delete-btn greyscale-icon";
+      deleteFile.addEventListener("click", async function() {
+        try {
+          await client.deleteFile(path.parse(url).name);
+        } catch (err) {
+          if (err.message == "NOT_FOUND") {
+            return newFile.remove();
+          }
+          throw err;
+        }
+      });
+
       newFileURL.href = url;
       newFileURL.addEventListener("click", function(ev) {
         ev.preventDefault();

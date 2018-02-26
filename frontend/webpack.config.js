@@ -53,6 +53,7 @@ module.exports = {
     highlight: `${SRC_DIR}/highlight.js`,
     highlightTheme: `${SRC_DIR}/highlightTheme.js`,
     theme: `${SRC_DIR}/theme.js`,
+    bootstrapJs: "bootstrap",
     themeCSS: `${SRC_DIR}/themeCSS.js`,
     about: `${SRC_DIR}/about.js`
   },
@@ -84,9 +85,13 @@ module.exports = {
           title: page.title,
           filename: `${page.chunkName}.html`,
           template: `${SRC_DIR}/${page.chunkName}.pug`,
-          chunks: ["babelPolyfill", "themeCSS", page.chunkName, "theme"].concat(
-            page.chunks || []
-          ),
+          chunks: [
+            "babelPolyfill",
+            "theme",
+            "themeCSS",
+            page.chunkName,
+            "bootstrapJs"
+          ].concat(page.chunks || []),
           mobile: true,
           inject: true,
           minify: {
