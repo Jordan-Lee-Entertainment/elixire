@@ -13,6 +13,16 @@ window.addEventListener("load", function() {
   const progressBar = document.getElementById("progress-bar");
   const savedFiles = document.getElementById("saved-files");
   const uploadText = document.getElementById("uploading-text");
+  document.addEventListener("paste", function(ev) {
+    const items = Array.from(
+      (event.clipboardData || event.originalEvent.clipboardData).items
+    );
+    const file = items.find(itm => itm.kind == "file");
+    if (!file) return;
+    ev.preventDefault();
+    dropZone.classList = "show-popover";
+    upload(file.getAsFile());
+  });
   dropZone.addEventListener("dragover", function(ev) {
     if (Array.from(ev.dataTransfer.items).find(item => item.kind == "file")) {
       ev.preventDefault();
