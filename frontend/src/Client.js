@@ -26,6 +26,21 @@ class Client {
     return [];
   }
 
+  async updateAccount(changes) {
+    if (!this.token || !changes.password) throw new Error("BAD_AUTH");
+    try {
+      const res = await this.request("patch", "/profile")
+        .send(changes)
+        .then(res => res.body);
+      if (changes.new_password) {
+        console.log(this.user, changes.new_password);
+        await this.login(this.profile.username, changes.new_password);
+      }
+    } catch (err) {
+      throw this.handleErr(err);
+    }
+  }
+
   generateToken(password) {
     if (!this.token) return Promise.reject(new Error("BAD_AUTH"));
     try {

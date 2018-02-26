@@ -1,5 +1,6 @@
 import "./account.scss";
 import "./forms.scss";
+import common from "./commonCode.js";
 
 window.addEventListener("load", async function() {
   const username = document.getElementById("profile-username");
@@ -22,14 +23,10 @@ window.addEventListener("load", async function() {
     domainElem.innerText = domains[domainId];
     domainSelector.appendChild(domainElem);
   }
-  const password = document.getElementById("password");
   const tokenPassword = document.getElementById("token-password");
   const generateTokenBtn = document.getElementById("generate-token");
-  const generateModalBtn = document.getElementById("generate-modal-btn");
   const passwordForm = document.getElementById("password-form");
-  generateModalBtn.addEventListener("click", function() {
-    tokenPassword.value = password.value || "";
-  });
+
   tokenPassword.addEventListener("keydown", function(ev) {
     if (ev.key == "Enter") {
       createToken();
@@ -74,15 +71,14 @@ window.addEventListener("load", async function() {
     try {
       await client.revokeTokens(revokePassword.value);
       if (stayLoggedIn.checked) {
-        console.log(client.profile.username);
         const token = await client.login(
           client.profile.username,
           revokePassword.value
         );
-        console.log("BITCH TOKEN!", token);
         window.localStorage.setItem("token", token);
         // Reload
         window.location.href = "";
+        return;
       }
       window.location.pathname = "/";
     } catch (err) {
@@ -93,4 +89,53 @@ window.addEventListener("load", async function() {
       return;
     }
   }
+
+  let errorBox = null;
+  const submitBtn = document.getElementById("submit-btn");
+  const newPassword = document.getElementById("new-password1");
+  const password = document.getElementById("password");
+  const newPassword2 = document.getElementById("new-password2");
+  submitBtn.addEventListener("click", async function() {
+    if (errorBox) common.removeALert(errorBox);
+    let error = false;
+    if (newPassword2.value != newPassword.value) {
+      newPassword2.setCustomValidity("Doesn't match!");
+      error = true;
+    }
+    if (!password.value) {
+      password.setCustomValidity("Invalid password!");
+      error = true;
+    }
+    updateForm.classList = "was-validated needs-validation form-wrap";
+    if (error) return;
+
+    const modifications = {};
+
+    if (newPassword.value) modifications.new_password = newPassword.value;
+    modifications.password = password.value;
+
+    try {
+      await client.updateAccount(modifications);
+    } catch (err) {
+      if (err.message == "BAD_AUTH") {
+        password.setCustomValidity("Invalid password!");
+        updateForm.classList = "was-validated needs-validation form-wrap";
+      } else {
+        errorBox = common.sendAlert("danger", "An unknown error occurred");
+        throw err;
+      }
+      return;
+    }
+    if (modifications.new_password) {
+      window.localStorage.setItem("token", client.token);
+      window.location.href = "";
+    }
+  });
+
+  const updateForm = document.getElementById("update-form");
+  updateForm.addEventListener("submit", function(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    return false;
+  });
 });
