@@ -1,7 +1,7 @@
 extends template.pug
 block content
   h1 Account info
-  div.form-wrap
+  form(novalidate="true").form-wrap.needs-verification#update-form
     div.data-group
       span.data-before Username: 
       b#profile-username Loading...
@@ -9,24 +9,28 @@ block content
       span.data-before Quota 
       b#profile-quota 100
       span.data-after  MB per week
-    div.form-group.update-account-ui-hidden
+    div.form-group
       label(for="password") Current Password
       input(type="password", required="true").form-control#password
-    div.form-group.update-account-ui-hidden
+      div.invalid-feedback Incorrect password!
+    div.form-group
       label(for="new-password1") New Password
       input(type="password", required="true").form-control#new-password1
-    div.form-group.update-account-ui-hidden
+      div.invalid-feedback Unsafe
+    div.form-group
       label(for="new-password2") New Password (Repeat)
       input(type="password", required="true").form-control#new-password2
+      div.invalid-feedback Doesn't match!
+
     hr.update-account-ui-hidden
     div.form-group.update-account-ui-hidden
       label(for="domain-selector") Domain
       select(required="true").form-control#domain-selector
-    button(type="submit").btn.btn-primary.update-account-ui-hidden#submit-btn Update Account
+    button(type="submit").btn.btn-primary#submit-btn Update Account
     hr
-    button(type="button", data-toggle="modal", data-target="#password-modal").btn.btn-primary#generate-modal-btn Generate Uploader Token
+    button(type="button", data-toggle="modal", data-target="#password-modal").btn.btn-primary Generate Uploader Token
     hr
-    button(type="button", data-toggle="modal", data-target="#revoke-modal").btn.btn-danger#generate-modal-btn Revoke All Tokens
+    button(type="button", data-toggle="modal", data-target="#revoke-modal").btn.btn-danger Revoke All Tokens
 
 
   div(tabindex="-1", role="dialog").modal.fade#password-modal

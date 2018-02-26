@@ -33,7 +33,6 @@ window.addEventListener("load", async function() {
       window.client.profile.username;
     document.body.classList += " logged-in";
   } else if (authenticatedPages.includes(window.location.pathname)) {
-    console.log("gaygyagy", window.client.profile);
     // Hash param is used to know where to redirect back to after login.
     window.location.hash = window.location.pathname;
     window.location.pathname = "/login.html";
