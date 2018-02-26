@@ -1,6 +1,8 @@
 HOST = 'localhost'
 PORT = 8080
 
+# Link / to ./frontend ?
+ENABLE_FRONTEND = True
 
 db = {
     'host': 'localhost',
@@ -10,3 +12,14 @@ db = {
 
 # 72 hours, 3 days.
 TIMED_TOKEN_AGE = 259200
+
+# run clamdscan on every upload.
+# this will use the multicore option,
+# so it is not recommended on low-end machines.
+UPLOAD_SCAN = False
+
+# When UPLOAD_SCAN is true and
+# a file is detected as being malicious,
+# we will call this discord webhook
+# with data about the upload.
+UPLOAD_SCAN_WEBHOOK = ""
