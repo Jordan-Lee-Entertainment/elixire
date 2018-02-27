@@ -13,8 +13,25 @@ log = logging.getLogger(__name__)
 
 @bp.get('/api/list')
 async def list_handler(request):
-    # TODO
-    pass
+    """Get list of files."""
+    user_id = await token_check(request)
+
+    user_files = await request.app.db.fetch("""
+    SELECT fspath
+    FROM files
+    WHERE uploader = $1
+    AND deleted = false
+    """, user_id)
+
+    if not user_files:
+        raise NotFound('You have no files.')
+
+    filenames = [os.path.basename(ufile['fspath']) for ufile in user_files]
+
+    return response.json({
+        'success': True,
+        'files': filenames
+    })
 
 
 async def purge_cf_cache(app, file_name: str):
@@ -47,7 +64,6 @@ async def purge_cf_cache(app, file_name: str):
 @bp.delete('/api/delete')
 async def delete_handler(request):
     """Invalidate a file."""
-    # NOTE: this is NOT tested
     user_id = await token_check(request)
     file_name = str(request.json['filename'])
 
