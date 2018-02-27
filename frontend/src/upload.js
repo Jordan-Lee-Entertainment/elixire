@@ -4,6 +4,7 @@ import "./upload.scss";
 import filesize from "file-size";
 import Clipboard from "clipboard";
 import volumeUpIcon from "./speaker.svg";
+import path from "path";
 
 window.addEventListener("load", function() {
   let error = null;
@@ -50,9 +51,8 @@ window.addEventListener("load", function() {
     }
     dropZone.classList = "show-popover";
     const uploadReq = window.client.upload(file);
-    console.log(uploadReq);
+    let deleteAlert = null;
     uploadReq.on("progress", function(prog) {
-      console.log(prog);
       if (prog.direction == "upload")
         progressBar.style.width = `${prog.percent || 0}%`;
     });
@@ -70,13 +70,32 @@ window.addEventListener("load", function() {
       const deleteFile = document.createElement("a");
       deleteFile.href = "#";
       deleteFile.classList = "delete-btn greyscale-icon";
+      deleteFile.innerHTML = "&times;";
       deleteFile.addEventListener("click", async function() {
+        if (deleteAlert) {
+          commonCode.removeAlert(deleteAlert);
+          deleteAlert = null;
+        }
         try {
-          await client.deleteFile(path.parse(url).name);
+          const fileName = path.basename(url);
+          await client.deleteFile(
+            fileName.substring(0, fileName.lastIndexOf("."))
+          );
+          newFile.remove();
         } catch (err) {
           if (err.message == "NOT_FOUND") {
+            deleteAlert = commonCode.sendAlert(
+              "warning",
+              "Failed to remove file because it couldn't be found. Was it deleted by someone else?"
+            );
             return newFile.remove();
           }
+          deleteAlert = commonCode.sendAlert(
+            "danger",
+            `An unknown error occurred while trying to remove that file: ${
+              err.message
+            }`
+          );
           throw err;
         }
       });
@@ -130,6 +149,7 @@ window.addEventListener("load", function() {
       newFile.appendChild(newFileLabel);
       newFile.appendChild(newFileSize);
       newFile.appendChild(newFileURL);
+      newFile.appendChild(deleteFile);
       savedFiles.appendChild(newFile);
       uploadInput.value = "";
     } catch (err) {
