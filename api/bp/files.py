@@ -69,9 +69,8 @@ async def delete_handler(request):
     WHERE filename = $2
     """, new_path, file_name)
 
+    os.rename(file_info["fspath"], new_path)
     await purge_cf_cache(request.app, full_filename)
-
-    os.rename(file_info["uploader"], new_path)
 
     return response.json({
         'success': True
