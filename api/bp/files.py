@@ -23,9 +23,6 @@ async def list_handler(request):
     AND deleted = false
     """, user_id)
 
-    if not user_files:
-        raise NotFound('You have no files.')
-
     filenames = [os.path.basename(ufile['fspath']) for ufile in user_files]
 
     return response.json({
