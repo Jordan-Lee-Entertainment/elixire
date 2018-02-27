@@ -55,6 +55,7 @@ async def delete_handler(request):
     SELECT uploader, fspath
     FROM files
     WHERE filename = $1
+    AND deleted = false
     """, file_name)
 
     if file_info["uploader"] != user_id:
@@ -63,14 +64,14 @@ async def delete_handler(request):
     full_filename = os.path.basename(file_info['fspath'])
     new_path = f"./deleted/{full_filename}"
 
+    os.rename(file_info["fspath"], new_path)
+
     await request.app.db.execute("""
     UPDATE files
     SET deleted = true, fspath = $1
     WHERE filename = $2
     """, new_path, file_name)
 
-    os.rename(os.path.realpath(file_info["fspath"]), 
-              os.path.realpath(new_path))
     await purge_cf_cache(request.app, full_filename)
 
     return response.json({
