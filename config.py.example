@@ -23,3 +23,10 @@ UPLOAD_SCAN = False
 # we will call this discord webhook
 # with data about the upload.
 UPLOAD_SCAN_WEBHOOK = ""
+
+CF_PURGE = False
+
+CF_UPLOADURLS = []
+CF_EMAIL = ""
+CF_ZONEID = ""
+CF_APIKEY = ""
