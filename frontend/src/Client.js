@@ -41,6 +41,19 @@ class Client {
     }
   }
 
+  async deleteFile(shortcode) {
+    if (!this.token) throw new Error("BAD_AUTH");
+    try {
+      const res = await this.request("delete", "/delete")
+        .send({
+          filename: shortcode
+        })
+        .then(res => res.body);
+    } catch (err) {
+      throw this.handleErr(err);
+    }
+  }
+
   generateToken(password) {
     if (!this.token) return Promise.reject(new Error("BAD_AUTH"));
     try {
@@ -133,6 +146,8 @@ class Client {
       return new Error("BAD_IMAGE");
     } else if (err.status == 429) {
       return new Error("RATELIMITED");
+    } else if (err.status == 404) {
+      return new Error("NOT_FOUND");
     }
     return err;
   }
