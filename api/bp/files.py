@@ -65,8 +65,7 @@ async def delete_handler(request):
 
     await request.app.db.execute("""
     UPDATE files
-    SET deleted = true
-    SET fspath = $1
+    SET deleted = true, fspath = $1
     WHERE filename = $2
     """, new_path, file_name)
 
