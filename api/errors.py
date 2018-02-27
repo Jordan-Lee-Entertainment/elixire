@@ -10,6 +10,10 @@ class FailedAuth(APIError):
     status_code = 403
 
 
+class NotFound(APIError):
+    status_code = 404
+
+
 # upload specific errors
 class BadImage(APIError):
     """Wrong image mimetype."""
