@@ -58,7 +58,7 @@ async def delete_handler(request):
     AND deleted = false
     """, file_name)
 
-    if file_info["uploader"] != user_id:
+    if not file_info or file_info["uploader"] != user_id:
         raise NotFound('You have no files with this name.')
 
     full_filename = os.path.basename(file_info['fspath'])
