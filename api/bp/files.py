@@ -55,7 +55,7 @@ async def delete_handler(request):
     SELECT uploader, fspath
     FROM files
     WHERE filename = $1
-    AND deleted = false
+    AND deleted != true
     """, file_name)
 
     if not file_info or file_info["uploader"] != user_id:
