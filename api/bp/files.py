@@ -69,7 +69,8 @@ async def delete_handler(request):
     WHERE filename = $2
     """, new_path, file_name)
 
-    os.rename(file_info["fspath"], new_path)
+    os.rename(os.path.realpath(file_info["fspath"]), 
+              os.path.realpath(new_path))
     await purge_cf_cache(request.app, full_filename)
 
     return response.json({
