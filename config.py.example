@@ -24,9 +24,19 @@ UPLOAD_SCAN = False
 # with data about the upload.
 UPLOAD_SCAN_WEBHOOK = ""
 
+# If set to true, we will purge 
+# image caches from cloudflare 
+# on image deletion.  
 CF_PURGE = False
 
+# UPLOADURLS indicates all url prefixes
+# a file can appear on
+# For example, on elixi.re, we use nginx 
+# rules so the file appears on both /i/ and /,
+# so we have this set to:
+# ["https://elixi.re/", "https://elixi.re/i/"]
 CF_UPLOADURLS = []
+
 CF_EMAIL = ""
 CF_ZONEID = ""
 CF_APIKEY = ""
