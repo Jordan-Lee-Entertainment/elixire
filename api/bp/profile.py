@@ -72,6 +72,14 @@ async def limits_handler(request):
     WHERE user_id = $1
     """, user_id)
 
+    used = await request.app.db.fetchval("""
+    SELECT SUM(file_size)
+    FROM files
+    WHERE uploader = $1
+    AND file_id > time_snowflake(now() - interval '7 hours')
+    """, user_id)
+
     return response.json({
         'limit': byte_limit,
+        'used': used
     })
