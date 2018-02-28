@@ -122,7 +122,10 @@ module.exports = {
       {
         test: /\.s?css$/,
         use: extractCSS.extract([
-          { loader: "css-loader", options: { minimize: true } },
+          {
+            loader: "css-loader",
+            options: { minimize: process.env.NODE_ENV == "production" }
+          },
           "sass-loader"
         ])
       },
