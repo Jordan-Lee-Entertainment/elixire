@@ -37,6 +37,10 @@ CF_PURGE = False
 # ["https://elixi.re/", "https://elixi.re/i/"]
 CF_UPLOADURLS = []
 
+# Same as CF_UPLOADURLS, except instead of /i/, /s/
+# Example: ["https://elixi.re/s/"]
+CF_SHORTENURLS = []
+
 CF_EMAIL = ""
 CF_ZONEID = ""
 CF_APIKEY = ""

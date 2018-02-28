@@ -42,7 +42,7 @@ async def list_handler(request):
     })
 
 
-async def purge_cf_cache(app, file_name: str):
+async def purge_cf_cache(app, file_name: str, shorten=False):
     """Clear the Cloudflare cache for the given URL."""
 
     if not app.econfig.CF_PURGE:
@@ -52,7 +52,9 @@ async def purge_cf_cache(app, file_name: str):
     cf_purge_url = "https://api.cloudflare.com/client/v4/zones/"\
                    f"{app.econfig.CF_ZONEID}/purge_cache"
 
-    purge_urls = [file_url+file_name for file_url in app.econfig.CF_UPLOADURLS]
+    purge_base_urls = (app.econfig.CF_SHORTENURLS if shorten
+                       else app.econfig.CF_UPLOADURLS)
+    purge_urls = [file_url+file_name for file_url in purge_base_urls]
 
     cf_auth_headers = {
         'X-Auth-Email': app.econfig.CF_EMAIL,
@@ -97,6 +99,32 @@ async def delete_handler(request):
     """, new_path, file_name)
 
     await purge_cf_cache(request.app, full_filename)
+
+    return response.json({
+        'success': True
+    })
+
+
+@bp.delete('/api/shortendelete')
+async def shortendelete_handler(request):
+    """Invalidate a shorten."""
+    user_id = await token_check(request)
+    file_name = str(request.json['filename'])
+
+    exec_out = await request.app.db.execute("""
+    UPDATE shortens
+    SET deleted = true
+    WHERE uploader = $1
+    AND filename = $2
+    AND deleted = false
+    """, user_id, file_name)
+
+    # By doing this, we're cutting down DB calls by half
+    # and it still checks for user
+    if exec_out == "UPDATE 0":
+        raise NotFound('You have no shortens with this name.')
+
+    await purge_cf_cache(request.app, f"/s/{file_name}")
 
     return response.json({
         'success': True
