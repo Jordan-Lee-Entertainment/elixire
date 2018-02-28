@@ -15,7 +15,11 @@ window.addEventListener("load", async function() {
   const domainSelector = document.getElementById("domain-selector");
   domainSelector.value = window.client.profile.domain;
   const quota = await window.client.getQuota();
-  document.getElementById("profile-quota").innerText = quota / 1024 / 1024;
+  document.getElementById("profile-quota").innerText =
+    quota.limit / 1024 / 1024;
+  document.getElementById("profile-used").innerText = Math.round(
+    quota.used / 1024 / 1024
+  );
   const domains = await window.client.getDomains();
   for (const domainId in domains) {
     const domainElem = document.createElement("option");
