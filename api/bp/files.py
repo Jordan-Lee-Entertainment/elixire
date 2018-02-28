@@ -24,7 +24,7 @@ async def list_handler(request):
     ORDER BY file_id DESC
     """, user_id)
 
-    filenames = [os.path.basename(ufile['fspath']) for ufile in user_files][::-1]
+    filenames = [os.path.basename(ufile['fspath']) for ufile in user_files]
 
     return response.json({
         'success': True,
