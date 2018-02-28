@@ -49,9 +49,8 @@ async def shorten_handler(request):
     """, user_id)
 
     if shortens_used and shortens_used > shorten_limit:
-        cnv_limit = shorten_limit / 1024 / 1024
         raise Ratelimited('You already blew your weekly'
-                          f' limit of {cnv_limit} shortens')
+                          f' limit of {shorten_limit} shortens')
 
     if shortens_used and shortens_used + 1 > shorten_limit:
         raise Ratelimited('This shorten blows the weekly limit of'
