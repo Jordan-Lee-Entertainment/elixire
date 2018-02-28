@@ -123,7 +123,7 @@ async def shortendelete_handler(request):
     if exec_out == "UPDATE 0":
         raise NotFound('You have no shortens with this name.')
 
-    await purge_cf_cache(request.app, f"/s/{file_name}",
+    await purge_cf_cache(request.app, file_name,
                          request.app.econfig.CF_SHORTENURLS)
 
     return response.json({
