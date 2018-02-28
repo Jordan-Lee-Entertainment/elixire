@@ -37,6 +37,10 @@ const pageList = [
   {
     title: "About Us | Elixire",
     chunkName: "about"
+  },
+  {
+    title: "My Files | Elixire",
+    chunkName: "list"
   }
 ];
 
@@ -55,7 +59,8 @@ module.exports = {
     theme: `${SRC_DIR}/theme.js`,
     bootstrapJs: "bootstrap",
     themeCSS: `${SRC_DIR}/themeCSS.js`,
-    about: `${SRC_DIR}/about.js`
+    about: `${SRC_DIR}/about.js`,
+    list: `${SRC_DIR}/list.js`
   },
   output: {
     filename: "assets/[chunkhash].js",
@@ -117,7 +122,10 @@ module.exports = {
       {
         test: /\.s?css$/,
         use: extractCSS.extract([
-          { loader: "css-loader", options: { minimize: true } },
+          {
+            loader: "css-loader",
+            options: { minimize: process.env.NODE_ENV == "production" }
+          },
           "sass-loader"
         ])
       },

@@ -96,9 +96,7 @@ class Client {
   async getQuota() {
     if (!this.token) throw new Error("BAD_AUTH");
     try {
-      this.quota = await this.request("get", "/limits").then(
-        res => res.body.limit
-      );
+      this.quota = await this.request("get", "/limits").then(res => res.body);
     } catch (err) {
       throw this.handleErr(err);
       // TODO: handle the error properly !
@@ -116,6 +114,19 @@ class Client {
       });
       this.token = res.body.token;
       return res.body.token;
+    } catch (err) {
+      throw this.handleErr(err);
+    }
+  }
+
+  async getFiles() {
+    if (!this.token) throw new Error("BAD_AUTH");
+
+    try {
+      this.files = await this.request("get", "/list").then(
+        res => res.body.files
+      );
+      return this.files;
     } catch (err) {
       throw this.handleErr(err);
     }
