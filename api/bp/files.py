@@ -21,10 +21,10 @@ async def list_handler(request):
     FROM files
     WHERE uploader = $1
     AND deleted = false
-    ORDER BY file_id ASC
+    ORDER BY file_id DESC
     """, user_id)
 
-    filenames = [os.path.basename(ufile['fspath']) for ufile in user_files]
+    filenames = [os.path.basename(ufile['fspath']) for ufile in user_files][::-1]
 
     return response.json({
         'success': True,
