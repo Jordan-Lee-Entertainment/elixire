@@ -17,13 +17,15 @@ html
                  a(href="#", data-target="/about.html").nav-link.intellectual-link About Us
                li.nav-item.logged-in-only
                  a(href="#", data-target="/upload.html").nav-link.intellectual-link Upload
-               //- This should be on far-right side
+             //- This should be on far-right side
+             ul.navbar-nav 
                li.nav-item.logged-out-only
                  a(href="#", data-target="/login.html").nav-link.intellectual-link Login
                li.nav-item.logged-in-only.dropdown
                  a(href="#", role="button", data-toggle="dropdown", aria-haspopup="true", aria-expanded="false").nav-link.dropdown-toggle#nav-account Account
-                 div.dropdown-menu
+                 div.dropdown-menu.dropdown-menu-right
                    a(href="#", data-target="/account.html").dropdown-item.intellectual-link My Account
+                   a(href="#", data-target="/list.html").dropdown-item.intellectual-link File List
                    a(href="#", data-target="/logout.html").dropdown-item.intellectual-link Log out
       .body
         //- Errors and stuff go in this div.
