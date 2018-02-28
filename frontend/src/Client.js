@@ -121,6 +121,19 @@ class Client {
     }
   }
 
+  async getFiles() {
+    if (!this.token) throw new Error("BAD_AUTH");
+
+    try {
+      this.files = await this.request("get", "/list").then(
+        res => res.body.files
+      );
+      return this.files;
+    } catch (err) {
+      throw this.handleErr(err);
+    }
+  }
+
   async invalidateSessions(username, password) {
     if (!username || !password) throw new Error("BAD_AUTH");
 
