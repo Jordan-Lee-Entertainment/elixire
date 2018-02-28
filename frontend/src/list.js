@@ -57,6 +57,9 @@ function renderFile(filename) {
     const alertId = commonCode.sendAlert("success", "Copied to clipboard!");
     setTimeout(() => commonCode.removeAlert(alertId), 1500);
   });
+  copyBtn.addEventListener("click", function(ev) {
+    ev.preventDefault();
+  });
 
   bottomRow.classList = "bottom-row";
   iconRow.classList = "icon-row";
@@ -64,7 +67,8 @@ function renderFile(filename) {
   deleteBtn.appendChild(deleteImg);
   deleteBtn.href = "#";
   let deleteAlert = null;
-  deleteBtn.addEventListener("click", async function() {
+  deleteBtn.addEventListener("click", async function(ev) {
+    ev.preventDefault();
     if (deleteAlert) {
       removeAlert(deleteAlert);
       deleteAlert = null;
