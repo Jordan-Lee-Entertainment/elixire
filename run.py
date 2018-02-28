@@ -12,6 +12,7 @@ import api.bp.auth
 import api.bp.profile
 import api.bp.upload
 import api.bp.files
+import api.bp.shorten
 
 from api.errors import APIError
 
@@ -20,14 +21,15 @@ import config
 app = Sanic()
 app.econfig = config
 
-# enable cors on api and images
-CORS(app, resources=[r"/api/*", r"/i/*"])
+# enable cors on api, images and shortens
+CORS(app, resources=[r"/api/*", r"/i/*", r"/s/*"])
 
 # load blueprints
 app.blueprint(api.bp.auth.bp)
 app.blueprint(api.bp.profile.bp)
 app.blueprint(api.bp.upload.bp)
 app.blueprint(api.bp.files.bp)
+app.blueprint(api.bp.shorten.bp)
 # TODO: app.blueprint(api.bp.fetch.bp)
 
 logging.basicConfig(level=logging.DEBUG)
