@@ -1,6 +1,12 @@
 import "./list.scss";
 import superagent from "superagent";
 import stubbedImage from "./loading.svg";
+import path from "path";
+import copyImage from "./copy.svg";
+import openImage from "./open.svg";
+import Clipboard from "clipboard";
+import deleteImage from "./delete.svg";
+import commonCode from "./commonCode.js";
 
 window.addEventListener("load", async function() {
   const fileGrid = document.getElementById("file-grid");
@@ -25,10 +31,37 @@ function renderFile(filename) {
   const iconRow = document.createElement("div");
   const bottomRow = document.createElement("div");
   const deleteBtn = document.createElement("a");
+  const copyBtn = document.createElement("a");
+  const openBtn = document.createElement("a");
+  const copyImg = document.createElement("img");
+  const openImg = document.createElement("img");
+  const deleteImg = document.createElement("img");
+  openImg.src = openImage;
+  copyImg.src = copyImage;
+  copyBtn.href = "#";
+  deleteImg.src = deleteImage;
+  openBtn.appendChild(openImg);
+
+  copyBtn.appendChild(copyImg);
+  openBtn.classList = "vector-btn";
+  copyBtn.classList = "vector-btn";
+  openBtn.href = `${client.endpoint}/../i/${filename}`;
+  openBtn.target = "_blank";
+
+  const clipboard = new Clipboard(copyBtn, {
+    text: function() {
+      return openBtn.href;
+    }
+  });
+  clipboard.on("success", function(ev) {
+    const alertId = commonCode.sendAlert("success", "Copied to clipboard!");
+    setTimeout(() => commonCode.removeAlert(alertId), 1500);
+  });
+
   bottomRow.classList = "bottom-row";
   iconRow.classList = "icon-row";
-  deleteBtn.classList = "delete-btn greyscale-icon";
-  deleteBtn.innerHTML = "&times;";
+  deleteBtn.classList = "vector-btn";
+  deleteBtn.appendChild(deleteImg);
   deleteBtn.href = "#";
   let deleteAlert = null;
   deleteBtn.addEventListener("click", async function() {
@@ -56,7 +89,9 @@ function renderFile(filename) {
       throw err;
     }
   });
+  iconRow.appendChild(copyBtn);
   iconRow.appendChild(deleteBtn);
+  iconRow.appendChild(openBtn);
   bottomRow.appendChild(iconRow);
 
   previewContainer.appendChild(previewTransport);
