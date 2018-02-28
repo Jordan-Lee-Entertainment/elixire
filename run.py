@@ -13,6 +13,7 @@ import api.bp.profile
 import api.bp.upload
 import api.bp.files
 import api.bp.shorten
+import api.bp.fetch
 
 from api.errors import APIError
 
@@ -30,7 +31,7 @@ app.blueprint(api.bp.profile.bp)
 app.blueprint(api.bp.upload.bp)
 app.blueprint(api.bp.files.bp)
 app.blueprint(api.bp.shorten.bp)
-# TODO: app.blueprint(api.bp.fetch.bp)
+app.blueprint(api.bp.fetch.bp)
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -86,7 +87,7 @@ def main():
             pass
 
     # TODO: b2 / s3 support ????
-    app.static('/i', './images')
+    # app.static('/i', './images')
 
     if config.ENABLE_FRONTEND:
         app.static('/', './frontend/output')
