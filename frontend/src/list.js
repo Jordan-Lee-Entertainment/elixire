@@ -125,7 +125,7 @@ const observer = new IntersectionObserver(
     }
   },
   {
-    rootMargin: "40px"
+    rootMargin: "60px"
   }
 );
 
