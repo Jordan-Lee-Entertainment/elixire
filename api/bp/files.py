@@ -21,7 +21,7 @@ async def list_handler(request):
     FROM files
     WHERE uploader = $1
     AND deleted = false
-    ORDER BY file_id DESC
+    ORDER BY file_id ASC
     """, user_id)
 
     filenames = [os.path.basename(ufile['fspath']) for ufile in user_files]
