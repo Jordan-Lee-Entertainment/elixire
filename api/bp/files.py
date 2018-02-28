@@ -42,7 +42,7 @@ async def list_handler(request):
     })
 
 
-async def purge_cf_cache(app, file_name: str, shorten=False):
+async def purge_cf_cache(app, file_name: str, base_urls):
     """Clear the Cloudflare cache for the given URL."""
 
     if not app.econfig.CF_PURGE:
@@ -52,9 +52,7 @@ async def purge_cf_cache(app, file_name: str, shorten=False):
     cf_purge_url = "https://api.cloudflare.com/client/v4/zones/"\
                    f"{app.econfig.CF_ZONEID}/purge_cache"
 
-    purge_base_urls = (app.econfig.CF_SHORTENURLS if shorten
-                       else app.econfig.CF_UPLOADURLS)
-    purge_urls = [file_url+file_name for file_url in purge_base_urls]
+    purge_urls = [file_url+file_name for file_url in base_urls]
 
     cf_auth_headers = {
         'X-Auth-Email': app.econfig.CF_EMAIL,
@@ -98,7 +96,8 @@ async def delete_handler(request):
     WHERE filename = $2
     """, new_path, file_name)
 
-    await purge_cf_cache(request.app, full_filename)
+    await purge_cf_cache(request.app, full_filename,
+                         request.app.econfig.CF_UPLOADURLS)
 
     return response.json({
         'success': True
@@ -124,7 +123,8 @@ async def shortendelete_handler(request):
     if exec_out == "UPDATE 0":
         raise NotFound('You have no shortens with this name.')
 
-    await purge_cf_cache(request.app, f"/s/{file_name}")
+    await purge_cf_cache(request.app, f"/s/{file_name}",
+                         request.app.econfig.CF_SHORTENURLS)
 
     return response.json({
         'success': True
