@@ -8,7 +8,9 @@ block content
     div.data-group
       span.data-before Quota: 
       b#profile-quota 100
-      span.data-after  MB per week
+      span.data-after  MB per week (
+        b#profile-used 00
+        |  MB used)
     div.form-group
       label(for="password") Current Password
       input(type="password", required="true").form-control#password

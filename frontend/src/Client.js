@@ -96,9 +96,7 @@ class Client {
   async getQuota() {
     if (!this.token) throw new Error("BAD_AUTH");
     try {
-      this.quota = await this.request("get", "/limits").then(
-        res => res.body.limit
-      );
+      this.quota = await this.request("get", "/limits").then(res => res.body);
     } catch (err) {
       throw this.handleErr(err);
       // TODO: handle the error properly !
