@@ -24,11 +24,21 @@ async def list_handler(request):
     ORDER BY file_id DESC
     """, user_id)
 
+    user_shortens = await request.app.db.fetch("""
+    SELECT filename
+    FROM shortens
+    WHERE uploader = $1
+    AND deleted = false
+    ORDER BY shorten_id DESC
+    """, user_id)
+
     filenames = [os.path.basename(ufile['fspath']) for ufile in user_files]
+    shortens = [slink['filename'] for slink in user_shortens]
 
     return response.json({
         'success': True,
-        'files': filenames
+        'files': filenames,
+        'shortens': shortens
     })
 
 
