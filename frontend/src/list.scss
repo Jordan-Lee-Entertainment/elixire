@@ -17,6 +17,7 @@
 
 .icon-row {
     text-align: center;
+    height: 48px;
 }
 
 .progress {
@@ -70,4 +71,13 @@
 
 .body {
     position: relative;
+}
+
+a.vector-btn:not(:last-child) {
+    margin-right: 25%;
+}
+
+.vector-btn, .vector-btn img {
+    height: 36px;
+    margin-top: 6px;
 }
