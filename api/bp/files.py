@@ -72,32 +72,35 @@ async def purge_cf_cache(app, file_name: str, base_urls):
 @bp.delete('/api/delete')
 async def delete_handler(request):
     """Invalidate a file."""
+    # TODO: Reduce code repetition between this and /api/shortendelete
     user_id = await token_check(request)
     file_name = str(request.json['filename'])
 
-    file_info = await request.app.db.fetchrow("""
-    SELECT uploader, fspath
-    FROM files
-    WHERE filename = $1
+    exec_out = await request.app.db.execute("""
+    UPDATE files
+    SET deleted = true
+    WHERE uploader = $1
+    AND filename = $2
     AND deleted = false
-    """, file_name)
+    """, user_id, file_name)
 
-    if not file_info or file_info["uploader"] != user_id:
+    if exec_out == "UPDATE 0":
         raise NotFound('You have no files with this name.')
 
-    full_filename = os.path.basename(file_info['fspath'])
-    new_path = f"./deleted/{full_filename}"
+    # Checking if purge is enabled here too
+    # So we can prevent an extra API call if it is not necessary
+    if request.app.econfig.CF_PURGE:
+        file_path = await request.app.db.fetchval("""
+        SELECT fspath
+        FROM files
+        WHERE filename = $1
+        AND deleted = true
+        """, file_name)
 
-    os.rename(file_info["fspath"], new_path)
+        full_filename = os.path.basename(file_path)
 
-    await request.app.db.execute("""
-    UPDATE files
-    SET deleted = true, fspath = $1
-    WHERE filename = $2
-    """, new_path, file_name)
-
-    await purge_cf_cache(request.app, full_filename,
-                         request.app.econfig.CF_UPLOADURLS)
+        await purge_cf_cache(request.app, full_filename,
+                             request.app.econfig.CF_UPLOADURLS)
 
     return response.json({
         'success': True
@@ -123,7 +126,7 @@ async def shortendelete_handler(request):
     if exec_out == "UPDATE 0":
         raise NotFound('You have no shortens with this name.')
 
-    await purge_cf_cache(request.app, f"/s/{file_name}",
+    await purge_cf_cache(request.app, file_name,
                          request.app.econfig.CF_SHORTENURLS)
 
     return response.json({
