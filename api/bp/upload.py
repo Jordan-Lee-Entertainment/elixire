@@ -135,7 +135,7 @@ async def upload_handler(request):
     SELECT SUM(file_size)
     FROM files
     WHERE uploader = $1
-    AND file_id > time_snowflake(now() - interval '7 hours')
+    AND file_id > time_snowflake(now() - interval '7 days')
     """, user_id)
 
     byte_limit = await request.app.db.fetchval("""

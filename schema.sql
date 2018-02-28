@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS users (
 /* weekly limits */
 CREATE TABLE IF NOT EXISTS limits (
     user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
-    blimit bigint DEFAULT 104857600, /* 100 mb by default */
+    blimit bigint DEFAULT 104857600, /* byte limit for uploads, 100 mb by default */
+    shlimit bigint DEFAULT 100, /* link shorten limit, 100 by default */
     PRIMARY KEY (user_id)
 );
 
@@ -54,5 +55,15 @@ CREATE TABLE IF NOT EXISTS files (
 
     uploader bigint REFERENCES users (user_id) ON DELETE CASCADE,
     fspath text, /* where the actual file is in fs */
+    deleted boolean DEFAULT false
+);
+
+/* all shortened links */
+CREATE TABLE IF NOT EXISTS shortens (
+    shorten_id bigint PRIMARY KEY, /* snowflake */
+    filename text, /* something like "d5Ym" */
+    redirto text, /* the link this shortened link will redirect to */
+
+    uploader bigint REFERENCES users (user_id) ON DELETE CASCADE,
     deleted boolean DEFAULT false
 );
