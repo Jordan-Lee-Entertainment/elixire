@@ -41,6 +41,19 @@ class Client {
     }
   }
 
+  async deleteLink(shortcode) {
+    if (!this.token) throw new Error("BAD_AUTH");
+    try {
+      const res = await this.request("delete", "/shortendelete")
+        .send({
+          filename: shortcode
+        })
+        .then(res => res.body);
+    } catch (err) {
+      throw this.handleErr(err);
+    }
+  }
+
   async deleteFile(shortcode) {
     if (!this.token) throw new Error("BAD_AUTH");
     try {
@@ -137,9 +150,7 @@ class Client {
     if (!this.token) throw new Error("BAD_AUTH");
 
     try {
-      this.files = await this.request("get", "/list").then(
-        res => res.body.files
-      );
+      this.files = await this.request("get", "/list").then(res => res.body);
       return this.files;
     } catch (err) {
       throw this.handleErr(err);
