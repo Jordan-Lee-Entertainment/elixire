@@ -25,7 +25,7 @@ async def list_handler(request):
     """, user_id)
 
     user_shortens = await request.app.db.fetch("""
-    SELECT filename
+    SELECT filename, redirto
     FROM shortens
     WHERE uploader = $1
     AND deleted = false
@@ -38,7 +38,7 @@ async def list_handler(request):
     return response.json({
         'success': True,
         'files': filenames,
-        'shortens': shortens
+        'shortens': user_shortens
     })
 
 
