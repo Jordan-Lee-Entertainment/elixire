@@ -4,6 +4,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MinifyPlugin = require("babel-minify-webpack-plugin");
 const ExtractTextPlugin = require("extract-text-webpack-plugin");
 const extractCSS = new ExtractTextPlugin("assets/[chunkhash].css");
+const CleanWebpackPlugin = require("clean-webpack-plugin");
 const pageList = [
   {
     title: "Elixire",
@@ -75,6 +76,9 @@ module.exports = {
     publicPath: "/"
   },
   plugins: [
+    new CleanWebpackPlugin([BUILD_DIR], {
+      beforeEmit: true
+    }),
     extractCSS,
     ...(process.env.NODE_ENV == "production"
       ? [
