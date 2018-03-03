@@ -93,6 +93,20 @@ class Client {
     }
   }
 
+  async shortenUrl(longUrl) {
+    if (!this.token) throw new Error("BAD_AUTH");
+    try {
+      return await this.request("post", "/shorten")
+        .send({
+          url: longUrl
+        })
+        .then(res => res.body.url);
+    } catch (err) {
+      throw this.handleErr(err);
+      // TODO: handle the error properly !
+    }
+  }
+
   async getQuota() {
     if (!this.token) throw new Error("BAD_AUTH");
     try {

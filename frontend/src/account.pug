@@ -6,11 +6,17 @@ block content
       span.data-before Username: 
       b#profile-username Loading...
     div.data-group
-      span.data-before Quota: 
+      span.data-before File Quota: 
       b#profile-quota 100
       span.data-after  MB per week (
         b#profile-used 00
         |  MB used)
+    div.data-group
+      span.data-before Shorten Quota: 
+      b#s-profile-quota 100
+      span.data-after  shortens per week (
+        b#s-profile-used 00
+        |  shortens used)
     div.form-group
       label(for="password") Current Password
       input(type="password", required="true").form-control#password
