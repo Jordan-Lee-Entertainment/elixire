@@ -4,7 +4,7 @@ import traceback
 import asyncpg
 import aiohttp
 
-from sanic import Sanic
+from sanic import Sanic, exceptions
 from sanic import response
 from sanic_cors import CORS
 
@@ -60,11 +60,15 @@ def handle_exception(request, exception):
     if 'self._ip' in val:
         return None
 
-    log.exception('error in request')
+    status_code = 500
+    if isinstance(exception, (exceptions.NotFound, exceptions.FileNotFound)):
+        status_code = 404
+
+    log.exception(f'error in request: {repr(exception)}')
     return response.json({
         'error': True,
         'message': repr(exception)
-    }, status=500)
+    }, status=status_code)
 
 
 @app.listener('before_server_start')
