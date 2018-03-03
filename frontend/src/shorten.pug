@@ -1,0 +1,11 @@
+extends template.pug
+block content
+  div.shortener-app
+    div.shortener-app-content
+      div.shortener-description
+        h2 Shorten URLs
+        span.blurb Type in the long link you'd like shortened and it'll be magically converted to a shiny new short link for you to use!
+      div.shortener-dynamic
+        div.form-group
+          input(placeholder="https://example.com/").form-control#long-link
+        button(type="button").btn.btn-primary#shorten-btn Shorten!
