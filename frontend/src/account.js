@@ -20,7 +20,7 @@ window.addEventListener("load", async function() {
   document.getElementById("profile-used").innerText = Math.round(
     quota.used / 1024 / 1024 || 0
   );
-  document.getElementById("s-profile-used").innerText = quota.shortenused;
+  document.getElementById("s-profile-used").innerText = quota.shortenused || 0;
   document.getElementById("s-profile-quota").innerText = quota.shortenlimit;
   const domains = await window.client.getDomains();
   for (const domainId in domains) {
