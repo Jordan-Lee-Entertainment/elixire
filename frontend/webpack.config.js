@@ -44,6 +44,10 @@ const pageList = [
     chunkName: "list"
   },
   {
+    title: "My Shortened URLs | Elixire",
+    chunkName: "shortlist"
+  },
+  {
     title: "Shorten | Elixire",
     chunkName: "shorten"
   }
@@ -66,6 +70,7 @@ module.exports = {
     themeCSS: `${SRC_DIR}/themeCSS.js`,
     about: `${SRC_DIR}/about.js`,
     list: `${SRC_DIR}/list.js`,
+    shortlist: `${SRC_DIR}/shortlist.js`,
     shorten: `${SRC_DIR}/shorten.js`
   },
   output: {

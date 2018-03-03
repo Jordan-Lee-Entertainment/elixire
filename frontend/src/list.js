@@ -10,7 +10,7 @@ import commonCode from "./commonCode.js";
 
 window.addEventListener("load", async function() {
   const fileGrid = document.getElementById("file-grid");
-  const files = await client.getFiles();
+  const { files } = await client.getFiles();
   for (const file of files) {
     fileGrid.appendChild(renderFile(file));
   }
