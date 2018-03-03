@@ -41,6 +41,10 @@ const pageList = [
   {
     title: "My Files | Elixire",
     chunkName: "list"
+  },
+  {
+    title: "Shorten | Elixire",
+    chunkName: "shorten"
   }
 ];
 
@@ -60,7 +64,8 @@ module.exports = {
     bootstrapJs: "bootstrap",
     themeCSS: `${SRC_DIR}/themeCSS.js`,
     about: `${SRC_DIR}/about.js`,
-    list: `${SRC_DIR}/list.js`
+    list: `${SRC_DIR}/list.js`,
+    shorten: `${SRC_DIR}/shorten.js`
   },
   output: {
     filename: "assets/[chunkhash].js",

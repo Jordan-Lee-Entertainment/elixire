@@ -18,8 +18,10 @@ window.addEventListener("load", async function() {
   document.getElementById("profile-quota").innerText =
     quota.limit / 1024 / 1024;
   document.getElementById("profile-used").innerText = Math.round(
-    quota.used / 1024 / 1024
+    quota.used / 1024 / 1024 || 0
   );
+  document.getElementById("s-profile-used").innerText = quota.shortenused;
+  document.getElementById("s-profile-quota").innerText = quota.shortenlimit;
   const domains = await window.client.getDomains();
   for (const domainId in domains) {
     const domainElem = document.createElement("option");
