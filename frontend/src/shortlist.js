@@ -12,7 +12,7 @@ window.addEventListener("load", async function() {
   const linkGrid = document.getElementById("link-grid");
   const { shortens } = await client.getFiles();
   for (const link of shortens) {
-    linkGrid.appendChild(renderLink([link, "https://example.com"]));
+    linkGrid.appendChild(renderLink(link));
   }
 });
 
