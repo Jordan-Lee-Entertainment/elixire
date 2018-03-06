@@ -1,19 +1,16 @@
 #!/usr/bin/env python3.6
 import sys
-import secrets
+import aiohttp
+import os
 import asyncio
 
-import bcrypt
 import asyncpg
 
 sys.path.append('..')
-import api.snowflake as snowflake
 import config
 
-import aiohttp
-import os
-
 aiosession = aiohttp.ClientSession()
+
 
 async def purge_cf_cache(econfig, file_name: str, base_urls):
     """Clear the Cloudflare cache for the given URL."""
@@ -25,7 +22,7 @@ async def purge_cf_cache(econfig, file_name: str, base_urls):
     cf_purge_url = "https://api.cloudflare.com/client/v4/zones/"\
                    f"{econfig.CF_ZONEID}/purge_cache"
 
-    purge_urls = [file_url+file_name for file_url in base_urls]
+    purge_urls = [file_url + file_name for file_url in base_urls]
 
     cf_auth_headers = {
         'X-Auth-Email': econfig.CF_EMAIL,

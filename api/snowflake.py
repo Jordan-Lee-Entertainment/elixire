@@ -59,7 +59,7 @@ def _snowflake(timestamp: int) -> Snowflake:
     epoch_b = '{0:042b}'.format(epochized)
 
     snowflake_b = f'{epoch_b}{workid_b}{procid_b}{genid_b}'
-    
+
     _generated_ids += 1
     return int(snowflake_b, 2)
 

@@ -125,4 +125,3 @@ def gen_token(user, token_type=TokenType.TIMED):
     signer = SIGNERS[token_type](user['password_hash'])
     uid = bytes(str(user['user_id']), 'utf-8')
     return signer.sign(uid)
-
