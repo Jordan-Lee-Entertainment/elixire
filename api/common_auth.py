@@ -67,8 +67,7 @@ async def login_user(request):
     if not user['active']:
         raise FailedAuth('user or password invalid')
 
-    pwd_check(request, user['password_hash'], password)
-
+    await pwd_check(request, user['password_hash'], password)
     return user
 
 
