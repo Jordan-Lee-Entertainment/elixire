@@ -53,7 +53,6 @@ async def scan_webhook(app, user_id: int, filesize: int, scan_out: str):
                     'name': 'clamdscan out',
                     'value': f'```\n{scan_out}\n```'
                 }
-                
             ]
         }],
     }
@@ -195,4 +194,3 @@ async def upload_handler(request):
     return response.json({
         'url': f'https://{str(fpath)}'
     })
-
