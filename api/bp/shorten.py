@@ -10,6 +10,7 @@ from ..snowflake import get_snowflake
 
 bp = Blueprint('shorten')
 
+
 @bp.get('/s/<filename>')
 async def shorten_serve_handler(request, filename):
     """Handles serving of shortened links."""
@@ -25,6 +26,7 @@ async def shorten_serve_handler(request, filename):
         raise NotFound('No shortened links found with this name.')
 
     return response.redirect(url_toredir)
+
 
 @bp.post('/api/shorten')
 async def shorten_handler(request):

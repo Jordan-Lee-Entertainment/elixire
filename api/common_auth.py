@@ -8,6 +8,7 @@ import itsdangerous
 from .common import SIGNERS, TokenType
 from .errors import BadInput, FailedAuth
 
+
 async def pwd_hash(request, password: str) -> str:
     """Generate a hash for any given password"""
     password_bytes = bytes(password, 'utf-8')
@@ -41,6 +42,21 @@ async def password_check(request, user_id: int, password: str):
     """, user_id)
 
     await pwd_check(request, stored, password)
+
+
+async def check_admin(request, user_id: int):
+    """Checks if the given user is an admin
+
+    Returns True if user is an admin, False if not.
+    Should return None if user is not found. I think.
+    """
+    isadmin = await request.app.db.fetchval("""
+        select admin
+        from users
+        where user_id = $1
+    """, user_id)
+
+    return isadmin
 
 
 async def login_user(request):
