@@ -6,10 +6,10 @@ import time
 from sanic import Blueprint
 from sanic import response
 
-from ..common_auth import token_check
+from ..common_auth import token_check, check_admin
 from ..common import gen_filename
 from ..snowflake import get_snowflake
-from ..errors import BadImage, Ratelimited
+from ..errors import BadImage, Ratelimited, FailedAuth
 
 bp = Blueprint('upload')
 log = logging.getLogger(__name__)
@@ -116,6 +116,18 @@ async def upload_handler(request):
     user_id = await token_check(request)
     keys = request.files.keys()
 
+    # Check if admin is set in get values, if not, do checks
+    # If it is set, and the admin value is truthy, do not do checks
+    do_checks = not ('admin' in request.args and request.args['admin'])
+
+    # Let's actually check if the user is an admin
+    # and raise an error if they're not an admin
+    if not do_checks:
+        is_admin = await check_admin(request, user_id)
+        if not is_admin:
+            raise FailedAuth("You're not an admin, "
+                             "remove the admin GET value.")
+
     # the first, and only the first.
     key = next(iter(keys))
     filedata = request.files[key]
@@ -125,38 +137,40 @@ async def upload_handler(request):
     filemime = filedata.type
     filebody = filedata.body
     extension = filemime.split('/')[-1]
-
-    # check mimetype
-    if filemime not in ACCEPTED_MIMES:
-        raise BadImage('bad image type')
-
-    used = await request.app.db.fetchval("""
-    SELECT SUM(file_size)
-    FROM files
-    WHERE uploader = $1
-    AND file_id > time_snowflake(now() - interval '7 days')
-    """, user_id)
-
-    byte_limit = await request.app.db.fetchval("""
-    SELECT blimit
-    FROM limits
-    WHERE user_id = $1
-    """, user_id)
-
-    if used and used > byte_limit:
-        cnv_limit = byte_limit / 1024 / 1024
-        raise Ratelimited('You already blew your weekly'
-                          f' limit of {cnv_limit}MB')
-
     filesize = len(filebody)
-    if used and used + filesize > byte_limit:
-        cnv_limit = byte_limit / 1024 / 1024
-        raise Ratelimited('This file blows the weekly limit of'
-                          f' {cnv_limit}MB')
 
-    # all good with limits
-    await scan_file(request,
-                    filebody=filebody, filesize=filesize, user_id=user_id)
+    # Skip checks for admins
+    if do_checks:
+        # check mimetype
+        if filemime not in ACCEPTED_MIMES:
+            raise BadImage('bad image type')
+
+        used = await request.app.db.fetchval("""
+        SELECT SUM(file_size)
+        FROM files
+        WHERE uploader = $1
+        AND file_id > time_snowflake(now() - interval '7 days')
+        """, user_id)
+
+        byte_limit = await request.app.db.fetchval("""
+        SELECT blimit
+        FROM limits
+        WHERE user_id = $1
+        """, user_id)
+
+        if used and used > byte_limit:
+            cnv_limit = byte_limit / 1024 / 1024
+            raise Ratelimited('You already blew your weekly'
+                              f' limit of {cnv_limit}MB')
+
+        if used and used + filesize > byte_limit:
+            cnv_limit = byte_limit / 1024 / 1024
+            raise Ratelimited('This file blows the weekly limit of'
+                              f' {cnv_limit}MB')
+
+        # all good with limits
+        await scan_file(request,
+                        filebody=filebody, filesize=filesize, user_id=user_id)
 
     file_rname = await gen_filename(request)
     file_id = get_snowflake()
