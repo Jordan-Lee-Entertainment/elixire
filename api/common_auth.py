@@ -50,13 +50,13 @@ async def check_admin(request, user_id: int):
     Returns True if user is an admin, False if not.
     Should return None if user is not found. I think.
     """
-    isadmin = await request.app.db.fetchval("""
+    is_admin = await request.app.db.fetchval("""
         select admin
         from users
         where user_id = $1
     """, user_id)
 
-    return isadmin
+    return is_admin
 
 
 async def login_user(request):
