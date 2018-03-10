@@ -44,17 +44,23 @@ async def password_check(request, user_id: int, password: str):
     await pwd_check(request, stored, password)
 
 
-async def check_admin(request, user_id: int):
+async def check_admin(request, user_id: int, error_on_nonadmin: bool = True):
     """Checks if the given user is an admin
 
     Returns True if user is an admin, False if not.
     Should return None if user is not found. I think.
+
+    If error_on_nonadmin is set to True, then a FailedAuth exception will be
+    raised if the user is not an admin.
     """
     is_admin = await request.app.db.fetchval("""
         select admin
         from users
         where user_id = $1
     """, user_id)
+
+    if error_on_nonadmin and not is_admin:
+        raise FailedAuth('User is not an admin.')
 
     return is_admin
 

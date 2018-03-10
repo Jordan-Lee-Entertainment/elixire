@@ -42,10 +42,7 @@ async def shorten_handler(request):
     # Let's actually check if the user is an admin
     # and raise an error if they're not an admin
     if not do_checks:
-        is_admin = await check_admin(request, user_id)
-        if not is_admin:
-            raise FailedAuth("You're not an admin, "
-                             "remove the admin GET value.")
+        await check_admin(request, user_id, True)
 
     # Skip checks for admins
     if do_checks:
