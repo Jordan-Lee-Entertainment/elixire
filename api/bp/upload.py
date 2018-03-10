@@ -4,6 +4,7 @@ import logging
 import time
 import mimetypes
 import os
+import io
 
 from sanic import Blueprint
 from sanic import response
@@ -12,6 +13,9 @@ from ..common_auth import token_check, check_admin
 from ..common import gen_filename
 from ..snowflake import get_snowflake
 from ..errors import BadImage, Ratelimited
+
+import PIL.Image
+import PIL.ExifTags
 
 bp = Blueprint('upload')
 log = logging.getLogger(__name__)
@@ -106,6 +110,36 @@ async def scan_file(request, **kwargs):
         raise BadImage('Image contains a virus.')
 
 
+async def clear_exif(image_bytes):
+    """Clears exif data of given image.
+
+    Doesn't check if the image is a JPEG, assumes that it is.
+    """
+    image = PIL.Image.open(io.BytesIO(image_bytes))
+    # Check if image has exif at all, return if not
+    if not image._getexif():
+        return image_bytes
+
+    orientation_exif = PIL.ExifTags.TAGS[274]
+    exif = dict(image._getexif().items())
+
+    # Only clear exif if orientation exif is present
+    # We're not just returning as re-saving image removes the
+    # remaining exif tags (like location or device info)
+    if orientation_exif in exif:
+        if exif[orientation_exif] == 3:
+            image = image.rotate(180, expand=True)
+        elif exif[orientation_exif] == 6:
+            image = image.rotate(270, expand=True)
+        elif exif[orientation_exif] == 8:
+            image = image.rotate(90, expand=True)
+
+    result_bytes = io.BytesIO()
+    image.save(result_bytes, format='JPEG')
+    image.close()
+    return result_bytes.getvalue()
+
+
 @bp.post('/api/upload')
 async def upload_handler(request):
     """
@@ -194,6 +228,9 @@ async def upload_handler(request):
     VALUES ($1, $2, $3, $4, $5, $6)
     """, file_id, filemime, file_rname,
                                  filesize, user_id, fspath)
+
+    if filemime == "image/jpeg" and request.app.econfig.CLEAR_EXIF:
+        filebody = await clear_exif(filebody)
 
     # write to fs
     with open(fspath, 'wb') as fd:
