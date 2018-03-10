@@ -4,7 +4,7 @@ from sanic import Blueprint
 from sanic import response
 
 from ..common_auth import token_check, check_admin
-from ..errors import NotFound, Ratelimited, FailedAuth
+from ..errors import NotFound, Ratelimited
 from ..common import gen_filename
 from ..snowflake import get_snowflake
 

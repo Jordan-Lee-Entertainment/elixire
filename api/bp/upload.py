@@ -2,6 +2,8 @@ import pathlib
 import asyncio
 import logging
 import time
+import mimetypes
+import os
 
 from sanic import Blueprint
 from sanic import response
@@ -9,7 +11,7 @@ from sanic import response
 from ..common_auth import token_check, check_admin
 from ..common import gen_filename
 from ..snowflake import get_snowflake
-from ..errors import BadImage, Ratelimited, FailedAuth
+from ..errors import BadImage, Ratelimited
 
 bp = Blueprint('upload')
 log = logging.getLogger(__name__)
@@ -17,10 +19,10 @@ log = logging.getLogger(__name__)
 
 ACCEPTED_MIMES = [
     'image/png',
-    'image/jpg',
     'image/jpeg',
     'image/gif',
     'image/webp',
+    'image/svg+xml',
     'audio/webm',
     'video/webm'
 ]
@@ -133,7 +135,19 @@ async def upload_handler(request):
     # filedata contains type, body and name
     filemime = filedata.type
     filebody = filedata.body
-    extension = filemime.split('/')[-1]
+    extension = f".{filemime.split('/')[-1]}"
+
+    # Get all possible extensions
+    pot_extensions = mimetypes.guess_all_extensions(filemime)
+    # if there's any potentials, check if the extension supplied by user
+    # is in potentials, and if it is, use the extension by user
+    # if it is not, use the first potential extension
+    # and if there's no potentials, just use the last part of mimetype
+    if pot_extensions:
+        given_extension = os.path.splitext(filedata.name)[-1].lower()
+        extension = (given_extension if given_extension in pot_extensions
+                     else pot_extensions[0])
+
     filesize = len(filebody)
 
     # Skip checks for admins
@@ -172,7 +186,7 @@ async def upload_handler(request):
     file_rname = await gen_filename(request)
     file_id = get_snowflake()
 
-    fspath = f'./images/{file_rname}.{extension}'
+    fspath = f'./images/{file_rname}{extension}'
 
     await request.app.db.execute("""
     INSERT INTO files (file_id, mimetype, filename,
@@ -200,7 +214,7 @@ async def upload_handler(request):
 
     # appended to generated filename
     dpath = pathlib.Path(domain)
-    fpath = dpath / 'i' / f'{file_rname}.{extension}'
+    fpath = dpath / 'i' / f'{file_rname}{extension}'
 
     return response.json({
         'url': f'https://{str(fpath)}'
