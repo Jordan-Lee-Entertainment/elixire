@@ -3,8 +3,8 @@ import pathlib
 from sanic import Blueprint
 from sanic import response
 
-from ..common_auth import token_check
-from ..errors import NotFound, Ratelimited
+from ..common_auth import token_check, check_admin
+from ..errors import NotFound, Ratelimited, FailedAuth
 from ..common import gen_filename
 from ..snowflake import get_snowflake
 
@@ -35,28 +35,42 @@ async def shorten_handler(request):
     user_id = await token_check(request)
     url_toredir = str(request.json['url'])
 
-    shortens_used = await request.app.db.fetch("""
-    SELECT shorten_id
-    FROM shortens
-    WHERE uploader = $1
-    AND shorten_id > time_snowflake(now() - interval '7 days')
-    """, user_id)
+    # Check if admin is set in get values, if not, do checks
+    # If it is set, and the admin value is truthy, do not do checks
+    do_checks = not ('admin' in request.args and request.args['admin'])
 
-    shortens_used = len(shortens_used)
+    # Let's actually check if the user is an admin
+    # and raise an error if they're not an admin
+    if not do_checks:
+        is_admin = await check_admin(request, user_id)
+        if not is_admin:
+            raise FailedAuth("You're not an admin, "
+                             "remove the admin GET value.")
 
-    shorten_limit = await request.app.db.fetchval("""
-    SELECT shlimit
-    FROM limits
-    WHERE user_id = $1
-    """, user_id)
+    # Skip checks for admins
+    if do_checks:
+        shortens_used = await request.app.db.fetch("""
+        SELECT shorten_id
+        FROM shortens
+        WHERE uploader = $1
+        AND shorten_id > time_snowflake(now() - interval '7 days')
+        """, user_id)
 
-    if shortens_used and shortens_used > shorten_limit:
-        raise Ratelimited('You already blew your weekly'
-                          f' limit of {shorten_limit} shortens')
+        shortens_used = len(shortens_used)
 
-    if shortens_used and shortens_used + 1 > shorten_limit:
-        raise Ratelimited('This shorten blows the weekly limit of'
-                          f' {shorten_limit} shortens')
+        shorten_limit = await request.app.db.fetchval("""
+        SELECT shlimit
+        FROM limits
+        WHERE user_id = $1
+        """, user_id)
+
+        if shortens_used and shortens_used > shorten_limit:
+            raise Ratelimited('You already blew your weekly'
+                              f' limit of {shorten_limit} shortens')
+
+        if shortens_used and shortens_used + 1 > shorten_limit:
+            raise Ratelimited('This shorten blows the weekly limit of'
+                              f' {shorten_limit} shortens')
 
     redir_rname = await gen_filename(request)
     redir_id = get_snowflake()
