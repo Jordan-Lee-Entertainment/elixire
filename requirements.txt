@@ -11,3 +11,6 @@ cerberus==1.1
 # and I did it.
 # fuck aiohttp.
 aiohttp==3.0.3
+
+# May god have mercy on my soul
+Pillow==5.0.0
