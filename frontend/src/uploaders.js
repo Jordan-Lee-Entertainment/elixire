@@ -24,7 +24,9 @@ file_dir="\${HOME}/Pictures" # Location for images to be saved.
 
 ########### ADVANCED CONFIG ############
 
-is_admin="" # This is sort of lazy. If you're an admin, put ?admin=1, if you're not, keep it empty
+is_admin="${
+  window.client.profile.admin ? "?admin=1" : ""
+}" # This is sort of lazy. If you're an admin, put ?admin=1, if you're not, keep it empty
 
 file_name_format="elixire-%Y_%m_%d-%H:%M:%S.png"
 
