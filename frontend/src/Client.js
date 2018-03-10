@@ -100,7 +100,9 @@ class Client {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      return this.request("post", "/upload").send(formData);
+      const request = this.request("post", "/upload").send(formData);
+      if (this.profile.admin) request.query({ admin: 1 });
+      return request;
     } catch (err) {
       return Promise.reject(this.handleErr(err));
     }
