@@ -78,7 +78,7 @@ async def setup_db(app, loop):
 
     log.info('connecting to db')
     app.db = await asyncpg.create_pool(**config.db)
-    log.info('conntected to db')
+    log.info('connected to db')
 
 
 def main():
