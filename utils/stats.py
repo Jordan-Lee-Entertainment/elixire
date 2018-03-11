@@ -128,6 +128,13 @@ async def main():
     biggest_file = await db.fetchrow("""
     SELECT filename, file_size
     FROM files
+    ORDER BY file_size DESC
+    """)
+
+    # Smallest file
+    smallest_file = await db.fetchrow("""
+    SELECT filename, file_size
+    FROM files
     ORDER BY file_size ASC
     """)
 
@@ -144,6 +151,8 @@ async def main():
           f"D: {total_d_file_size_week}b\n"
           f"Biggest file: {biggest_file['filename']} at "
           f"{biggest_file['file_size']}b\n\n"
+          f"Smallest file: {smallest_file['filename']} at "
+          f"{smallest_file['file_size']}b\n\n"
           "Shortens\n"
           "========\n"
           f"Global Counts, ND: {nd_shorten_count}, D: {d_shorten_count}\n"
