@@ -20,6 +20,11 @@ LANGUAGE PLPGSQL;
 CREATE TABLE IF NOT EXISTS domains (
     domain_id serial PRIMARY KEY,
     wildcard boolean DEFAULT true,
+    admin_only boolean DEFAULT false,
+    cf_enabled boolean DEFAULT false,
+    cf_email text,
+    cf_zoneid text,
+    cf_apikey text,
     domain text
 );
 
@@ -56,6 +61,7 @@ CREATE TABLE IF NOT EXISTS files (
     uploader bigint REFERENCES users (user_id) ON DELETE CASCADE,
     fspath text, /* where the actual file is in fs */
     deleted boolean DEFAULT false
+    domain bigint REFERENCES domains (domain_id) DEFAULT 0
 );
 
 /* all shortened links */
@@ -66,4 +72,5 @@ CREATE TABLE IF NOT EXISTS shortens (
 
     uploader bigint REFERENCES users (user_id) ON DELETE CASCADE,
     deleted boolean DEFAULT false
+    domain bigint REFERENCES domains (domain_id) DEFAULT 0
 );
