@@ -16,11 +16,12 @@ async def domainlist_handler(request):
     is_admin = await check_admin(request, user_id, False)
     adm_string = "" if is_admin else "WHERE admin_only = False"
     domain_records = await request.app.db.fetch("""
-    SELECT domain
+    SELECT domain_id, domain
     FROM domains
     """ + adm_string)
 
-    domains = [record["domain"] for record in domain_records]
+    domains = [{record["domain_id"]: record["domain"]} for
+               record in domain_records]
     return response.json({"domains": domains})
 
 
