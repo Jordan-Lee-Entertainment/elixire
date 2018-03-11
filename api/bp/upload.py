@@ -32,7 +32,7 @@ ACCEPTED_MIMES = [
 ]
 
 
-async def scan_webhook(app, user_id: int, filesize: int, scan_out: str):
+async def scan_webhook(app, user_id: int, filename: str, filesize: int, scan_out: str):
     """Execute a discord webhook with information about the virus scan."""
     uname = await app.db.fetchval("""
         select username
@@ -51,8 +51,8 @@ async def scan_webhook(app, user_id: int, filesize: int, scan_out: str):
                 },
 
                 {
-                    'name': 'file size',
-                    'value': f'{filesize} bytes'
+                    'name': 'file info',
+                    'value': f'filename: `{filename}`, {filesize} bytes'
                 },
 
                 {
@@ -75,6 +75,7 @@ async def scan_file(request, **kwargs):
     """
     filebody = kwargs.get('filebody')
     filesize = kwargs.get('filesize')
+    filename = kwargs.get('filename')
     user_id = kwargs.get('user_id')
 
     app = request.app
@@ -106,7 +107,7 @@ async def scan_file(request, **kwargs):
     if 'OK' not in complete:
         # Oops.
         log.warning(f'user id {user_id} did a dumb')
-        await scan_webhook(app, user_id, filesize, complete)
+        await scan_webhook(app, user_id, filename, filesize, complete)
         raise BadImage('Image contains a virus.')
 
 
@@ -167,6 +168,7 @@ async def upload_handler(request):
     filedata = next(iter(filedata))
 
     # filedata contains type, body and name
+    in_filename = filedata.name
     filemime = filedata.type
     filebody = filedata.body
     extension = f".{filemime.split('/')[-1]}"
@@ -178,7 +180,7 @@ async def upload_handler(request):
     # if it is not, use the first potential extension
     # and if there's no potentials, just use the last part of mimetype
     if pot_extensions:
-        given_extension = os.path.splitext(filedata.name)[-1].lower()
+        given_extension = os.path.splitext(in_filename)[-1].lower()
         extension = (given_extension if given_extension in pot_extensions
                      else pot_extensions[0])
 
@@ -215,7 +217,8 @@ async def upload_handler(request):
 
         # all good with limits
         await scan_file(request,
-                        filebody=filebody, filesize=filesize, user_id=user_id)
+                        filebody=filebody, filename=in_filename,
+                        filesize=filesize, user_id=user_id)
 
     file_rname = await gen_filename(request)
     file_id = get_snowflake()
