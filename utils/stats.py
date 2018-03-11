@@ -150,27 +150,29 @@ async def main():
     """)
     smallest_ext = os.path.splitext(smallest_file["fspath"])[-1]
 
-    print("Users\n"
-          "=====\n"
-          f"Total active user count: {total_active_user_count}\n"
-          f"Total inactive user count: {total_inactive_user_count}\n\n")
-    print("Files\n"
-          "=====\n"
-          f"Global Counts, ND: {nd_file_count}, D: {d_file_count}\n"
-          f"Weekly Counts, ND: {nd_file_count_week}, D: {d_file_count_week}\n"
-          f"Global sizes, ND: {byte_to_mibstring(total_nd_file_size)}, "
-          f"D: {byte_to_mibstring(total_d_file_size)}\n"
-          f"Weekly sizes, ND: {byte_to_mibstring(total_nd_file_size_week)}, "
-          f"D: {byte_to_mibstring(total_d_file_size_week)}\n"
-          f"Biggest file: '{biggest_file['filename']}{biggest_ext}' at "
-          f"{byte_to_mibstring(biggest_file['file_size'])}\n"
-          f"Smallest file: '{smallest_file['filename']}{smallest_ext}' at "
-          f"{byte_to_mibstring(smallest_file['file_size'])}\n\n")
-    print("Shortens\n"
-          "========\n"
-          f"Global Counts, ND: {nd_shorten_count}, D: {d_shorten_count}\n"
-          f"Weekly Counts, ND: {nd_shorten_count_week}, "
-          f"D: {d_shorten_count_week}\n")
+    print(f"""Users
+=====
+Total active user count: {total_active_user_count}
+Total inactive user count: {total_inactive_user_count}
+
+Files
+=====
+Global Counts, ND: {nd_file_count}, D: {d_file_count}
+Weekly Counts, ND: {nd_file_count_week}, D: {d_file_count_week}
+Global sizes, ND: {byte_to_mibstring(total_nd_file_size)}, \
+D: {byte_to_mibstring(total_d_file_size)}
+Weekly sizes, ND: {byte_to_mibstring(total_nd_file_size_week)}, \
+D: {byte_to_mibstring(total_d_file_size_week)}
+Biggest file: '{biggest_file['filename']}{biggest_ext}' \
+at {byte_to_mibstring(biggest_file['file_size'])}
+Smallest file: '{smallest_file['filename']}{smallest_ext}' \
+at {byte_to_mibstring(smallest_file['file_size'])}
+
+Shortens
+========
+Global Counts, ND: {nd_shorten_count}, D: {d_shorten_count}
+Weekly Counts, ND: {nd_shorten_count_week}, D: {d_shorten_count_week}
+    """)
 
 
 if __name__ == '__main__':
