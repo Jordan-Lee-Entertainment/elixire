@@ -21,17 +21,6 @@ bp = Blueprint('upload')
 log = logging.getLogger(__name__)
 
 
-ACCEPTED_MIMES = [
-    'image/png',
-    'image/jpeg',
-    'image/gif',
-    'image/webp',
-    'image/svg+xml',
-    'audio/webm',
-    'video/webm'
-]
-
-
 async def scan_webhook(app, user_id: int, filename: str,
                        filesize: int, scan_out: str):
     """Execute a discord webhook with information about the virus scan."""
@@ -181,7 +170,7 @@ async def upload_handler(request):
     # Skip checks for admins
     if do_checks:
         # check mimetype
-        if filemime not in ACCEPTED_MIMES:
+        if filemime not in request.app.econfig.ACCEPTED_MIMES:
             raise BadImage('bad image type')
 
         used = await request.app.db.fetchval("""
