@@ -2,10 +2,26 @@ from sanic import Blueprint
 from sanic import response
 
 from ..errors import FailedAuth
-from ..common_auth import token_check, password_check, pwd_hash
+from ..common_auth import token_check, password_check, pwd_hash, check_admin
 from ..schema import validate, PROFILE_SCHEMA
 
 bp = Blueprint('profile')
+
+
+@bp.get('/api/domains')
+async def domainlist_handler(request):
+    """Gets the domain list."""
+    user_id = await token_check(request)
+
+    is_admin = await check_admin(request, user_id, False)
+    adm_string = "" if is_admin else "WHERE admin_only = False"
+    domain_records = await request.app.db.fetch("""
+    SELECT domain
+    FROM domains
+    """ + adm_string)
+
+    domains = [record["domain"] for record in domain_records]
+    return response.json({"domains": domains})
 
 
 @bp.get('/api/profile')
