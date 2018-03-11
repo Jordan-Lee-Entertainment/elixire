@@ -1,5 +1,5 @@
 elixi.re v2
-===============
+===========
 
 ```
 "elixirae is the futureae"
@@ -24,7 +24,17 @@ python3.6 run.py
 
 **TODO**
 
- - `scripts/adduser.py` adds a new user.
+Here's some important notes while this is still a todo:
+
+- If you're proxying the instance (you should), enable host forwarding [like this](https://s.ave.zone/fjt.png).
+- If you get an error saying something like "route already registered", then you forgot to build the frontend, either disable it or cd to `frontend`, run `npm install` and then `npm run build:production`. You need a reasonably decent node version.
+- Ensure that you redirect www to non-www or non-www to www or else the domain checking stuff won't be super happy (you'll not be able to fetch stuff properly).
+
+## Tools
+
+ - `utils/adduser.py` adds a new user.
+ - `utils/deletefile.py` deletes a file.
+ - `utils/stats.py` displays neat facts about your instance.
 
 # API Documentation
 

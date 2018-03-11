@@ -3,7 +3,7 @@ import pathlib
 from sanic import Blueprint
 from sanic import response
 
-from ..common_auth import token_check, check_admin
+from ..common_auth import token_check, check_admin, check_domain
 from ..errors import NotFound, Ratelimited
 from ..common import gen_filename
 from ..snowflake import get_snowflake
@@ -14,16 +14,19 @@ bp = Blueprint('shorten')
 @bp.get('/s/<filename>')
 async def shorten_serve_handler(request, filename):
     """Handles serving of shortened links."""
+    domain = await check_domain(request, request.host)
 
     url_toredir = await request.app.db.fetchval("""
     SELECT redirto
     FROM shortens
     WHERE filename = $1
     AND deleted = false
-    """, filename)
+    AND domain = $2
+    """, filename, domain["domain_id"])
 
     if not url_toredir:
-        raise NotFound('No shortened links found with this name.')
+        raise NotFound('No shortened links found with this name '
+                       'on this domain.')
 
     return response.redirect(url_toredir)
 
