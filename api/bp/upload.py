@@ -32,7 +32,8 @@ ACCEPTED_MIMES = [
 ]
 
 
-async def scan_webhook(app, user_id: int, filename: str, filesize: int, scan_out: str):
+async def scan_webhook(app, user_id: int, filename: str,
+                       filesize: int, scan_out: str):
     """Execute a discord webhook with information about the virus scan."""
     uname = await app.db.fetchval("""
         select username
@@ -171,18 +172,9 @@ async def upload_handler(request):
     in_filename = filedata.name
     filemime = filedata.type
     filebody = filedata.body
-    extension = f".{filemime.split('/')[-1]}"
-
-    # Get all possible extensions
-    pot_extensions = mimetypes.guess_all_extensions(filemime)
-    # if there's any potentials, check if the extension supplied by user
-    # is in potentials, and if it is, use the extension by user
-    # if it is not, use the first potential extension
-    # and if there's no potentials, just use the last part of mimetype
-    if pot_extensions:
-        given_extension = os.path.splitext(in_filename)[-1].lower()
-        extension = (given_extension if given_extension in pot_extensions
-                     else pot_extensions[0])
+    given_extension = os.path.splitext(in_filename)[-1].lower()
+    # For admins, use the extension
+    extension = given_extension
 
     filesize = len(filebody)
 
@@ -219,6 +211,18 @@ async def upload_handler(request):
         await scan_file(request,
                         filebody=filebody, filename=in_filename,
                         filesize=filesize, user_id=user_id)
+
+        extension = f".{filemime.split('/')[-1]}"
+
+        # Get all possible extensions
+        pot_extensions = mimetypes.guess_all_extensions(filemime)
+        # if there's any potentials, check if the extension supplied by user
+        # is in potentials, and if it is, use the extension by user
+        # if it is not, use the first potential extension
+        # and if there's no potentials, just use the last part of mimetype
+        if pot_extensions:
+            extension = (given_extension if given_extension in pot_extensions
+                         else pot_extensions[0])
 
     file_rname = await gen_filename(request)
     file_id = get_snowflake()
