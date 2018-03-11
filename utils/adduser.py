@@ -5,10 +5,10 @@ import asyncio
 
 import bcrypt
 import asyncpg
-import api.snowflake as snowflake
 
 sys.path.append('..')
 import config
+import api.snowflake as snowflake
 
 
 async def main():
