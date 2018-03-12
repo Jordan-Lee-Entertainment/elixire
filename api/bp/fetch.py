@@ -1,10 +1,11 @@
-import logging 
+import logging
 import os
 
 from sanic import Blueprint
 from sanic import response
 
 from ..errors import NotFound
+from ..common_auth import check_domain
 
 bp = Blueprint('fetch')
 log = logging.getLogger(__name__)
@@ -13,6 +14,8 @@ log = logging.getLogger(__name__)
 @bp.get('/i/<filename>')
 async def file_handler(request, filename):
     """Handles file serves."""
+    domain = await check_domain(request, request.host)
+
     shortname, ext = os.path.splitext(filename)
 
     filepath = await request.app.db.fetchval("""
@@ -20,10 +23,11 @@ async def file_handler(request, filename):
     FROM files
     WHERE filename = $1
     AND deleted = false
-    """, shortname)
+    AND domain = $2
+    """, shortname, domain["domain_id"])
 
     if not filepath:
-        raise NotFound('No files with this name.')
+        raise NotFound('No files with this name on this domain.')
 
     # If we don't do this, there's a tiny chance of someone uploading an .exe
     # with extension of .png or whatever and slipping through ClamAV
@@ -33,6 +37,6 @@ async def file_handler(request, filename):
     # and due to that, it makes cf cache revokes MUCH less painful
     db_ext = os.path.splitext(filepath)[-1]
     if db_ext != ext:
-        raise NotFound('No files with this name.')
+        raise NotFound('No files with this name on this domain.')
 
     return await response.file(filepath)

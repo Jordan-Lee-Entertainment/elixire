@@ -3,7 +3,7 @@ import pathlib
 from sanic import Blueprint
 from sanic import response
 
-from ..common_auth import token_check, check_admin
+from ..common_auth import token_check, check_admin, check_domain
 from ..errors import NotFound, Ratelimited
 from ..common import gen_filename
 from ..snowflake import get_snowflake
@@ -14,16 +14,19 @@ bp = Blueprint('shorten')
 @bp.get('/s/<filename>')
 async def shorten_serve_handler(request, filename):
     """Handles serving of shortened links."""
+    domain = await check_domain(request, request.host)
 
     url_toredir = await request.app.db.fetchval("""
     SELECT redirto
     FROM shortens
     WHERE filename = $1
     AND deleted = false
-    """, filename)
+    AND domain = $2
+    """, filename, domain["domain_id"])
 
     if not url_toredir:
-        raise NotFound('No shortened links found with this name.')
+        raise NotFound('No shortened links found with this name '
+                       'on this domain.')
 
     return response.redirect(url_toredir)
 
@@ -72,18 +75,18 @@ async def shorten_handler(request):
     redir_rname = await gen_filename(request)
     redir_id = get_snowflake()
 
-    await request.app.db.execute("""
-    INSERT INTO shortens (shorten_id, filename,
-        uploader, redirto)
-    VALUES ($1, $2, $3, $4)
-    """, redir_id, redir_rname, user_id, url_toredir)
-
     # get domain ID from user and return it
     domain_id = await request.app.db.fetchval("""
     SELECT domain
     FROM users
     WHERE user_id = $1
     """, user_id)
+
+    await request.app.db.execute("""
+    INSERT INTO shortens (shorten_id, filename,
+        uploader, redirto, domain)
+    VALUES ($1, $2, $3, $4, $5)
+    """, redir_id, redir_rname, user_id, url_toredir, domain_id)
 
     domain = await request.app.db.fetchval("""
     SELECT domain

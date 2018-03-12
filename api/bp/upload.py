@@ -21,17 +21,6 @@ bp = Blueprint('upload')
 log = logging.getLogger(__name__)
 
 
-ACCEPTED_MIMES = [
-    'image/png',
-    'image/jpeg',
-    'image/gif',
-    'image/webp',
-    'image/svg+xml',
-    'audio/webm',
-    'video/webm'
-]
-
-
 async def scan_webhook(app, user_id: int, filename: str,
                        filesize: int, scan_out: str):
     """Execute a discord webhook with information about the virus scan."""
@@ -181,7 +170,7 @@ async def upload_handler(request):
     # Skip checks for admins
     if do_checks:
         # check mimetype
-        if filemime not in ACCEPTED_MIMES:
+        if filemime not in request.app.econfig.ACCEPTED_MIMES:
             raise BadImage('bad image type')
 
         used = await request.app.db.fetchval("""
@@ -229,12 +218,19 @@ async def upload_handler(request):
 
     fspath = f'./images/{file_rname}{extension}'
 
+    # get domain ID from user and return it
+    domain_id = await request.app.db.fetchval("""
+    SELECT domain
+    FROM users
+    WHERE user_id = $1
+    """, user_id)
+
     await request.app.db.execute("""
     INSERT INTO files (file_id, mimetype, filename,
-        file_size, uploader, fspath)
-    VALUES ($1, $2, $3, $4, $5, $6)
+        file_size, uploader, fspath, domain)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     """, file_id, filemime, file_rname,
-                                 filesize, user_id, fspath)
+                                 filesize, user_id, fspath, domain_id)
 
     if filemime == "image/jpeg" and request.app.econfig.CLEAR_EXIF:
         filebody = await clear_exif(filebody)
@@ -242,13 +238,6 @@ async def upload_handler(request):
     # write to fs
     with open(fspath, 'wb') as fd:
         fd.write(filebody)
-
-    # get domain ID from user and return it
-    domain_id = await request.app.db.fetchval("""
-    SELECT domain
-    FROM users
-    WHERE user_id = $1
-    """, user_id)
 
     domain = await request.app.db.fetchval("""
     SELECT domain
