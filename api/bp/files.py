@@ -27,7 +27,7 @@ async def list_handler(request):
     domains = await domain_list(request)
 
     user_files = await request.app.db.fetch("""
-    SELECT fspath, domain
+    SELECT file_id, filename, file_size, fspath, domain
     FROM files
     WHERE uploader = $1
     AND deleted = false
@@ -35,20 +35,27 @@ async def list_handler(request):
     """, user_id)
 
     user_shortens = await request.app.db.fetch("""
-    SELECT filename, redirto, domain
+    SELECT shorten_id, filename, redirto, domain
     FROM shortens
     WHERE uploader = $1
     AND deleted = false
     ORDER BY shorten_id DESC
     """, user_id)
 
-    filenames = [f"https://{domains[ufile['domain']]}/i/"
-                 f"{os.path.basename(ufile['fspath'])}" for ufile in user_files]
+    filenames = dict([(ufile["filename"],
+                       {"snowflake": ufile["file_id"],
+                        "shortid": ufile["filename"],
+                        "size": ufile["file_size"],
+                        "url": f"https://{domains[ufile['domain']]}/i/"
+                        f"{os.path.basename(ufile['fspath'])}"}
+                       ) for ufile in user_files])
 
-    # oh god this mess
-    shortens = dict([(f"https://{domains[ushorten['domain']]}/s/"
-                      f"{ushorten['filename']}", ushorten["redirto"])
-                     for ushorten in user_shortens])
+    shortens = dict([(ushorten["filename"],
+                      {"snowflake": ushorten["shorten_id"],
+                       "shortid": ushorten["filename"],
+                       "url": f"https://{domains[ushorten['domain']]}/s/"
+                       f"{ushorten['filename']}"}
+                      ) for ushorten in user_shortens])
 
     return response.json({
         'success': True,
