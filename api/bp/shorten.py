@@ -75,18 +75,18 @@ async def shorten_handler(request):
     redir_rname = await gen_filename(request)
     redir_id = get_snowflake()
 
-    await request.app.db.execute("""
-    INSERT INTO shortens (shorten_id, filename,
-        uploader, redirto)
-    VALUES ($1, $2, $3, $4)
-    """, redir_id, redir_rname, user_id, url_toredir)
-
     # get domain ID from user and return it
     domain_id = await request.app.db.fetchval("""
     SELECT domain
     FROM users
     WHERE user_id = $1
     """, user_id)
+
+    await request.app.db.execute("""
+    INSERT INTO shortens (shorten_id, filename,
+        uploader, redirto, domain)
+    VALUES ($1, $2, $3, $4, $5)
+    """, redir_id, redir_rname, user_id, url_toredir, domain_id)
 
     domain = await request.app.db.fetchval("""
     SELECT domain

@@ -21,9 +21,7 @@ async def domainlist_handler(request):
     FROM domains
     """ + adm_string)
 
-    domains = [{record["domain_id"]: record["domain"]} for
-               record in domain_records]
-    return response.json({"domains": domains})
+    return response.json({"domains": dict(domain_records)})
 
 
 @bp.get('/api/profile')
