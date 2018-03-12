@@ -11,13 +11,23 @@ bp = Blueprint('files')
 log = logging.getLogger(__name__)
 
 
+async def domain_list(request):
+    """Returns a dictionary with domain IDs mapped to domain names"""
+    domain_info = await request.app.db.fetch("""
+        SELECT domain_id, domain
+        FROM domains
+    """)
+    return dict(domain_info)
+
+
 @bp.get('/api/list')
 async def list_handler(request):
     """Get list of files."""
     user_id = await token_check(request)
+    domains = await domain_list(request)
 
     user_files = await request.app.db.fetch("""
-    SELECT fspath
+    SELECT fspath, domain
     FROM files
     WHERE uploader = $1
     AND deleted = false
@@ -25,19 +35,24 @@ async def list_handler(request):
     """, user_id)
 
     user_shortens = await request.app.db.fetch("""
-    SELECT filename, redirto
+    SELECT filename, redirto, domain
     FROM shortens
     WHERE uploader = $1
     AND deleted = false
     ORDER BY shorten_id DESC
     """, user_id)
 
-    filenames = [os.path.basename(ufile['fspath']) for ufile in user_files]
+    filenames = [f"https://{domains[ufile['domain']]}/i/"
+                 f"{os.path.basename(ufile['fspath'])}" for ufile in user_files]
+
+    shortens = [{f"https://{domains[ushorten['domain']]}/s/"
+                 f"{ushorten['filename']}": ushorten["redirto"]}
+                for ushorten in user_shortens]
 
     return response.json({
         'success': True,
         'files': filenames,
-        'shortens': user_shortens
+        'shortens': shortens
     })
 
 
