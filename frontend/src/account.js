@@ -119,7 +119,7 @@ window.addEventListener("load", async function() {
 
     if (newPassword.value) modifications.new_password = newPassword.value;
     if (domainSelector.value != client.profile.domain)
-      modifications.domain = domainSelector.value;
+      modifications.domain = Number(domainSelector.value);
     if (!Object.keys(modifications).length) return; // No changes to be made
     modifications.password = password.value;
 
