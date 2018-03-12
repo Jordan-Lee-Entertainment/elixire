@@ -11,12 +11,14 @@ import commonCode from "./commonCode.js";
 window.addEventListener("load", async function() {
   const linkGrid = document.getElementById("link-grid");
   const { shortens } = await client.getFiles();
-  for (const link of shortens) {
+  for (const shortcode in shortens) {
+    const link = shortens[shortcode];
     linkGrid.appendChild(renderLink(link));
   }
 });
 
-function renderLink([shortLink, destLink]) {
+function renderLink(shorten) {
+  // [shortLink, destLink]
   const linkContainer = document.createElement("div");
   linkContainer.classList = "link-container col-12"; // col-sm-12 col-md-6 col-lg-4";
 
@@ -24,13 +26,12 @@ function renderLink([shortLink, destLink]) {
   linkWrap.classList = "link-wrap";
   const shortMapping = document.createElement("span");
   const shortL = document.createElement("a");
-  shortL.href = client.endpoint + "/../s/" + shortLink;
-  shortL.innerText = shortL.href;
-  shortL.href = destLink;
+  shortL.innerText = shorten.url;
+  shortL.href = shorten.redirto;
   shortL.classList = "shortened";
   const longL = document.createElement("a");
-  longL.href = destLink;
-  longL.innerText = destLink;
+  longL.href = shorten.redirto;
+  longL.innerText = shorten.redirto;
   const arrow = document.createElement("span");
   arrow.innerText = " → ";
   shortMapping.appendChild(shortL);
@@ -56,7 +57,7 @@ function renderLink([shortLink, destLink]) {
   copyBtn.appendChild(copyImg);
   openBtn.classList = "vector-btn";
   copyBtn.classList = "vector-btn";
-  openBtn.href = destLink;
+  openBtn.href = shorten.redirto;
   openBtn.target = "_blank";
 
   const clipboard = new Clipboard(copyBtn, {
@@ -85,7 +86,7 @@ function renderLink([shortLink, destLink]) {
       deleteAlert = null;
     }
     try {
-      await client.deleteLink(shortLink);
+      await client.deleteLink(shorten.shortname);
       linkContainer.remove();
     } catch (err) {
       if (err.message == "NOT_FOUND") {

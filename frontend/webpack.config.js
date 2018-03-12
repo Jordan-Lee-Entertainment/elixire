@@ -50,6 +50,10 @@ const pageList = [
   {
     title: "Shorten | Elixire",
     chunkName: "shorten"
+  },
+  {
+    title: "404 Page not Found",
+    chunkName: "404"
   }
 ];
 
@@ -71,7 +75,8 @@ module.exports = {
     about: `${SRC_DIR}/about.js`,
     list: `${SRC_DIR}/list.js`,
     shortlist: `${SRC_DIR}/shortlist.js`,
-    shorten: `${SRC_DIR}/shorten.js`
+    shorten: `${SRC_DIR}/shorten.js`,
+    404: `${SRC_DIR}/errorpage.js`
   },
   output: {
     filename: "assets/[chunkhash].js",
@@ -81,12 +86,12 @@ module.exports = {
     publicPath: "/"
   },
   plugins: [
-    new CleanWebpackPlugin([BUILD_DIR], {
-      beforeEmit: true
-    }),
     extractCSS,
     ...(process.env.NODE_ENV == "production"
       ? [
+          new CleanWebpackPlugin([BUILD_DIR], {
+            beforeEmit: true
+          }),
           new MinifyPlugin(
             {
               removeConsole: true,

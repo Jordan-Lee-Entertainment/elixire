@@ -23,15 +23,15 @@ block content
       div.invalid-feedback Incorrect password!
     div.form-group
       label(for="new-password1") New Password
-      input(type="password", required="true").form-control#new-password1
+      input(type="password").form-control#new-password1
       div.invalid-feedback Unsafe
     div.form-group
       label(for="new-password2") New Password (Repeat)
-      input(type="password", required="true").form-control#new-password2
+      input(type="password").form-control#new-password2
       div.invalid-feedback Doesn't match!
 
-    hr.update-account-ui-hidden
-    div.form-group.update-account-ui-hidden
+    hr
+    div.form-group
       label(for="domain-selector") Domain
       select(required="true").form-control#domain-selector
     button(type="submit").btn.btn-primary#submit-btn Update Account

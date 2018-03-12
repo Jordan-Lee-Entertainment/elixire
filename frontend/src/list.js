@@ -7,16 +7,18 @@ import openImage from "./open.svg";
 import Clipboard from "clipboard";
 import deleteImage from "./delete.svg";
 import commonCode from "./commonCode.js";
+import filesize from "file-size";
 
 window.addEventListener("load", async function() {
   const fileGrid = document.getElementById("file-grid");
   const { files } = await client.getFiles();
-  for (const file of files) {
+  for (const shortname in files) {
+    const file = files[shortname];
     fileGrid.appendChild(renderFile(file));
   }
 });
 
-function renderFile(filename) {
+function renderFile(file) {
   const fileContainer = document.createElement("div");
   fileContainer.classList = "file-container col-12 col-sm-12 col-md-6 col-lg-4";
   const fileWrap = document.createElement("div");
@@ -26,7 +28,11 @@ function renderFile(filename) {
   let previewTransport = document.createElement("img");
   previewTransport.classList = "stubbed-preview preview-transport";
   previewTransport.src = stubbedImage;
-  previewContainer.attributes["data-filename"] = filename;
+  previewContainer.attributes["data-filename"] = file.shortname;
+
+  const fileSize = document.createElement("div");
+  fileSize.innerText = filesize(file.size).human();
+  fileSize.classList = "file-size text-muted";
 
   const iconRow = document.createElement("div");
   const bottomRow = document.createElement("div");
@@ -45,7 +51,7 @@ function renderFile(filename) {
   copyBtn.appendChild(copyImg);
   openBtn.classList = "vector-btn";
   copyBtn.classList = "vector-btn";
-  openBtn.href = `${client.endpoint}/../i/${filename}`;
+  openBtn.href = file.url;
   openBtn.target = "_blank";
 
   const clipboard = new Clipboard(copyBtn, {
@@ -74,7 +80,7 @@ function renderFile(filename) {
       deleteAlert = null;
     }
     try {
-      await client.deleteFile(filename.substring(0, filename.lastIndexOf(".")));
+      await client.deleteFile(file.shortname);
       fileContainer.remove();
     } catch (err) {
       if (err.message == "NOT_FOUND") {
@@ -103,10 +109,11 @@ function renderFile(filename) {
     observer.observe(previewContainer);
     if (isVisible(previewContainer)) {
       console.log("Render!");
-      renderRealPreview(filename, previewContainer);
+      renderRealPreview(file, previewContainer);
     }
   });
   fileWrap.appendChild(previewContainer);
+  fileWrap.appendChild(fileSize);
   fileWrap.appendChild(bottomRow);
 
   fileContainer.appendChild(fileWrap);
@@ -129,11 +136,9 @@ const observer = new IntersectionObserver(
   }
 );
 
-async function renderRealPreview(filename, previewContainer) {
+async function renderRealPreview(file, previewContainer) {
   previewContainer.attributes["data-loaded-preview"] = "true";
-  const req = superagent
-    .get(`${client.endpoint}/../i/${filename}`)
-    .responseType("blob");
+  const req = superagent.get(file.url).responseType("blob");
   const progressBarWrap = document.createElement("div");
   const loadingBlock = document.createElement("div");
   loadingBlock.classList = "loading-block";
