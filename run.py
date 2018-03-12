@@ -33,7 +33,7 @@ app.blueprint(api.bp.files.bp)
 app.blueprint(api.bp.shorten.bp)
 app.blueprint(api.bp.fetch.bp)
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
