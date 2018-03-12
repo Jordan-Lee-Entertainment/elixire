@@ -66,7 +66,7 @@ async def check_admin(request, user_id: int, error_on_nonadmin: bool = True):
 
 
 async def check_domain(request, domain_name: str, error_on_nodomain=True):
-    """Checks if a domain exists
+    """Checks if a domain exists, by domain
 
     returns its record it if does, returns None if it doesn't"""
     domain_info = await request.app.db.fetchrow("""
@@ -74,6 +74,23 @@ async def check_domain(request, domain_name: str, error_on_nodomain=True):
         FROM domains
         WHERE domain = $1
     """, domain_name)
+
+    if error_on_nodomain and not domain_info:
+        raise NotFound('This domain does not exist in this elixire instance.')
+
+    return domain_info
+
+
+# TODO: reduce code repetition
+async def check_domain_id(request, domain_id: int, error_on_nodomain=True):
+    """Checks if a domain exists, by id
+
+    returns its record it if does, returns None if it doesn't"""
+    domain_info = await request.app.db.fetchrow("""
+        SELECT *
+        FROM domains
+        WHERE domain_id = $1
+    """, domain_id)
 
     if error_on_nodomain and not domain_info:
         raise NotFound('This domain does not exist in this elixire instance.')
