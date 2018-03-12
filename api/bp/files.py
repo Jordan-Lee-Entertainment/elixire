@@ -45,9 +45,10 @@ async def list_handler(request):
     filenames = [f"https://{domains[ufile['domain']]}/i/"
                  f"{os.path.basename(ufile['fspath'])}" for ufile in user_files]
 
-    shortens = [{f"https://{domains[ushorten['domain']]}/s/"
-                 f"{ushorten['filename']}": ushorten["redirto"]}
-                for ushorten in user_shortens]
+    # oh god this mess
+    shortens = dict([(f"https://{domains[ushorten['domain']]}/s/"
+                      f"{ushorten['filename']}", ushorten["redirto"])
+                     for ushorten in user_shortens])
 
     return response.json({
         'success': True,
