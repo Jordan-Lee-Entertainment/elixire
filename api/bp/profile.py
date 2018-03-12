@@ -2,10 +2,26 @@ from sanic import Blueprint
 from sanic import response
 
 from ..errors import FailedAuth
-from ..common_auth import token_check, password_check, pwd_hash
+from ..common_auth import token_check, password_check, pwd_hash,\
+    check_admin, check_domain_id
 from ..schema import validate, PROFILE_SCHEMA
 
 bp = Blueprint('profile')
+
+
+@bp.get('/api/domains')
+async def domainlist_handler(request):
+    """Gets the domain list."""
+    user_id = await token_check(request)
+
+    is_admin = await check_admin(request, user_id, False)
+    adm_string = "" if is_admin else "WHERE admin_only = False"
+    domain_records = await request.app.db.fetch("""
+    SELECT domain_id, domain
+    FROM domains
+    """ + adm_string)
+
+    return response.json({"domains": dict(domain_records)})
 
 
 @bp.get('/api/profile')
@@ -38,20 +54,39 @@ async def change_profile(request):
 
     password = payload.get('password')
     new_pwd = payload.get('new_password')
+    new_domain = payload.get('domain')
 
     if password:
         await password_check(request, user_id, password)
     else:
         raise FailedAuth('no password provided')
 
+    if new_domain is not None:
+        # Check if domain exists
+        domain_info = await check_domain_id(request, new_domain)
+
+        # Check if user has perms for getting that domain
+        is_admin = await check_admin(request, user_id, False)
+        if domain_info["admin_only"] and not is_admin:
+            raise FailedAuth("You're not an admin but you're "
+                             "trying to switch to an admin-only domain.")
+
+        await request.app.db.execute("""
+            UPDATE users
+            SET domain = $1
+            WHERE user_id = $2
+        """, new_domain, user_id)
+
+        updated.append('domain')
+
     if new_pwd and new_pwd != password:
         # we are already good from password_check call
         new_hash = await pwd_hash(request, new_pwd)
 
         await request.app.db.execute("""
-            update users
-            set password_hash = $1
-            where user_id = $2
+            UPDATE users
+            SET password_hash = $1
+            WHERE user_id = $2
         """, new_hash, user_id)
 
         updated.append('password')
