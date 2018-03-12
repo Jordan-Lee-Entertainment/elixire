@@ -44,7 +44,7 @@ async def list_handler(request):
 
     filenames = dict([(ufile["filename"],
                        {"snowflake": ufile["file_id"],
-                        "shortid": ufile["filename"],
+                        "shortname": ufile["filename"],
                         "size": ufile["file_size"],
                         "url": f"https://{domains[ufile['domain']]}/i/"
                         f"{os.path.basename(ufile['fspath'])}"}
@@ -52,7 +52,7 @@ async def list_handler(request):
 
     shortens = dict([(ushorten["filename"],
                       {"snowflake": ushorten["shorten_id"],
-                       "shortid": ushorten["filename"],
+                       "shortname": ushorten["filename"],
                        "redirto": ushorten["redirto"],
                        "url": f"https://{domains[ushorten['domain']]}/s/"
                        f"{ushorten['filename']}"}
