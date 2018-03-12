@@ -53,6 +53,7 @@ async def list_handler(request):
     shortens = dict([(ushorten["filename"],
                       {"snowflake": ushorten["shorten_id"],
                        "shortid": ushorten["filename"],
+                       "redirto": ushorten["redirto"],
                        "url": f"https://{domains[ushorten['domain']]}/s/"
                        f"{ushorten['filename']}"}
                       ) for ushorten in user_shortens])
