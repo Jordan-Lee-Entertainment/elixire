@@ -23,7 +23,16 @@ class Client {
   }
 
   async getDomains() {
-    return [];
+    if (!this.token) throw new Error("BAD_AUTH");
+    try {
+      this.domains = await this.request("get", "/domains").then(
+        res => res.body.domains
+      );
+    } catch (err) {
+      throw this.handleErr(err);
+      // TODO: handle the error properly !
+    }
+    return this.domains;
   }
 
   async updateAccount(changes) {
@@ -33,7 +42,6 @@ class Client {
         .send(changes)
         .then(res => res.body);
       if (changes.new_password) {
-        console.log(this.user, changes.new_password);
         await this.login(this.profile.username, changes.new_password);
       }
     } catch (err) {

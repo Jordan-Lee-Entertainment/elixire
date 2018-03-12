@@ -104,7 +104,7 @@ window.addEventListener("load", async function() {
   submitBtn.addEventListener("click", async function() {
     if (errorBox) common.removeALert(errorBox);
     let error = false;
-    if (newPassword2.value != newPassword.value) {
+    if (newPassword.value && newPassword2.value != newPassword.value) {
       newPassword2.setCustomValidity("Doesn't match!");
       error = true;
     }
@@ -118,6 +118,9 @@ window.addEventListener("load", async function() {
     const modifications = {};
 
     if (newPassword.value) modifications.new_password = newPassword.value;
+    if (domainSelector.value != client.profile.domain)
+      modifications.domain = domainSelector.value;
+    if (!Object.keys(modifications).length) return; // No changes to be made
     modifications.password = password.value;
 
     try {
