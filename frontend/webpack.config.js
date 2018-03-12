@@ -50,10 +50,6 @@ const pageList = [
   {
     title: "Shorten | Elixire",
     chunkName: "shorten"
-  },
-  {
-    title: "404 Page not Found",
-    chunkName: "404"
   }
 ];
 
@@ -75,8 +71,7 @@ module.exports = {
     about: `${SRC_DIR}/about.js`,
     list: `${SRC_DIR}/list.js`,
     shortlist: `${SRC_DIR}/shortlist.js`,
-    shorten: `${SRC_DIR}/shorten.js`,
-    404: `${SRC_DIR}/errorpage.js`
+    shorten: `${SRC_DIR}/shorten.js`
   },
   output: {
     filename: "assets/[chunkhash].js",
