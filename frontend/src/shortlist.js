@@ -11,8 +11,11 @@ import commonCode from "./commonCode.js";
 window.addEventListener("load", async function() {
   const linkGrid = document.getElementById("link-grid");
   const { shortens } = await client.getFiles();
-  for (const shortcode in shortens) {
-    const link = shortens[shortcode];
+  const shortLinks = [];
+  const shortLinksSorted = shortLinks.sort(
+    (a, b) => Number(b.snowflake) - Number(a.snowflake)
+  );
+  for (const link of shortLinksSorted) {
     linkGrid.appendChild(renderLink(link));
   }
 });

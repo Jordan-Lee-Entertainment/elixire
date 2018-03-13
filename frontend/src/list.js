@@ -12,8 +12,14 @@ import filesize from "file-size";
 window.addEventListener("load", async function() {
   const fileGrid = document.getElementById("file-grid");
   const { files } = await client.getFiles();
+  const fileList = [];
   for (const shortname in files) {
-    const file = files[shortname];
+    fileList.push(files[shortname]);
+  }
+  const fileListSorted = fileList.sort(
+    (b, a) => Number(a.snowflake) - Number(b.snowflake)
+  );
+  for (const file of fileListSorted) {
     fileGrid.appendChild(renderFile(file));
   }
 });
