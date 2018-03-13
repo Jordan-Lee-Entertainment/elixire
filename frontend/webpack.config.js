@@ -32,8 +32,7 @@ const pageList = [
   },
   {
     title: "New Token | Elixire",
-    chunkName: "token",
-    chunks: ["highlight", "highlightTheme"]
+    chunkName: "token"
   },
   {
     title: "About Us | Elixire",
@@ -63,8 +62,6 @@ module.exports = {
     account: `${SRC_DIR}/account.js`,
     logout: `${SRC_DIR}/logout.js`,
     token: `${SRC_DIR}/token.js`,
-    highlight: `${SRC_DIR}/highlight.js`,
-    highlightTheme: `${SRC_DIR}/highlightTheme.js`,
     theme: `${SRC_DIR}/theme.js`,
     bootstrapJs: "bootstrap",
     themeCSS: `${SRC_DIR}/themeCSS.js`,
@@ -130,7 +127,8 @@ module.exports = {
         loader: "babel-loader",
         options: {
           babelrc: false,
-          presets: ["@babel/preset-env"]
+          presets: ["@babel/preset-env"],
+          plugins: ["@babel/plugin-syntax-dynamic-import"]
         }
       },
       {
@@ -145,7 +143,8 @@ module.exports = {
       },
       {
         test: /\.pug$/,
-        use: ["pug-loader"],
+        loader: "pug-loader",
+        query: {},
         exclude: /node_modules/
       },
       {
