@@ -101,6 +101,7 @@ window.addEventListener("load", async function() {
   const newPassword = document.getElementById("new-password1");
   const password = document.getElementById("password");
   const newPassword2 = document.getElementById("new-password2");
+  let domainId = client.profile.domain;
   submitBtn.addEventListener("click", async function() {
     if (errorBox) common.removeAlert(errorBox);
     let error = false;
@@ -118,7 +119,7 @@ window.addEventListener("load", async function() {
     const modifications = {};
 
     if (newPassword.value) modifications.new_password = newPassword.value;
-    if (domainSelector.value != client.profile.domain)
+    if (domainSelector.value != domainId)
       modifications.domain = Number(domainSelector.value);
     if (!Object.keys(modifications).length) return; // No changes to be made
     modifications.password = password.value;
@@ -126,6 +127,7 @@ window.addEventListener("load", async function() {
     try {
       await client.updateAccount(modifications);
       errorBox = common.sendAlert("success", "Your changes have been saved!");
+      if (modifications.domain) domainId = modifications.domain;
     } catch (err) {
       if (err.message == "BAD_AUTH") {
         password.setCustomValidity("Invalid password!");
