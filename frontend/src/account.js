@@ -125,6 +125,7 @@ window.addEventListener("load", async function() {
 
     try {
       await client.updateAccount(modifications);
+      errorBox = common.sendAlert("success", "Your changes have been saved!");
     } catch (err) {
       if (err.message == "BAD_AUTH") {
         password.setCustomValidity("Invalid password!");

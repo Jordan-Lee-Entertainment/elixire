@@ -34,6 +34,9 @@ block content
     div.form-group
       label(for="domain-selector") Domain
       select(required="true").form-control#domain-selector
+      span.text-muted If you'd like to donate a domain, please email 
+        a(href="mailto:domain@elixi.re") domain@elixi.re
+        | !
     button(type="submit").btn.btn-primary#submit-btn Update Account
     hr
     button(type="button", data-toggle="modal", data-target="#password-modal").btn.btn-primary Generate Uploader Token
