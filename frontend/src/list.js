@@ -28,7 +28,7 @@ function renderFile(file) {
   let previewTransport = document.createElement("img");
   previewTransport.classList = "stubbed-preview preview-transport";
   previewTransport.src = stubbedImage;
-  previewContainer.attributes["data-filename"] = file.shortname;
+  previewContainer.attributes["data-url"] = file.url;
 
   const fileSize = document.createElement("div");
   fileSize.innerText = filesize(file.size).human();
@@ -109,7 +109,7 @@ function renderFile(file) {
     observer.observe(previewContainer);
     if (isVisible(previewContainer)) {
       console.log("Render!");
-      renderRealPreview(file, previewContainer);
+      renderRealPreview(file.url, previewContainer);
     }
   });
   fileWrap.appendChild(previewContainer);
@@ -128,7 +128,7 @@ const observer = new IntersectionObserver(
         entry.target.attributes["data-loaded-preview"] == "true"
       )
         return;
-      renderRealPreview(entry.target.attributes["data-filename"], entry.target);
+      renderRealPreview(entry.target.attributes["data-url"], entry.target);
     }
   },
   {
@@ -136,9 +136,9 @@ const observer = new IntersectionObserver(
   }
 );
 
-async function renderRealPreview(file, previewContainer) {
+async function renderRealPreview(fileUrl, previewContainer) {
   previewContainer.attributes["data-loaded-preview"] = "true";
-  const req = superagent.get(file.url).responseType("blob");
+  const req = superagent.get(fileUrl).responseType("blob");
   const progressBarWrap = document.createElement("div");
   const loadingBlock = document.createElement("div");
   loadingBlock.classList = "loading-block";
