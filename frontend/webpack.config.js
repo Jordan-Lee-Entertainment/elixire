@@ -15,10 +15,6 @@ const pageList = [
     chunkName: "login"
   },
   {
-    title: "Signup | Elixire",
-    chunkName: "signup"
-  },
-  {
     title: "Upload | Elixire",
     chunkName: "upload"
   },
@@ -58,7 +54,6 @@ module.exports = {
     babelPolyfill: "babel-polyfill",
     index: `${SRC_DIR}/homepage.js`,
     login: `${SRC_DIR}/login.js`,
-    signup: `${SRC_DIR}/signup.js`,
     upload: `${SRC_DIR}/upload.js`,
     account: `${SRC_DIR}/account.js`,
     logout: `${SRC_DIR}/logout.js`,

@@ -102,7 +102,7 @@ window.addEventListener("load", async function() {
   const password = document.getElementById("password");
   const newPassword2 = document.getElementById("new-password2");
   submitBtn.addEventListener("click", async function() {
-    if (errorBox) common.removeALert(errorBox);
+    if (errorBox) common.removeAlert(errorBox);
     let error = false;
     if (newPassword.value && newPassword2.value != newPassword.value) {
       newPassword2.setCustomValidity("Doesn't match!");
