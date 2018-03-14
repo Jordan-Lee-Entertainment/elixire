@@ -20,6 +20,22 @@ def byte_to_mibstring(bytecount):
 async def main():
     db = await asyncpg.create_pool(**config.db)
 
+    # Total domain with cf enabled
+    all_cf_domains = await db.fetch("""
+    SELECT *
+    FROM domains
+    WHERE cf_enabled = true
+    """)
+    cf_domain_count = len(all_cf_domains)
+
+    # Total domain with cf disabled
+    all_ncf_domains = await db.fetch("""
+    SELECT *
+    FROM domains
+    WHERE cf_enabled = false
+    """)
+    ncf_domain_count = len(all_ncf_domains)
+
     # Total non-deleted file count
     all_nd_files = await db.fetch("""
     SELECT *
@@ -154,6 +170,11 @@ async def main():
 =====
 Total active user count: {total_active_user_count}
 Total inactive user count: {total_inactive_user_count}
+
+Domains
+=======
+Total CF domains: {cf_domain_count}
+Total non-CF domains: {ncf_domain_count}
 
 Files
 =====
