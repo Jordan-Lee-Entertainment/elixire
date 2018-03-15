@@ -16,7 +16,7 @@ window.addEventListener("load", function() {
   const uploadText = document.getElementById("uploading-text");
   document.addEventListener("paste", function(ev) {
     const items = Array.from(
-      (event.clipboardData || event.originalEvent.clipboardData).items
+      (ev.clipboardData || ev.originalEvent.clipboardData).items
     );
     const file = items.find(itm => itm.kind == "file");
     if (!file) return;
