@@ -119,8 +119,8 @@ async def main():
     # Total non-deleted shortens in last week
     total_nd_shorten_count_week = await db.fetch("""
     SELECT *
-    FROM files
-    WHERE file_id > time_snowflake(now() - interval '7 days')
+    FROM shortens
+    WHERE shorten_id > time_snowflake(now() - interval '7 days')
     AND deleted = false
     """)
     nd_shorten_count_week = len(total_nd_shorten_count_week)
@@ -128,8 +128,8 @@ async def main():
     # Total deleted shortens in last week
     total_d_shorten_count_week = await db.fetch("""
     SELECT *
-    FROM files
-    WHERE file_id > time_snowflake(now() - interval '7 days')
+    FROM shortens
+    WHERE shorten_id > time_snowflake(now() - interval '7 days')
     AND deleted = true
     """)
     d_shorten_count_week = len(total_d_shorten_count_week)
