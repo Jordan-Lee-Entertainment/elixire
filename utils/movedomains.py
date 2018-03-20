@@ -11,7 +11,7 @@ import config
 async def main():
     db = await asyncpg.create_pool(**config.db)
     filename = sys.argv[1]
-    new_domain = sys.argv[2]
+    new_domain = int(sys.argv[2])
 
     exec_out = await db.execute("""
     UPDATE files
