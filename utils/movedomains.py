@@ -10,14 +10,14 @@ import config
 
 async def main():
     db = await asyncpg.create_pool(**config.db)
-    old_domain = sys.argv[1]
+    filename = sys.argv[1]
     new_domain = sys.argv[2]
 
     exec_out = await db.execute("""
     UPDATE files
     SET domain = $1
-    WHERE domain = $2
-    """, new_domain, old_domain)
+    WHERE filename = $2
+    """, new_domain, filename)
 
     print(f"db out: {exec_out}")
 
