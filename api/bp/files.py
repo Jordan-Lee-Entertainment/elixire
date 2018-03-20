@@ -1,9 +1,10 @@
+import os
 import logging
 
 from sanic import Blueprint
 from sanic import response
 
-from ..common import purge_cf_cache_file, purge_cf_cache_shorten
+from ..common import purge_cf, FileNameType
 from ..common_auth import token_check
 from ..errors import NotFound
 
@@ -83,7 +84,7 @@ async def delete_handler(request):
     if exec_out == "UPDATE 0":
         raise NotFound('You have no files with this name.')
 
-    await purge_cf_cache_file(request.app, file_name)
+    await purge_cf(request.app, file_name, FileNameType.FILE)
 
     return response.json({
         'success': True
@@ -109,7 +110,7 @@ async def shortendelete_handler(request):
     if exec_out == "UPDATE 0":
         raise NotFound('You have no shortens with this name.')
 
-    await purge_cf_cache_shorten(request.app, file_name)
+    await purge_cf(request.app, file_name, FileNameType.SHORTEN)
 
     return response.json({
         'success': True
