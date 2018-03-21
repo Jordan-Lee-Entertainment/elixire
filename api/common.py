@@ -1,5 +1,6 @@
 import string
 import secrets
+import os
 
 import itsdangerous
 
@@ -11,6 +12,12 @@ class TokenType:
     """Token type "enum"."""
     NONTIMED = 1
     TIMED = 2
+
+
+class FileNameType:
+    """Represents a type of a filename."""
+    FILE = 0
+    SHORTEN = 1
 
 
 SIGNERS = {
@@ -52,3 +59,83 @@ async def gen_filename(request, length=3) -> str:
 
     # if 10 tries didnt work, try generating with length+1
     return await gen_filename(request, length + 1)
+
+
+async def _purge_cf_cache(app, purge_urls, email, apikey, zoneid):
+    """Clear the Cloudflare cache for the given URLs and cf creds."""
+
+    cf_purge_url = "https://api.cloudflare.com/client/v4/zones/"\
+                   f"{zoneid}/purge_cache"
+
+    cf_auth_headers = {
+        'X-Auth-Email': email,
+        'X-Auth-Key': apikey
+    }
+
+    purge_payload = {
+        'files': purge_urls,
+    }
+
+    async with app.session.delete(cf_purge_url,
+                                  json=purge_payload,
+                                  headers=cf_auth_headers) as resp:
+        return resp
+
+
+def _purge_url_file(_filename: str, domain: str, detail: dict):
+    """Generate a purge URL for a filename that represents a proper file."""
+    joined = os.path.basename(detail['fspath'])
+    return f'https://{domain}/i/{joined}'
+
+
+def _purge_url_shorten(filename: str, domain: str, _detail: dict):
+    """Generate a purge URL for a filename that represents a shortened url."""
+    return f'https://{domain}/s/{filename}'
+
+
+async def purge_cf(app, filename: str, ftype: int):
+    """
+    Purge a filename(that can represent either a proper file or a shorten)
+    from Cloudflare's caching.
+    """
+    domain, detail = None, None
+
+    if ftype == FileNameType.FILE:
+        # query file_detail
+        detail = await app.db.fetchrow("""
+        SELECT domain, fspath
+        FROM files
+        WHERE filename = $1
+        """, filename)
+
+        domain = detail['domain']
+    elif ftype == FileNameType.SHORTEN:
+        # query shorten detail
+        domain = await app.db.fetchval("""
+        SELECT domain
+        FROM shortens
+        WHERE filename = $1
+        """, filename)
+
+    if not domain:
+        # oops. invalid type?
+        return
+
+    domain_detail = await app.db.fetchrow("""
+    SELECT domain, cf_enabled, cf_email, cf_zoneid, cf_apikey
+    FROM domains
+    WHERE domain_id = $1
+    """, domain)
+
+    # check if purge is enabled
+    if domain_detail['cf_enabled']:
+        mapping = {
+            FileNameType.FILE: _purge_url_file,
+            FileNameType.SHORTEN: _purge_url_shorten,
+        }
+
+        purge_url = mapping[ftype](filename, domain, detail)
+
+        await _purge_cf_cache(app, [purge_url], domain_detail['cf_email'],
+                              domain_detail['cf_apikey'],
+                              domain_detail['cf_zoneid'])
