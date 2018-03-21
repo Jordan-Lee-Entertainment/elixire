@@ -14,6 +14,7 @@ import api.bp.upload
 import api.bp.files
 import api.bp.shorten
 import api.bp.fetch
+import api.bp.admin
 
 from api.errors import APIError
 
@@ -32,6 +33,7 @@ app.blueprint(api.bp.upload.bp)
 app.blueprint(api.bp.files.bp)
 app.blueprint(api.bp.shorten.bp)
 app.blueprint(api.bp.fetch.bp)
+app.blueprint(api.bp.admin.bp)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)

@@ -12,9 +12,14 @@ bp = Blueprint('profile')
 @bp.get('/api/domains')
 async def domainlist_handler(request):
     """Gets the domain list."""
-    user_id = await token_check(request)
 
-    is_admin = await check_admin(request, user_id, False)
+    # Only check if user's token is valid and their admin status
+    # if they gave authorization.
+    is_admin = False
+    if 'Authorization' in request.headers:
+        user_id = await token_check(request)
+        is_admin = await check_admin(request, user_id, False)
+
     adm_string = "" if is_admin else "WHERE admin_only = False"
     domain_records = await request.app.db.fetch("""
     SELECT domain_id, domain
