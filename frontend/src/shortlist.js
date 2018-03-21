@@ -12,6 +12,9 @@ window.addEventListener("load", async function() {
   const linkGrid = document.getElementById("link-grid");
   const { shortens } = await client.getFiles();
   const shortLinks = [];
+  for (const shorten in shortens) {
+    shortLinks.push(shortens[shorten]);
+  }
   const shortLinksSorted = shortLinks.sort(
     (a, b) => Number(b.snowflake) - Number(a.snowflake)
   );

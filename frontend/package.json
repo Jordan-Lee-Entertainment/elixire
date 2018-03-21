@@ -6,7 +6,10 @@
   "author": "Ave Ozkal <avezone@ave.zone>",
   "license": "MIT",
   "scripts": {
-    "start": "webpack-dev-server --port 8081 --compress --watch --cache --open --mode development",
+    "test":
+      "jest --runInBand --setupTestFrameworkScriptFile=./test/jestSetup.js",
+    "start":
+      "webpack-dev-server --port 8081 --compress --watch --cache --open --mode development",
     "build:production": "NODE_ENV=production webpack --mode production",
     "build:dev": "NODE_ENV=dev webpack --mode development"
   },
@@ -31,13 +34,19 @@
     "clean-webpack-plugin": "^0.1.18",
     "css-loader": "^0.28.9",
     "eslint": "^4.17.0",
+    "expect": "^23.0.0-alpha.0",
     "extract-text-webpack-plugin": "^4.0.0-beta.0",
+    "faker": "^4.1.0",
     "file-loader": "^1.1.6",
     "html-webpack-plugin": "^3.0.6",
     "html-webpack-template-pug": "^1.1.1",
+    "jest": "22.3.0",
+    "jest-cli": "^23.0.0-alpha.0",
+    "jest-puppeteer-preset": "^2.0.1",
     "node-sass": "^4.7.2",
     "pug": "^2.0.0-rc.4",
     "pug-loader": "https://github.com/pugjs/pug-loader/tarball/master",
+    "puppeteer": "^1.2.0",
     "sass-loader": "^6.0.6",
     "style-loader": "^0.20.1",
     "webpack": "4",
