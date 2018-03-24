@@ -126,7 +126,7 @@ async def login_user(request):
     return user
 
 
-async def token_check(request, wanted_type=None):
+async def token_check(request, wanted_type=None) -> int:
     """
     Check if a token is valid.
     By default does not care about the token type.
