@@ -148,7 +148,7 @@ async def global_rl(request):
         return
 
     retry_after = bucket.update_rate_limit()
-    if bucket._retries > 10:
+    if bucket._retries > request.app.econfig.RL_THRESHOLD:
         raise Banned('Reached retry limit on ratelimiting.')
 
     if retry_after:
