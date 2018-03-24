@@ -112,6 +112,12 @@ async def global_rl(request):
     request.headers['X-Username'] = user_name
 
     bucket = rtl.get_bucket(user_name)
+
+    # ignore when rtl isnt properly initialized
+    # with a global cooldown
+    if not bucket:
+        return
+
     retry_after = bucket.update_rate_limit()
     if retry_after:
         raise Ratelimited('You are being ratelimited.', retry_after)
@@ -127,9 +133,10 @@ async def rl_header_set(request, response):
 
     bucket = request.app.rtl.get_bucket(username)
 
-    response.headers['X-RateLimit-Limit'] = bucket.requests
-    response.headers['X-RateLimit-Remaining'] = bucket._tokens
-    response.headers['X-RateLimit-Reset'] = bucket._window + bucket.second
+    if bucket:
+        response.headers['X-RateLimit-Limit'] = bucket.requests
+        response.headers['X-RateLimit-Remaining'] = bucket._tokens
+        response.headers['X-RateLimit-Reset'] = bucket._window + bucket.second
 
 
 @app.listener('before_server_start')
