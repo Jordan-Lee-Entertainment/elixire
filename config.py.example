@@ -37,3 +37,8 @@ ACCEPTED_MIMES = [
     'audio/webm',
     'video/webm'
 ]
+
+RATELIMIT = {
+    'requests': 5,
+    'second': 3,
+}

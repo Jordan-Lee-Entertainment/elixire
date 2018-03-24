@@ -16,7 +16,9 @@ import api.bp.shorten
 import api.bp.fetch
 import api.bp.admin
 
-from api.errors import APIError
+from api.errors import APIError, Ratelimited
+from api.common_auth import token_check
+from api.ratelimit import RatelimitManager
 
 import config
 
@@ -49,10 +51,15 @@ def handle_api_error(request, exception):
     Handle any kind of application-level raised error.
     """
     log.warning(f'API error: {exception!r}')
-    return response.json({
+    scode = exception.status_code
+    res = {
         'error': True,
+        'code': scode,
         'message': exception.args[0]
-    }, status=exception.status_code)
+    }
+
+    res.update(exception.get_payload())
+    return response.json(res, status=scode)
 
 
 @app.exception(Exception)
@@ -73,6 +80,58 @@ def handle_exception(request, exception):
     }, status=status_code)
 
 
+@app.middleware('request')
+async def global_rl(request):
+    # handle global ratelimiting
+    if '/api' not in request.url:
+        return
+
+    rtl = request.app.rtl
+
+    # process ratelimiting
+    user_name = None
+    user_id = None
+    try:
+        # should raise KeyError
+        request.headers['Authorization']
+
+        user_id = await token_check(request)
+    except KeyError:
+        user_name = request.json.get('username')
+
+    if not user_name:
+        user_name = await request.app.db.fetchval("""
+        SELECT username
+        FROM users
+        WHERE user_id=$1
+        """, user_id)
+
+    if not user_name:
+        raise APIError('No usernames were found.')
+
+    request.headers['X-Username'] = user_name
+
+    bucket = rtl.get_bucket(user_name)
+    retry_after = bucket.update_rate_limit()
+    if retry_after:
+        raise Ratelimited('You are being ratelimited.', retry_after)
+
+
+@app.middleware('response')
+async def rl_header_set(request, response):
+    username = request.headers.pop('x-username')
+    if not username:
+        # we are in deep trouble
+        log.error('Request object does not provide a username')
+        raise APIError('Request object does not provide username')
+
+    bucket = request.app.rtl.get_bucket(username)
+
+    response.headers['X-RateLimit-Limit'] = bucket.requests
+    response.headers['X-RateLimit-Remaining'] = bucket._tokens
+    response.headers['X-RateLimit-Reset'] = bucket._window + bucket.second
+
+
 @app.listener('before_server_start')
 async def setup_db(app, loop):
     """Initialize db connection before app start"""
@@ -81,6 +140,9 @@ async def setup_db(app, loop):
     log.info('connecting to db')
     app.db = await asyncpg.create_pool(**config.db)
     log.info('connected to db')
+
+    # start ratelimiting man
+    app.rtl = RatelimitManager(app)
 
 
 def main():

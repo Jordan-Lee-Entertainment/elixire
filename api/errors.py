@@ -1,6 +1,9 @@
 class APIError(Exception):
     status_code = 500
 
+    def get_payload(self):
+        return {}
+
 
 class BadInput(APIError):
     status_code = 400
@@ -14,6 +17,16 @@ class NotFound(APIError):
     status_code = 404
 
 
+class Ratelimited(APIError):
+    """Memes: here"""
+    status_code = 429
+
+    def get_payload(self):
+        return {
+            'retry_after': self.args[1],
+        }
+
+
 # upload specific errors
 class BadImage(APIError):
     """Wrong image mimetype."""
@@ -23,8 +36,3 @@ class BadImage(APIError):
 class BadUpload(APIError):
     """Upload precondition failed"""
     status_code = 412
-
-
-class Ratelimited(APIError):
-    """Memes: here"""
-    status_code = 429
