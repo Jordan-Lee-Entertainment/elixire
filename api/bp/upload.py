@@ -12,7 +12,7 @@ from sanic import response
 from ..common_auth import token_check, check_admin
 from ..common import gen_filename
 from ..snowflake import get_snowflake
-from ..errors import BadImage, Ratelimited
+from ..errors import BadImage, Ratelimited, QuotaExploded
 
 import PIL.Image
 import PIL.ExifTags
@@ -188,13 +188,13 @@ async def upload_handler(request):
 
         if used and used > byte_limit:
             cnv_limit = byte_limit / 1024 / 1024
-            raise Ratelimited('You already blew your weekly'
-                              f' limit of {cnv_limit}MB')
+            raise QuotaExploded('You already blew your weekly'
+                                f' limit of {cnv_limit}MB')
 
         if used and used + filesize > byte_limit:
             cnv_limit = byte_limit / 1024 / 1024
-            raise Ratelimited('This file blows the weekly limit of'
-                              f' {cnv_limit}MB')
+            raise QuotaExploded('This file blows the weekly limit of'
+                                f' {cnv_limit}MB')
 
         # all good with limits
         await scan_file(request,
