@@ -82,6 +82,9 @@ class RatelimitManager:
             del self._cache[k]
 
     def get_bucket(self, uid):
+        if not self._cooldown:
+            return None
+
         self._verify_cache()
 
         if uid not in self._cache:
@@ -91,4 +94,3 @@ class RatelimitManager:
             bucket = self._cache[uid]
 
         return bucket
-
