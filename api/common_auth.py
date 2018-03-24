@@ -122,6 +122,15 @@ async def login_user(request):
     if not user['active']:
         raise FailedAuth('user or password invalid')
 
+    reason = await request.app.db.fetchval("""
+    SELECT reason
+    FROM bans
+    WHERE user_id=$1 and now() < end_timestamp
+    """, user['id'])
+
+    if reason:
+        raise FailedAuth(f'User is banned. {reason}')
+
     await pwd_check(request, user['password_hash'], password)
     return user
 
@@ -158,6 +167,15 @@ async def token_check(request, wanted_type=None) -> int:
     if not user['active']:
         raise FailedAuth('inactive user')
 
+    reason = await request.app.db.fetchval("""
+    SELECT reason
+    FROM bans
+    WHERE user_id=$1 and now() < end_timestamp
+    """, user_id)
+
+    if reason:
+        raise FailedAuth(f'User is banned. {reason}')
+
     pwdhash = user['password_hash']
 
     signer = SIGNERS[token_type](pwdhash)
@@ -176,7 +194,8 @@ async def token_check(request, wanted_type=None) -> int:
     return user_id
 
 
-def gen_token(user, token_type=TokenType.TIMED):
+def gen_token(user, token_type=TokenType.TIMED) -> str:
+    """Generate one token."""
     signer = SIGNERS[token_type](user['password_hash'])
     uid = bytes(str(user['user_id']), 'utf-8')
     return signer.sign(uid)

@@ -42,6 +42,12 @@ CREATE TABLE IF NOT EXISTS users (
     domain bigint REFERENCES domains (domain_id) DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS bans (
+    user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
+    reason text,
+    end_timestamp timestamp without time zone
+);
+
 /* weekly limits */
 CREATE TABLE IF NOT EXISTS limits (
     user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
