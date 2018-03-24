@@ -31,6 +31,10 @@ USER_BAN_WEBHOOK = ""
 # '1 day', '6 hours', '10 seconds', etc.
 BAN_PERIOD = '6 hours'
 
+# How many ratelimit payloads can be sent
+# before the current user gets banned?
+RL_THRESHOLD = 10
+
 # Should we clear EXIF values for JPEGs?
 # Needs Pillow
 CLEAR_EXIF = False
