@@ -11,6 +11,7 @@ class Ratelimit:
 
         self._window = 0.0
         self._tokens = self.requests
+        self._retries = 0
         self._last = 0.0
 
     def get_tokens(self, current):
@@ -41,9 +42,11 @@ class Ratelimit:
 
         # Are we currently ratelimited?
         if self._tokens == 0:
+            self._retries += 1
             return self.second - (current - self._window)
 
         # if not ratelimited, remove a token
+        self._retries = 0
         self._tokens -= 1
 
         # if we got ratelimited after that token removal,
@@ -55,6 +58,7 @@ class Ratelimit:
         """Reset current ratelimit to default state."""
         self._tokens = self.requests
         self._last = 0.0
+        self._retries = 0
 
     def copy(self):
         """Create a copy of this ratelimit.
@@ -66,6 +70,7 @@ class Ratelimit:
     def __repr__(self):
         return (f'<Ratelimit requests{self.requests} second={self.second} '
                 f'window: {self._window} tokens={self._tokens}>')
+
 
 class RatelimitManager:
     def __init__(self, app):

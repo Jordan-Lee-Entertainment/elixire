@@ -16,8 +16,9 @@ import api.bp.shorten
 import api.bp.fetch
 import api.bp.admin
 
-from api.errors import APIError, Ratelimited
+from api.errors import APIError, Ratelimited, Banned
 from api.common_auth import token_check
+from api.common import ban_webhook
 from api.ratelimit import RatelimitManager
 
 import config
@@ -43,6 +44,32 @@ log = logging.getLogger(__name__)
 
 async def options_handler(request):
     return response.text('ok')
+
+
+@app.exception(Banned)
+async def handle_ban(request, exception):
+    scode = exception.status_code
+    reason = exception.args[0]
+
+    user_id, user_name = request.headers['X-Context']
+
+    log.warning(f'Banning {user_name} {user_id} with reason {reason!r}')
+
+    await request.app.db.execute(f"""
+    INSERT INTO bans (user_id, reason, end_timestamp)
+    VALUES ($1, $2, now() + interval '{request.app.econfig.BAN_PERIOD}')
+    """, user_id, reason)
+
+    await ban_webhook(request.app, user_id, reason, '6 hours')
+    res = {
+        'error': True,
+        'code': scode,
+        'message': reason,
+    }
+
+    res.update(exception.get_payload())
+
+    return response.json(res, status=scode)
 
 
 @app.exception(APIError)
@@ -97,7 +124,7 @@ async def global_rl(request):
 
         user_id = await token_check(request)
     except KeyError:
-        user_name = request.json.get('username')
+        user_name = request.json.get('user')
 
     if not user_name:
         user_name = await request.app.db.fetchval("""
@@ -106,10 +133,12 @@ async def global_rl(request):
         WHERE user_id=$1
         """, user_id)
 
+    print(user_name, user_id)
+
     if not user_name:
         raise APIError('No usernames were found.')
 
-    request.headers['X-Username'] = user_name
+    request.headers['X-Context'] = (user_id, user_name)
 
     bucket = rtl.get_bucket(user_name)
 
@@ -119,14 +148,18 @@ async def global_rl(request):
         return
 
     retry_after = bucket.update_rate_limit()
+    if bucket._retries > 10:
+        raise Banned('Reached retry limit on ratelimiting.')
+
     if retry_after:
         raise Ratelimited('You are being ratelimited.', retry_after)
 
 
 @app.middleware('response')
 async def rl_header_set(request, response):
-    username = request.headers.pop('x-username')
-    if not username:
+    try:
+        user_id, username = request.headers.pop('x-context')
+    except KeyError:
         # we are in deep trouble
         log.error('Request object does not provide a username')
         raise APIError('Request object does not provide username')

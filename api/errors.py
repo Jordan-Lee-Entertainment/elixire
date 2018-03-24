@@ -27,6 +27,19 @@ class Ratelimited(APIError):
         }
 
 
+class Banned(APIError):
+    """To be thrown by the ratelimiting handler.
+
+    Banned error handlers should disable the user on sight.
+    """
+    status_code = 420
+
+    def get_payload(self):
+        return {
+            'reason': self.args[0]
+        }
+
+
 # upload specific errors
 class BadImage(APIError):
     """Wrong image mimetype."""

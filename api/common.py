@@ -139,3 +139,40 @@ async def purge_cf(app, filename: str, ftype: int):
         await _purge_cf_cache(app, [purge_url], domain_detail['cf_email'],
                               domain_detail['cf_apikey'],
                               domain_detail['cf_zoneid'])
+
+
+async def ban_webhook(app, user_id: int, reason: str, period: str):
+    wh_url = getattr(app.econfig, 'USER_BAN_WEBHOOK', None)
+    if not wh_url:
+        return
+
+    uname = await app.db.fetchval("""
+        select username
+        from users
+        where user_id = $1
+    """, user_id)
+
+    payload = {
+        'embeds': [{
+            'title': 'Elixire Auto Banning',
+            'color': 0x696969,
+            'fields': [
+                {
+                    'name': 'user',
+                    'value': f'id: {user_id}, name: {uname}'
+                },
+                {
+                    'name': 'reason',
+                    'value': reason,
+                },
+                {
+                    'name': 'period',
+                    'value': period,
+                }
+            ]
+        }]
+    }
+
+    async with app.session.post(wh_url,
+                                json=payload) as resp:
+        return resp

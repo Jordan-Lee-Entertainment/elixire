@@ -24,6 +24,13 @@ UPLOAD_SCAN = False
 # with data about the upload.
 UPLOAD_SCAN_WEBHOOK = ""
 
+# Webhook for banned users.
+USER_BAN_WEBHOOK = ""
+
+# change this to your wanted ban period
+# '1 day', '6 hours', '10 seconds', etc.
+BAN_PERIOD = '6 hours'
+
 # Should we clear EXIF values for JPEGs?
 # Needs Pillow
 CLEAR_EXIF = False
