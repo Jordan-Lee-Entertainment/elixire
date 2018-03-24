@@ -4,6 +4,8 @@ import os
 
 import itsdangerous
 
+from .errors import FailedAuth
+
 VERSION = '2.0.0'
 ALPHABET = string.ascii_lowercase + string.digits
 
@@ -139,6 +141,19 @@ async def purge_cf(app, filename: str, ftype: int):
         await _purge_cf_cache(app, [purge_url], domain_detail['cf_email'],
                               domain_detail['cf_apikey'],
                               domain_detail['cf_zoneid'])
+
+
+async def check_bans(request, user_id: int):
+    """Check if the current user is already banned."""
+    reason = await request.app.db.fetchval("""
+    SELECT reason
+    FROM bans
+    WHERE user_id=$1 and now() < end_timestamp
+    LIMIT 1
+    """, user_id)
+
+    if reason:
+        raise FailedAuth(f'User is banned. {reason}')
 
 
 async def ban_webhook(app, user_id: int, reason: str, period: str):

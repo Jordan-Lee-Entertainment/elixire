@@ -5,7 +5,7 @@ Common authentication-related functions.
 import bcrypt
 import itsdangerous
 
-from .common import SIGNERS, TokenType
+from .common import SIGNERS, TokenType, check_bans
 from .errors import BadInput, FailedAuth, NotFound
 
 
@@ -122,16 +122,9 @@ async def login_user(request):
     if not user['active']:
         raise FailedAuth('user or password invalid')
 
-    reason = await request.app.db.fetchval("""
-    SELECT reason
-    FROM bans
-    WHERE user_id=$1 and now() < end_timestamp
-    """, user['id'])
-
-    if reason:
-        raise FailedAuth(f'User is banned. {reason}')
-
+    await check_bans(request, user['user_id'])
     await pwd_check(request, user['password_hash'], password)
+
     return user
 
 
@@ -167,14 +160,7 @@ async def token_check(request, wanted_type=None) -> int:
     if not user['active']:
         raise FailedAuth('inactive user')
 
-    reason = await request.app.db.fetchval("""
-    SELECT reason
-    FROM bans
-    WHERE user_id=$1 and now() < end_timestamp
-    """, user_id)
-
-    if reason:
-        raise FailedAuth(f'User is banned. {reason}')
+    await check_bans(request, user_id)
 
     pwdhash = user['password_hash']
 

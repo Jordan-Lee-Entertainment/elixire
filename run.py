@@ -16,9 +16,9 @@ import api.bp.shorten
 import api.bp.fetch
 import api.bp.admin
 
-from api.errors import APIError, Ratelimited, Banned
+from api.errors import APIError, Ratelimited, Banned, BadInput, FailedAuth
 from api.common_auth import token_check
-from api.common import ban_webhook
+from api.common import ban_webhook, check_bans
 from api.ratelimit import RatelimitManager
 
 import config
@@ -55,12 +55,13 @@ async def handle_ban(request, exception):
 
     log.warning(f'Banning {user_name} {user_id} with reason {reason!r}')
 
+    period = request.app.econfig.BAN_PERIOD
     await request.app.db.execute(f"""
     INSERT INTO bans (user_id, reason, end_timestamp)
-    VALUES ($1, $2, now() + interval '{request.app.econfig.BAN_PERIOD}')
+    VALUES ($1, $2, now() + interval '{period}')
     """, user_id, reason)
 
-    await ban_webhook(request.app, user_id, reason, '6 hours')
+    await ban_webhook(request.app, user_id, reason, period)
     res = {
         'error': True,
         'code': scode,
@@ -68,7 +69,6 @@ async def handle_ban(request, exception):
     }
 
     res.update(exception.get_payload())
-
     return response.json(res, status=scode)
 
 
@@ -116,36 +116,55 @@ async def global_rl(request):
     rtl = request.app.rtl
 
     # process ratelimiting
-    user_name = None
-    user_id = None
+    user_name, user_id, token = None, None, None
     try:
         # should raise KeyError
-        request.headers['Authorization']
+        token = request.headers['Authorization']
+    except (TypeError, KeyError):
+        # no token provided.
 
-        user_id = await token_check(request)
-    except KeyError:
+        # check if payload makes sense
+        if not isinstance(request.json, dict):
+            raise BadInput('Current payload is not a dict')
+
         user_name = request.json.get('user')
 
-    if not user_name:
+    if not user_name and token:
+        user_id = await token_check(request)
+
+    if not user_id:
+        user_id = await request.app.db.fetchval("""
+        SELECT user_id
+        FROM users
+        WHERE username=$1
+        """, user_name)
+
+    if not user_id:
+        raise FailedAuth('User not found')
+
+    if not user_name and user_id:
         user_name = await request.app.db.fetchval("""
         SELECT username
         FROM users
         WHERE user_id=$1
         """, user_id)
 
-    print(user_name, user_id)
+    context = (user_name, user_id)
+    print(context)
 
-    if not user_name:
-        raise APIError('No usernames were found.')
+    # ensure both user_name and user_id exist
+    if all(v is None for v in context):
+        raise FailedAuth('Can not identify user')
 
     request.headers['X-Context'] = (user_id, user_name)
-
     bucket = rtl.get_bucket(user_name)
 
     # ignore when rtl isnt properly initialized
     # with a global cooldown
     if not bucket:
         return
+
+    await check_bans(request, user_id)
 
     retry_after = bucket.update_rate_limit()
     if bucket._retries > request.app.econfig.RL_THRESHOLD:
@@ -158,11 +177,11 @@ async def global_rl(request):
 @app.middleware('response')
 async def rl_header_set(request, response):
     try:
-        user_id, username = request.headers.pop('x-context')
+        _, username = request.headers['x-context']
     except KeyError:
         # we are in deep trouble
-        log.error('Request object does not provide a username')
-        raise APIError('Request object does not provide username')
+        log.exception('Request object does not provide a username')
+        raise APIError('Request object doesnt have a context.')
 
     bucket = request.app.rtl.get_bucket(username)
 
@@ -170,6 +189,11 @@ async def rl_header_set(request, response):
         response.headers['X-RateLimit-Limit'] = bucket.requests
         response.headers['X-RateLimit-Remaining'] = bucket._tokens
         response.headers['X-RateLimit-Reset'] = bucket._window + bucket.second
+
+    try:
+        request.headers.pop('x-context')
+    except KeyError:
+        pass
 
 
 @app.listener('before_server_start')
