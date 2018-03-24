@@ -49,3 +49,7 @@ class BadImage(APIError):
 class BadUpload(APIError):
     """Upload precondition failed"""
     status_code = 412
+
+
+class QuotaExploded(APIError):
+    status_code = 469
