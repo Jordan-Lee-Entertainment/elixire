@@ -12,13 +12,59 @@ from sanic import response
 from ..common_auth import token_check, check_admin
 from ..common import gen_filename
 from ..snowflake import get_snowflake
-from ..errors import BadImage, Ratelimited, QuotaExploded
+from ..errors import BadImage, QuotaExploded
 
 import PIL.Image
 import PIL.ExifTags
 
 bp = Blueprint('upload')
 log = logging.getLogger(__name__)
+
+
+async def jpeg_toobig_webhook(app, user_id: int, in_filename: str,
+                              out_filename: str, size_before: int,
+                              size_after: int):
+    wh_url = getattr(app.econfig, 'EXIF_TOOBIG_WEBHOOK', None)
+    if not wh_url:
+        return
+
+    increase = size_after / size_before
+
+    uname = await app.db.fetchval("""
+        select username
+        from users
+        where user_id = $1
+    """, user_id)
+
+    payload = {
+        'embeds': [{
+            'title': 'Elixire EXIF Cleaner Size Change Warning',
+            'color': 0x420420,
+            'fields': [
+                {
+                    'name': 'user',
+                    'value': f'id: {user_id}, name: {uname}'
+                },
+                {
+                    'name': 'in filename',
+                    'value': in_filename,
+                },
+                {
+                    'name': 'out filename',
+                    'value': out_filename,
+                },
+                {
+                    'name': 'size change',
+                    'value': f'{size_before}b -> {size_after}b '
+                             f'({increase:.01f}x)',
+                }
+            ]
+        }]
+    }
+
+    async with app.session.post(wh_url,
+                                json=payload) as resp:
+        return resp
 
 
 async def scan_webhook(app, user_id: int, filename: str,
@@ -215,6 +261,7 @@ async def upload_handler(request):
 
     file_rname = await gen_filename(request)
     file_id = get_snowflake()
+    out_filename = file_rname + extension
 
     fspath = f'./images/{file_rname}{extension}'
 
@@ -233,7 +280,19 @@ async def upload_handler(request):
                                  filesize, user_id, fspath, domain_id)
 
     if filemime == "image/jpeg" and request.app.econfig.CLEAR_EXIF:
-        filebody = await clear_exif(filebody)
+        exif_limit = getattr(request.app.econfig, 'EXIF_INCREASELIMIT', None)
+        noexif_filebody = await clear_exif(filebody)
+        size_growth = (len(noexif_filebody) / filesize)
+
+        # If admin mode or exif limit is disabled, just set the value
+        # If growth is less than limit, also set the value
+        if not do_checks or not exif_limit or size_growth < exif_limit:
+            filebody = noexif_filebody
+        # If there is a limit AND we're over the limit, then send warning
+        elif exif_limit and size_growth > exif_limit:
+            await jpeg_toobig_webhook(request.app, user_id, in_filename,
+                                      out_filename, filesize,
+                                      len(noexif_filebody))
 
     # write to fs
     with open(fspath, 'wb') as fd:
@@ -247,7 +306,7 @@ async def upload_handler(request):
 
     # appended to generated filename
     dpath = pathlib.Path(domain)
-    fpath = dpath / 'i' / f'{file_rname}{extension}'
+    fpath = dpath / 'i' / out_filename
 
     return response.json({
         'url': f'https://{str(fpath)}'

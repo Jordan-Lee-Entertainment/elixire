@@ -27,6 +27,9 @@ UPLOAD_SCAN_WEBHOOK = ""
 # Webhook for banned users.
 USER_BAN_WEBHOOK = ""
 
+# Webhook for JPEGs that grew too much after EXIF cleaning.
+EXIF_TOOBIG_WEBHOOK = ""
+
 # change this to your wanted ban period
 # '1 day', '6 hours', '10 seconds', etc.
 BAN_PERIOD = '6 hours'
@@ -38,6 +41,14 @@ RL_THRESHOLD = 10
 # Should we clear EXIF values for JPEGs?
 # Needs Pillow
 CLEAR_EXIF = False
+
+# To prevent potential exploits to take over a lot of storage space
+# by abusing EXIF cleaning, we're comparing size of images before and after
+# EXIF cleaning. If exif_cleaned_filesize/regular_filesize is bigger than
+# the following number, we just use non-exif cleaned versions of the files.
+# Using anything below 1.25 or so might cause false positives.
+# Set to None or 0 to disable check.
+EXIF_INCREASELIMIT = 2
 
 ACCEPTED_MIMES = [
     'image/png',
