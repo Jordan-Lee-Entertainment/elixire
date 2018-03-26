@@ -1,0 +1,7 @@
+{
+  "plugins": {
+    "jest": {},
+    "doc_comment": {},
+    "node": {}
+  }
+}
