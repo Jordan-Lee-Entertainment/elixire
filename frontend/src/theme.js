@@ -1,6 +1,13 @@
 import "./commonCode.js";
 
-const authenticatedPages = ["/upload.html", "/logout.html", "/account.html"];
+const authenticatedPages = [
+  "/upload.html",
+  "/logout.html",
+  "/account.html",
+  "/list.html",
+  "/shortlist.html",
+  "/shorten.html"
+];
 
 const profilePromise = window.client
   .getProfile()
