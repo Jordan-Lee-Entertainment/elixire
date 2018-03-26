@@ -176,6 +176,10 @@ async def global_rl(request):
 
 @app.middleware('response')
 async def rl_header_set(request, response):
+    print(request.url)
+    if '/api' not in request.url:
+        return
+
     try:
         _, username = request.headers['x-context']
     except KeyError:
