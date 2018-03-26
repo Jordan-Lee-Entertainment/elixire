@@ -12,6 +12,7 @@ frontend/output/*
 
 # elixire file storage
 images/
+thumbnails/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

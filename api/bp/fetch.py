@@ -1,8 +1,11 @@
 import logging
 import os
+import time
 
 from sanic import Blueprint
 from sanic import response
+
+from PIL import Image
 
 from ..errors import NotFound
 from ..common_auth import check_domain
@@ -11,9 +14,7 @@ bp = Blueprint('fetch')
 log = logging.getLogger(__name__)
 
 
-@bp.get('/i/<filename>')
-async def file_handler(request, filename):
-    """Handles file serves."""
+async def filecheck(request, filename):
     domain = await check_domain(request, request.host)
 
     shortname, ext = os.path.splitext(filename)
@@ -39,4 +40,42 @@ async def file_handler(request, filename):
     if db_ext != ext:
         raise NotFound('No files with this name on this domain.')
 
+    return filepath
+
+
+@bp.get('/i/<filename>')
+async def file_handler(request, filename):
+    """Handles file serves."""
+    filepath = await filecheck(request, filename)
     return await response.file(filepath)
+
+
+@bp.get('/t/<filename>')
+async def thumbnail_handler(request, filename):
+    """Handles thumbnail serves."""
+    appcfg = request.app.econfig
+    thumbtype, filename = filename[0], filename[1:]
+    fspath = await filecheck(request, filename)
+
+    if not appcfg.THUMBNAILS:
+        return await response.file(fspath)
+
+    thb_folder = appcfg.THUMBNAIL_FOLDER
+    thumbpath = os.path.join(thb_folder, f'{thumbtype}{filename}')
+
+    if not os.path.isfile(thumbpath):
+        # call pillow, make it
+        tstart = time.monotonic()
+
+        image = Image.open(fspath)
+        image.thumbnail(appcfg.THUMBNAIL_SIZES[thumbtype])
+        image.save(thumbpath)
+
+        tend = time.monotonic()
+        delta = round((tend - tstart) * 1000, 5)
+        log.info(f'Took {delta} msec generating thumbnail '
+                 f'type {thumbtype} for {filename}')
+
+    # yes, we are doing more I/O by using response.file
+    # and not sending the bytes ourselves.
+    return await response.file(thumbpath)

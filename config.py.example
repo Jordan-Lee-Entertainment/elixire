@@ -64,3 +64,23 @@ RATELIMIT = {
     'requests': 5,
     'second': 3,
 }
+
+# Enable thumbnails?
+THUMBNAILS = False
+THUMBNAIL_FOLDER = './thumbnails'
+
+# Thumbnail sizing
+THUMBNAIL_SIZES = {
+    # large
+    'l': (5000, 5000),
+
+    # medium
+    'm': (1000, 1000),
+
+    # small
+    's': (500, 500),
+
+    # tiny
+    't': (250, 250),
+}
+
