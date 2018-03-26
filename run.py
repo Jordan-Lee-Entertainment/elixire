@@ -113,6 +113,9 @@ async def global_rl(request):
     if '/api' not in request.url:
         return
 
+    if request.method == 'OPTIONS':
+        return
+
     rtl = request.app.rtl
 
     # process ratelimiting
@@ -176,8 +179,10 @@ async def global_rl(request):
 
 @app.middleware('response')
 async def rl_header_set(request, response):
-    print(request.url)
     if '/api' not in request.url:
+        return
+
+    if request.method == 'OPTIONS':
         return
 
     try:
