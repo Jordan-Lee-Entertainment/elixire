@@ -247,10 +247,14 @@ class Client {
   async login(username, password) {
     if (!username || !password) throw new Error("BAD_AUTH");
     try {
-      const res = await this.request("post", "/login").send({
-        user: username,
-        password
-      });
+      const res = await this.request("post", "/login")
+        .send({
+          user: username,
+          password
+        })
+        .set("Authorization", null);
+      // So I guess the ratelimit code gets mad when you provide
+      // an invalid token, bypassing the actual route handler entirely
       this.token = res.body.token;
       return res.body.token;
     } catch (err) {
