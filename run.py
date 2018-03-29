@@ -110,6 +110,7 @@ def handle_exception(request, exception):
 
 
 async def ip_ratelimit(request):
+    # TODO: this, using the cf headers, etc
     pass
 
 
@@ -125,6 +126,7 @@ async def global_rl(request):
     if any(x in request.url
            for x in ('/api/login', '/api/apikey', '/api/revoke')):
         # not enable ratelimiting for those routes
+        # TODO: use ip_ratelimit
         return
 
     rtl = request.app.rtl
