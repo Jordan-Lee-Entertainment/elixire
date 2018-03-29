@@ -25,6 +25,7 @@ async def filecheck(request, filename):
     WHERE filename = $1
     AND deleted = false
     AND domain = $2
+    LIMIT 1
     """, shortname, domain["domain_id"])
 
     if not filepath:

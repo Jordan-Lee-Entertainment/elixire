@@ -1,7 +1,6 @@
 """
 Common authentication-related functions.
 """
-
 import bcrypt
 import itsdangerous
 
@@ -35,6 +34,7 @@ async def pwd_check(request, stored: str, password: str):
 
 
 async def password_check(request, user_id: int, password: str):
+    """Query password hash from user_id and compare with given."""
     stored = await request.app.db.fetchval("""
         select password_hash
         from users
@@ -110,11 +110,7 @@ async def login_user(request):
     except (TypeError, KeyError):
         raise BadInput('bad input')
 
-    user = await request.app.db.fetchrow("""
-    SELECT user_id, active, password_hash
-    FROM users
-    WHERE username = $1
-    """, username)
+    user = await request.app.storage.actx_username(username)
 
     if not user:
         raise FailedAuth('user or password invalid')
@@ -148,11 +144,7 @@ async def token_check(request, wanted_type=None) -> int:
     except (TypeError, ValueError):
         raise FailedAuth('invalid token format')
 
-    user = await request.app.db.fetchrow("""
-    SELECT password_hash, active
-    FROM users
-    WHERE user_id = $1
-    """, user_id)
+    user = await request.app.storage.actx_userid(user_id)
 
     if not user:
         raise FailedAuth('unknown user ID')
