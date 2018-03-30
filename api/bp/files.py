@@ -43,21 +43,38 @@ async def list_handler(request):
     ORDER BY shorten_id DESC
     """, user_id)
 
-    filenames = dict([(ufile["filename"],
-                       {"snowflake": ufile["file_id"],
-                        "shortname": ufile["filename"],
-                        "size": ufile["file_size"],
-                        "url": f"https://{domains[ufile['domain']]}/i/"
-                        f"{os.path.basename(ufile['fspath'])}"}
-                       ) for ufile in user_files])
+    filenames = {}
+    for ufile in user_files:
+        filename = ufile['filename']
+        domain = domains[ufile['domain']]
+        basename = os.path.basename(ufile['fspath'])
 
-    shortens = dict([(ushorten["filename"],
-                      {"snowflake": ushorten["shorten_id"],
-                       "shortname": ushorten["filename"],
-                       "redirto": ushorten["redirto"],
-                       "url": f"https://{domains[ushorten['domain']]}/s/"
-                       f"{ushorten['filename']}"}
-                      ) for ushorten in user_shortens])
+        file_url = f'https://{domain}/i/{basename}'
+
+        # TODO: remove the hardcoding on this one
+        file_url_thumb = f'https://{domain}/t/s{basename}'
+
+        filenames[filename] = {
+            'snowflake': ufile['file_id'],
+            'shortname': filename,
+            'size': ufile['file_size'],
+
+            'url': file_url,
+            'thumbnail': file_url_thumb,
+        }
+
+    shortens = {}
+    for ushorten in user_shortens:
+        filename = ushorten['filename']
+        domain = domains[ushorten['domain']]
+
+        shorten_url = f'https://{domain}/s/{filename}'
+        shortens[filename] = {
+            'snowflake': ushorten['shorten_id'],
+            'shortname': filename,
+            'redirto': ushorten['redirto'],
+            'url': shorten_url,
+        }
 
     return response.json({
         'success': True,
