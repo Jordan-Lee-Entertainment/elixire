@@ -10,6 +10,8 @@ db = {
     'password': '',
 }
 
+redis = 'redis://localhost'
+
 # 72 hours, 3 days.
 TIMED_TOKEN_AGE = 259200
 

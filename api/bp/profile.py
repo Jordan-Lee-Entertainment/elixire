@@ -94,6 +94,8 @@ async def change_profile(request):
             WHERE user_id = $2
         """, new_hash, user_id)
 
+        await request.app.storage.invalidate(user_id, 'password_hash')
+
         updated.append('password')
 
     return response.json({
