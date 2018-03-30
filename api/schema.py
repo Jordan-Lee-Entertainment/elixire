@@ -14,6 +14,7 @@ def validate(document, schema):
 
 
 PROFILE_SCHEMA = {
+    'user': {'type': 'string'},
     'password': {'type': 'string'},
     'new_password': {'type': 'string', 'nullable': True},
     'domain': {'type': 'integer', 'nullable': True},
