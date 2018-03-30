@@ -79,10 +79,10 @@ class Storage:
             log.info(f'setting key {key!r} to {value!r}')
             await conn.set(key, value if value is not None else 'false')
 
-    async def invalidate(self, keys):
+    async def invalidate(self, keys: tuple):
         """Invalidate/delete a set of keys."""
-        for key in keys:
-            await self.redis.delete(key)
+        with await self.redis as conn:
+            await conn.delete(*keys)
 
     async def get_uid(self, username: str) -> int:
         """Get an user ID given a username."""
