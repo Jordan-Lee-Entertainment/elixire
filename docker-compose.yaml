@@ -14,3 +14,6 @@ services:
         volumes:
             - ./data/postgres:/var/lib/postgresql/data
             - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+    redis:
+        image: "redis:4.0.9"
