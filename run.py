@@ -3,6 +3,7 @@ import traceback
 
 import asyncpg
 import aiohttp
+import aioredis
 
 from sanic import Sanic, exceptions
 from sanic import response
@@ -20,6 +21,7 @@ from api.errors import APIError, Ratelimited, Banned, BadInput, FailedAuth
 from api.common_auth import token_check
 from api.common import ban_webhook, check_bans
 from api.ratelimit import RatelimitManager
+from api.storage import Storage
 
 import config
 
@@ -107,6 +109,11 @@ def handle_exception(request, exception):
     }, status=status_code)
 
 
+async def ip_ratelimit(request):
+    # TODO: this, using the cf headers, etc
+    pass
+
+
 @app.middleware('request')
 async def global_rl(request):
     # handle global ratelimiting
@@ -116,7 +123,15 @@ async def global_rl(request):
     if request.method == 'OPTIONS':
         return
 
+    if any(x in request.url
+           for x in ('/api/login', '/api/apikey',
+                     '/api/revoke', '/api/domains')):
+        # not enable ratelimiting for those routes
+        # TODO: use ip_ratelimit
+        return
+
     rtl = request.app.rtl
+    storage = request.app.storage
 
     # process ratelimiting
     user_name, user_id, token = None, None, None
@@ -136,21 +151,13 @@ async def global_rl(request):
         user_id = await token_check(request)
 
     if not user_id:
-        user_id = await request.app.db.fetchval("""
-        SELECT user_id
-        FROM users
-        WHERE username=$1
-        """, user_name)
+        user_id = await storage.get_uid(user_name)
 
     if not user_id:
         raise FailedAuth('User not found')
 
     if not user_name and user_id:
-        user_name = await request.app.db.fetchval("""
-        SELECT username
-        FROM users
-        WHERE user_id=$1
-        """, user_id)
+        user_name = await storage.get_username(user_id)
 
     context = (user_name, user_id)
     print(context)
@@ -170,7 +177,7 @@ async def global_rl(request):
     await check_bans(request, user_id)
 
     retry_after = bucket.update_rate_limit()
-    if bucket._retries > request.app.econfig.RL_THRESHOLD:
+    if bucket.retries > request.app.econfig.RL_THRESHOLD:
         raise Banned('Reached retry limit on ratelimiting.')
 
     if retry_after:
@@ -189,10 +196,13 @@ async def rl_header_set(request, response):
         _, username = request.headers['x-context']
     except KeyError:
         # we are in deep trouble
-        log.exception('Request object does not provide a username')
-        raise APIError('Request object doesnt have a context.')
+        log.warning('Request object does not provide a context')
+        username = None
+        return
 
-    bucket = request.app.rtl.get_bucket(username)
+    bucket = None
+    if username:
+        bucket = request.app.rtl.get_bucket(username)
 
     if bucket:
         response.headers['X-RateLimit-Limit'] = bucket.requests
@@ -212,10 +222,28 @@ async def setup_db(app, loop):
 
     log.info('connecting to db')
     app.db = await asyncpg.create_pool(**config.db)
-    log.info('connected to db')
+
+    log.info('connecting to redis')
+    app.redis = await aioredis.create_redis_pool(
+        config.redis,
+        minsize=3, maxsize=11,
+        loop=loop, encoding='utf-8'
+    )
 
     # start ratelimiting man
     app.rtl = RatelimitManager(app)
+
+    app.storage = Storage(app)
+
+
+@app.listener('after_server_stop')
+async def close_db(app, loop):
+    log.info('closing db')
+    await app.db.close()
+
+    log.info('closing redis')
+    app.redis.close()
+    await app.redis.wait_closed()
 
 
 def main():
