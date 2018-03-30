@@ -4,6 +4,9 @@ PORT = 8080
 # Link / to ./frontend ?
 ENABLE_FRONTEND = True
 
+# Which folder to store uploaded images to?
+IMAGE_FOLDER = './images'
+
 db = {
     'host': 'localhost',
     'user': 'postgres',
