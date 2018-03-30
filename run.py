@@ -125,7 +125,7 @@ async def global_rl(request):
 
     if any(x in request.url
            for x in ('/api/login', '/api/apikey',
-                     '/api/revoke', '/api/domains')):
+                     '/api/revoke', '/api/domains', '/api/hello')):
         # not enable ratelimiting for those routes
         # TODO: use ip_ratelimit
         return
@@ -244,6 +244,13 @@ async def close_db(app, loop):
     log.info('closing redis')
     app.redis.close()
     await app.redis.wait_closed()
+
+
+@app.get('/api/hello')
+async def test_route(request):
+    return response.json({
+        'name': 'elixire'
+    })
 
 
 def main():
