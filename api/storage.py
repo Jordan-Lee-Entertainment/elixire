@@ -110,6 +110,26 @@ class Storage:
 
         return uid
 
+    async def get_username(self, user_id: int) -> str:
+        """Get a username given user ID."""
+        key = f'uname:{user_id}'
+        uname = await self.get(key, str)
+
+        if uname is False:
+            return
+
+        if uname is None:
+            uname = await self.db.fetchval("""
+            SELECT username
+            FROM users
+            WHERE user_id = $1
+            LIMIT 1
+            """, user_id)
+
+            await self.set(f'uname:{user_id}', uname)
+
+        return uname
+
     async def actx_username(self, username: str) -> dict:
         """Fetch authentication context important stuff
         given an username.
@@ -162,3 +182,25 @@ class Storage:
             'password_hash': password_hash,
             'active': active,
         })
+
+    async def get_fspath(self, shortname: str, domain_id: int) -> str:
+        """Get the filesystem path of an image."""
+        key = f'fspath:{domain_id}:{shortname}'
+        fspath = await self.get(key, str)
+
+        if fspath is False:
+            return
+
+        if fspath is None:
+            fspath = await self.db.fetchval("""
+            SELECT fspath
+            FROM files
+            WHERE filename = $1
+            AND deleted = false
+            AND domain = $2
+            LIMIT 1
+            """, shortname, domain_id)
+
+            await self.set(key, fspath)
+
+        return fspath

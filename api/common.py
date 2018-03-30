@@ -146,7 +146,7 @@ async def purge_cf(app, filename: str, ftype: int):
 async def check_bans(request, user_id: int):
     """Check if the current user is already banned."""
 
-    # TODO: make this use Storage
+    # TODO: make this use Storage...?
     reason = await request.app.db.fetchval("""
     SELECT reason
     FROM bans

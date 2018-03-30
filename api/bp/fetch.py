@@ -19,14 +19,8 @@ async def filecheck(request, filename):
 
     shortname, ext = os.path.splitext(filename)
 
-    filepath = await request.app.db.fetchval("""
-    SELECT fspath
-    FROM files
-    WHERE filename = $1
-    AND deleted = false
-    AND domain = $2
-    LIMIT 1
-    """, shortname, domain["domain_id"])
+    storage = request.app.storage
+    filepath = await storage.get_fspath(shortname, domain['domain_id'])
 
     if not filepath:
         raise NotFound('No files with this name on this domain.')

@@ -130,6 +130,7 @@ async def global_rl(request):
         return
 
     rtl = request.app.rtl
+    storage = request.app.storage
 
     # process ratelimiting
     user_name, user_id, token = None, None, None
@@ -149,21 +150,13 @@ async def global_rl(request):
         user_id = await token_check(request)
 
     if not user_id:
-        user_id = await request.app.db.fetchval("""
-        SELECT user_id
-        FROM users
-        WHERE username=$1
-        """, user_name)
+        user_id = await storage.get_uid(user_name)
 
     if not user_id:
         raise FailedAuth('User not found')
 
     if not user_name and user_id:
-        user_name = await request.app.db.fetchval("""
-        SELECT username
-        FROM users
-        WHERE user_id=$1
-        """, user_id)
+        user_name = await storage.get_username(user_id)
 
     context = (user_name, user_id)
     print(context)
@@ -183,7 +176,7 @@ async def global_rl(request):
     await check_bans(request, user_id)
 
     retry_after = bucket.update_rate_limit()
-    if bucket._retries > request.app.econfig.RL_THRESHOLD:
+    if bucket.retries > request.app.econfig.RL_THRESHOLD:
         raise Banned('Reached retry limit on ratelimiting.')
 
     if retry_after:
