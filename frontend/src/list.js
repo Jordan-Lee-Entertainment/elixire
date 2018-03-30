@@ -34,7 +34,7 @@ function renderFile(file) {
   let previewTransport = document.createElement("img");
   previewTransport.classList = "stubbed-preview preview-transport";
   previewTransport.src = stubbedImage;
-  previewContainer.attributes["data-url"] = file.url;
+  previewContainer.attributes["data-url"] = file.thumbnail;
 
   const fileSize = document.createElement("div");
   fileSize.innerText = filesize(file.size).human();
@@ -115,7 +115,7 @@ function renderFile(file) {
     observer.observe(previewContainer);
     if (isVisible(previewContainer)) {
       console.log("Render!");
-      renderRealPreview(file.url, previewContainer);
+      renderRealPreview(file.thumbnail, previewContainer);
     }
   });
   fileWrap.appendChild(previewContainer);
