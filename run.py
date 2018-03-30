@@ -44,7 +44,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
-async def options_handler(request):
+async def options_handler(request, *args, **kwargs):
     return response.text('ok')
 
 
