@@ -124,7 +124,8 @@ async def global_rl(request):
         return
 
     if any(x in request.url
-           for x in ('/api/login', '/api/apikey', '/api/revoke')):
+           for x in ('/api/login', '/api/apikey',
+                     '/api/revoke', '/api/domains')):
         # not enable ratelimiting for those routes
         # TODO: use ip_ratelimit
         return

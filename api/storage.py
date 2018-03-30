@@ -205,3 +205,24 @@ class Storage:
             await self.set(key, fspath)
 
         return fspath
+
+    async def get_urlredir(self, filename: str, domain_id: int) -> str:
+        """Get a redirection of an URL."""
+        key = f'redir:{domain_id}:{filename}'
+        url = await self.get(key, str)
+
+        if url is False:
+            return
+
+        if url is None:
+            url = await self.db.fetchval("""
+            SELECT redirto
+            FROM shortens
+            WHERE filename = $1
+            AND deleted = false
+            AND domain = $2
+            """, filename, domain_id)
+
+            await self.set(key, url)
+
+        return url

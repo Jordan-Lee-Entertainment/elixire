@@ -84,16 +84,7 @@ async def delete_handler(request):
     if exec_out == "UPDATE 0":
         raise NotFound('You have no files with this name.')
 
-    await purge_cf(request.app, file_name, FileNameType.FILE)
-
-    # We have to fetch the domain here
-    # because that's how life is
-    domain_id = await request.app.db.fetchval("""
-    SELECT domain
-    FROM files
-    WHERE filename = $1
-    """, file_name)
-
+    domain_id = await purge_cf(request.app, file_name, FileNameType.FILE)
     await request.app.storage.raw_invalidate(f'fspath:{domain_id}:{file_name}')
 
     return response.json({
@@ -120,7 +111,8 @@ async def shortendelete_handler(request):
     if exec_out == "UPDATE 0":
         raise NotFound('You have no shortens with this name.')
 
-    await purge_cf(request.app, file_name, FileNameType.SHORTEN)
+    domain_id = await purge_cf(request.app, file_name, FileNameType.SHORTEN)
+    await request.app.storage.raw_invalidate(f'redir:{domain_id}:{file_name}')
 
     return response.json({
         'success': True
