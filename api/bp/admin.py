@@ -4,7 +4,7 @@ elixire - admin routes
 
 from sanic import Blueprint, response
 
-from ..common_auth import login_user, check_admin
+from ..common_auth import login_user, token_check, check_admin
 from ..errors import NotFound, BadInput
 
 
@@ -17,8 +17,8 @@ async def test_admin(request):
 
     This is just a test route.
     """
-    user = await login_user(request)
-    await check_admin(user['id'], True)
+    user_id = await token_check(request)
+    await check_admin(user_id, True)
 
     return response.json({
         'admin': True
@@ -27,31 +27,26 @@ async def test_admin(request):
 
 @bp.get('/api/admin/users')
 async def list_users_handler(request):
-    user = await login_user(request)
-    await check_admin(user['id'], True)
+    user_id = await token_check(request)
+    await check_admin(request, user_id)
 
-    try:
-        page = request.json['page']
-    except (ValueError, TypeError):
-        raise BadInput('invalid page value')
-
-    # TODO: paging.
-    page = await request.app.db.fetchr("""
-    SELECT *
+    # TODO: this is inefficient.
+    # how to approach paging, in something like SQL?
+    data = await request.app.db.fetch("""
+    SELECT user_id, username, active, admin, domain
     FROM users
-    LIMIT 1
     """)
 
-    return request.json(list(map(dict, page)))
+    return response.json(list(map(dict, data)))
 
 
 @bp.get('/api/admin/users/<user_id:int>')
 async def get_user_handler(request, user_id):
-    user = await login_user(request)
-    await check_admin(user['id'], True)
+    user_id = await token_check(request)
+    await check_admin(user_id, True)
 
     udata = await request.app.db.fetchrow("""
-    SELECT *
+    SELECT user_id, suername, active, admin, domain
     FROM users
     WHERE user_id=$1
     """, user_id)

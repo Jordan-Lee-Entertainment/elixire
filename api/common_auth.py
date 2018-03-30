@@ -108,7 +108,7 @@ async def login_user(request):
         username = request.json['user']
         password = request.json['password']
     except (TypeError, KeyError):
-        raise BadInput('bad input')
+        raise BadInput('Bad payload for user/password auth')
 
     user = await request.app.storage.actx_username(username)
 
