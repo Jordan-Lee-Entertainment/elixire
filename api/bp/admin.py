@@ -4,8 +4,8 @@ elixire - admin routes
 
 from sanic import Blueprint, response
 
-from ..common_auth import login_user, token_check, check_admin
-from ..errors import NotFound, BadInput
+from ..common_auth import token_check, check_admin
+from ..errors import NotFound
 
 
 bp = Blueprint('admin')
