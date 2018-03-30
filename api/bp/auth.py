@@ -64,6 +64,8 @@ async def revoke_handler(request):
     WHERE user_id = $2
     """, hashed.decode('utf-8'), user['user_id'])
 
+    await request.app.storage.invalidate(user['user_id'], 'password_hash')
+
     return response.json({
         'success': True
     })
