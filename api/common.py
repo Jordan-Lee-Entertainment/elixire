@@ -95,7 +95,7 @@ def _purge_url_shorten(filename: str, domain: str, _detail: dict):
     return f'https://{domain}/s/{filename}'
 
 
-async def purge_cf(app, filename: str, ftype: int):
+async def purge_cf(app, filename: str, ftype: int) -> int:
     """
     Purge a filename(that can represent either a proper file or a shorten)
     from Cloudflare's caching.
@@ -119,7 +119,7 @@ async def purge_cf(app, filename: str, ftype: int):
         WHERE filename = $1
         """, filename)
 
-    if not domain:
+    if domain is None:
         # oops. invalid type?
         return
 
@@ -141,6 +141,8 @@ async def purge_cf(app, filename: str, ftype: int):
         await _purge_cf_cache(app, [purge_url], domain_detail['cf_email'],
                               domain_detail['cf_apikey'],
                               domain_detail['cf_zoneid'])
+
+    return domain
 
 
 async def check_bans(request, user_id: int):
