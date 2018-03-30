@@ -39,7 +39,7 @@ function renderLink(shorten) {
   longL.href = shorten.redirto;
   longL.innerText = shorten.redirto;
   const arrow = document.createElement("span");
-  arrow.innerText = " → ";
+  arrow.innerHTML = "&rarr;"; // →
   shortMapping.appendChild(shortL);
   shortMapping.appendChild(arrow);
   shortMapping.appendChild(longL);
