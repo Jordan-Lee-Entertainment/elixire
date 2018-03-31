@@ -39,3 +39,24 @@ Here's some important notes while this is still a todo:
 # API Documentation
 
 [See this repo](https://gitlab.com/elixire/api-docs) for API Docs.
+
+# Running tests
+
+**NOTE: DO NOT RUN TESTS IN YOUR PRODUCTION ENVIROMENT. AT ALL.**
+
+```bash
+cd utils
+./adduser.py hi hi
+
+# TODO: instructions for admin test user
+
+./adduser.py nousage nousage
+./adduser.py quotareached quotareached
+
+cd ..
+```
+
+Then,
+```bash
+tox
+```
