@@ -25,6 +25,7 @@ async def test_api(test_cli):
     resp_json = await response.json()
     assert resp_json['name'] == 'elixire'
 
+
 async def test_login(test_cli):
     response = await test_cli.post('/api/login', json={
         'user': elixire.tests.creds.USERNAME,
@@ -34,3 +35,29 @@ async def test_login(test_cli):
     assert response.status == 200
     resp_json = await response.json()
     assert isinstance(resp_json['token'], str)
+
+
+async def test_login_badinput(test_cli):
+    response = await test_cli.post('/api/login', json={
+        'user': elixire.tests.creds.USERNAME,
+    })
+
+    assert response.status == 400
+
+
+async def test_login_badpwd(test_cli):
+    response = await test_cli.post('/api/login', json={
+        'user': elixire.tests.creds.USERNAME,
+        'password': 'AAAAAAAAAAAAAAAAAAAAAAAAAA',
+    })
+
+    assert response.status == 403
+
+async def test_login_baduser(test_cli):
+    response = await test_cli.post('/api/login', json={
+        'user': 'AAAAAAAAAAAAAAAAAAA',
+        'password': elixire.tests.creds.PASSWORD,
+    })
+
+    assert response.status == 403
+
