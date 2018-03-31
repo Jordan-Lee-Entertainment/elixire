@@ -21,6 +21,7 @@ async def main():
     """, new_filename, old_filename)
 
     print(f"db out: {exec_out}")
+    await db.close()
 
 
 if __name__ == '__main__':
