@@ -30,6 +30,8 @@ async def main():
     print(f'username: {username!r}')
     print(f'password: {password!r}')
 
+    await db.close()
+
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
