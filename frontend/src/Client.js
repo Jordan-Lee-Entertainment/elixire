@@ -142,15 +142,16 @@ class Client {
   /**
    * Generates an uploader API key
    * @param {String} password - The user's password to authenticate with
+   * @param {String} [username=this.profile.username] - The username to login with
    * @returns {Promise<String>} The generated API key
    * @api public
    */
-  generateToken(password) {
-    if (!this.token) return Promise.reject(new Error("BAD_AUTH"));
+  async generateToken(password, username = this.profile.username) {
+    if (!username || !password) throw new Error("BAD_AUTH");
     try {
-      return this.request("post", "/apikey")
+      return await this.request("post", "/apikey")
         .send({
-          user: this.profile.username,
+          user: username,
           password: password
         })
         .then(res => res.body.api_key);

@@ -13,3 +13,13 @@
 #submit-btn {
     margin-bottom: 1em;
 }
+
+.keep-wrap {
+    position: relative;
+}
+
+.form-check.keep-check {
+    top: 7px; // Literally a magic number.
+    position: absolute;
+    margin-left: 0.75em;
+}
