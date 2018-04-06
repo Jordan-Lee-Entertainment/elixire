@@ -10,9 +10,32 @@ block content
         label(for="password") Password
         input(type="password", placeholder="Password").form-control#password
 
-      button(type="submit").btn.btn-primary#submit-btn Login
+      div.keep-wrap
+        button(type="submit").btn.btn-primary#submit-btn Login
+        div.form-check.form-check-inline.keep-check
+          input(type="checkbox").form-check-input#keep-logged-in
+          label(for="keep-logged-in").form-check-label Keep me signed in
       br
       span.text-muted
         | Forgotten your password? Ask for help on our 
         a(href="https://discord.gg/Yt83sPJ") Discord guild
         | !
+
+      div(tabindex="-1", role="dialog", aria-hidden="true").modal.fade#remember-modal
+        div(role="document").modal-dialog
+          div.modal-content
+            div.modal-header
+              h5 Are you sure?
+              button(type="button", data-dismiss="modal").close
+                span &times;
+            div.modal-body
+              //- CP carousel
+              div(data-ride="carousel").carousel.slide#cp-carousel
+                div.carousel-inner
+                  div.carousel-item.active
+                    img(src=require("../cp/banned.png")).d-block.w-100
+                  div.carousel-item
+                    img(src=require("../cp/igloo.png")).d-block.w-100
+            div.modal-footer
+              button(type="button", data-dismiss="modal").btn.btn-secondary No! Go back!
+              button(type="button", data-dismiss="modal").btn.btn-primary#save-password Yes, I'm sure
