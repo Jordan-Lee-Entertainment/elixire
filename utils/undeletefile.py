@@ -25,6 +25,8 @@ async def main():
 
     print(f"db out: {exec_out}")
 
+    await db.close()
+
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
