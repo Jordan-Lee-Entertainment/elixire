@@ -195,6 +195,8 @@ Global Counts, ND: {nd_shorten_count}, D: {d_shorten_count}
 Weekly Counts, ND: {nd_shorten_count_week}, D: {d_shorten_count_week}
     """)
 
+    await db.close()
+
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()

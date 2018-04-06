@@ -140,9 +140,13 @@ class Storage:
         dict
         """
         user_id = await self.get_uid(username)
+        if not user_id:
+            log.info('user not found')
+            return
 
         actx = await self.actx_userid(user_id)
         if not actx:
+            log.info('actx failed')
             return
 
         actx.update({'user_id': user_id})

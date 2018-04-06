@@ -67,6 +67,7 @@ async def main():
                                      config.CF_UPLOADURLS)
         print(f"purge result: {cfres}")
 
+    await db.close()
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
