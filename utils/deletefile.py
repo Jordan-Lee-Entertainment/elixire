@@ -41,7 +41,15 @@ async def purge_cf_cache(econfig, file_name: str, base_urls):
 
 async def main():
     db = await asyncpg.create_pool(**config.db)
+    redis = await aioredis.create_redis(config.redis)
+
     filename = sys.argv[1]
+
+    domain = await db.fetchval("""
+    SELECT domain
+    FROM files
+    WHERE filename = $1
+    """, filename)
 
     exec_out = await db.execute("""
     UPDATE files
@@ -51,6 +59,7 @@ async def main():
     """, filename)
 
     print(f"db out: {exec_out}")
+    await redis.delete(f'fspath:{domain}:{filename}')
 
     if config.CF_PURGE:
         print("cf purging")
@@ -68,6 +77,7 @@ async def main():
         print(f"purge result: {cfres}")
 
     await db.close()
+    await redis.close()
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()

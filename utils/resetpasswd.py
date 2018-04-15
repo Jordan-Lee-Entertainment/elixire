@@ -5,6 +5,7 @@ import asyncio
 
 import bcrypt
 import asyncpg
+import aioredis
 
 sys.path.append('..')
 import config
@@ -12,6 +13,8 @@ import config
 
 async def main():
     db = await asyncpg.create_pool(**config.db)
+    redis = await aioredis.create_redis(config.redis)
+
     username = sys.argv[1]
     password = secrets.token_urlsafe(25)
 
@@ -25,12 +28,24 @@ async def main():
     WHERE username = $2
     """, hashed.decode('utf-8'), username)
 
+    # we need uid lol
+    uid = await db.fetchval("""
+    SELECT user_id
+    FROM users
+    WHERE username=$1
+    """, username)
+
+    # invalidate
+    await redis.delete(f'uid:{uid}:password_hash')
+    await redis.delete(f'uid:{uid}:active')
+
     # print the user & password
     print(f'db output: {dbout}')
     print(f'username: {username!r}')
     print(f'password: {password!r}')
 
     await db.close()
+    await redis.close()
 
 
 if __name__ == '__main__':

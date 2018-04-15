@@ -14,7 +14,14 @@ aiosession = aiohttp.ClientSession()
 
 async def main():
     db = await asyncpg.create_pool(**config.db)
+    redis = await aioredis.create_redis(config.redis)
     filename = sys.argv[1]
+
+    domain = await db.fetchval("""
+    SELECT domain
+    FROM files
+    WHERE filename = $1
+    """, filename)
 
     exec_out = await db.execute("""
     UPDATE files
@@ -24,8 +31,10 @@ async def main():
     """, filename)
 
     print(f"db out: {exec_out}")
+    await redis.delete(f'fspath:{domain}:{filename}')
 
     await db.close()
+    await redis.close()
 
 
 if __name__ == '__main__':
