@@ -12,7 +12,7 @@ from sanic import response
 from ..common_auth import token_check, check_admin
 from ..common import gen_filename
 from ..snowflake import get_snowflake
-from ..errors import BadImage, QuotaExploded
+from ..errors import BadImage, QuotaExploded, BadUpload
 
 import PIL.Image
 import PIL.ExifTags
@@ -199,7 +199,11 @@ async def upload_handler(request):
         await check_admin(request, user_id, True)
 
     # the first, and only the first.
-    key = next(iter(keys))
+    try:
+        key = next(iter(keys))
+    except StopIteration:
+        raise BadUpload('No images given')
+
     filedata = request.files[key]
     filedata = next(iter(filedata))
 
