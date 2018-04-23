@@ -30,6 +30,36 @@ html
                    a(href="#", data-target="/list.html").dropdown-item.intellectual-link File List
                    a(href="#", data-target="/shortlist.html").dropdown-item.intellectual-link Shortened Links
                    a(href="#", data-target="/logout.html").dropdown-item.intellectual-link Log out
+
+      .error-body
+        h2 Oopsie Woopsie!
+        p.error-text
+          | We did a fucky wucky UwU! A real bingo bango! Ouw engineews awe working 
+          b
+            i VEWY
+          |  hawd to fix it :3! Why don't you join ouw 
+          a(href="") RP Discord server
+          |  so we can help you OwO
+        p.error-info
+          b Hewwo! Dis should be included in youw error repowt.
+          br
+          | Error thrown: 
+          code#error-info undefined
+          |  in 
+          code#filename undefined.js:1:1
+          
+      .access-denied
+        .garfield-column
+           img(src=require("./garfield-access-denied.svg"), alt="Access denied")
+        .error-column
+           h1 Access Denied!
+           div.error-description
+             | Looks like you're not allowed in here!
+             br
+             | Have you tried 
+             a(href="/login.html")#garfield-login logging in
+             | ?
+
       .body
         //- Errors and stuff go in this div.
         #alert-area

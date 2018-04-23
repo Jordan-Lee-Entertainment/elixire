@@ -40,7 +40,20 @@ window.addEventListener("DOMContentLoaded", async function() {
     document.body.classList += " logged-in";
   } else if (authenticatedPages.includes(window.location.pathname)) {
     // Hash param is used to know where to redirect back to after login.
-    window.location.hash = window.location.pathname;
-    window.location.pathname = "/login.html";
+    document.getElementById("garfield-login").href = `/login.html#${
+      window.location.pathname
+    }`;
+    document.body.classList += " show-garfield";
+    document.title = "Access Denied | Elixire";
   }
+});
+
+window.addEventListener("error", function(event) {
+  // oopsie woopsie
+  console.log(event);
+  document.body.classList += " error-thrown";
+  const errorInfo = document.getElementById("error-info");
+  errorInfo.innerText = event.message;
+  const filename = document.getElementById("filename");
+  filename.innerText = `${event.filename}:${event.lineno}:${event.colno}`;
 });
