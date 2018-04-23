@@ -4,7 +4,7 @@ from sanic import Blueprint
 from sanic import response
 
 from ..common_auth import token_check, check_admin, check_domain
-from ..errors import NotFound, Ratelimited
+from ..errors import NotFound, QuotaExploded
 from ..common import gen_filename
 from ..snowflake import get_snowflake
 
@@ -60,12 +60,12 @@ async def shorten_handler(request):
         """, user_id)
 
         if shortens_used and shortens_used > shorten_limit:
-            raise Ratelimited('You already blew your weekly'
-                              f' limit of {shorten_limit} shortens')
+            raise QuotaExploded('You already blew your weekly'
+                                f' limit of {shorten_limit} shortens')
 
         if shortens_used and shortens_used + 1 > shorten_limit:
-            raise Ratelimited('This shorten blows the weekly limit of'
-                              f' {shorten_limit} shortens')
+            raise QuotaExploded('This shorten blows the weekly limit of'
+                                f' {shorten_limit} shortens')
 
     redir_rname = await gen_filename(request)
     redir_id = get_snowflake()
