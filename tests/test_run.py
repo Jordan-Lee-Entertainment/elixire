@@ -2,11 +2,13 @@ import pytest
 
 import sys
 import os
+import secrets
 
 sys.path.append(os.getcwd())
 
 from elixire.run import app as mainapp
 import elixire.tests.creds
+from elixire.tests.common import token, username
 
 
 @pytest.yield_fixture
@@ -48,16 +50,51 @@ async def test_login_badinput(test_cli):
 async def test_login_badpwd(test_cli):
     response = await test_cli.post('/api/login', json={
         'user': elixire.tests.creds.USERNAME,
-        'password': 'AAAAAAAAAAAAAAAAAAAAAAAAAA',
+        'password': token(),
     })
 
     assert response.status == 403
 
+
 async def test_login_baduser(test_cli):
     response = await test_cli.post('/api/login', json={
-        'user': 'AAAAAAAAAAAAAAAAAAA',
+        'user': username(),
         'password': elixire.tests.creds.PASSWORD,
     })
 
     assert response.status == 403
+
+# token tests
+
+
+async def test_no_token(test_cli):
+    """Test no token request."""
+    response = await test_cli.get('/api/profile', headers={})
+    assert response.status == 400
+
+
+async def test_invalid_token(test_cli):
+    """Test invalid token."""
+    response = await test_cli.get('/api/profile', headers={
+        'Authorization': token(),
+    })
+    assert response.status == 403
+
+
+async def test_valid_token(test_cli):
+    response = await test_cli.post('/api/login', json={
+        'user': elixire.tests.creds.USERNAME,
+        'password': elixire.tests.creds.PASSWORD,
+    })
+
+    assert response.status == 200
+    data = await response.json()
+    assert isinstance(data, dict)
+
+    token = data['token']
+    response_valid = await test_cli.get('/api/profile', headers={
+        'Authorization': token,
+    })
+
+    assert response_valid.status == 200
 
