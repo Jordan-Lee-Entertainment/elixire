@@ -45,3 +45,53 @@ h1 {
     margin-top: -0.75rem; 
 }
 
+
+
+// Errors
+.error-body {
+    display: none;
+    text-align: center;
+    width: 40vw;
+    margin: auto;
+    margin-top: 10vh;
+}
+
+.error-thrown .error-body {
+    display: block;
+}
+
+.error-thrown .body {
+    display: none;
+}
+
+
+// Garfield
+.access-denied {
+    margin-top: 2vh;
+    display: none;
+}
+
+body.show-garfield .access-denied {
+    display: block;
+}
+
+body.show-garfield .body {
+    display: none;
+}
+
+.garfield-column {
+    display: inline-block;
+    width: 60vw;
+    padding-left: 1em;
+}
+
+.garfield-column img {
+    width: 60vw;
+}
+
+.error-column {
+    display: inline-block;
+    width: 35vw;
+    text-align: right;
+    font-size: 1.65em;
+}

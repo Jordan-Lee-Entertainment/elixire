@@ -49,7 +49,7 @@ class Client {
   async getProfile() {
     if (!this.token) throw new Error("BAD_AUTH");
     try {
-      this.profile = await this.request("get", "/profile").then(
+      this.profile = await this.ratelimitedRequest("get", "/profile").then(
         res => res.body
       );
     } catch (err) {
@@ -67,7 +67,7 @@ class Client {
   async getDomains() {
     if (!this.token) throw new Error("BAD_AUTH");
     try {
-      this.domains = await this.request("get", "/domains").then(
+      this.domains = await this.ratelimitedRequest("get", "/domains").then(
         res => res.body.domains
       );
     } catch (err) {
@@ -89,9 +89,9 @@ class Client {
   async updateAccount(changes) {
     if (!this.token || !changes.password) throw new Error("BAD_AUTH");
     try {
-      const res = await this.request("patch", "/profile")
-        .send(changes)
-        .then(res => res.body.updated_fields);
+      const res = await this.ratelimitedRequest("patch", "/profile", req =>
+        req.send(changes)
+      ).then(res => res.body.updated_fields);
       if (changes.new_password) {
         await this.login(this.profile.username, changes.new_password);
       }
@@ -110,11 +110,9 @@ class Client {
   async deleteLink(shortcode) {
     if (!this.token) throw new Error("BAD_AUTH");
     try {
-      return await this.request("delete", "/shortendelete")
-        .send({
-          filename: shortcode
-        })
-        .then(res => res.body);
+      return await this.ratelimitedRequest("delete", "/shortendelete", req =>
+        req.send({ filename: shortcode })
+      ).then(res => res.body);
     } catch (err) {
       throw this.handleErr(err);
     }
@@ -129,11 +127,11 @@ class Client {
   async deleteFile(shortcode) {
     if (!this.token) throw new Error("BAD_AUTH");
     try {
-      return await this.request("delete", "/delete")
-        .send({
+      return await this.ratelimitedRequest("delete", "/delete", req =>
+        req.send({
           filename: shortcode
         })
-        .then(res => res.body);
+      ).then(res => res.body);
     } catch (err) {
       throw this.handleErr(err);
     }
@@ -149,12 +147,12 @@ class Client {
   async generateToken(password, username = this.profile.username) {
     if (!username || !password) throw new Error("BAD_AUTH");
     try {
-      return await this.request("post", "/apikey")
-        .send({
+      return await this.ratelimitedRequest("post", "/apikey", req =>
+        req.send({
           user: username,
           password: password
         })
-        .then(res => res.body.api_key);
+      ).then(res => res.body.api_key);
     } catch (err) {
       throw this.handleErr(err);
       // TODO: handle the error properly !
@@ -170,12 +168,12 @@ class Client {
   revokeTokens(password) {
     if (!this.token || !password) return Promise.reject(new Error("BAD_AUTH"));
     try {
-      return this.request("post", "/revoke")
-        .send({
+      return this.ratelimitedRequest("post", "/revoke", req =>
+        req.send({
           user: this.profile.username,
           password: password
         })
-        .then(req => req.body);
+      ).then(req => req.body);
     } catch (err) {
       throw this.handleErr(err);
       // TODO: handle the error properly !
@@ -193,6 +191,7 @@ class Client {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      // TODO: How will we make this work and still handle ratelimits?
       const request = this.request("post", "/upload").send(formData);
       if (this.profile.admin) request.query({ admin: 1 });
       return request;
@@ -210,11 +209,11 @@ class Client {
   async shortenUrl(longUrl) {
     if (!this.token) throw new Error("BAD_AUTH");
     try {
-      return await this.request("post", "/shorten")
-        .send({
+      return await this.ratelimitedRequest("post", "/shorten", req =>
+        req.send({
           url: longUrl
         })
-        .then(res => res.body.url);
+      ).then(res => res.body.url);
     } catch (err) {
       throw this.handleErr(err);
       // TODO: handle the error properly !
@@ -230,7 +229,9 @@ class Client {
     // TODO: Quota class?
     if (!this.token) throw new Error("BAD_AUTH");
     try {
-      this.quota = await this.request("get", "/limits").then(res => res.body);
+      this.quota = await this.ratelimitedRequest("get", "/limits").then(
+        res => res.body
+      );
     } catch (err) {
       throw this.handleErr(err);
       // TODO: handle the error properly !
@@ -248,14 +249,16 @@ class Client {
   async login(username, password) {
     if (!username || !password) throw new Error("BAD_AUTH");
     try {
-      const res = await this.request("post", "/login")
-        .send({
-          user: username,
-          password
-        })
-        .set("Authorization", null);
-      // So I guess the ratelimit code gets mad when you provide
-      // an invalid token, bypassing the actual route handler entirely
+      const res = await this.ratelimitedRequest("post", "/login", req =>
+        req
+          .send({
+            user: username,
+            password
+          })
+          // So I guess the ratelimit code gets mad when you provide
+          // an invalid token, bypassing the actual route handler entirely
+          .set("Authorization", null)
+      );
       this.token = res.body.token;
       return res.body.token;
     } catch (err) {
@@ -273,7 +276,9 @@ class Client {
     if (!this.token) throw new Error("BAD_AUTH");
 
     try {
-      this.files = await this.request("get", "/list").then(res => res.body);
+      this.files = await this.ratelimitedRequest("get", "/list").then(
+        res => res.body
+      );
       return this.files;
     } catch (err) {
       throw this.handleErr(err);
@@ -300,6 +305,45 @@ class Client {
       return new Error("NOT_FOUND");
     }
     return err;
+  }
+
+  /**
+   * Setup function called every time a request needs to be made (usually only once, but when ratelimited this can be called a few times)
+   * @typedef {Function} RequestSetup
+   * @param {superagent.Request} req The request to set necessary options once
+   */
+
+  /**
+   * Used internally to make ratelimit-abiding requests to API endpoints, adds an Authorization header
+   * @param {String} method - The type of request to make (get, post, patch, etc)
+   * @param {String} url - The endpoint upon which to perform this request, is appended to the API base url of the client
+   * @param {RequestSetup} [setup] - The setup function gets called to apply any options needed to the request
+   * @returns {superagent.Response} The request created by this
+   * @api private
+   */
+  async ratelimitedRequest(method, url, setup) {
+    const req = superagent[method.toLowerCase()](this.endpoint + url).set(
+      "Authorization",
+      this.token
+    );
+    if (setup) setup(req);
+    try {
+      return await req;
+    } catch (err) {
+      if (
+        err.response &&
+        err.response.body &&
+        !isNaN(err.response.body.retry_after)
+      ) {
+        return await new Promise(resolve =>
+          setTimeout(
+            async () =>
+              resolve(await this.ratelimitedRequest(method, url, setup)),
+            err.response.body.retry_after * 1000
+          )
+        );
+      } else throw err;
+    }
   }
 
   /**
