@@ -32,7 +32,9 @@ async def main():
     await redis.delete(f'fspath:{old_domain}:{filename}')
 
     await db.close()
-    await redis.close()
+    redis.close()
+    await redis.wait_close()
+    print('OK')
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@
 import sys
 import asyncio
 
+import aiohttp
 import asyncpg
 
 sys.path.append('..')
@@ -10,8 +11,15 @@ import config
 
 async def main():
     db = await asyncpg.create_pool(**config.db)
+    redis = await aioredis.create_redis(config.redis)
     old_filename = sys.argv[1]
     new_filename = sys.argv[2]
+
+    domain = await db.fetchval("""
+    SELECT domain
+    FROM files
+    WHERE filename = $1
+    """, old_filename)
 
     exec_out = await db.execute("""
     UPDATE files
@@ -21,7 +29,15 @@ async def main():
     """, new_filename, old_filename)
 
     print(f"db out: {exec_out}")
+
+    # invalidate etc
+    await redis.delete(f'fspath:{domain}:{old_filename}')
+    await redis.delete(f'fspath:{domain}:{new_filename}')
+
     await db.close()
+    redis.close()
+    await redis.wait_close()
+    print('OK')
 
 
 if __name__ == '__main__':
