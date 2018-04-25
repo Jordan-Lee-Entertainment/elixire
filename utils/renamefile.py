@@ -4,6 +4,7 @@ import asyncio
 
 import aiohttp
 import asyncpg
+import aioredis
 
 sys.path.append('..')
 import config
@@ -36,7 +37,7 @@ async def main():
 
     await db.close()
     redis.close()
-    await redis.wait_close()
+    await redis.wait_closed()
     print('OK')
 
 

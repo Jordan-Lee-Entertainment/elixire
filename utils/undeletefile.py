@@ -5,6 +5,7 @@ import os
 import asyncio
 
 import asyncpg
+import aioredis
 
 sys.path.append('..')
 import config
@@ -34,7 +35,9 @@ async def main():
     await redis.delete(f'fspath:{domain}:{filename}')
 
     await db.close()
-    await redis.close()
+    redis.close()
+    await redis.wait_closed()
+    print('OK')
 
 
 if __name__ == '__main__':
