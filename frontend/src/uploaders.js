@@ -243,7 +243,6 @@ done`;
 uploaders.sharexConfig = token =>
   JSON.stringify(
     {
-      Name: "Elixire",
       DestinationType: "ImageUploader",
       RequestURL: `${window.client.endpoint}/upload`,
       FileFormName: "f",
