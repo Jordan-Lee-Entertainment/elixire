@@ -39,4 +39,3 @@ async def test_invalid_path_thumbnail(test_cli):
         prefix = random.choice(['s', 't', 'l', 'm'])
         resp = await test_cli.get(f'/t/{prefix}{invalid}')
         assert resp.status == 404
-
