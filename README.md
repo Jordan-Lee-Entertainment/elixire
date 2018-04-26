@@ -46,17 +46,23 @@ Here's some important notes while this is still a todo:
 
 ```bash
 cd utils
+
 ./adduser.py hi hi
-
-# TODO: instructions for admin test user
-
+./adduser.py admin admin
 ./adduser.py nousage nousage
 ./adduser.py quotareached quotareached
 
 cd ..
 ```
 
-Then,
+After creating admin user, enter the PSQL Shell:
+```sql
+UPDATE users
+SET admin = true
+WHERE username = 'admin';
+```
+
+Then, run the tests with tox.
 ```bash
 tox
 ```
