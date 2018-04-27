@@ -1,8 +1,9 @@
 """
 snowflake.py - snowflake helper functions
 
-    These functions generate discord-like snowflakes
-    that can be used to uniquely identify any object in litecord.
+    These functions generate discord-like snowflakes.
+    File brought in from
+        litecord-reference(https://github.com/lnmds/litecord-reference)
 """
 import time
 import hashlib
@@ -43,6 +44,9 @@ def _snowflake(timestamp: int) -> Snowflake:
         This timestamp has to be an UNIX timestamp
          with millisecond precision.
     """
+    # Yes, using global variables aren't the best idea
+    # Maybe we could distribute the work of snowflake generation
+    # to actually separated servers? :thinking:
     global _generated_ids
 
     # bits 0-12 encode _generated_ids (size 12)
@@ -59,8 +63,8 @@ def _snowflake(timestamp: int) -> Snowflake:
     epoch_b = '{0:042b}'.format(epochized)
 
     snowflake_b = f'{epoch_b}{workid_b}{procid_b}{genid_b}'
-
     _generated_ids += 1
+
     return int(snowflake_b, 2)
 
 
