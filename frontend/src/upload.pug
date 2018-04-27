@@ -3,7 +3,7 @@ block content
   div.drop-invitation
     div
       div.center-upload
-        img(src=require("./upload.svg"))
+        img(src=require("./icons/upload.svg"))
         span#uploading-text Drop to upload!
         div.progress
           div(style="width:0").progress-bar.progress-bar-striped.progress-bar-animated.bg-success#progress-bar
@@ -16,6 +16,6 @@ block content
       label(for="upload-input")
         div.dropper-card#dropper-card
           div.dropper-icon
-            img(src=require("./uploadbubble.svg")).dropper-bubble
+            img(src=require("./icons/uploadbubble.svg")).dropper-bubble
       input(type="file")#upload-input
       div#saved-files

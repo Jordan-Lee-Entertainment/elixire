@@ -1,11 +1,11 @@
-import "./shortlist.scss";
+import "@/styles/shortlist.scss";
 import superagent from "superagent";
-import stubbedImage from "./loading.svg";
+import stubbedImage from "@/icons/loading.svg";
 import path from "path";
-import copyImage from "./copy.svg";
-import openImage from "./open.svg";
+import copyImage from "@/icons/copy.svg";
+import openImage from "@/icons/open.svg";
 import Clipboard from "clipboard";
-import deleteImage from "./delete.svg";
+import deleteImage from "@/icons/delete.svg";
 import commonCode from "./commonCode.js";
 
 window.addEventListener("load", async function() {

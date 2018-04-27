@@ -1,4 +1,4 @@
-import "./about.scss";
+import "@/styles/about.scss";
 
 window.addEventListener("load", function() {
   const mems = Array.from(document.getElementsByClassName("team-name"));

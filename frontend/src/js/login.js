@@ -1,6 +1,6 @@
 // Stub
 import commonCode from "./commonCode.js";
-import "./forms.scss";
+import "@/styles/forms.scss";
 
 window.addEventListener("load", async function() {
   const username = document.getElementById("username");

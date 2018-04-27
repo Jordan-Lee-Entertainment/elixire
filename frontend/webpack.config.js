@@ -5,6 +5,8 @@ const MinifyPlugin = require("babel-minify-webpack-plugin");
 const ExtractTextPlugin = require("extract-text-webpack-plugin");
 const extractCSS = new ExtractTextPlugin("assets/[chunkhash].css");
 const CleanWebpackPlugin = require("clean-webpack-plugin");
+const path = require("path");
+
 const pageList = [
   {
     title: "Elixire",
@@ -48,22 +50,37 @@ const pageList = [
   }
 ];
 
+const entryPointNames = [
+  "login",
+  "upload",
+  "account",
+  "logout",
+  "token",
+  "theme",
+  "themeCSS",
+  "about",
+  "list",
+  "shortlist",
+  "shorten"
+];
+let entry = {};
+for (const name of entryPointNames) {
+  entry[name] = `${SRC_DIR}js/${name}.js`;
+}
+
 module.exports = {
   entry: {
     babelPolyfill: "babel-polyfill",
-    index: `${SRC_DIR}/homepage.js`,
-    login: `${SRC_DIR}/login.js`,
-    upload: `${SRC_DIR}/upload.js`,
-    account: `${SRC_DIR}/account.js`,
-    logout: `${SRC_DIR}/logout.js`,
-    token: `${SRC_DIR}/token.js`,
-    theme: `${SRC_DIR}/theme.js`,
+    index: `${SRC_DIR}js/homepage.js`,
     bootstrapJs: "bootstrap",
-    themeCSS: `${SRC_DIR}/themeCSS.js`,
-    about: `${SRC_DIR}/about.js`,
-    list: `${SRC_DIR}/list.js`,
-    shortlist: `${SRC_DIR}/shortlist.js`,
-    shorten: `${SRC_DIR}/shorten.js`
+    themeCSS: `${SRC_DIR}js/themeCSS.js`,
+    ...entry
+  },
+  resolve: {
+    alias: {
+      // import "@/file" goes to "src/file"
+      "@": path.resolve(SRC_DIR)
+    }
   },
   output: {
     filename: "assets/[chunkhash].js",
@@ -118,7 +135,7 @@ module.exports = {
     rules: [
       {
         test: /\.js$/,
-        include: [SRC_DIR],
+        include: [SRC_DIR, `${SRC_DIR}/js`],
         loader: "babel-loader",
         options: {
           babelrc: false,
@@ -131,7 +148,7 @@ module.exports = {
         use: extractCSS.extract([
           {
             loader: "css-loader",
-            options: { minimize: process.env.NODE_ENV == "production" }
+            options: {minimize: process.env.NODE_ENV == "production"}
           },
           "sass-loader"
         ])
