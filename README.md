@@ -17,6 +17,11 @@ get pythone!!!
 
 ```bash
 python3.6 -m pip install -Ur requirements.txt
+
+# this sets up the folder structure in ./images for you
+# NOTE: this script has ./images hardcoded.
+./utils/upgrade/folder_sharding.py
+
 python3.6 run.py
 ```
 
@@ -43,6 +48,8 @@ Here's some important notes while this is still a todo:
 # Running tests
 
 **NOTE: DO NOT RUN TESTS IN YOUR PRODUCTION ENVIROMENT. AT ALL.**
+
+Install `tox`, the python package.
 
 ```bash
 cd utils
