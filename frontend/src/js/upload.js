@@ -108,7 +108,7 @@ window.addEventListener("load", function() {
 
       let newFileIcon = null;
       if (file.type.startsWith("video/")) {
-        const imageBlob = new Blob([file], {type: file.type});
+        const imageBlob = new Blob([file], { type: file.type });
         const objectUrl = URL.createObjectURL(imageBlob);
         newFileIcon = document.createElement("video");
         newFileIcon.loop = true;
@@ -124,7 +124,7 @@ window.addEventListener("load", function() {
         newFileIcon = document.createElement("img");
         newFileIcon.src = volumeUpIcon;
       } else {
-        const imageBlob = new Blob([file], {type: file.type});
+        const imageBlob = new Blob([file], { type: file.type });
         const objectUrl = URL.createObjectURL(imageBlob);
         newFileIcon = document.createElement("img");
         newFileIcon.src = objectUrl;

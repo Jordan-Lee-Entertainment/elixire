@@ -2,126 +2,127 @@
 // I just know that it does and I'll leave it at that
 // This *desperately* needs to be cleaned up.
 
-
 .dropper-bubble {
-    height: 100px;
-    width: 100px;
-    z-index: 99;
+  height: 100px;
+  width: 100px;
+  z-index: 99;
 }
 
 .drop-invitation {
-    display: none;
+  display: none;
 }
 
 .show-popover .drop-invitation {
-    display: block;
-    z-index: 9999999;
-    padding: 20px;
-    background-color: rgba(100, 100, 100, 0.8);
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 100vh;
-    width: 100vw;
-    animation: fadeIn 0.15s ease-out;
+  display: block;
+  z-index: 9999999;
+  padding: 20px;
+  background-color: rgba(100, 100, 100, 0.8);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  width: 100vw;
+  animation: fadeIn 0.15s ease-out;
 }
 
 @keyframes fadeIn {
-    0% {
-	opacity: 0;
-    }
+  0% {
+    opacity: 0;
+  }
 
-    100% {
-	opacity: 1;
-    }
+  100% {
+    opacity: 1;
+  }
 }
 
 .show-popover .drop-invitation > div {
-    border: 4px dashed #EEE;
-    border-radius: 5px;
-    height: 100%;
+  border: 4px dashed #eee;
+  border-radius: 5px;
+  height: 100%;
 }
 
 #uploading-text {
-    display: block;
+  display: block;
 }
 
 .show-popover .drop-invitation div div.center-upload {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    margin: auto;
-    height: calc(100px + 1.4em);
-    border: none;
-    width: 100vw;
-    color: #fff;
-    fill: #fff;
-    text-align: center;
-    font-weight: bold;
-    font-size: 1.4em;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
+  height: calc(100px + 1.4em);
+  border: none;
+  width: 100vw;
+  color: #fff;
+  fill: #fff;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.4em;
 }
 
 .center-upload .progress {
-    text-align: left;
+  text-align: left;
 }
 
 .center-upload > * {
-    width: calc(100% - 70px);
-    margin: 0 35px;
+  width: calc(100% - 70px);
+  margin: 0 35px;
 }
 
 .show-popover .drop-invitation div div img {
-    height: 100px;
-    width: 100px;
+  height: 100px;
+  width: 100px;
 }
 
 input#upload-input {
-    display: none;
+  display: none;
 }
-html, body {
-    min-height: 100vh;
-    height: 100%;
+html,
+body {
+  min-height: 100vh;
+  height: 100%;
 }
 
-.saved-file > span, .saved-file > a {
-    align-items: center;
-    margin-right: 5px;
+.saved-file > span,
+.saved-file > a {
+  align-items: center;
+  margin-right: 5px;
 }
 
 .saved-file .new-file-icon {
-    width: calc(1rem + 10px);
-    height: calc(1rem + 10px);
+  width: calc(1rem + 10px);
+  height: calc(1rem + 10px);
 }
 
 .upload-clear label[for="upload-input"] {
-    display: block;
-    position: relative;
-    min-height: 50vh;
-    cursor: pointer;
-}
-    
-.dropper-card {
-    left: 0;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    position: absolute;
-    margin: auto;
-    height: 100px;
-    text-align: center;
+  display: block;
+  position: relative;
+  min-height: 50vh;
+  cursor: pointer;
 }
 
 .dropper-card {
-    width: auto;
-    display: inline-block;
-    height: 25%;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  position: absolute;
+  margin: auto;
+  height: 100px;
+  text-align: center;
+}
+
+.dropper-card {
+  width: auto;
+  display: inline-block;
+  height: 25%;
 }
 
 .saved-file {
-    width: 100%;
-    display: flex;
+  width: 100%;
+  display: flex;
 }
