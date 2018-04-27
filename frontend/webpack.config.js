@@ -148,7 +148,7 @@ module.exports = {
         use: extractCSS.extract([
           {
             loader: "css-loader",
-            options: {minimize: process.env.NODE_ENV == "production"}
+            options: { minimize: process.env.NODE_ENV == "production" }
           },
           "sass-loader"
         ])

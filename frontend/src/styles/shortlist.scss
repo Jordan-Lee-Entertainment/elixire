@@ -1,69 +1,68 @@
 .icon-row {
-    margin: 5px;
-    height: 22px;
+  margin: 5px;
+  height: 22px;
 }
 .no-links-upload-some {
-    display: none;
+  display: none;
 }
 
 .no-links-upload-some:only-child {
-    display: block;
-    z-index: 999;
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    left: 0;
-    width: 100vw;
-    height: calc(100vh - 56px);
-    max-height: 100vh;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: #fff;
+  display: block;
+  z-index: 999;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  width: 100vw;
+  height: calc(100vh - 56px);
+  max-height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
 }
 
 .m-content {
-    height: 25%;
-    margin: auto;
-    width: 100%;
-    top: 0;
-    bottom: 0;
-    position: absolute;
+  height: 25%;
+  margin: auto;
+  width: 100%;
+  top: 0;
+  bottom: 0;
+  position: absolute;
 }
 
 .m-content-centered {
-    text-align: center;
+  text-align: center;
 }
 
 .m-content-centered h1 {
-    font-size: 600%;
+  font-size: 600%;
 }
 
 .m-content-centered .tagline {
-    font-size: 200%;
+  font-size: 200%;
 }
 
 .body {
-    position: relative;
+  position: relative;
 }
 
-
-.vector-btn, .vector-btn img {
-    height: 22px;
+.vector-btn,
+.vector-btn img {
+  height: 22px;
 }
-
 
 .link-container {
-    position: relative;
+  position: relative;
 }
 
 .link-wrap {
-    margin: 5px;
-    width: calc(100% - 65px);
-    display: inline-block;
+  margin: 5px;
+  width: calc(100% - 65px);
+  display: inline-block;
 }
 
 .bottom-row {
-    display: inline-block;
-    right: 0;
-    position: absolute;
+  display: inline-block;
+  right: 0;
+  position: absolute;
 }
