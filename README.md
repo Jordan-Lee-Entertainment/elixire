@@ -17,6 +17,11 @@ get pythone!!!
 
 ```bash
 python3.6 -m pip install -Ur requirements.txt
+
+# this sets up the folder structure in ./images for you
+# NOTE: this script has ./images hardcoded.
+./utils/upgrade/folder_sharding.py
+
 python3.6 run.py
 ```
 
@@ -44,19 +49,27 @@ Here's some important notes while this is still a todo:
 
 **NOTE: DO NOT RUN TESTS IN YOUR PRODUCTION ENVIROMENT. AT ALL.**
 
+Install `tox`, the python package.
+
 ```bash
 cd utils
+
 ./adduser.py hi hi
-
-# TODO: instructions for admin test user
-
+./adduser.py admin admin
 ./adduser.py nousage nousage
 ./adduser.py quotareached quotareached
 
 cd ..
 ```
 
-Then,
+After creating admin user, enter the PSQL Shell:
+```sql
+UPDATE users
+SET admin = true
+WHERE username = 'admin';
+```
+
+Then, run the tests with tox.
 ```bash
 tox
 ```

@@ -18,7 +18,7 @@ async def test_admin(request):
     This is just a test route.
     """
     user_id = await token_check(request)
-    await check_admin(user_id, True)
+    await check_admin(request, user_id, True)
 
     return response.json({
         'admin': True
@@ -28,7 +28,7 @@ async def test_admin(request):
 @bp.get('/api/admin/users')
 async def list_users_handler(request):
     user_id = await token_check(request)
-    await check_admin(request, user_id)
+    await check_admin(request, user_id, True)
 
     # TODO: this is inefficient.
     # how to approach paging, in something like SQL?
@@ -43,7 +43,7 @@ async def list_users_handler(request):
 @bp.get('/api/admin/users/<user_id:int>')
 async def get_user_handler(request, user_id):
     user_id = await token_check(request)
-    await check_admin(user_id, True)
+    await check_admin(request, user_id, True)
 
     udata = await request.app.db.fetchrow("""
     SELECT user_id, suername, active, admin, domain

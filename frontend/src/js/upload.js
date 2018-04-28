@@ -1,9 +1,9 @@
 // Stub
 import commonCode from "./commonCode";
-import "./upload.scss";
+import "@/styles/upload.scss";
 import filesize from "file-size";
 import Clipboard from "clipboard";
-import volumeUpIcon from "./speaker.svg";
+import volumeUpIcon from "@/icons/speaker.svg";
 import path from "path";
 
 window.addEventListener("load", function() {

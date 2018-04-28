@@ -268,7 +268,7 @@ async def upload_handler(request):
     out_filename = file_rname + extension
 
     folder = request.app.econfig.IMAGE_FOLDER
-    fspath = f'{folder}/{file_rname}{extension}'
+    fspath = f'{folder}/{file_rname[0]}/{file_rname}{extension}'
 
     # get domain ID from user and return it
     domain_id = await request.app.db.fetchval("""
