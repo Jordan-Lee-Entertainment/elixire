@@ -12,8 +12,6 @@ window.addEventListener("load", async function() {
     adminBadge.classList = "badge badge-pill badge-primary";
     username.parentNode.appendChild(adminBadge);
   }
-  const domainSelector = document.getElementById("domain-selector");
-  domainSelector.value = window.client.profile.domain;
   const quota = await window.client.getQuota();
   document.getElementById("profile-quota").innerText =
     quota.limit / 1024 / 1024;
@@ -29,6 +27,8 @@ window.addEventListener("load", async function() {
     domainElem.innerText = domains[domainId];
     domainSelector.appendChild(domainElem);
   }
+  const domainSelector = document.getElementById("domain-selector");
+  domainSelector.value = window.client.profile.domain;
   const tokenPassword = document.getElementById("token-password");
   const generateTokenBtn = document.getElementById("generate-token");
   const passwordForm = document.getElementById("password-form");
