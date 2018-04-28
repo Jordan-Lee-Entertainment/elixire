@@ -1,4 +1,4 @@
-import "./shorten.scss";
+import "@/styles/shorten.scss";
 import common from "./commonCode.js";
 
 window.addEventListener("load", function() {

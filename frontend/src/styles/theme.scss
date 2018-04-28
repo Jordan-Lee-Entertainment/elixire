@@ -1,0 +1,95 @@
+.logged-in .logged-in-only {
+  display: block;
+}
+
+.logged-in-only {
+  display: none;
+}
+
+.logged-in .logged-out-only {
+  display: none;
+}
+
+.logged-out-only {
+  display: block;
+}
+
+#alert-area {
+  padding: 5px 4px;
+}
+
+.body {
+  padding: 8px 10px 0 10px;
+}
+
+h1 {
+  padding-left: 20px;
+}
+
+.no-indent {
+  padding-left: 0;
+}
+
+.indent-left {
+  padding-left: 20px;
+}
+
+.no-margin {
+  margin: 0;
+}
+
+.greyscale-icon,
+.greyscale-icon:hover {
+  color: #222;
+  text-decoration: none;
+  font-size: 2rem;
+  margin-top: -0.75rem;
+}
+
+// Errors
+.error-body {
+  display: none;
+  text-align: center;
+  width: 40vw;
+  margin: auto;
+  margin-top: 10vh;
+}
+
+.error-thrown .error-body {
+  display: block;
+}
+
+.error-thrown .body {
+  display: none;
+}
+
+// Garfield
+.access-denied {
+  margin-top: 2vh;
+  display: none;
+}
+
+body.show-garfield .access-denied {
+  display: block;
+}
+
+body.show-garfield .body {
+  display: none;
+}
+
+.garfield-column {
+  display: inline-block;
+  width: 60vw;
+  padding-left: 1em;
+}
+
+.garfield-column img {
+  width: 60vw;
+}
+
+.error-column {
+  display: inline-block;
+  width: 35vw;
+  text-align: right;
+  font-size: 1.65em;
+}
