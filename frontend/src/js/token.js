@@ -1,4 +1,4 @@
-import "./token.scss";
+import "@/styles/token.scss";
 import uploaders from "./uploaders.js";
 import "highlightjs/styles/solarized-light.css";
 
