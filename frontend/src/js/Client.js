@@ -350,6 +350,7 @@ class Client {
    * Used internally to make requests to API endpoints, adds an Authorization header
    * @param {String} method - The type of request to make (get, post, patch, etc)
    * @param {String} url - The endpoint upon which to perform this request, is appended to the API base url of the client
+   * @deprecated since [63a036d84fc959c4ba6a3591cf2d4db7caf523e6], use ratelimitedRequest wherever possible
    * @returns {superagent.Request} The request created by this
    * @api private
    */
