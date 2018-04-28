@@ -1,5 +1,5 @@
-import "./account.scss";
-import "./forms.scss";
+import "@/styles/account.scss";
+import "@/styles/forms.scss";
 import common from "./commonCode.js";
 
 window.addEventListener("load", async function() {

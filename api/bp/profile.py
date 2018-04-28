@@ -42,9 +42,12 @@ async def profile_handler(request):
     WHERE user_id = $1
     """, user_id)
 
+    limits = await get_limits(request.app.db, user_id)
+
     duser = dict(user)
     duser['user_id'] = str(duser['user_id'])
     duser.pop('password_hash')
+    duser['limits'] = limits
 
     return response.json(duser)
 
@@ -103,34 +106,40 @@ async def change_profile(request):
     })
 
 
-@bp.get('/api/limits')
-async def limits_handler(request):
-    """Query a user's limits."""
-    user_id = await token_check(request)
-
-    limits = await request.app.db.fetchrow("""
+async def get_limits(db, user_id):
+    limits = await db.fetchrow("""
     SELECT blimit, shlimit
     FROM limits
     WHERE user_id = $1
     """, user_id)
 
-    bytes_used = await request.app.db.fetchval("""
+    bytes_used = await db.fetchval("""
     SELECT SUM(file_size)
     FROM files
     WHERE uploader = $1
     AND file_id > time_snowflake(now() - interval '7 days')
     """, user_id)
 
-    shortens_used = await request.app.db.fetch("""
+    shortens_used = await db.fetch("""
     SELECT shorten_id
     FROM shortens
     WHERE uploader = $1
     AND shorten_id > time_snowflake(now() - interval '7 days')
     """, user_id)
 
-    return response.json({
+    return {
         'limit': limits["blimit"],
         'used': bytes_used,
         'shortenlimit': limits["shlimit"],
         'shortenused': len(shortens_used)
-    })
+    }
+
+
+@bp.get('/api/limits')
+async def limits_handler(request):
+    """Query a user's limits."""
+    user_id = await token_check(request)
+
+    limits = await get_limits(request.app.db, user_id)
+
+    return response.json(limits)
