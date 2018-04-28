@@ -1,5 +1,6 @@
 import "@/styles/account.scss";
 import "@/styles/forms.scss";
+import "select2/dist/css/select2.css";
 import common from "./commonCode.js";
 import "select2";
 import $ from "jquery";
@@ -32,7 +33,7 @@ window.addEventListener("load", async function() {
     $(".domain-selector").append(option);
   }
   const domainSelector = document.getElementById("domain-selector");
-  $(".domain-selector").val(String(window.client.profile.domain));
+  domainSelector.value = window.client.profile.domain;
   const tokenPassword = document.getElementById("token-password");
   const generateTokenBtn = document.getElementById("generate-token");
   const passwordForm = document.getElementById("password-form");
