@@ -1,8 +1,12 @@
 import "@/styles/account.scss";
 import "@/styles/forms.scss";
+import "select2/dist/css/select2.css";
 import common from "./commonCode.js";
+import "select2";
+import $ from "jquery";
 
 window.addEventListener("load", async function() {
+  $(".select2").select2();
   const username = document.getElementById("profile-username");
   await window.profilePromise;
   username.innerText = window.client.profile.username;
@@ -21,11 +25,12 @@ window.addEventListener("load", async function() {
   document.getElementById("s-profile-used").innerText = quota.shortenused || 0;
   document.getElementById("s-profile-quota").innerText = quota.shortenlimit;
   const domains = await window.client.getDomains();
-  for (const domainId in domains) {
-    const domainElem = document.createElement("option");
-    domainElem.value = domainId;
-    domainElem.innerText = domains[domainId];
-    domainSelector.appendChild(domainElem);
+  console.log("Fetched domains:", domains);
+  const options = Object.entries(domains).map(
+    ([id, domain]) => new Option(domain, id, false, false)
+  );
+  for (const option of options) {
+    $(".domain-selector").append(option);
   }
   const domainSelector = document.getElementById("domain-selector");
   domainSelector.value = window.client.profile.domain;

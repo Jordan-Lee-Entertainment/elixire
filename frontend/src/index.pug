@@ -1,6 +1,27 @@
 extends template.pug
 block content
-  h2 Welcome to Elixire!
-  p.blurb Elixire is a free, and open-source filehost! We're currently not accepting signups but you can shoot a request over to 
-    a(href="https://discord.gg/Yt83sPJ") our Discord guild
-    |  and you might just get access!
+  section.jumbotron.landing-jumbotron.text-center
+    .container
+      h1.jumbotron-heading elixi.re
+      p.lead.text-muted Elixire is a free, and open-source filehost and link shortener!&nbsp;
+        | Want an account? Drop by&nbsp;
+        a(href="https://discord.gg/Yt83sPJ") our Discord server&nbsp;
+        | to request one!
+      a.btn.btn-primary(href="/login.html") Login
+  section.features.py-5
+    .row
+      .col-md
+        .card
+          .card-header Domains
+          .card-body
+            p.card-text Elixire has over 40 vanity domains for you to enjoy and play around with.
+      .col-md
+        .card
+          .card-header Image Management
+          .card-body
+            p.card-text See all of your images at a glance with the online file list. You can also delete any images you don't want hosted anymore.
+      .col-md
+        .card
+          .card-header Link Shortening
+          .card-body
+            p.card-text Elixire also supports intuitive link shortening, with the same domains as your images.
