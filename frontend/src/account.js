@@ -1,8 +1,8 @@
-import "@/styles/account.scss";
-import "@/styles/forms.scss";
+import "./account.scss";
+import "./forms.scss";
 import common from "./commonCode.js";
 
-window.addEventListener("DOMContentLoaded", async function() {
+window.addEventListener("load", async function() {
   const username = document.getElementById("profile-username");
   await window.profilePromise;
   username.innerText = window.client.profile.username;
@@ -21,14 +21,13 @@ window.addEventListener("DOMContentLoaded", async function() {
   document.getElementById("s-profile-used").innerText = quota.shortenused || 0;
   document.getElementById("s-profile-quota").innerText = quota.shortenlimit;
   const domains = await window.client.getDomains();
-  console.log("Fetched domains:", domains);
-  const options = Object.entries(domains).map(
-    ([id, domain]) => new Option(domain, id, false, false)
-  );
-  const domainSelector = document.getElementById("domain-selector");
-  for (const option of options) {
-    domainSelector.appendChild(option);
+  for (const domainId in domains) {
+    const domainElem = document.createElement("option");
+    domainElem.value = domainId;
+    domainElem.innerText = domains[domainId];
+    domainSelector.appendChild(domainElem);
   }
+  const domainSelector = document.getElementById("domain-selector");
   domainSelector.value = window.client.profile.domain;
   const tokenPassword = document.getElementById("token-password");
   const generateTokenBtn = document.getElementById("generate-token");

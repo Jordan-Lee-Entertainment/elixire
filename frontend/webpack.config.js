@@ -9,43 +9,44 @@ const path = require("path");
 
 const pageList = [
   {
-    title: "Elixire",
+    title: "elixi.re",
     chunkName: "index"
   },
   {
-    title: "Login | Elixire",
+    title: "Login | elixi.re",
     chunkName: "login"
   },
   {
-    title: "Upload | Elixire",
+    title: "Upload | elixi.re",
     chunkName: "upload"
   },
   {
-    title: "My Account | Elixire",
-    chunkName: "account"
+    title: "My Account | elixi.re",
+    chunkName: "account",
+    chunks: ["accountSelect2"]
   },
   {
     title: "Logout",
     chunkName: "logout"
   },
   {
-    title: "New Token | Elixire",
+    title: "New Token | elixi.re",
     chunkName: "token"
   },
   {
-    title: "About Us | Elixire",
+    title: "About Us | elixi.re",
     chunkName: "about"
   },
   {
-    title: "My Files | Elixire",
+    title: "My Files | elixi.re",
     chunkName: "list"
   },
   {
-    title: "My Shortened URLs | Elixire",
+    title: "My Shortened URLs | elixi.re",
     chunkName: "shortlist"
   },
   {
-    title: "Shorten | Elixire",
+    title: "Shorten | elixi.re",
     chunkName: "shorten"
   }
 ];
@@ -74,6 +75,7 @@ module.exports = {
     index: `${SRC_DIR}js/homepage.js`,
     bootstrapJs: "bootstrap",
     themeCSS: `${SRC_DIR}js/themeCSS.js`,
+    accountSelect2: `${SRC_DIR}js/account-select2`,
     ...entry
   },
   resolve: {
@@ -150,7 +152,8 @@ module.exports = {
             loader: "css-loader",
             options: { minimize: process.env.NODE_ENV == "production" }
           },
-          "sass-loader"
+
+          { loader: "sass-loader" }
         ])
       },
       {
