@@ -6,10 +6,8 @@
   "author": "Ave Ozkal <avezone@ave.zone>",
   "license": "MIT",
   "scripts": {
-    "test":
-      "jest --runInBand --setupTestFrameworkScriptFile=./test/jestSetup.js",
-    "start":
-      "webpack-dev-server --port 8081 --compress --watch --cache --open --mode development",
+    "test": "jest --runInBand --setupTestFrameworkScriptFile=./test/jestSetup.js",
+    "start": "webpack-dev-server --port 8081 --compress --watch --cache --open --mode development",
     "build:production": "NODE_ENV=production webpack --mode production",
     "build:dev": "NODE_ENV=dev webpack --mode development"
   },
@@ -21,6 +19,7 @@
     "highlightjs": "^9.10.0",
     "jquery": "^3.3.1",
     "popper.js": "^1.12.9",
+    "select2": "^4.0.6-rc.1",
     "superagent": "^3.8.2"
   },
   "devDependencies": {
