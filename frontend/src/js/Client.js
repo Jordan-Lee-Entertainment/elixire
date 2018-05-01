@@ -65,11 +65,11 @@ class Client {
    * @api public
    */
   async getDomains() {
-    if (!this.token) throw new Error("BAD_AUTH");
     try {
-      this.domains = await this.ratelimitedRequest("get", "/domains").then(
-        res => res.body.domains
-      );
+      this.domains = await this.ratelimitedRequest("get", "/domains", req => {
+        // Heh. Expired token woes...
+        if (!this.profile) req.set("Authorization", null);
+      }).then(res => res.body.domains);
     } catch (err) {
       throw this.handleErr(err);
       // TODO: handle the error properly !
