@@ -13,8 +13,6 @@ v2 is being written in Python.
 
 # Running
 
-get pythone!!!
-
 ```bash
 python3.6 -m pip install -Ur requirements.txt
 
