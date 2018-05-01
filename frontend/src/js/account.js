@@ -30,6 +30,20 @@ window.addEventListener("DOMContentLoaded", async function() {
     domainSelector.appendChild(option);
   }
   domainSelector.value = window.client.profile.domain;
+  const wildcard = document.getElementById("wildcard");
+  wildcard.value = window.client.profile.subdomain || "";
+  function checkDomainSelector() {
+    if (domains[domainSelector.value].startsWith("*.")) {
+      domainSelector.parentNode.classList = "form-group show-wildcard";
+    } else {
+      domainSelector.parentNode.classList = "form-group";
+    }
+  }
+  try {
+    checkDomainSelector();
+  } catch (err) {}
+  // This would be an addEventListener but jQuery is garbage
+  domainSelector.onchange = checkDomainSelector;
   const tokenPassword = document.getElementById("token-password");
   const generateTokenBtn = document.getElementById("generate-token");
   const passwordForm = document.getElementById("password-form");
@@ -120,8 +134,11 @@ window.addEventListener("DOMContentLoaded", async function() {
     const modifications = {};
 
     if (newPassword.value) modifications.new_password = newPassword.value;
-    if (domainSelector.value != domainId)
+    if (domainSelector.value != domainId) {
       modifications.domain = Number(domainSelector.value);
+      if (wildcard.value && domains[domainSelector.value].startsWith("*."))
+        modifications.subdomain = wildcard.value;
+    }
     if (!Object.keys(modifications).length) return; // No changes to be made
     modifications.password = password.value;
 
