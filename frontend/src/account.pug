@@ -33,7 +33,9 @@ block content
     hr
     div.form-group
       label(for="domain-selector") Domain
-      select(required="true").select2.domain-selector.form-control#domain-selector
+      div
+        input(type="text").form-control#wildcard
+        select(required="true").select2.domain-selector.form-control#domain-selector
       span.text-muted If you'd like to request or donate a domain, check out #subdomain-requests on 
         a(href="https://discord.gg/Yt83sPJ") the Discord guild
         | !

@@ -10,3 +10,38 @@
 #profile-username {
   padding-right: 0.4em;
 }
+
+// Make the select2 thing fit with the style of bootstrap's form controls
+.select2-container,
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--single .select2-selection__arrow
+{
+    height: calc(2.25rem + 2px);
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: calc(2.25rem + 2px);
+}
+
+.select2-container {
+    margin-top: -4px;
+}
+
+.select2-container--default .select2-selection--single {
+    border: 1px solid #ced4da;
+}
+
+.show-wildcard .select2-container {
+    width: calc(50% - 5px) !important;
+    display: inline-block;
+}
+
+#wildcard {
+    display: none;
+    width: calc(50% - 5px);
+    margin-right: 10px;
+}
+
+.show-wildcard #wildcard {
+    display: inline-block;
+}
