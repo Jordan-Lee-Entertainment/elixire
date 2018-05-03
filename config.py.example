@@ -35,6 +35,9 @@ USER_BAN_WEBHOOK = ""
 # Webhook for JPEGs that grew too much after EXIF cleaning.
 EXIF_TOOBIG_WEBHOOK = ""
 
+# Webhook for user registrations.
+USER_REGISTER_WEBHOOK = ""
+
 # change this to your wanted ban period
 # '1 day', '6 hours', '10 seconds', etc.
 BAN_PERIOD = '6 hours'

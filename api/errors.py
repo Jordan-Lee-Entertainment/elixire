@@ -8,6 +8,12 @@ class APIError(Exception):
 class BadInput(APIError):
     status_code = 400
 
+    def get_payload(self):
+        try:
+            return self.args[1]
+        except IndexError:
+            return {}
+
 
 class FailedAuth(APIError):
     status_code = 403
