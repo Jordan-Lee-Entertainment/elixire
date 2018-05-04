@@ -72,11 +72,19 @@ async def check_domain(request, domain_name: str, error_on_nodomain=True):
     """Checks if a domain exists, by domain
 
     returns its record it if does, returns None if it doesn't"""
+
+    # This is hacky but it works so you can't really blame me
+    # Unless you send a fix first, then you can blame me :)
+    subd_wildcard_name = domain_name.replace(domain_name.split(".")[0], "*")
+    domain_wildcard_name = "*." + domain_name
+
     domain_info = await request.app.db.fetchrow("""
         SELECT *
         FROM domains
         WHERE domain = $1
-    """, domain_name)
+        OR domain = $2
+        OR domain = $3
+    """, domain_name, subd_wildcard_name, domain_wildcard_name)
 
     if error_on_nodomain and not domain_info:
         raise NotFound('This domain does not exist in this elixire instance.')

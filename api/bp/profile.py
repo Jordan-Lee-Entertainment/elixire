@@ -63,6 +63,7 @@ async def change_profile(request):
     password = payload.get('password')
     new_pwd = payload.get('new_password')
     new_domain = payload.get('domain')
+    new_subdomain = payload.get('subdomain')
 
     if password:
         await password_check(request, user_id, password)
@@ -86,6 +87,15 @@ async def change_profile(request):
         """, new_domain, user_id)
 
         updated.append('domain')
+
+    if new_subdomain is not None:
+        await request.app.db.execute("""
+            UPDATE users
+            SET subdomain = $1
+            WHERE user_id = $2
+        """, new_subdomain, user_id)
+
+        updated.append('subdomain')
 
     if new_pwd and new_pwd != password:
         # we are already good from password_check call
