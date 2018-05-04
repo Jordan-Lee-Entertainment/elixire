@@ -80,8 +80,8 @@ async def register_user(request):
     await request.app.storage.raw_invalidate(f'uid:{username}')
 
     app = request.app
-    resp = await register_webhook(app, app.econfig.USER_REGISTER_WEBHOOK,
-                                  user_id, username, discord_user)
+    await register_webhook(app, app.econfig.USER_REGISTER_WEBHOOK,
+                           user_id, username, discord_user)
 
     return response.json({
         'success': True

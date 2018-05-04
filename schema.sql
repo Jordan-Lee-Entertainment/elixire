@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS users (
     active boolean DEFAULT true,
     password_hash text,
     admin boolean DEFAULT false,
+    subdomain text DEFAULT '',
     domain bigint REFERENCES domains (domain_id) DEFAULT 0
 );
 

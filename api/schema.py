@@ -4,7 +4,9 @@ import re
 from cerberus import Validator
 from .errors import BadInput
 
-USERNAME_REGEX = re.compile(r'^[a-z]{1}[a-zA-Z0-9_]{2,19}$', re.M | re.A)
+USERNAME_REGEX = re.compile(r'^[a-z]{1}[a-zA-Z0-9_]{2,19}$', re.A)
+SUBDOMAIN_REGEX = re.compile(r'^[a-zA-Z0-9_-]{0,35}$', re.A)
+
 
 class ElixireValidator(Validator):
     def _validate_type_username(self, value) -> bool:
@@ -21,6 +23,12 @@ class ElixireValidator(Validator):
         # Would it be interesting to measure entropy?
         return len(value) > 8 and len(value) < 100
 
+    def _validate_type_subdomain(self, value) -> bool:
+        """Validate subdomains."""
+        # re.match returns none, soooo, bool(None) = False
+        return bool(SUBDOMAIN_REGEX.match(value))
+
+
 def validate(document, schema):
     """Validate one document against a schema."""
     validator = ElixireValidator(schema)
@@ -33,6 +41,7 @@ def validate(document, schema):
 PROFILE_SCHEMA = {
     'user': {'type': 'string'},
     'password': {'type': 'string'},
+    'subdomain': {'type': 'string', 'nullable': True},
     'new_password': {'type': 'string', 'nullable': True},
     'domain': {'type': 'integer', 'nullable': True},
 }
