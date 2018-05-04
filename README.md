@@ -45,7 +45,7 @@ Here's some important notes while this is still a todo:
 
 # Running tests
 
-**NOTE: DO NOT RUN TESTS IN YOUR PRODUCTION ENVIROMENT. AT ALL.**
+**NOTE: DO NOT RUN TESTS IN YOUR PRODUCTION ENVIRONMENT. AT ALL.**
 
 Install `tox`, the python package.
 
