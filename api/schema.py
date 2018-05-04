@@ -9,6 +9,7 @@ SUBDOMAIN_REGEX = re.compile(r'^[a-zA-Z0-9_-]{0,35}$', re.A)
 
 
 class ElixireValidator(Validator):
+    """Main validator class for elixire data types."""
     def _validate_type_username(self, value) -> bool:
         """Validate usernames."""
         # re.match returns none, soooo, bool(None) = False
@@ -40,9 +41,9 @@ def validate(document, schema):
 
 PROFILE_SCHEMA = {
     'user': {'type': 'string'},
-    'password': {'type': 'string'},
-    'subdomain': {'type': 'string', 'nullable': True},
-    'new_password': {'type': 'string', 'nullable': True},
+    'password': {'type': 'password'},
+    'subdomain': {'type': 'subdomain', 'nullable': True},
+    'new_password': {'type': 'password', 'nullable': True},
     'domain': {'type': 'integer', 'nullable': True},
 }
 
