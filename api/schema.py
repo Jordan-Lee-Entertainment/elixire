@@ -5,11 +5,12 @@ from cerberus import Validator
 from .errors import BadInput
 
 USERNAME_REGEX = re.compile(r'^[a-z]{1}[a-zA-Z0-9_]{2,19}$', re.A)
-SUBDOMAIN_REGEX = re.compile(r'^[a-zA-Z0-9_-]{0,35}$', re.A)
+SUBDOMAIN_REGEX = re.compile(r'^[a-zA-Z0-9_-]{0,63}$', re.A)
 
 
 class ElixireValidator(Validator):
     """Main validator class for elixire data types."""
+
     def _validate_type_username(self, value) -> bool:
         """Validate usernames."""
         # re.match returns none, soooo, bool(None) = False
