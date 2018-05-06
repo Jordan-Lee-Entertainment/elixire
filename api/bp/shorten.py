@@ -71,23 +71,30 @@ async def shorten_handler(request):
     redir_id = get_snowflake()
 
     # get domain ID from user and return it
-    domain_id = await request.app.db.fetchval("""
-    SELECT domain
+    domain_id, subdomain_name = await request.app.db.fetchrow("""
+    SELECT domain, subdomain
     FROM users
     WHERE user_id = $1
     """, user_id)
-
-    await request.app.db.execute("""
-    INSERT INTO shortens (shorten_id, filename,
-        uploader, redirto, domain)
-    VALUES ($1, $2, $3, $4, $5)
-    """, redir_id, redir_rname, user_id, url_toredir, domain_id)
 
     domain = await request.app.db.fetchval("""
     SELECT domain
     FROM domains
     WHERE domain_id = $1
     """, domain_id)
+
+    # Check if it's wildcard and if we have a subdomain set
+    if domain[0:2] == "*." and subdomain_name:
+        domain = domain.replace("*.", f"{subdomain_name}.")
+    # If it's wildcard but we don't have a wildcard, upload to base domain
+    elif domain[0:2] == "*.":
+        domain = domain.replace("*.", "")
+
+    await request.app.db.execute("""
+    INSERT INTO shortens (shorten_id, filename,
+        uploader, redirto, domain)
+    VALUES ($1, $2, $3, $4, $5)
+    """, redir_id, redir_rname, user_id, url_toredir, domain_id)
 
     # appended to generated filename
     dpath = pathlib.Path(domain)
