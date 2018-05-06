@@ -24,6 +24,7 @@ async def domainlist_handler(request):
     domain_records = await request.app.db.fetch("""
     SELECT domain_id, domain
     FROM domains
+    ORDER BY domain_id ASC
     """ + adm_string)
 
     return response.json({"domains": dict(domain_records)})
