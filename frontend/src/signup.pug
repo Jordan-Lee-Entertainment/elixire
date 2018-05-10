@@ -1,0 +1,24 @@
+extends template.pug
+block content
+  h1 Signup
+  div.form-wrap
+    form(novalidate=true).needs-validation.form#signup-form
+      div.form-group
+        label(for="username") Username
+        input(type="text", placeholder="Username").form-control#username
+        div.invalid-feedback
+      div.form-group
+        label(for="email") Email
+        input(type="email", placeholder="Email").form-control#email
+        div.invalid-feedback
+      div.form-group
+        label(for="discord") Discord User
+        input(type="text", placeholder="DiscordUser#0000").form-control#discord
+        div.invalid-feedback
+      div.form-group
+        label(for="password") Password
+        input(type="password", placeholder="Password").form-control#password
+        div.invalid-feedback
+
+      div.keep-wrap
+        button(type="button").btn.btn-primary#submit-btn Signup

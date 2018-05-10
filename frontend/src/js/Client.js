@@ -24,26 +24,91 @@ class Client {
         : null) || options.endpoint;
     /**
      * The profile of the currently logged in user (Only set if getProfile() has been called)
-     * @type {?Object}
+     * @type {?Profile}
      */
     this.profile = null;
-    // TODO: Profile class?
     /**
      * The quota of the currently logged in user (Only set if getQuota() has been called)
-     * @type {?Object}
+     * @type {?Quota}
      */
     this.quota = null;
-    // TODO: Quota class?
     /**
-     * The files and shortlinks created by the user
-     * @type {?Object}
+     * The files created by the user
+     * @type {?Files}
      */
     this.files = null;
+    /**
+     * The shortens created by the user
+     * @type {?Shortens}
+     */
+    this.shortens = null;
   }
 
   /**
+   * Files uploaded by the user
+   * @typedef Files
+   * @type {Object.<Shortcode, File}
+   */
+
+  /**
+   * The shortcode of a file/shorten
+   * @typedef Shortcode
+   * @type {String}
+   */
+
+  /**
+   * An uploaded file
+   * @typedef File
+   * @type {Object}
+   * @property {Shortcode} shortname The shortcode of the file
+   * @property {Number} size The size of the file in bytes
+   * @property {Number} snowflake The snowflake/unique ID of the file
+   * @property {String} thumbnail The URL to the small thumbnail of the file
+   * @property {String} url The URL to the original file
+   */
+
+  /**
+   * Shortened URLs created by the user
+   * @typedef Shortens
+   * @type {Object.<Shortcode, Shorten}
+   */
+
+  /**
+   * Shortened URL
+   * @typedef Shorten
+   * @type {Object}
+   * @property {String} redirto The URL the shorten points to
+   * @property {Shortcode} shortname The shortcode of the shorten
+   * @property {Number} snowflake the snowflake/unique ID of the shorten
+   * @property {String} url The shortened version of the URL
+   */
+
+  /**
+   * A user's profile
+   * @typedef Profile
+   * @type {Object}
+   * @property {Boolean} active True if the account is not disabled
+   * @property {Boolean} admin If the user is admin, true otherwise false
+   * @property {Number} domain The ID of the currently selected domain
+   * @property {Quota} limits The quota of the user
+   * @property {?String} subdomain The subdomain of the user if they have a wildcard domain selected
+   * @property {String} user_id The ID of the user
+   * @property {String} username The username of the user
+   */
+
+  /**
+   * The quota of a user
+   * @typedef Quota
+   * @type {Object}
+   * @property {Number} limit The user's weekly file cap in bytes
+   * @property {Number} shortenlimit The user's weekly shortened URL cap
+   * @property {Number} shortenused The number of shortened URLs the user has created during the quota period
+   * @property {Number} used The total amount of storage used during this quota period by uploaded files in bytes
+   */
+
+  /**
    * Gets the user's profile from the API
-   * @returns {Promise<Object>} The profile of the currently logged-in user
+   * @returns {Promise<Profile>} The profile of the currently logged-in user
    * @api public
    */
   async getProfile() {
@@ -61,7 +126,7 @@ class Client {
 
   /**
    * Gets the domains currently available to the user
-   * @returns {Promise<Object>} An Object mapping domain id to domain
+   * @returns {Promise<Object.<String, String>} An Object whose keys are domain IDs and whose values are the corresponding domain name
    * @api public
    */
   async getDomains() {
@@ -103,7 +168,7 @@ class Client {
 
   /**
    * Deletes a shortened URL
-   * @param {String} shortcode - The shortcode of the shortened link to delete
+   * @param {Shortcode} shortcode - The shortcode of the shortened link to delete
    * @returns {Promise<Object>} The response body
    * @api public
    */
@@ -120,7 +185,7 @@ class Client {
 
   /**
    * Deletes an uploaded file
-   * @param {String} shorcode - The shortcode of the file to be deleted
+   * @param {Shortcode} shortcode - The shortcode of the file to be deleted
    * @returns {Promise<Object>} The response body
    * @api public
    */
@@ -222,7 +287,7 @@ class Client {
 
   /**
    * Finds the user's quota
-   * @returns {Object} The quotas of the user
+   * @returns {Quota} The quotas of the user
    * @api public
    */
   async getQuota() {
@@ -237,6 +302,36 @@ class Client {
       // TODO: handle the error properly !
     }
     return this.quota;
+  }
+
+  /**
+   * Creates a temporary account to be activated.
+   * @param {Object} params - The details for the account to be created with
+   * @param {String} params.username - The username for the account
+   * @param {String} params.password - The password for the account
+   * @param {String} params.email - The email of the user for whom the account will be created
+   * @param {String} params.discord - The DiscordTag of the user for whom the account will be created in the form of username#0000
+   * @returns {Promise<Boolean>} Resolves with a boolean indicating success
+   * @api public
+   */
+  async signup({ username, password, email, discord }) {
+    try {
+      const res = await this.ratelimitedRequest("post", "/register", req =>
+        req
+          .send({
+            discord_user: discord,
+            username,
+            password
+            // ,email
+          })
+          // So I guess the ratelimit code gets mad when you provide
+          // an invalid token, bypassing the actual route handler entirely
+          .set("Authorization", null)
+      );
+      return res.body.success;
+    } catch (err) {
+      throw this.handleErr(err);
+    }
   }
 
   /**
@@ -267,19 +362,28 @@ class Client {
   }
 
   /**
+   * The files and the shortened urls created
+   * @typedef AllContent
+   * @type {Object}
+   * @property {Files} files The files uploaded
+   * @property {Shortens} shortens The shortened URLs created
+   */
+
+  /**
    * Gets a list of all the files the user has uploaded and the links they've shortened
-   * @returns {Promise<Object>} The files and shortens created by the user
+   * @returns {Promise<AllContent>} The files and shortens created by the user
    * @api public
    */
   async getFiles() {
-    // TODO: Make a type for this so we can document the return value?
     if (!this.token) throw new Error("BAD_AUTH");
 
     try {
-      this.files = await this.ratelimitedRequest("get", "/list").then(
+      const content = await this.ratelimitedRequest("get", "/list").then(
         res => res.body
       );
-      return this.files;
+      this.shortens = content.shortens;
+      this.files = content.files;
+      return content;
     } catch (err) {
       throw this.handleErr(err);
     }
