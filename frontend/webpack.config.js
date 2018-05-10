@@ -48,6 +48,10 @@ const pageList = [
   {
     title: "Shorten | elixi.re",
     chunkName: "shorten"
+  },
+  {
+    title: "Signup | elixi.re",
+    chunkName: "signup"
   }
 ];
 
@@ -62,7 +66,8 @@ const entryPointNames = [
   "about",
   "list",
   "shortlist",
-  "shorten"
+  "shorten",
+  "signup"
 ];
 let entry = {};
 for (const name of entryPointNames) {
