@@ -49,7 +49,7 @@
 }
 
 .logged-in .logged-in-only {
-  display: block;
+  display: initial;
 }
 
 .logged-in-only {
@@ -61,7 +61,7 @@
 }
 
 .logged-out-only {
-  display: block;
+  display: initial;
 }
 
 #alert-area {
