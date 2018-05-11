@@ -1,3 +1,5 @@
+import "@/styles/index.scss";
+
 window.addEventListener("DOMContentLoaded", async function() {
   const profile = await window.profilePromise;
   if (profile) {
