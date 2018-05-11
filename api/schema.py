@@ -6,6 +6,7 @@ from .errors import BadInput
 
 USERNAME_REGEX = re.compile(r'^[a-z]{1}[a-zA-Z0-9_]{2,19}$', re.A)
 SUBDOMAIN_REGEX = re.compile(r'^[a-zA-Z0-9_-]{0,63}$', re.A)
+DISCORD_REGEX = re.compiler(r'^[^\#]{2,32}\#\d{4}$', re.A)
 
 
 class ElixireValidator(Validator):
@@ -30,6 +31,10 @@ class ElixireValidator(Validator):
         # re.match returns none, soooo, bool(None) = False
         return bool(SUBDOMAIN_REGEX.match(value))
 
+    def _validate_type_discord(self, value: str) -> bool:
+        """Validate discord usernames."""
+        return bool(DISCORD_REGEX.match(value))
+
 
 def validate(document, schema):
     """Validate one document against a schema."""
@@ -51,5 +56,5 @@ PROFILE_SCHEMA = {
 REGISTRATION_SCHEMA = {
     'username': {'type': 'username'},
     'password': {'type': 'password'},
-    'discord_user': {'type': 'string'},
+    'discord_user': {'type': 'discord'},
 }

@@ -20,12 +20,13 @@ async def domainlist_handler(request):
         user_id = await token_check(request)
         is_admin = await check_admin(request, user_id, False)
 
-    adm_string = "" if is_admin else "WHERE admin_only = False"
-    domain_records = await request.app.db.fetch("""
+    adm_string = "" if is_admin else "WHERE admin_only = false"
+    domain_records = await request.app.db.fetch(f"""
     SELECT domain_id, domain
     FROM domains
+    {adm_string}
     ORDER BY domain_id ASC
-    """ + adm_string)
+    """)
 
     return response.json({"domains": dict(domain_records)})
 

@@ -20,6 +20,10 @@ python3.6 -m pip install -Ur requirements.txt
 # NOTE: this script has ./images hardcoded.
 ./utils/upgrade/folder_sharding.py
 
+# Please edit schema.sql before continuing.
+# Specially the "INSERT INTO domains" line.
+psql -U postgres -f schema.sql
+
 python3.6 run.py
 ```
 
