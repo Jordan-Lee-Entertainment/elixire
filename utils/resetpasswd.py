@@ -45,7 +45,11 @@ async def main():
     print(f'password: {password!r}')
 
     await db.close()
-    await redis.close()
+    redis.close()
+    await redis.wait_closed()
+    print('OK')
+
+
 
 
 if __name__ == '__main__':
