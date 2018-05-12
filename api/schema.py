@@ -7,6 +7,7 @@ from .errors import BadInput
 USERNAME_REGEX = re.compile(r'^[a-z]{1}[a-zA-Z0-9_]{2,19}$', re.A)
 SUBDOMAIN_REGEX = re.compile(r'^[a-zA-Z0-9_-]{0,63}$', re.A)
 DISCORD_REGEX = re.compile(r'^[^\#]{2,32}\#\d{4}$', re.A)
+EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', re.A)
 
 
 class ElixireValidator(Validator):
@@ -35,6 +36,9 @@ class ElixireValidator(Validator):
         """Validate discord usernames."""
         return bool(DISCORD_REGEX.match(value))
 
+    def _validate_type_email(self, value: str) -> bool:
+        return bool(EMAIL_REGEX.match(value))
+
 
 def validate(document, schema):
     """Validate one document against a schema."""
@@ -57,4 +61,5 @@ REGISTRATION_SCHEMA = {
     'username': {'type': 'username'},
     'password': {'type': 'password'},
     'discord_user': {'type': 'discord'},
+    'email': {'type', 'email'},
 }

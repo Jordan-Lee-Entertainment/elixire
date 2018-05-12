@@ -14,7 +14,7 @@ from ..schema import validate, REGISTRATION_SCHEMA
 bp = Blueprint('register')
 
 
-async def register_webhook(app, wh_url, user_id, username, discord_user):
+async def register_webhook(app, wh_url, user_id, username, discord_user, email):
     # call webhook
     payload = {
         'embeds': [{
@@ -32,6 +32,10 @@ async def register_webhook(app, wh_url, user_id, username, discord_user):
                 {
                     'name': 'discord user',
                     'value': discord_user,
+                },
+                {
+                    'name': 'email',
+                    'value': email,
                 }
             ]
         }]
@@ -53,6 +57,7 @@ async def register_user(request):
     username = payload['username']
     password = payload['password']
     discord_user = payload['discord_user']
+    email = payload['email']
 
     if len(password) < 8:
         raise BadInput('Password is less than 8 chars.')
@@ -81,7 +86,7 @@ async def register_user(request):
 
     app = request.app
     await register_webhook(app, app.econfig.USER_REGISTER_WEBHOOK,
-                           user_id, username, discord_user)
+                           user_id, username, discord_user, email)
 
     return response.json({
         'success': True
