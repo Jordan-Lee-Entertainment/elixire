@@ -27,8 +27,6 @@ def test_cli(loop, app, test_client):
 async def test_upload(test_cli):
     """Test that the upload route works given test data!"""
     utoken = await login_normal(test_cli)
-    
-    print(utoken)
     data = aiohttp.FormData()
 
     data.add_field('file',
