@@ -1,4 +1,5 @@
 class APIError(Exception):
+    """General API Error"""
     status_code = 500
 
     def get_payload(self):
@@ -6,6 +7,7 @@ class APIError(Exception):
 
 
 class BadInput(APIError):
+    """Bad input from the user."""
     status_code = 400
 
     def get_payload(self):
@@ -16,15 +18,17 @@ class BadInput(APIError):
 
 
 class FailedAuth(APIError):
+    """Failed to authenticate."""
     status_code = 403
 
 
 class NotFound(APIError):
+    """Resource not found"""
     status_code = 404
 
 
 class Ratelimited(APIError):
-    """Memes: here"""
+    """Too many requests to the application."""
     status_code = 429
 
     def get_payload(self):
@@ -58,4 +62,5 @@ class BadUpload(APIError):
 
 
 class QuotaExploded(APIError):
+    """When your quota is exploded or will be exploded."""
     status_code = 469

@@ -63,3 +63,13 @@ REGISTRATION_SCHEMA = {
     'discord_user': {'type': 'discord'},
     'email': {'type': 'email'},
 }
+
+REVOKE_SCHEMA = {
+    # can't use type password here
+    'password': {'type': 'string'},
+}
+
+LOGIN_SCHEMA = {
+    'username': {'type': 'string'},
+    'password': {'type': 'string'},
+}
