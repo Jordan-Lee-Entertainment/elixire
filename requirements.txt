@@ -1,4 +1,4 @@
-sanic==0.7.0
+git+https://github.com/channelcat/sanic
 sanic-cors==0.9.3
 
 asyncpg==0.15.0
