@@ -61,5 +61,5 @@ REGISTRATION_SCHEMA = {
     'username': {'type': 'username'},
     'password': {'type': 'password'},
     'discord_user': {'type': 'discord'},
-    'email': {'type', 'email'},
+    'email': {'type': 'email'},
 }
