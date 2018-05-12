@@ -53,7 +53,7 @@ def validate(document, schema):
 
 PROFILE_SCHEMA = {
     'user': {'type': 'string'},
-    'password': {'type': 'password'},
+    'password': {'type': 'password', 'required': False},
     'subdomain': {'type': 'subdomain', 'nullable': True},
     'new_password': {'type': 'password', 'nullable': True},
     'domain': {'type': 'integer', 'nullable': True},
