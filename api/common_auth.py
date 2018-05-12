@@ -117,7 +117,7 @@ async def login_user(request):
     Returns a partial user row.
     """
     payload = validate(request.json, LOGIN_SCHEMA)
-    username = payload['username']
+    username = payload['user']
     password = payload['password']
 
     user = await request.app.storage.actx_username(username)
