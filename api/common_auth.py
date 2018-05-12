@@ -162,6 +162,7 @@ async def token_check(request, wanted_type=None) -> int:
     if not user:
         raise FailedAuth('unknown user ID')
 
+    print(user)
     if not user['active']:
         raise FailedAuth('inactive user')
 

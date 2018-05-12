@@ -41,6 +41,7 @@ USER_REGISTER_WEBHOOK = ""
 # change this to your wanted ban period
 # '1 day', '6 hours', '10 seconds', etc.
 BAN_PERIOD = '6 hours'
+IP_BAN_PERIOD = '5 minutes'
 
 # How many ratelimit payloads can be sent
 # before the current user gets banned?
@@ -71,6 +72,11 @@ ACCEPTED_MIMES = [
 RATELIMIT = {
     'requests': 5,
     'second': 3,
+}
+
+IP_RATELIMIT = {
+    'requests': 10,
+    'second': 5,
 }
 
 # Enable thumbnails?
