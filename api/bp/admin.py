@@ -70,7 +70,7 @@ async def activate_user(request, user_id: int):
 
     result = await request.app.db.execute("""
     UPDATE users
-    SET active = false
+    SET active = true
     WHERE user_id = $1
     """, user_id)
 
