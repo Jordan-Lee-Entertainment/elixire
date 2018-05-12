@@ -159,13 +159,11 @@ async def purge_cf(app, filename: str, ftype: int) -> int:
 async def check_bans(request, user_id: int):
     """Check if the current user is already banned."""
     if user_id is not None:
-        print('checking uid')
         reason = await request.app.storage.get_ban(user_id)
 
         if reason:
             raise FailedAuth(f'User is banned. {reason}')
 
-    print('checking stuff on ip')
     ip_addr = get_ip_addr(request)
     ip_ban_reason = await request.app.storage.get_ipban(ip_addr)
     if ip_ban_reason:
