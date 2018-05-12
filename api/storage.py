@@ -253,7 +253,6 @@ class Storage:
             LIMIT 1
             """, ip_address)
 
-            print(row)
             if row is None:
                 await self.set(key, None)
                 return None

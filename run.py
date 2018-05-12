@@ -54,6 +54,12 @@ FORCE_IP_ROUTES = (
     '/api/register',
 )
 
+NOT_API_RATELIMIT = (
+    '/i/',
+    '/s/',
+    '/t/',
+)
+
 
 async def options_handler(request, *args, **kwargs):
     return response.text('ok')
@@ -161,7 +167,7 @@ async def global_rl(request):
     ip_rtl = request.app.ip_rtl
 
     force_ip = any(x in request.url for x in FORCE_IP_ROUTES)
-    is_image = '/i/' in request.url
+    is_image = any(x in request.url for x in NOT_API_RATELIMIT)
 
     if force_ip or is_image:
         ip_addr = get_ip_addr(request)
