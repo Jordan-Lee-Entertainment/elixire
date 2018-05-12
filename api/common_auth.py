@@ -7,6 +7,7 @@ import logging
 
 from .common import SIGNERS, TokenType, check_bans
 from .errors import BadInput, FailedAuth, NotFound
+from .schema import validate, LOGIN_SCHEMA
 
 log = logging.getLogger(__name__)
 
@@ -115,11 +116,9 @@ async def login_user(request):
 
     Returns a partial user row.
     """
-    try:
-        username = request.json['user']
-        password = request.json['password']
-    except (TypeError, KeyError):
-        raise BadInput('Bad payload for user/password auth')
+    payload = validate(request.json, LOGIN_SCHEMA)
+    username = payload['username']
+    password = payload['password']
 
     user = await request.app.storage.actx_username(username)
 
