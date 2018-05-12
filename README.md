@@ -9,7 +9,7 @@ elixi.re v2
 elixi.re is a imagehost solution, the v1 was written in PHP,
 v2 is being written in Python.
 
-*(no, we won't write Elixir)*
+*(no, we won't write Elixir, read BACKEND.md for the why)*
 
 # Running
 
@@ -24,6 +24,12 @@ python3.6 -m pip install -Ur requirements.txt
 # Specially the "INSERT INTO domains" line.
 psql -U postgres -f schema.sql
 
+# build frontend before running the app
+# you need a reasonably decent node version
+cd frontend
+npm i
+npm run build:production
+
 python3.6 run.py
 ```
 
@@ -34,14 +40,16 @@ python3.6 run.py
 Here's some important notes while this is still a todo:
 
 - If you're proxying the instance (you should), enable host forwarding [like this](https://s.ave.zone/fjt.png).
-- If you get an error saying something like "route already registered", then you forgot to build the frontend, either disable it or cd to `frontend`, run `npm install` and then `npm run build:production`. You need a reasonably decent node version.
+- If you get an error saying something like "route already registered", then you forgot to build the frontend, either disable it or build the frontend. **You need a reasonably decent node version.**
 - Ensure that you redirect www to non-www or non-www to www or else the domain checking stuff won't be super happy (you'll not be able to fetch stuff properly).
 
 ## Tools
 
- - `utils/adduser.py` adds a new user.
+ - `utils/adduser.py` to add a new user into your instance.
  - `utils/deletefile.py` deletes a file.
  - `utils/stats.py` displays neat facts about your instance.
+ - `utils/resetpasswd.py` in the case a user wants to reset a password.
+ - `utils/renamefile.py` in the case you want to rename a file's shortname.
 
 # API Documentation
 
