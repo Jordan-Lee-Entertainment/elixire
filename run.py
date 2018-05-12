@@ -121,7 +121,7 @@ async def handle_ban(request, exception):
 
 
 @app.exception(APIError)
-def handle_api_error(_request, exception):
+def handle_api_error(request, exception):
     """Handle any kind of application-level raised error."""
     log.warning(f'API error: {exception!r}')
     scode = exception.status_code

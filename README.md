@@ -71,6 +71,10 @@ SET admin = true
 WHERE username = 'admin';
 ```
 
+Make sure to insert some big ratelimits to be able to run
+the test battery, 1000/1s should be enough for both user ratelimits
+and IP based ratelimits.
+
 Then, run the tests with tox.
 ```bash
 tox
