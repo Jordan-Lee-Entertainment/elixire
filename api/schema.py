@@ -43,6 +43,8 @@ class ElixireValidator(Validator):
 def validate(document, schema):
     """Validate one document against a schema."""
     validator = ElixireValidator(schema)
+    validator.allow_unknown = False
+
     if not validator.validate(document):
         raise BadInput('Bad payload', validator.errors)
 
@@ -58,18 +60,18 @@ PROFILE_SCHEMA = {
 }
 
 REGISTRATION_SCHEMA = {
-    'username': {'type': 'username'},
-    'password': {'type': 'password'},
-    'discord_user': {'type': 'discord'},
-    'email': {'type': 'email'},
+    'username': {'type': 'username', 'required': True},
+    'password': {'type': 'password', 'required': True},
+    'discord_user': {'type': 'discord', 'required': True},
+    'email': {'type': 'email', 'required': True},
 }
 
 REVOKE_SCHEMA = {
     # can't use type password here
-    'password': {'type': 'string'},
+    'password': {'type': 'string', 'required': True},
 }
 
 LOGIN_SCHEMA = {
-    'username': {'type': 'string'},
-    'password': {'type': 'string'},
+    'user': {'type': 'string', 'nullable': False, 'required': True},
+    'password': {'type': 'string', 'nullable': False, 'required': True},
 }

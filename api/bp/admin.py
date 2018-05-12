@@ -25,7 +25,7 @@ async def test_admin(request):
     })
 
 
-@bp.get('/api/admin/users/<page:int>')
+@bp.get('/api/admin/listusers/<page:int>')
 async def list_users_handler(request, page: int):
     """List users in the service"""
     user_id = await token_check(request)

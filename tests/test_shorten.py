@@ -66,7 +66,7 @@ async def test_shorten_complete(test_cli):
     # because since this is a test server, it runs in an entirely
     # different domain (127.0.0.1:random_port), instead of
     # localhost:8081.
-    listdata = await test_cli.get('/api/list', headers={
+    listdata = await test_cli.get('/api/list?page=0', headers={
         'Authorization': utoken,
     })
 
