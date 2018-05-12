@@ -250,9 +250,7 @@ async def rl_header_set(request, response):
     try:
         _, username = request.headers['x-context']
     except KeyError:
-        # we are in deep trouble
-        log.warning('Request object does not provide a context')
-        username = None
+        # No context provided.
         return
 
     bucket = None
