@@ -61,8 +61,8 @@ async def get_user_handler(request, user_id: int):
 @bp.post('/api/admin/activate/<user_id:int>')
 async def activate_user(request, user_id: int):
     """Activate one user, given its ID."""
-    user_id = await token_check(request)
-    await check_admin(request, user_id, True)
+    caller_id = await token_check(request)
+    await check_admin(request, caller_id, True)
 
     result = await request.app.db.execute("""
     UPDATE users
@@ -81,8 +81,8 @@ async def activate_user(request, user_id: int):
 @bp.post('/api/admin/deactivate/<user_id:int>')
 async def deactivate_user(request, user_id: int):
     """Deactivate one user, given its ID."""
-    user_id = await token_check(request)
-    await check_admin(request, user_id, True)
+    caller_id = await token_check(request)
+    await check_admin(request, caller_id, True)
 
     result = await request.app.db.execute("""
     UPDATE users
