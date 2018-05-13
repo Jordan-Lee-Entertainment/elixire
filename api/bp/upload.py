@@ -321,5 +321,6 @@ async def upload_handler(request):
     fpath = dpath / 'i' / out_filename
 
     return response.json({
-        'url': f'https://{str(fpath)}'
+        'url': f'https://{str(fpath)}',
+        'shortname': file_rname,
     })

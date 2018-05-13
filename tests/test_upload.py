@@ -24,8 +24,19 @@ def app():
 def test_cli(loop, app, test_client):
     return loop.run_until_complete(test_client(app))
 
-async def test_upload(test_cli):
-    """Test that the upload route works given test data!"""
+async def check_exists(test_cli, shortname, token):
+    resp = await test_cli.get('/api/list?page=0', headers={
+        'Authorization': token,
+    })
+    assert resp.status == 200
+    rjson = await resp.json()
+    
+    assert isinstance(rjson['files'], dict)
+    assert shortname in rjson['files']
+
+
+async def test_upload_png(test_cli):
+    """Test that the upload route works given test data"""
     utoken = await login_normal(test_cli)
     data = aiohttp.FormData()
 
@@ -44,3 +55,4 @@ async def test_upload(test_cli):
     respjson = await resp.json()
     assert isinstance(respjson, dict)
     assert isinstance(respjson['url'], str)
+    await check_exists(test_cli, respjson['shortname'], utoken)
