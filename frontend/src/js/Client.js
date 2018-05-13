@@ -321,8 +321,8 @@ class Client {
           .send({
             discord_user: discord,
             username,
-            password
-            // ,email
+            password,
+            email
           })
           // So I guess the ratelimit code gets mad when you provide
           // an invalid token, bypassing the actual route handler entirely

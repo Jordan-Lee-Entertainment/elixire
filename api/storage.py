@@ -3,8 +3,13 @@ storage.py - multiple routines to fetch things
 from redis (as caching) and using postgres as a fallback
 """
 import logging
+import datetime
 
 log = logging.getLogger(__name__)
+epoch = datetime.datetime.utcfromtimestamp(0)
+
+def unix_time_millis(dt):
+    return (dt - epoch).total_seconds() * 1000.0
 
 
 def check(map) -> dict:
@@ -50,6 +55,7 @@ class Storage:
         any: typ
             If the key fetching succeeded.
         """
+        log.info(f'Getting key {key}, type {typ}')
         with await self.redis as conn:
             val = await conn.get(key)
 
@@ -70,14 +76,14 @@ class Storage:
 
         return typ(val)
 
-    async def set(self, key, value):
+    async def set(self, key, value, **kwargs):
         """Set a key in Redis."""
         with await self.redis as conn:
             if isinstance(value, bool):
                 value = str(value)
 
             log.info(f'setting key {key!r} to {value!r}')
-            await conn.set(key, value if value is not None else 'false')
+            await conn.set(key, value if value is not None else 'false', **kwargs)
 
     async def raw_invalidate(self, *keys: tuple):
         """Invalidate/delete a set of keys."""
@@ -230,3 +236,61 @@ class Storage:
             await self.set(key, url)
 
         return url
+
+    async def get_ipban(self, ip_address: str) -> str:
+        """Get the reason for a specific IP ban."""
+        key = f'ipban:{ip_address}'
+        ban_reason = await self.get(key, str)
+
+        if ban_reason is False:
+            return
+
+        if ban_reason is None:
+            row = await self.db.fetchrow("""
+            SELECT reason, end_timestamp
+            FROM ip_bans
+            WHERE ip_address = $1 AND end_timestamp > now()
+            LIMIT 1
+            """, ip_address)
+
+            if row is None:
+                await self.set(key, None)
+                return None
+
+            ban_reason = row['reason']
+            end_timestamp = row['end_timestamp']
+            et_millis = int(unix_time_millis(end_timestamp))
+
+            # set key expiration at same time the banning finishes
+            await self.set(key, ban_reason, pexpire=et_millis)
+
+        return ban_reason
+
+    async def get_ban(self, user_id: int) -> str:
+        """Get the ban reason for a specific user id."""
+        key = f'userban:{user_id}'
+        ban_reason = await self.get(key, str)
+
+        if ban_reason is False:
+            return
+
+        if ban_reason is None:
+            row = await self.db.fetchrow("""
+            SELECT reason, end_timestamp
+            FROM bans
+            WHERE user_id = $1 AND end_timestamp > now()
+            LIMIT 1
+            """, user_id)
+
+            if row is None:
+                await self.set(key, None)
+                return None
+
+            ban_reason = row['reason']
+            end_timestamp = row['end_timestamp']
+            et_millis = int(unix_time_millis(end_timestamp))
+
+            # set key expiration at same time the banning finishes
+            await self.set(key, ban_reason, pexpire=et_millis)
+
+        return ban_reason

@@ -6,7 +6,7 @@ from sanic import response
 
 from ..common import purge_cf, FileNameType
 from ..common_auth import token_check
-from ..errors import NotFound
+from ..errors import NotFound, BadInput
 
 bp = Blueprint('files')
 log = logging.getLogger(__name__)
@@ -24,6 +24,12 @@ async def domain_list(request):
 @bp.get('/api/list')
 async def list_handler(request):
     """Get list of files."""
+    try:
+        print(request.args)
+        page = int(request.args['page'][0])
+    except (TypeError, ValueError, KeyError, IndexError):
+        raise BadInput('Page parameter needs to be supplied correctly.')
+
     user_id = await token_check(request)
     domains = await domain_list(request)
 
@@ -33,7 +39,10 @@ async def list_handler(request):
     WHERE uploader = $1
     AND deleted = false
     ORDER BY file_id DESC
-    """, user_id)
+
+    LIMIT 100
+    OFFSET ($2 * 100)
+    """, user_id, page)
 
     user_shortens = await request.app.db.fetch("""
     SELECT shorten_id, filename, redirto, domain
@@ -41,7 +50,10 @@ async def list_handler(request):
     WHERE uploader = $1
     AND deleted = false
     ORDER BY shorten_id DESC
-    """, user_id)
+
+    LIMIT 100
+    OFFSET ($2 * 100)
+    """, user_id, page)
 
     filenames = {}
     for ufile in user_files:
@@ -51,7 +63,7 @@ async def list_handler(request):
 
         file_url = f'https://{domain}/i/{basename}'
 
-        # TODO: remove the hardcoding on this one
+        # TODO: remove the https hardcoding on this one
         file_url_thumb = f'https://{domain}/t/s{basename}'
 
         filenames[filename] = {

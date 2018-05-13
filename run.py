@@ -20,7 +20,7 @@ import api.bp.register
 
 from api.errors import APIError, Ratelimited, Banned, BadInput, FailedAuth
 from api.common_auth import token_check
-from api.common import ban_webhook, check_bans
+from api.common import ban_webhook, check_bans, get_ip_addr
 from api.ratelimit import RatelimitManager
 from api.storage import Storage
 
@@ -45,27 +45,71 @@ app.blueprint(api.bp.register.bp)
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
+FORCE_IP_ROUTES = (
+    '/api/login',
+    '/api/apikey',
+    '/api/revoke',
+    '/api/domains',
+    '/api/hello',
+    '/api/register',
+)
+
+NOT_API_RATELIMIT = (
+    '/i/',
+    '/s/',
+    '/t/',
+)
+
 
 async def options_handler(request, *args, **kwargs):
     return response.text('ok')
+
+
+def check_rtl(request, bucket):
+    """Check the ratelimit bucket."""
+    retry_after = bucket.update_rate_limit()
+    if bucket.retries > request.app.econfig.RL_THRESHOLD:
+        raise Banned('Reached retry limit on ratelimiting.')
+
+    if retry_after:
+        raise Ratelimited('You are being ratelimited.', retry_after)
 
 
 @app.exception(Banned)
 async def handle_ban(request, exception):
     scode = exception.status_code
     reason = exception.args[0]
+    rapp = request.app
 
-    user_id, user_name = request.headers['X-Context']
+    if 'X-Context' not in request.headers:
+        # use the IP as banning point
+        ip_addr = get_ip_addr(request)
 
-    log.warning(f'Banning {user_name} {user_id} with reason {reason!r}')
+        log.warning(f'Banning ip address {ip_addr} with reason {reason!r}')
 
-    period = request.app.econfig.BAN_PERIOD
-    await request.app.db.execute(f"""
-    INSERT INTO bans (user_id, reason, end_timestamp)
-    VALUES ($1, $2, now() + interval '{period}')
-    """, user_id, reason)
+        period = rapp.econfig.IP_BAN_PERIOD
+        await rapp.db.execute(f"""
+        INSERT INTO ip_bans (ip_address, reason, end_timestamp)
+        VALUES ($1, $2, now() + interval '{period}')
+        """, ip_addr, reason)
 
-    await ban_webhook(request.app, user_id, reason, period)
+        await rapp.storage.raw_invalidate(f'ipban:{ip_addr}')
+        await ban_webhook(rapp, ip_addr, f'[ip ban] {reason}', period)
+    else:
+        user_id, user_name = request.headers['X-Context']
+
+        log.warning(f'Banning {user_name} {user_id} with reason {reason!r}')
+
+        period = app.econfig.BAN_PERIOD
+        await rapp.db.execute(f"""
+        INSERT INTO bans (user_id, reason, end_timestamp)
+        VALUES ($1, $2, now() + interval '{period}')
+        """, user_id, reason)
+
+        await rapp.storage.raw_invalidate(f'userban:{user_id}')
+        await ban_webhook(rapp, user_id, reason, period)
+
+    # generate our error message to the client.
     res = {
         'error': True,
         'code': scode,
@@ -78,9 +122,7 @@ async def handle_ban(request, exception):
 
 @app.exception(APIError)
 def handle_api_error(request, exception):
-    """
-    Handle any kind of application-level raised error.
-    """
+    """Handle any kind of application-level raised error."""
     log.warning(f'API error: {exception!r}')
     scode = exception.status_code
     res = {
@@ -103,36 +145,47 @@ def handle_exception(request, exception):
     status_code = 500
     if isinstance(exception, (exceptions.NotFound, exceptions.FileNotFound)):
         status_code = 404
+        log.warning(f'File not found: {exception!r}')
+    else:
+        log.exception(f'Error in request: {exception!r}')
 
-    log.exception(f'error in request: {repr(exception)}')
     return response.json({
         'error': True,
         'message': repr(exception)
     }, status=status_code)
 
 
-async def ip_ratelimit(request):
-    # TODO: this, using the cf headers, etc
-    pass
-
 
 @app.middleware('request')
 async def global_rl(request):
-    # handle global ratelimiting
-    if '/api' not in request.url:
-        return
-
+    # handle global ratelimiting on all routes
     if request.method == 'OPTIONS':
         return
 
-    if any(x in request.url
-           for x in ('/api/login', '/api/apikey', '/api/register',
-                     '/api/revoke', '/api/domains', '/api/hello')):
-        # not enable ratelimiting for those routes
-        # TODO: use ip_ratelimit
+    # ratelimiter
+    rtl = request.app.rtl
+    ip_rtl = request.app.ip_rtl
+
+    force_ip = any(x in request.url for x in FORCE_IP_ROUTES)
+    is_image = any(x in request.url for x in NOT_API_RATELIMIT)
+
+    if force_ip or is_image:
+        ip_addr = get_ip_addr(request)
+
+        # use the ip as a bucket to the request
+        bucket = ip_rtl.get_bucket(ip_addr)
+
+        if not bucket:
+            return
+
+        await check_bans(request, None)
+        check_rtl(request, bucket)
         return
 
-    rtl = request.app.rtl
+    if '/api' not in request.url:
+        # ignore at THIS POINT, in specific
+        return
+
     storage = request.app.storage
 
     # process ratelimiting
@@ -168,6 +221,7 @@ async def global_rl(request):
     if all(v is None for v in context):
         raise FailedAuth('Can not identify user')
 
+    # embed request context inside X-Context
     request.headers['X-Context'] = (user_id, user_name)
     bucket = rtl.get_bucket(user_name)
 
@@ -177,29 +231,26 @@ async def global_rl(request):
         return
 
     await check_bans(request, user_id)
-
-    retry_after = bucket.update_rate_limit()
-    if bucket.retries > request.app.econfig.RL_THRESHOLD:
-        raise Banned('Reached retry limit on ratelimiting.')
-
-    if retry_after:
-        raise Ratelimited('You are being ratelimited.', retry_after)
+    check_rtl(request, bucket)
 
 
 @app.middleware('response')
 async def rl_header_set(request, response):
+    """Set ratelimit headers when possible!"""
     if '/api' not in request.url:
         return
 
     if request.method == 'OPTIONS':
         return
 
+    # TODO: use the ip address instead of X-Context
+    # or maybe... we could embed the ip address inside some X-Context-IP
+    # or something.
+
     try:
         _, username = request.headers['x-context']
     except KeyError:
-        # we are in deep trouble
-        log.warning('Request object does not provide a context')
-        username = None
+        # No context provided.
         return
 
     bucket = None
@@ -218,44 +269,49 @@ async def rl_header_set(request, response):
 
 
 @app.listener('before_server_start')
-async def setup_db(app, loop):
+async def setup_db(rapp, loop):
     """Initialize db connection before app start"""
-    app.session = aiohttp.ClientSession(loop=loop)
+    rapp.session = aiohttp.ClientSession(loop=loop)
 
     log.info('connecting to db')
-    app.db = await asyncpg.create_pool(**config.db)
+    rapp.db = await asyncpg.create_pool(**config.db)
 
     log.info('connecting to redis')
-    app.redis = await aioredis.create_redis_pool(
+    rapp.redis = await aioredis.create_redis_pool(
         config.redis,
         minsize=3, maxsize=11,
         loop=loop, encoding='utf-8'
     )
 
-    # start ratelimiting man
-    app.rtl = RatelimitManager(app)
+    # custom classes for elixire
+    log.info('loading user ratelimit manager')
+    rapp.rtl = RatelimitManager(app)
 
-    app.storage = Storage(app)
+    log.info('loading ip ratelimit manager')
+    rapp.ip_rtl = RatelimitManager(app, app.econfig.IP_RATELIMIT)
+    rapp.storage = Storage(app)
 
 
 @app.listener('after_server_stop')
-async def close_db(app, loop):
+async def close_db(rapp, _loop):
+    """Close all database connections."""
     log.info('closing db')
-    await app.db.close()
+    await rapp.db.close()
 
     log.info('closing redis')
-    app.redis.close()
-    await app.redis.wait_closed()
+    rapp.redis.close()
+    await rapp.redis.wait_closed()
 
 
 @app.get('/api/hello')
-async def test_route(request):
+async def test_route(_request):
     return response.json({
         'name': 'elixire'
     })
 
 
 def main():
+    """Main application entry point."""
     # "fix" CORS.
     routelist = list(app.router.routes_all.keys())
     for uri in list(routelist):
