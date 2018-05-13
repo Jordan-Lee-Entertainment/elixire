@@ -58,7 +58,7 @@ async def get_user_handler(request, user_id: int):
 
     return response.json(dict(udata))
 
-@bp.post('/api/admin/activate/<user_id>')
+@bp.post('/api/admin/activate/<user_id:int>')
 async def activate_user(request, user_id: int):
     """Activate one user, given its ID."""
     user_id = await token_check(request)
@@ -74,10 +74,11 @@ async def activate_user(request, user_id: int):
         raise BadInput('Provided user ID does not reference any user.')
 
     return response.json({
-        'success': True
+        'success': True,
+        'result': result,
     })
 
-@bp.post('/api/admin/deactivate/<user_id>')
+@bp.post('/api/admin/deactivate/<user_id:int>')
 async def deactivate_user(request, user_id: int):
     """Deactivate one user, given its ID."""
     user_id = await token_check(request)
@@ -93,5 +94,6 @@ async def deactivate_user(request, user_id: int):
         raise BadInput('Provided user ID does not reference any user.')
 
     return response.json({
-        'success': True
+        'success': True,
+        'result': result
     })
