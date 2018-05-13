@@ -70,6 +70,8 @@ async def activate_user(request, user_id: int):
     WHERE user_id = $1
     """, user_id)
 
+    await request.app.storage.invalidate(user_id, 'active')
+
     if result == "UPDATE 0":
         raise BadInput('Provided user ID does not reference any user.')
 
@@ -89,6 +91,8 @@ async def deactivate_user(request, user_id: int):
     SET active = false
     WHERE user_id = $1
     """, user_id)
+
+    await request.app.storage.invalidate(user_id, 'active')
 
     if result == "UPDATE 0":
         raise BadInput('Provided user ID does not reference any user.')
