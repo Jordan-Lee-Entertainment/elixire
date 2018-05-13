@@ -371,16 +371,17 @@ class Client {
 
   /**
    * Gets a list of all the files the user has uploaded and the links they've shortened
+   * @param {Number} pageNum - The page to fetch files for
    * @returns {Promise<AllContent>} The files and shortens created by the user
    * @api public
    */
-  async getFiles() {
+  async getFiles(pageNum = 0) {
     if (!this.token) throw new Error("BAD_AUTH");
 
     try {
-      const content = await this.ratelimitedRequest("get", "/list").then(
-        res => res.body
-      );
+      const content = await this.ratelimitedRequest("get", "/list", req =>
+        req.query({ page: pageNum })
+      ).then(res => res.body);
       this.shortens = content.shortens;
       this.files = content.files;
       return content;
@@ -407,6 +408,8 @@ class Client {
       return new Error("RATELIMITED");
     } else if (err.status == 404) {
       return new Error("NOT_FOUND");
+    } else if (err.status == 469) {
+      return new Error("QUOTA_EXPLODED");
     }
     return err;
   }
