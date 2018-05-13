@@ -32,12 +32,25 @@ window.addEventListener("DOMContentLoaded", async function() {
   }
 
   const profileDisplay = document.getElementById("profile-container");
+  const profileCache = JSON.parse(
+    window.localStorage.getItem("profile-cache") || null
+  );
+  if (profileCache) isLoggedIn(profileCache);
   window.client.profile = await profilePromise;
   console.log(window.client.profile);
-  if (window.client.profile) {
-    document.getElementById("nav-account").innerText =
-      window.client.profile.username;
+  function isLoggedIn(profile) {
+    document.getElementById("nav-account").innerText = profile.username;
     document.body.classList += " logged-in";
+  }
+  if (!window.client.profile) {
+    window.localStorage.removeItem("profile-cache");
+  }
+  if (window.client.profile) {
+    isLoggedIn(window.client.profile);
+    window.localStorage.setItem(
+      "profile-cache",
+      JSON.stringify(window.client.profile)
+    );
   } else if (authenticatedPages.includes(window.location.pathname)) {
     // Hash param is used to know where to redirect back to after login.
     document.getElementById("garfield-login").href = `/login.html#${

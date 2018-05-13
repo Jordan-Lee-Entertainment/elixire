@@ -163,7 +163,7 @@ window.addEventListener("load", function() {
           "danger",
           "Bad image! You aren't allowed to upload images of that type!"
         );
-      } else if (err.message == "RATELIMITED") {
+      } else if (err.message == "QUOTA_EXPLODED") {
         error = commonCode.sendAlert(
           "danger",
           "You have expended your weekly quota or uploading this would cause you to expend it"

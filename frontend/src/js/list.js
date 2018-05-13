@@ -9,19 +9,38 @@ import deleteImage from "@/icons/delete.svg";
 import commonCode from "./commonCode.js";
 import filesize from "file-size";
 
+let loadedAll = false;
+
 window.addEventListener("load", async function() {
   const fileGrid = document.getElementById("file-grid");
-  const { files } = await client.getFiles();
-  const fileList = [];
-  for (const shortname in files) {
-    fileList.push(files[shortname]);
+  let pageNum = 0;
+  await loadMore(0);
+  async function loadMore(pageNum = 0) {
+    const { files } = await client.getFiles(pageNum);
+    const fileList = [];
+    for (const shortname in files) {
+      fileList.push(files[shortname]);
+    }
+    if (fileList.length === 0) {
+      return (loadedAll = true);
+    }
+    const fileListSorted = fileList.sort(
+      (b, a) => Number(a.snowflake) - Number(b.snowflake)
+    );
+    for (const file of fileListSorted) {
+      fileGrid.appendChild(renderFile(file));
+    }
   }
-  const fileListSorted = fileList.sort(
-    (b, a) => Number(a.snowflake) - Number(b.snowflake)
-  );
-  for (const file of fileListSorted) {
-    fileGrid.appendChild(renderFile(file));
-  }
+
+  window.addEventListener("scroll", ev => {
+    if (
+      window.innerHeight + window.scrollY >= document.body.offsetHeight &&
+      !loadedAll
+    ) {
+      // got the bottom of the page, load some more
+      loadMore(++pageNum);
+    }
+  });
 });
 
 function renderFile(file) {
