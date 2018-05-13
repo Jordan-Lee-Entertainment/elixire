@@ -25,29 +25,25 @@ async def test_admin(request):
     })
 
 
-@bp.get('/api/admin/users')
-async def list_users_handler(request):
+@bp.get('/api/admin/listusers/<page:int>')
+async def list_users_handler(request, page: int):
+    """List users in the service"""
     user_id = await token_check(request)
     await check_admin(request, user_id, True)
 
-    try:
-        page = int(request.json['page'])
-    except (TypeError, ValueError):
-        raise BadInput('Invalid page integer.')
-
-    # hmmm maybe more users per page?
     data = await request.app.db.fetch("""
     SELECT user_id, username, active, admin, domain
     FROM users
-    LIMIT 15
-    OFFSET ($1 * 15)
+    LIMIT 20
+    OFFSET ($1 * 20)
     """, page)
 
     return response.json(list(map(dict, data)))
 
 
 @bp.get('/api/admin/users/<user_id:int>')
-async def get_user_handler(request, user_id):
+async def get_user_handler(request, user_id: int):
+    """Get a user's details in the service."""
     user_id = await token_check(request)
     await check_admin(request, user_id, True)
 
@@ -70,7 +66,7 @@ async def activate_user(request, user_id: int):
 
     result = await request.app.db.execute("""
     UPDATE users
-    SET active = false
+    SET active = true
     WHERE user_id = $1
     """, user_id)
 

@@ -5,6 +5,7 @@ from sanic import response
 
 from ..common import TokenType
 from ..common_auth import login_user, gen_token
+from ..schema import validate, REVOKE_SCHEMA
 
 bp = Blueprint('auth')
 
@@ -12,7 +13,7 @@ bp = Blueprint('auth')
 @bp.post('/api/login')
 async def login_handler(request):
     """
-    Login one user to elixi.re
+    Login one user to the service
     receives a json payload with fields "user" and "password".
 
     returns a timed token
@@ -45,10 +46,11 @@ async def revoke_handler(request):
 
     This applies to timed and non-timed tokens.
     """
+    payload = validate(request.json, REVOKE_SCHEMA)
     user = await login_user(request)
 
     # we rerash password and invalidate all other tokens
-    user_pwd = request.json['password']
+    user_pwd = payload['password']
     user_pwd = bytes(user_pwd, 'utf-8')
 
     future = request.app.loop.run_in_executor(None,

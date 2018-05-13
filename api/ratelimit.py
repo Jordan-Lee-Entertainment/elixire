@@ -2,6 +2,9 @@
 Based off discord.py's cooldown code.
 """
 import time
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class Ratelimit:
@@ -73,11 +76,17 @@ class Ratelimit:
 
 
 class RatelimitManager:
-    def __init__(self, app):
+    def __init__(self, app, ratelimit=None):
         self._cache = {}
         self._cooldown = None
-        if getattr(app.econfig, 'RATELIMIT'):
-            self._cooldown = Ratelimit(**app.econfig.RATELIMIT)
+
+        if ratelimit is None and hasattr(app.econfig, 'RATELIMIT'):
+            ratelimit = app.econfig.RATELIMIT
+            log.info(f'Loading config ratelimits: {ratelimit!r}')
+        else:
+            log.info(f'Using given ratelimits: {ratelimit!r}')
+
+        self._cooldown = Ratelimit(**ratelimit)
 
     def _verify_cache(self):
         current = time.time()

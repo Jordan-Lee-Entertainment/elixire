@@ -28,6 +28,17 @@ SIGNERS = {
 }
 
 
+def get_ip_addr(request) -> str:
+    """Fetch the IP address for a request.
+
+    Handles the cloudflare headers responsible to set
+    the client's IP.
+    """
+    if 'X-Forwarded-For' not in request.headers:
+        return request.ip
+    return request.headers['X-Forwarded-For']
+
+
 def _gen_fname(length) -> str:
     """Generate a random filename."""
     return ''.join(secrets.choice(ALPHABET)
@@ -147,29 +158,32 @@ async def purge_cf(app, filename: str, ftype: int) -> int:
 
 async def check_bans(request, user_id: int):
     """Check if the current user is already banned."""
+    if user_id is not None:
+        reason = await request.app.storage.get_ban(user_id)
 
-    # TODO: make this use Storage...?
-    reason = await request.app.db.fetchval("""
-    SELECT reason
-    FROM bans
-    WHERE user_id=$1 and now() < end_timestamp
-    LIMIT 1
-    """, user_id)
+        if reason:
+            raise FailedAuth(f'User is banned. {reason}')
 
-    if reason:
-        raise FailedAuth(f'User is banned. {reason}')
+    ip_addr = get_ip_addr(request)
+    ip_ban_reason = await request.app.storage.get_ipban(ip_addr)
+    if ip_ban_reason:
+        raise FailedAuth(f'IP address is currently banned. {ip_ban_reason}')
 
 
 async def ban_webhook(app, user_id: int, reason: str, period: str):
+    """Send a webhook containing banning information."""
     wh_url = getattr(app.econfig, 'USER_BAN_WEBHOOK', None)
     if not wh_url:
         return
 
-    uname = await app.db.fetchval("""
-        select username
-        from users
-        where user_id = $1
-    """, user_id)
+    if isinstance(user_id, int):
+        uname = await app.db.fetchval("""
+            select username
+            from users
+            where user_id = $1
+        """, user_id)
+    else:
+        uname = '<no username>'
 
     payload = {
         'embeds': [{
