@@ -8,20 +8,19 @@ from sanic import response
 from PIL import Image
 
 from ..errors import NotFound
-from ..common_auth import check_domain
 
 bp = Blueprint('fetch')
 log = logging.getLogger(__name__)
 
 
 async def filecheck(request, filename):
-    domain = await check_domain(request, request.host)
+    """Check if the given file exists on the domain."""
+    storage = request.app.storage
+    domain_id = await storage.get_domain_id(request.host)
 
     shortname, ext = os.path.splitext(filename)
 
-    storage = request.app.storage
-    filepath = await storage.get_fspath(shortname, domain['domain_id'])
-
+    filepath = await storage.get_fspath(shortname, domain_id)
     if not filepath:
         raise NotFound('No files with this name on this domain.')
 

@@ -5,6 +5,8 @@ from redis (as caching) and using postgres as a fallback
 import logging
 import datetime
 
+from .errors import NotFound
+
 log = logging.getLogger(__name__)
 epoch = datetime.datetime.utcfromtimestamp(0)
 
@@ -12,16 +14,16 @@ def unix_time_millis(dt):
     return (dt - epoch).total_seconds() * 1000.0
 
 
-def check(map) -> dict:
+def check(map_data) -> dict:
     """Check if all values in the map aren't None.
 
     If one is, returns None.
     """
     # checks if all values in map are not None
-    if any(v is None for v in map.values()):
+    if any(v is None for v in map_data.values()):
         return None
 
-    return map
+    return map_data
 
 
 def prefix(user_id: int) -> str:
@@ -65,7 +67,7 @@ class Storage:
             elif val == 'False':
                 return False
 
-        # always use false to show when the db
+        # always use "false" to show when the db
         # didnt give us anything
         if val == 'false':
             return False
@@ -76,14 +78,31 @@ class Storage:
 
         return typ(val)
 
+    async def get_multi(self, keys: list, typ=str) -> list:
+        """Fetch multiple keys."""
+        res = []
+
+        for key in keys:
+            val = await self.get(key, typ)
+            res.append(val)
+
+        return res
+
     async def set(self, key, value, **kwargs):
         """Set a key in Redis."""
+        key = str(key)
+
         with await self.redis as conn:
             if isinstance(value, bool):
                 value = str(value)
 
-            log.info(f'setting key {key!r} to {value!r}')
+            log.info(f'Setting key {key!r} to {value!r}')
             await conn.set(key, value if value is not None else 'false', **kwargs)
+
+    async def set_multi_one(self, keys: list, value):
+        """Set multiple keys to one given value."""
+        for key in keys:
+            await self.set(key, value)
 
     async def raw_invalidate(self, *keys: tuple):
         """Invalidate/delete a set of keys."""
@@ -113,7 +132,7 @@ class Storage:
             LIMIT 1
             """, username)
 
-            await self.set(f'uid:{username}', uid)
+            await self.set(f'uid:{username}', uid or 'false')
 
         return uid
 
@@ -133,7 +152,7 @@ class Storage:
             LIMIT 1
             """, user_id)
 
-            await self.set(f'uname:{user_id}', uname)
+            await self.set(f'uname:{user_id}', uname or 'false')
 
         return uname
 
@@ -178,7 +197,7 @@ class Storage:
             WHERE user_id = $1
             """, user_id)
 
-            await self.set(f'{ukey}:password_hash', password_hash)
+            await self.set(f'{ukey}:password_hash', password_hash or 'false')
 
         if active is None:
             active = await self.db.fetchval("""
@@ -187,7 +206,7 @@ class Storage:
             WHERE user_id = $1
             """, user_id)
 
-            await self.set(f'{ukey}:active', active)
+            await self.set(f'{ukey}:active', active or 'false')
 
         return check({
             'password_hash': password_hash,
@@ -212,7 +231,7 @@ class Storage:
             LIMIT 1
             """, shortname, domain_id)
 
-            await self.set(key, fspath)
+            await self.set(key, fspath or 'false')
 
         return fspath
 
@@ -233,7 +252,7 @@ class Storage:
             AND domain = $2
             """, filename, domain_id)
 
-            await self.set(key, url)
+            await self.set(key, url or 'false')
 
         return url
 
@@ -294,3 +313,46 @@ class Storage:
             await self.set(key, ban_reason, pexpire=et_millis)
 
         return ban_reason
+
+    async def get_domain_id(self, domain_name: str, err_flag=True) -> int:
+        """Get a domain ID, given the domain.
+
+        The old function was common_auth.check_domain and was modified
+        so that it could account for our caching.
+        """
+        # hacky but it works
+        _sp = domain_name.split('.')[0]
+        subdomain_name = domain_name.replace(_sp, "*")
+        wildcard_name = f'*.{domain_name}'
+
+        keys = [
+            # example, domain_name = elixi.re
+            # subdomain_name = *.re
+            # wildcard_name = *.elixi.re
+            f'domain_id:{domain_name}',
+            f'domain_id:{subdomain_name}',
+            f'domain_id:{wildcard_name}',
+        ]
+
+        possible_ids = await self.get_multi(keys, str)
+
+        try:
+            return next(possible for possible in possible_ids
+                        if not isinstance(possible, bool))
+        except StopIteration:
+            # fetch from db
+            domain_id = await self.db.fetchval("""
+            SELECT domain_id
+            FROM domains
+            WHERE domain = $1
+               OR domain = $2
+               OR domain = $3
+            """, domain_name, subdomain_name, wildcard_name)
+
+            if domain_id is None:
+                await self.set_multi_one(keys, 'false')
+                if err_flag:
+                    raise NotFound('This domain does not exist in this elixire instance.')
+                return None
+
+            return domain_id
