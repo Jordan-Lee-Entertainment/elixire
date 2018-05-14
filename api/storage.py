@@ -334,7 +334,7 @@ class Storage:
             f'domain_id:{wildcard_name}',
         ]
 
-        possible_ids = await self.get_multi(keys, str)
+        possible_ids = await self.get_multi(keys, int)
 
         try:
             return next(possible for possible in possible_ids
