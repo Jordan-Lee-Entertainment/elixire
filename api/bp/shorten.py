@@ -4,7 +4,7 @@ import urllib.parse
 from sanic import Blueprint
 from sanic import response
 
-from ..common_auth import token_check, check_admin, check_domain
+from ..common_auth import token_check, check_admin
 from ..errors import NotFound, QuotaExploded, BadInput
 from ..common import gen_filename, get_domain_info, transform_wildcard
 from ..snowflake import get_snowflake
@@ -15,10 +15,9 @@ bp = Blueprint('shorten')
 @bp.get('/s/<filename>')
 async def shorten_serve_handler(request, filename):
     """Handles serving of shortened links."""
-    domain = await check_domain(request, request.host)
-
     storage = request.app.storage
-    url_toredir = await storage.get_urlredir(filename, domain['domain_id'])
+    domain_id = await storage.get_domain_id(request.host)
+    url_toredir = await storage.get_urlredir(filename, domain_id)
 
     if not url_toredir:
         raise NotFound('No shortened links found with this name '
