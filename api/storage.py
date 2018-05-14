@@ -57,10 +57,10 @@ class Storage:
         any: typ
             If the key fetching succeeded.
         """
-        log.info(f'Getting key {key}, type {typ}')
         with await self.redis as conn:
             val = await conn.get(key)
 
+        log.info(f'get {key!r}, type {typ!r}, value {val!r}')
         if typ == bool:
             if val == 'True':
                 return True
@@ -338,7 +338,7 @@ class Storage:
 
         try:
             return next(possible for possible in possible_ids
-                        if not isinstance(possible, bool))
+                        if not isinstance(possible, bool) and possible is not None)
         except StopIteration:
             # fetch from db
             domain_id = await self.db.fetchval("""
@@ -355,4 +355,5 @@ class Storage:
                     raise NotFound('This domain does not exist in this elixire instance.')
                 return None
 
+            await self.set_multi_one(keys, domain_id)
             return domain_id
