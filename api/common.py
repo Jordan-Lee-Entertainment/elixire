@@ -209,3 +209,30 @@ async def ban_webhook(app, user_id: int, reason: str, period: str):
     async with app.session.post(wh_url,
                                 json=payload) as resp:
         return resp
+
+
+async def get_domain_info(request, user_id):
+    domain_id, subdomain_name = await request.app.db.fetchrow("""
+    SELECT domain, subdomain
+    FROM users
+    WHERE user_id = $1
+    """, user_id)
+
+    domain = await request.app.db.fetchval("""
+    SELECT domain
+    FROM domains
+    WHERE domain_id = $1
+    """, domain_id)
+
+    return domain_id, subdomain_name, domain
+
+
+def transform_wildcard(domain, subdomain_name):
+    # Check if it's wildcard and if we have a subdomain set
+    if domain[0:2] == "*." and subdomain_name:
+        domain = domain.replace("*.", f"{subdomain_name}.")
+    # If it's wildcard but we don't have a wildcard, upload to base domain
+    elif domain[0:2] == "*.":
+        domain = domain.replace("*.", "")
+
+    return domain

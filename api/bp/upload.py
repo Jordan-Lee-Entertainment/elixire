@@ -10,7 +10,7 @@ from sanic import Blueprint
 from sanic import response
 
 from ..common_auth import token_check, check_admin
-from ..common import gen_filename
+from ..common import gen_filename, get_domain_info, transform_wildcard
 from ..snowflake import get_snowflake
 from ..errors import BadImage, QuotaExploded, BadUpload
 
@@ -154,11 +154,12 @@ async def clear_exif(image_bytes):
     """
     image = PIL.Image.open(io.BytesIO(image_bytes))
     # Check if image has exif at all, return if not
-    if not image._getexif():
+    rawexif = image._getexif()
+    if not rawexif:
         return image_bytes
 
     orientation_exif = PIL.ExifTags.TAGS[274]
-    exif = dict(image._getexif().items())
+    exif = dict(rawexif.items())
 
     # Only clear exif if orientation exif is present
     # We're not just returning as re-saving image removes the
@@ -270,25 +271,8 @@ async def upload_handler(request):
     folder = request.app.econfig.IMAGE_FOLDER
     fspath = f'{folder}/{file_rname[0]}/{file_rname}{extension}'
 
-    # get domain ID from user and return it
-    domain_id, subdomain_name = await request.app.db.fetchrow("""
-    SELECT domain, subdomain
-    FROM users
-    WHERE user_id = $1
-    """, user_id)
-
-    domain = await request.app.db.fetchval("""
-    SELECT domain
-    FROM domains
-    WHERE domain_id = $1
-    """, domain_id)
-
-    # Check if it's wildcard and if we have a subdomain set
-    if domain[0:2] == "*." and subdomain_name:
-        domain = domain.replace("*.", f"{subdomain_name}.")
-    # If it's wildcard but we don't have a wildcard, upload to base domain
-    elif domain[0:2] == "*.":
-        domain = domain.replace("*.", "")
+    domain_id, subdomain_name, domain = await get_domain_info(request, user_id)
+    domain = transform_wildcard(domain, subdomain_name)
 
     await request.app.db.execute("""
     INSERT INTO files (file_id, mimetype, filename,
@@ -313,8 +297,8 @@ async def upload_handler(request):
                                       len(noexif_filebody))
 
     # write to fs
-    with open(fspath, 'wb') as fd:
-        fd.write(filebody)
+    with open(fspath, 'wb') as raw_file:
+        raw_file.write(filebody)
 
     # appended to generated filename
     dpath = pathlib.Path(domain)

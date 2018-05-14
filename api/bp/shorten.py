@@ -1,11 +1,12 @@
 import pathlib
+import urllib.parse
 
 from sanic import Blueprint
 from sanic import response
 
 from ..common_auth import token_check, check_admin, check_domain
-from ..errors import NotFound, QuotaExploded
-from ..common import gen_filename
+from ..errors import NotFound, QuotaExploded, BadInput
+from ..common import gen_filename, get_domain_info, transform_wildcard
 from ..snowflake import get_snowflake
 
 bp = Blueprint('shorten')
@@ -31,7 +32,15 @@ async def shorten_handler(request):
     """Handles addition of shortened links."""
 
     user_id = await token_check(request)
-    url_toredir = str(request.json['url'])
+    try:
+        url_toredir = str(request.json['url'])
+        url_parsed = urllib.parse.urlparse(url_toredir)
+    except (TypeError, ValueError):
+        raise BadInput('Invalid URL')
+
+    if url_parsed.scheme not in ('https', 'http'):
+        raise BadInput(f'Invalid URI scheme({url_parsed.scheme}). '
+                       'Only https and http are allowed.')
 
     # Check if admin is set in get values, if not, do checks
     # If it is set, and the admin value is truthy, do not do checks
@@ -70,25 +79,8 @@ async def shorten_handler(request):
     redir_rname = await gen_filename(request)
     redir_id = get_snowflake()
 
-    # get domain ID from user and return it
-    domain_id, subdomain_name = await request.app.db.fetchrow("""
-    SELECT domain, subdomain
-    FROM users
-    WHERE user_id = $1
-    """, user_id)
-
-    domain = await request.app.db.fetchval("""
-    SELECT domain
-    FROM domains
-    WHERE domain_id = $1
-    """, domain_id)
-
-    # Check if it's wildcard and if we have a subdomain set
-    if domain[0:2] == "*." and subdomain_name:
-        domain = domain.replace("*.", f"{subdomain_name}.")
-    # If it's wildcard but we don't have a wildcard, upload to base domain
-    elif domain[0:2] == "*.":
-        domain = domain.replace("*.", "")
+    domain_id, subdomain_name, domain = await get_domain_info(request, user_id)
+    domain = transform_wildcard(domain, subdomain_name)
 
     await request.app.db.execute("""
     INSERT INTO shortens (shorten_id, filename,

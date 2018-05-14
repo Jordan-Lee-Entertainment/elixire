@@ -75,8 +75,6 @@ async def test_shorten_complete(test_cli):
     listdata = await listdata.json()
 
     shortens = listdata['shortens']
-    print(given_shorten)
-    print(shortens)
     try:
         key = next(k for k in shortens if k == given_shorten)
         shorten = shortens[key]
@@ -84,3 +82,29 @@ async def test_shorten_complete(test_cli):
         raise RuntimeError('shorten not found')
 
     assert shorten['redirto'] == url
+
+async def test_shorten_wrong_scheme(test_cli):
+    utoken = await login_normal(test_cli)
+
+    some_schemes = [
+        'ftp://',
+        'mailto:',
+        'AAAAAAAAAA://',
+        'laksjdkj::',
+        token(),
+    ]
+
+    # bad idea but whatever
+    wrong = []
+    for scheme in some_schemes:
+        wrong += [f'{scheme}{token()}.{token()}' for _ in range(100)]
+
+    for wrong_url in wrong:
+        resp = await test_cli.post('/api/shorten', headers={
+            'Authorization': utoken
+        }, json={
+            'url': wrong_url,
+        })
+
+        assert resp.status == 400
+
