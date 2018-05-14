@@ -58,7 +58,7 @@ async def list_handler(request):
     filenames = {}
     for ufile in user_files:
         filename = ufile['filename']
-        domain = domains[ufile['domain']]
+        domain = domains[ufile['domain']].replace("*.", "i.")
         basename = os.path.basename(ufile['fspath'])
 
         file_url = f'https://{domain}/i/{basename}'
