@@ -20,7 +20,7 @@ import api.bp.register
 
 from api.errors import APIError, Ratelimited, Banned, BadInput, FailedAuth
 from api.common_auth import token_check
-from api.common import ban_webhook, check_bans, get_ip_addr
+from api.common import ban_webhook, check_bans, get_ip_addr, ip_ban_webhook
 from api.ratelimit import RatelimitManager
 from api.storage import Storage
 
@@ -94,7 +94,7 @@ async def handle_ban(request, exception):
         """, ip_addr, reason)
 
         await rapp.storage.raw_invalidate(f'ipban:{ip_addr}')
-        await ban_webhook(rapp, ip_addr, f'[ip ban] {reason}', period)
+        await ip_ban_webhook(rapp, ip_addr, f'[ip ban] {reason}', period)
     else:
         user_id, user_name = request.headers['X-Context']
 

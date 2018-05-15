@@ -183,7 +183,7 @@ async def ban_webhook(app, user_id: int, reason: str, period: str):
             where user_id = $1
         """, user_id)
     else:
-        uname = '<no username>'
+        uname = '<no username found>'
 
     payload = {
         'embeds': [{
@@ -211,7 +211,40 @@ async def ban_webhook(app, user_id: int, reason: str, period: str):
         return resp
 
 
-async def get_domain_info(request, user_id):
+async def ip_ban_webhook(app, ip_address: str, reason: str, period: str):
+    """Send a webhook containing banning information."""
+    wh_url = getattr(app.econfig, 'IP_BAN_WEBHOOK', None)
+    if not wh_url:
+        return
+
+    payload = {
+        'embeds': [{
+            'title': 'Elixire Auto IP Banning',
+            'color': 0x696969,
+            'fields': [
+                {
+                    'name': 'IP address',
+                    'value': ip_address,
+                },
+                {
+                    'name': 'reason',
+                    'value': reason,
+                },
+                {
+                    'name': 'period',
+                    'value': period,
+                }
+            ]
+        }]
+    }
+
+    async with app.session.post(wh_url,
+                                json=payload) as resp:
+        return resp
+
+
+async def get_domain_info(request, user_id: int) -> tuple:
+    """Get information about a user's selected domain."""
     domain_id, subdomain_name = await request.app.db.fetchrow("""
     SELECT domain, subdomain
     FROM users
