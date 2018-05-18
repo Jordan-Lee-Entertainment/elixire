@@ -8,10 +8,10 @@ import datetime
 from .errors import NotFound
 
 log = logging.getLogger(__name__)
-epoch = datetime.datetime.utcfromtimestamp(0)
 
-def unix_time_millis(dt):
-    return (dt - epoch).total_seconds() * 1000.0
+def unix_time(dt):
+    epoch = datetime.datetime.utcfromtimestamp(0)
+    return (dt - epoch).total_seconds()
 
 
 def check(map_data) -> dict:
@@ -278,10 +278,10 @@ class Storage:
 
             ban_reason = row['reason']
             end_timestamp = row['end_timestamp']
-            et_millis = int(unix_time_millis(end_timestamp))
 
             # set key expiration at same time the banning finishes
-            await self.set(key, ban_reason, pexpire=et_millis)
+            await self.set(key, ban_reason)
+            await self.redis.expireat(key, unix_time(end_timestamp))
 
         return ban_reason
 
@@ -307,10 +307,10 @@ class Storage:
 
             ban_reason = row['reason']
             end_timestamp = row['end_timestamp']
-            et_millis = int(unix_time_millis(end_timestamp))
 
             # set key expiration at same time the banning finishes
-            await self.set(key, ban_reason, pexpire=et_millis)
+            await self.set(key, ban_reason)
+            await self.redis.expireat(key, unix_time(end_timestamp))
 
         return ban_reason
 
