@@ -52,6 +52,7 @@ FORCE_IP_ROUTES = (
     '/api/domains',
     '/api/hello',
     '/api/register',
+    '/api/delete_confirm',
 )
 
 NOT_API_RATELIMIT = (
@@ -77,6 +78,7 @@ def check_rtl(request, bucket):
 
     if retry_after:
         raise Ratelimited('You are being ratelimited.', retry_after)
+
 
 async def context_fetch(request, storage, user_name, user_id, token):
     if not user_name and token:

@@ -118,3 +118,11 @@ CREATE TABLE IF NOT EXISTS shortens (
     deleted boolean DEFAULT false,
     domain bigint REFERENCES domains (domain_id) DEFAULT 0
 );
+
+-- email stuff for account deletion confirmations
+CREATE TABLE IF NOT EXISTS email_deletion_tokens (
+    hash text NOT NULL,
+    user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
+    expiral timestamp without time zone default now() + interval '12 hours',
+    PRIMARY KEY (hash, user_id)
+);
