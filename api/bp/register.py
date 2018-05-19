@@ -8,7 +8,7 @@ import asyncpg
 from sanic import Blueprint, response
 
 from ..snowflake import get_snowflake
-from ..errors import BadInput
+from ..errors import BadInput, FeatureDisabled
 from ..schema import validate, REGISTRATION_SCHEMA
 
 bp = Blueprint('register')
@@ -52,6 +52,9 @@ async def register_user(request):
 
     Look into /api/admin/activate for registration acceptance.
     """
+    if not request.app.econfig.REGISTRATIONS_ENABLED:
+        raise FeatureDisabled('registrations are currently disabled')
+
     payload = validate(request.json, REGISTRATION_SCHEMA)
 
     username = payload['username']

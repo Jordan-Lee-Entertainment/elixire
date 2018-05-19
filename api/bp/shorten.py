@@ -5,7 +5,7 @@ from sanic import Blueprint
 from sanic import response
 
 from ..common_auth import token_check, check_admin
-from ..errors import NotFound, QuotaExploded, BadInput
+from ..errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
 from ..common import gen_filename, get_domain_info, transform_wildcard
 from ..snowflake import get_snowflake
 
@@ -52,6 +52,9 @@ async def shorten_handler(request):
 
     # Skip checks for admins
     if do_checks:
+        if not request.app.econfig.SHORTENS_ENABLED:
+            raise FeatureDisabled('shortens are currently disabled')
+
         shortens_used = await request.app.db.fetch("""
         SELECT shorten_id
         FROM shortens

@@ -12,7 +12,7 @@ from sanic import response
 from ..common_auth import token_check, check_admin
 from ..common import gen_filename, get_domain_info, transform_wildcard
 from ..snowflake import get_snowflake
-from ..errors import BadImage, QuotaExploded, BadUpload
+from ..errors import BadImage, QuotaExploded, BadUpload, FeatureDisabled
 
 import PIL.Image
 import PIL.ExifTags
@@ -220,6 +220,9 @@ async def upload_handler(request):
 
     # Skip checks for admins
     if do_checks:
+        if not request.app.econfig.UPLOADS_ENABLED:
+            raise FeatureDisabled('uploads are currently disabled')
+
         # check mimetype
         if filemime not in request.app.econfig.ACCEPTED_MIMES:
             raise BadImage('bad image type')

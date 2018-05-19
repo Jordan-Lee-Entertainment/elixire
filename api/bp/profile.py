@@ -1,7 +1,7 @@
 from sanic import Blueprint
 from sanic import response
 
-from ..errors import FailedAuth
+from ..errors import FailedAuth, FeatureDisabled
 from ..common_auth import token_check, password_check, pwd_hash,\
     check_admin, check_domain_id
 from ..schema import validate, PROFILE_SCHEMA
@@ -57,6 +57,9 @@ async def profile_handler(request):
 @bp.patch('/api/profile')
 async def change_profile(request):
     """Change a user's profile."""
+    if not request.app.econfig.PATCH_API_PROFILE_ENABLED:
+        raise FeatureDisabled('changes on profile are currently disabled')
+
     user_id = await token_check(request)
     payload = validate(request.json, PROFILE_SCHEMA)
 

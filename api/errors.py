@@ -50,6 +50,11 @@ class Banned(APIError):
         }
 
 
+class FeatureDisabled(APIError):
+    """When a feature is explicitly disabled in config"""
+    status_code = 503
+
+
 # upload specific errors
 class BadImage(APIError):
     """Wrong image mimetype."""
