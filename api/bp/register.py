@@ -73,9 +73,9 @@ async def register_user(request):
 
     try:
         await request.app.db.execute("""
-        INSERT INTO users (user_id, username, password_hash, active)
-        VALUES ($1, $2, $3, false)
-        """, user_id, username, hashed.decode('utf-8'))
+        INSERT INTO users (user_id, username, password_hash, email, active)
+        VALUES ($1, $2, $3, $4, false)
+        """, user_id, username, email, hashed.decode('utf-8'))
     except asyncpg.exceptions.UniqueViolationError:
         raise BadInput('Username exists.')
 
