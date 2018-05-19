@@ -18,6 +18,10 @@ block content
         b#s-profile-used 00
         |  shortens used)
     div.form-group
+      label(for="new-password2") Email Address
+      input(type="text").form-control#email
+      div.invalid-feedback Bad email!
+    div.form-group
       label(for="password") Current Password
       input(type="password", required="true").form-control#password
       div.invalid-feedback Incorrect password!

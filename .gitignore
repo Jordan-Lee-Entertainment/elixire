@@ -5,6 +5,8 @@
 # Turds
 \#*\#
 *~
+# Emacs backup files
+.#*#
 
 deleted/*
 
