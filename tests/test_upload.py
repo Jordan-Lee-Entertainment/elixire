@@ -12,7 +12,7 @@ sys.path.append(os.getcwd())
 import aiohttp
 from elixire.run import app as mainapp
 import elixire.tests.creds
-from elixire.tests.common import token, username, login_normal
+from elixire.tests.common import token, username, login_normal, png_data
 
 
 @pytest.yield_fixture
@@ -24,7 +24,7 @@ def app():
 def test_cli(loop, app, test_client):
     return loop.run_until_complete(test_client(app))
 
-async def check_exists(test_cli, shortname, token):
+async def check_exists(test_cli, shortname, token, not_exists=False):
     resp = await test_cli.get('/api/list?page=0', headers={
         'Authorization': token,
     })
@@ -32,7 +32,11 @@ async def check_exists(test_cli, shortname, token):
     rjson = await resp.json()
     
     assert isinstance(rjson['files'], dict)
-    assert shortname in rjson['files']
+
+    if not_exists:
+        assert shortname not in rjson['files']
+    else:
+        assert shortname in rjson['files']
 
 
 async def test_upload_png(test_cli):
@@ -40,10 +44,7 @@ async def test_upload_png(test_cli):
     utoken = await login_normal(test_cli)
     data = aiohttp.FormData()
 
-    data.add_field('file',
-                   io.BytesIO(base64.b64decode(b'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABC'
-                                               b'AQAAAC1HAwCAAAAC0lEQVQYV2NgYAAAAAM'
-                                               b'AAWgmWQ0AAAAASUVORK5CYII=')),
+    data.add_field('file', png_data(),
                    filename='random.png',
                    content_type='image/png')
 
@@ -56,3 +57,37 @@ async def test_upload_png(test_cli):
     assert isinstance(respjson, dict)
     assert isinstance(respjson['url'], str)
     await check_exists(test_cli, respjson['shortname'], utoken)
+
+
+async def test_delete_file(test_cli):
+    utoken = await login_normal(test_cli)
+    data = aiohttp.FormData()
+
+    data.add_field('file', png_data(),
+                   filename='random.png',
+                   content_type='image/png')
+
+    resp = await test_cli.post('/api/upload', headers={
+        'Authorization': utoken,
+    }, data=data)
+
+    assert resp.status == 200
+    respjson = await resp.json()
+    assert isinstance(respjson, dict)
+    assert isinstance(respjson['url'], str)
+    await check_exists(test_cli, respjson['shortname'], utoken)
+
+    # test delete
+    resp_del = await test_cli.delete('/api/delete', headers={
+        'Authorization': utoken
+    }, json={
+        'filename': respjson['shortname']    
+    })
+
+    assert resp_del.status == 200
+    rdel_json = await resp_del.json()
+    assert isinstance(rdel_json, dict)
+    assert rdel_json['success'] == True
+
+    await check_exists(test_cli, respjson['shortname'], utoken, True)
+
