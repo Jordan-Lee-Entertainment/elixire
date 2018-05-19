@@ -67,14 +67,13 @@ html
         .container
           #alert-area
           block content
-          span(type="button", data-toggle="modal", data-target="#gdpr-modal")#open-gdpr-modal
+          span(data-toggle="modal", data-target="#gdpr-modal")#open-gdpr-modal
+ 
           div(tabindex="-1", role="dialog").modal.fade#gdpr-modal
             div(role="document").modal-dialog
               div.modal-content
                 div.modal-header
                   h5.modal-title Data Consent
-                  button(type="button", data-dismiss="modal").close
-                    span &times;
                 div.modal-body.needs-validation
                   p.text-muted
                    | By using the service, you must agree to the following:
