@@ -51,7 +51,7 @@ async def profile_handler(request):
     # token is it being fed with, it will only check.
     user_id = await token_check(request)
     user = await request.app.db.fetchrow("""
-    SELECT *
+    SELECT user_id, username, active, email, consented, admin, subdomain, domain
     FROM users
     WHERE user_id = $1
     """, user_id)
@@ -60,7 +60,6 @@ async def profile_handler(request):
 
     duser = dict(user)
     duser['user_id'] = str(duser['user_id'])
-    duser.pop('password_hash')
     duser['limits'] = limits
 
     return response.json(duser)
