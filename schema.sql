@@ -20,6 +20,7 @@ LANGUAGE PLPGSQL;
 CREATE TABLE IF NOT EXISTS domains (
     domain_id serial PRIMARY KEY,
     admin_only boolean DEFAULT false,
+    official boolean DEFAULT false,
     cf_enabled boolean DEFAULT false,
     cf_email text,
     cf_zoneid text,
@@ -38,6 +39,8 @@ CREATE TABLE IF NOT EXISTS users (
     */
     active boolean DEFAULT true,
     password_hash text,
+    email text NOT NULL,
+    consented BOOLEAN DEFAULT NULL,
     admin boolean DEFAULT false,
     subdomain text DEFAULT '',
     domain bigint REFERENCES domains (domain_id) DEFAULT 0
