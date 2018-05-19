@@ -1,5 +1,9 @@
 import "@/styles/index.scss";
 
+const officialTag = document.createElement("span");
+officialTag.innerText = "OFFICIAL";
+officialTag.classList = "badge badge-bill badge-success";
+
 window.addEventListener("DOMContentLoaded", async function() {
   const profile = await window.profilePromise;
   if (profile) {
@@ -10,16 +14,22 @@ window.addEventListener("DOMContentLoaded", async function() {
 
   const domainListContainer = document.getElementById("domain-list");
 
-  const domains = await client.getDomains();
+  const { officialDomains, domains } = await client.getDomains();
   // I'd use Object.values but we need to support other browsers and I don't feel like finding a polyfill
-  const domainArr = Object.keys(domains).map(k => domains[k]);
   const domainList = document.getElementById("domain-ul");
   while (domainList.firstChild) {
     domainList.removeChild(domainList.firstChild);
   }
-  for (const domain of domainArr) {
+
+  for (const domainId in domains) {
     const domainLi = document.createElement("li");
-    domainLi.innerText = domain;
+    domainLi.innerText = domains[domainId];
+    console.log("aasss");
+    if ((officialDomains || []).includes(Number(domainId))) {
+      console.log("uwo");
+      domainLi.classList = "official-domain";
+      domainLi.appendChild(officialTag.cloneNode(true));
+    }
     domainList.appendChild(domainLi);
   }
   // Clone it for the infinite scroller to not break
@@ -28,5 +38,5 @@ window.addEventListener("DOMContentLoaded", async function() {
   domainList.parentNode.appendChild(clonedDomain);
   // Round down to the nearest tenth, so 57 becomes 'over 50 domains'
   document.getElementById("relative-domain-count").innerText =
-    Math.floor(domainArr.length / 10) * 10;
+    Math.floor(Object.keys(domains).length / 10) * 10;
 });

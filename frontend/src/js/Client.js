@@ -125,8 +125,15 @@ class Client {
   }
 
   /**
+   * Shows domains available to the user
+   * @typedef Domains
+   * @property {Array} officialDomains - Array of official domains
+   * @property {Object.<String, String>} domains - Domain names indexed by ID
+   */
+
+  /**
    * Gets the domains currently available to the user
-   * @returns {Promise<Object.<String, String>} An Object whose keys are domain IDs and whose values are the corresponding domain name
+   * @returns {Promise<Domains>} Domains available to the user
    * @api public
    */
   async getDomains() {
@@ -134,7 +141,10 @@ class Client {
       this.domains = await this.ratelimitedRequest("get", "/domains", req => {
         // Heh. Expired token woes...
         if (!this.profile) req.set("Authorization", null);
-      }).then(res => res.body.domains);
+      }).then(res => ({
+        officialDomains: res.body.officialdomains,
+        domains: res.body.domains
+      }));
     } catch (err) {
       throw this.handleErr(err);
       // TODO: handle the error properly !
