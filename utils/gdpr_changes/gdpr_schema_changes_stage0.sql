@@ -8,7 +8,7 @@ ALTER TABLE domains
 ALTER TABLE users
     -- so we are able to send data dumps(GDPR's Right to Data Portability),
     -- notices about the service on data breaches, etc (GDPR's Right to be informed).
-    ADD COLUMN email TEXT NOT NULL;
+    ADD COLUMN email TEXT;
 
 -- GDPR's Right to Restrict Processing
 --  the only kind of processing we found was service statistics.
