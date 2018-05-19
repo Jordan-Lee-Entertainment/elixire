@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS domains (
 
     -- if domain can *only* be used by admins
     admin_only boolean DEFAULT false,
+    
+    official boolean DEFAULT false,
 
     -- cloudflare credentials
     cf_enabled boolean DEFAULT false,
@@ -43,6 +45,8 @@ CREATE TABLE IF NOT EXISTS users (
     -- purposes, we can mark is as inactive.
     active boolean DEFAULT true,
     password_hash text,
+    email text NOT NULL,
+    consented BOOLEAN DEFAULT NULL,
     admin boolean DEFAULT false,
 
     -- user domain information
