@@ -32,6 +32,8 @@ window.addEventListener("DOMContentLoaded", async function() {
   domainSelector.value = window.client.profile.domain;
   const wildcard = document.getElementById("wildcard");
   wildcard.value = window.client.profile.subdomain || "";
+  const email = document.getElementById("email");
+  email.value = window.client.profile.email || "";
   function checkDomainSelector() {
     if (domains[domainSelector.value].startsWith("*.")) {
       domainSelector.parentNode.classList = "form-group show-wildcard";
@@ -118,6 +120,7 @@ window.addEventListener("DOMContentLoaded", async function() {
   const newPassword2 = document.getElementById("new-password2");
   let domainId = client.profile.domain;
   let wildcardVal = client.profile.subdomain;
+  let emailVal = client.profile.email;
   submitBtn.addEventListener("click", async function() {
     if (errorBox) common.removeAlert(errorBox);
     let error = false;
@@ -147,11 +150,16 @@ window.addEventListener("DOMContentLoaded", async function() {
     if (!Object.keys(modifications).length) return; // No changes to be made
     modifications.password = password.value;
 
+    if (email.value != emailVal) {
+      modifications.email = email.value;
+    }
+
     try {
       await client.updateAccount(modifications);
       errorBox = common.sendAlert("success", "Your changes have been saved!");
       if (modifications.domain) domainId = modifications.domain;
       if (modifications.subdomain) wildcardVal = modifications.subdomain;
+      if (modifications.email) emailVal = modifications.email;
     } catch (err) {
       if (err.message == "BAD_AUTH") {
         password.setCustomValidity("Invalid password!");
