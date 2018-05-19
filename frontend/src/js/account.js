@@ -2,6 +2,8 @@ import "@/styles/account.scss";
 import "@/styles/forms.scss";
 import common from "./commonCode.js";
 
+const EMAIL_RE = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+
 window.addEventListener("DOMContentLoaded", async function() {
   const username = document.getElementById("profile-username");
   await window.profilePromise;
@@ -130,6 +132,10 @@ window.addEventListener("DOMContentLoaded", async function() {
     }
     if (!password.value) {
       password.setCustomValidity("Invalid password!");
+      error = true;
+    }
+    if (!email.value.match(EMAIL_RE)) {
+      email.setCustomValidity("Invalid email!");
       error = true;
     }
     updateForm.classList = "was-validated needs-validation form-wrap";
