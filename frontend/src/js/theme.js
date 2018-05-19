@@ -59,6 +59,49 @@ window.addEventListener("DOMContentLoaded", async function() {
     document.body.classList += " show-garfield";
     document.title = "Access Denied | Elixire";
   }
+
+  if (
+    (!localStorage.getItem("gdpr-consent") && !window.client.profile) ||
+    (window.client.profile && window.client.profile.consented === null)
+  ) {
+    const gdprFuckJquery = document.getElementById("open-gdpr-modal");
+    gdprFuckJquery.click();
+    const acceptBtn = document.getElementById("gdpr-btn");
+    const denyBtn = document.getElementById("gdpr-deny");
+    const password = document.getElementById("gdpr-password");
+    const form = document.getElementById("gdpr-form");
+    password.addEventListener("keypress", function(ev) {
+      console.log(ev.key);
+      if (ev.key == "Enter") {
+        ev.preventDefault();
+        ev.stopPropagation();
+        submitGdpr(true);
+        return false;
+      }
+    });
+    acceptBtn.addEventListener("click", () => submitGdpr(true));
+    denyBtn.addEventListener("click", () => submitGdpr(false));
+    async function submitGdpr(allowed) {
+      if (window.client.profile) {
+        try {
+          if (password.value.length < 8 || password.value.length > 100) {
+            throw new Error("BAD_AUTH");
+          }
+
+          await client.updateAccount({
+            password: password.value,
+            consented: allowed
+          });
+        } catch (err) {
+          if (err.message == "BAD_AUTH") {
+            form.classList = "was-validated needs-validation logged-in-only";
+            return password.setCustomValidity("Incorrect password");
+          } else throw err;
+        }
+      }
+      window.localStorage.setItem("gdpr-consent", allowed);
+    }
+  }
 });
 
 window.addEventListener("error", function(event) {
