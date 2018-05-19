@@ -77,3 +77,8 @@ LOGIN_SCHEMA = {
     'user': {'type': 'string', 'nullable': False, 'required': True},
     'password': {'type': 'string', 'nullable': False, 'required': True},
 }
+
+DEACTIVATE_USER_SCHAMA = {
+    'confirmation': {'type': 'boolean', 'required': True},
+    'password': {'type': 'password', 'required': True},
+}
