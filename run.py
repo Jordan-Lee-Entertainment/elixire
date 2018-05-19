@@ -55,10 +55,14 @@ FORCE_IP_ROUTES = (
 )
 
 NOT_API_RATELIMIT = (
-    '/i/',
     '/s/',
-    '/t/',
 )
+
+SPECIAL_RATELIMITS = {
+    '/i/': config.SPECIAL_RATELIMITS.get('/i/', config.IP_RATELIMIT),
+    '/t/': config.SPECIAL_RATELIMITS.get('/t/', config.IP_RATELIMIT),
+}
+
 
 
 async def options_handler(request, *args, **kwargs):
@@ -73,6 +77,21 @@ def check_rtl(request, bucket):
 
     if retry_after:
         raise Ratelimited('You are being ratelimited.', retry_after)
+
+async def context_fetch(request, storage, user_name, user_id, token):
+    if not user_name and token:
+        user_id = await token_check(request)
+
+    if not user_id:
+        user_id = await storage.get_uid(user_name)
+
+    if not user_id:
+        raise FailedAuth('User not found')
+
+    if not user_name and user_id:
+        user_name = await storage.get_username(user_id)
+
+    return user_name, user_id
 
 
 @app.exception(Banned)
@@ -162,16 +181,31 @@ async def global_rl(request):
     if request.method == 'OPTIONS':
         return
 
-    # ratelimiter
+    # ratelimiters
     rtl = request.app.rtl
     ip_rtl = request.app.ip_rtl
+    sp_rtl = request.app.sp_rtl
 
     force_ip = any(x in request.url for x in FORCE_IP_ROUTES)
     is_image = any(x in request.url for x in NOT_API_RATELIMIT)
+    ip_addr = get_ip_addr(request)
 
+    # special ratelimit handling (always ip-based)
+    for match, rtl in sp_rtl.items():
+        if match not in request.url:
+            continue
+
+        print(f'SPECIAL RATELIMIT MATCH {match}')
+
+        bucket = rtl.get_bucket(ip_addr)
+        if not bucket:
+            continue
+
+        await check_bans(request, None)
+        return check_rtl(request, bucket)
+
+    # global ip-based ratelimiting
     if force_ip or is_image:
-        ip_addr = get_ip_addr(request)
-
         # use the ip as a bucket to the request
         bucket = ip_rtl.get_bucket(ip_addr)
 
@@ -179,13 +213,12 @@ async def global_rl(request):
             return
 
         await check_bans(request, None)
-        check_rtl(request, bucket)
-        return
+        return check_rtl(request, bucket)
 
     if '/api' not in request.url:
-        # ignore at THIS POINT, in specific
         return
 
+    # from here onwards, only api ratelimiting (user-based, X-Context, etc)
     storage = request.app.storage
 
     # process ratelimiting
@@ -202,27 +235,16 @@ async def global_rl(request):
 
         user_name = request.json.get('user')
 
-    if not user_name and token:
-        user_id = await token_check(request)
-
-    if not user_id:
-        user_id = await storage.get_uid(user_name)
-
-    if not user_id:
-        raise FailedAuth('User not found')
-
-    if not user_name and user_id:
-        user_name = await storage.get_username(user_id)
-
+    user_name, user_id = await context_fetch(request, storage, user_name,
+                                             user_id, token)
     context = (user_name, user_id)
-    print(context)
 
     # ensure both user_name and user_id exist
     if all(v is None for v in context):
         raise FailedAuth('Can not identify user')
 
     # embed request context inside X-Context
-    request.headers['X-Context'] = (user_id, user_name)
+    request.headers['X-Context'] = context
     bucket = rtl.get_bucket(user_name)
 
     # ignore when rtl isnt properly initialized
@@ -231,7 +253,7 @@ async def global_rl(request):
         return
 
     await check_bans(request, user_id)
-    check_rtl(request, bucket)
+    return check_rtl(request, bucket)
 
 
 @app.middleware('response')
@@ -289,6 +311,13 @@ async def setup_db(rapp, loop):
 
     log.info('loading ip ratelimit manager')
     rapp.ip_rtl = RatelimitManager(app, app.econfig.IP_RATELIMIT)
+
+    # special ratelimit managers
+    rapp.sp_rtl = {}
+    for key, rtl in SPECIAL_RATELIMITS.items():
+        log.info(f'initializing special ratelimit for match: {key}')
+        rapp.sp_rtl[key] = RatelimitManager(app, rtl)
+
     rapp.storage = Storage(app)
 
 
