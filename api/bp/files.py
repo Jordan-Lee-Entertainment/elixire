@@ -63,8 +63,9 @@ async def list_handler(request):
 
         file_url = f'https://{domain}/i/{basename}'
 
-        # TODO: remove the https hardcoding on this one
-        file_url_thumb = f'https://{domain}/t/s{basename}'
+        use_https = request.app.econfig.USE_HTTPS
+        prefix = 'https://' if use_https else 'http://'
+        file_url_thumb = f'{prefix}{domain}/t/s{basename}'
 
         filenames[filename] = {
             'snowflake': ufile['file_id'],
@@ -80,7 +81,10 @@ async def list_handler(request):
         filename = ushorten['filename']
         domain = domains[ushorten['domain']]
 
-        shorten_url = f'https://{domain}/s/{filename}'
+        use_https = request.app.econfig.USE_HTTPS
+        prefix = 'https://' if use_https else 'http://'
+        shorten_url = f'{prefix}{domain}/s/{filename}'
+
         shortens[filename] = {
             'snowflake': ushorten['shorten_id'],
             'shortname': filename,

@@ -244,7 +244,7 @@ might be compromised.
 
 Do not reply to this email specifically, it will not work.
 
-- {_inst_name}
+- {_inst_name}, {request.app.econfig.MAIN_URL}
 """
 
     # Mailgun API is cool!
