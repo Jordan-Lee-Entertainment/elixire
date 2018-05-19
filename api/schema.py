@@ -57,6 +57,7 @@ PROFILE_SCHEMA = {
     'subdomain': {'type': 'subdomain', 'nullable': True},
     'new_password': {'type': 'password', 'nullable': True},
     'domain': {'type': 'integer', 'nullable': True},
+    'email': {'type': 'email', 'nullable': True},
 }
 
 REGISTRATION_SCHEMA = {
