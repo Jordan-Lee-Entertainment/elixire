@@ -16,13 +16,14 @@ async def main():
     db = await asyncpg.create_pool(**config.db)
     redis = await aioredis.create_redis(config.redis)
 
-    username = sys.argv[1]
+    email = sys.argv[1]
+    username = sys.argv[2]
 
     # generate password
     user_id = snowflake.get_snowflake()
 
     try:
-        password = sys.argv[2]
+        password = sys.argv[3]
     except IndexError:
         password = secrets.token_urlsafe(25)
 
@@ -31,9 +32,9 @@ async def main():
 
     # insert on db
     await db.execute("""
-    INSERT INTO users (user_id, username, password_hash)
-    VALUES ($1, $2, $3)
-    """, user_id, username, hashed.decode('utf-8'))
+    INSERT INTO users (user_id, username, password_hash, email)
+    VALUES ($1, $2, $3, $4)
+    """, user_id, username, hashed.decode('utf-8'), email)
 
     await db.execute("""
     INSERT INTO limits (user_id)
