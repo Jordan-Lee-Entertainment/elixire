@@ -58,6 +58,7 @@ PROFILE_SCHEMA = {
     'new_password': {'type': 'password', 'nullable': True},
     'domain': {'type': 'integer', 'nullable': True},
     'email': {'type': 'email', 'nullable': True},
+    'consented': {'type': 'boolean', 'nullable': True},
 }
 
 REGISTRATION_SCHEMA = {
