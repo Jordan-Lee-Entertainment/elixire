@@ -20,7 +20,7 @@ window.addEventListener("DOMContentLoaded", async function() {
   );
   document.getElementById("s-profile-used").innerText = quota.shortenused || 0;
   document.getElementById("s-profile-quota").innerText = quota.shortenlimit;
-  const domains = await window.client.getDomains();
+  const { domains, officialDomains } = await window.client.getDomains();
   console.log("Fetched domains:", domains);
   const options = Object.entries(domains).map(
     ([id, domain]) => new Option(domain, id, false, false)
