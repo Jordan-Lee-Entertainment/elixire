@@ -70,8 +70,8 @@ window.addEventListener("DOMContentLoaded", async function() {
     const denyBtn = document.getElementById("gdpr-deny");
     const password = document.getElementById("gdpr-password");
     const form = document.getElementById("gdpr-form");
+    const dismissBtn = document.getElementById("dismiss-modal");
     password.addEventListener("keypress", function(ev) {
-      console.log(ev.key);
       if (ev.key == "Enter") {
         ev.preventDefault();
         ev.stopPropagation();
@@ -100,6 +100,7 @@ window.addEventListener("DOMContentLoaded", async function() {
         }
       }
       window.localStorage.setItem("gdpr-consent", allowed);
+      gdprFuckJquery.click();
     }
   }
 });
