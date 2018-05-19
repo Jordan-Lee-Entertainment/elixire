@@ -82,6 +82,7 @@ async def change_profile(request):
     new_domain = payload.get('domain')
     new_subdomain = payload.get('subdomain')
     new_email = payload.get('email')
+    new_consent_state = payload.get('consented')
 
     if password:
         await password_check(request, user_id, password)
@@ -123,6 +124,15 @@ async def change_profile(request):
         """, new_email, user_id)
 
         updated.append('email')
+
+    if new_consent_state is not None:
+        await request.app.db.execute("""
+            UPDATE users
+            SET consented = $1
+            WHERE user_id = $2
+        """, new_consent_state, user_id)
+
+        updated.append('consented')
 
     if new_pwd and new_pwd != password:
         # we are already good from password_check call
