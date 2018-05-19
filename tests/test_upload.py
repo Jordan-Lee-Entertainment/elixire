@@ -4,8 +4,6 @@ import sys
 import os
 import secrets
 import random
-import io
-import base64
 
 sys.path.append(os.getcwd())
 
