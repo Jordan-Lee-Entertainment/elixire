@@ -81,6 +81,17 @@ IP_RATELIMIT = {
     'second': 5,
 }
 
+# Ratelimit settings for special routes.
+#   The only supported special routes are /i/ and /t/.
+#   Also, special ratelimits will be forced to use IP ratelimiting.
+SPECIAL_RATELIMITS = {}
+
+# An example of a SPECIAL_RATELIMITS:
+#   SPECIAL_RATELIMITS = {
+#       '/i/': {'requests': 100, 'second': 5},
+#       '/t/': {'requests': 200, 'second': 3},
+#   }
+
 # Enable thumbnails?
 THUMBNAILS = False
 THUMBNAIL_FOLDER = './thumbnails'
