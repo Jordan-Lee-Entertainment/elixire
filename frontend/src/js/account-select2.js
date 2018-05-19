@@ -4,7 +4,6 @@ import "select2/dist/css/select2.css";
 window.addEventListener("DOMContentLoaded", function() {
   // Query strings are slow
   function officialDomainAdd(domain) {
-    console.log(domain);
     if (domain.id === undefined) return domain.text;
     const domainWrap = document.createElement("div");
     domainWrap.innerText = domain.text;
