@@ -41,6 +41,22 @@ async def list_users_handler(request, page: int):
     return response.json(list(map(dict, data)))
 
 
+@bp.get('/api/admin/list_inactive/<page:int>')
+async def inactive_users_handler(request, page: int):
+    user_id = await token_check(request)
+    await check_admin(request, user_id, True)
+
+    data = await request.app.db.fetch("""
+    SELECT user_id, username, active, admin, domain
+    FROM users
+    WHERE active=false
+    LIMIT 20
+    OFFSET ($1 * 20)
+    """, page)
+
+    return response.json(list(map(dict, data)))
+
+
 @bp.get('/api/admin/users/<user_id:int>')
 async def get_user_handler(request, user_id: int):
     """Get a user's details in the service."""
@@ -48,7 +64,7 @@ async def get_user_handler(request, user_id: int):
     await check_admin(request, user_id, True)
 
     udata = await request.app.db.fetchrow("""
-    SELECT user_id, suername, active, admin, domain
+    SELECT user_id, username, active, admin, domain
     FROM users
     WHERE user_id=$1
     """, user_id)
@@ -57,6 +73,7 @@ async def get_user_handler(request, user_id: int):
         raise NotFound('User not found')
 
     return response.json(dict(udata))
+
 
 @bp.post('/api/admin/activate/<user_id:int>')
 async def activate_user(request, user_id: int):
@@ -79,6 +96,7 @@ async def activate_user(request, user_id: int):
         'success': True,
         'result': result,
     })
+
 
 @bp.post('/api/admin/deactivate/<user_id:int>')
 async def deactivate_user(request, user_id: int):
