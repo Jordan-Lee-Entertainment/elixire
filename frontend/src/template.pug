@@ -67,3 +67,29 @@ html
         .container
           #alert-area
           block content
+          span(type="button", data-toggle="modal", data-target="#gdpr-modal")#open-gdpr-modal
+          div(tabindex="-1", role="dialog").modal.fade#gdpr-modal
+            div(role="document").modal-dialog
+              div.modal-content
+                div.modal-header
+                  h5.modal-title Data Consent
+                  button(type="button", data-dismiss="modal").close
+                    span &times;
+                div.modal-body.needs-validation
+                  p.text-muted
+                   | By using the service, you must agree to the following:
+                   ul
+                     li Your information may be shared within our core development team.
+                     li Your information may be processed to provide us with service statistics, these stats may be shared publicly.
+                     li Your information may be processed by Cloudflare (one of our providers) to provide statistics. If you choose to use a domain that is not owned by elixi.re team, owners of those domains may view these statistics. If you want to make sure that your data stays inside the elixi.re service, please use one of the domains owned by elixi.re team (The list can be found on the about page).
+                     li Your information will not be used for advertising purposes or be sold.
+                   | If you do not agree with these terms, you can leave.
+
+                  form(novalidate=true).needs-validation.logged-in-only#gdpr-form
+                    div.form-group
+                      label(for="revoke-password") Password
+                      input(type="password", required="true", placeholder="Password").form-control#gdpr-password
+                      div.invalid-feedback Incorrect password
+                div.modal-footer
+                  button(type="button").btn.btn-link#gdpr-deny No!
+                  button(type="button").btn.btn-danger#gdpr-btn I understand
