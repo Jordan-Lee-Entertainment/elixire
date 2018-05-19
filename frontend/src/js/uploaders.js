@@ -5,7 +5,7 @@ uploaders.elixireManager = token => `#!/bin/bash
 # based on https://github.com/aveao/ownshot
 # based on https://github.com/jomo/imgur-screenshot
 
-current_version="v5.0.0"
+current_version="v6.0.1"
 
 ############# BASIC CONFIG #############
 
@@ -15,7 +15,7 @@ apiurl="${
 apikey="${token}" # API key, which you can get from elixire web ui
 open="false" # Open the link? true/false
 edit="false" # Edit before uploading? true/false
-mode="select" # What should be captured? select/window/full
+mode="select" # What should be captured? select/full
 copy_url="true" # Copy URL after upload? true/false
 keep_file="false" # Keep image after uploading? true/false
 file_dir="\${HOME}/Pictures" # Location for images to be saved.
@@ -25,8 +25,8 @@ file_dir="\${HOME}/Pictures" # Location for images to be saved.
 ########### ADVANCED CONFIG ############
 
 is_admin="${
-  window.client.profile.admin ? "?admin=1" : ""
-}" # This is sort of lazy. If you're an admin, put ?admin=1, if you're not, keep it empty
+  window.client.profile.admin ? "?admin=true" : ""
+}" # If you're an admin, put ?admin=true, if you're not keep it empty
 
 file_name_format="elixire-%Y_%m_%d-%H:%M:%S.png"
 
@@ -39,9 +39,8 @@ upload_connect_timeout="5"
 upload_timeout="120"
 upload_retries="1"
 
-screenshot_select_command="maim -u -s %img"
-screenshot_window_command="maim -u %img"
-screenshot_full_command="maim -u %img"
+screenshot_select_command="escrotum -s %img"
+screenshot_full_command="escrotum %img"
 open_command="xdg-open %url"
 
 ########## END ADVANCED CONFIG ##########
@@ -51,9 +50,7 @@ if [ "\${1}" = "--check" ]; then
   (which grep &>/dev/null && echo "OK: found grep") || echo "ERROR: grep not found"
   (which jq &>/dev/null && echo "OK: found jq") || echo "ERROR: jq not found"
   (which notify-send &>/dev/null && echo "OK: found notify-send") || echo "ERROR: notify-send (from libnotify-bin) not found"
-  (which maim &>/dev/null && echo "OK: found maim") || echo "ERROR: maim not found"
-  (which slop &>/dev/null && echo "OK: found slop") || echo "ERROR: slop not found"
-  (which xclip &>/dev/null && echo "OK: found xclip") || echo "ERROR: xclip not found"
+  (which escrotum &>/dev/null && echo "OK: found maim") || echo "ERROR: escrotum not found"
   (which convert &>/dev/null && echo "OK: found imagemagick") || echo "ERROR: imagemagick not found"
   (which curl &>/dev/null && echo "OK: found curl") || echo "ERROR: curl not found"
   exit 0
@@ -151,11 +148,12 @@ echo "      --check                  Check if all dependencies are installed, ex
 echo "  -sh, --shorten <url>         Shortens a url, copies result"
 echo "  -o, --open <true|false>      Override 'open' config"
 echo "  -s, --select                 Override 'mode' config to select a screen area"
-echo "  -w, --window                 Override 'mode' config to upload the whole window"
 echo "  -f, --full                   Override 'mode' config to upload the full screen"
 echo "  -e, --edit <true|false>      Override 'edit' config"
 echo "  -i, --edit-command <command> Override 'edit_command' config (include '%img'), sets --edit 'true'"
 echo "  -k, --keep-file <true|false> Override 'keep_file' config"
+echo "  --admin                      Override 'admin' config to upload as an admin"
+echo "  --noadmin                    Override 'admin' config to upload as a user"
 echo "  file                         Upload file instead of taking a screenshot"
 exit 0;;
 -v | --version)
@@ -167,9 +165,11 @@ exit 0;;
 -s | --select)
 mode="select"
 shift;;
--w | --window)
-mode="window"
+--admin)
+is_admin="?admin=true"
 shift;;
+--noadmin)
+is_admin=""
 -f | --full)
 mode="full"
 shift;;

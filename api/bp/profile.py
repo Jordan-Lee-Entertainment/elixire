@@ -28,7 +28,19 @@ async def domainlist_handler(request):
     ORDER BY domain_id ASC
     """)
 
-    return response.json({"domains": dict(domain_records)})
+    adm_string_official = "" if is_admin else "AND admin_only = false"
+    official_domains = await request.app.db.fetch(f"""
+    SELECT domain_id
+    FROM domains
+    WHERE official = true {adm_string_official}
+    ORDER BY domain_id ASC
+    """)
+
+    # dear god
+    official_domains = [x[0] for x in official_domains]
+
+    return response.json({"domains": dict(domain_records),
+                          "officialdomains": official_domains})
 
 
 @bp.get('/api/profile')
