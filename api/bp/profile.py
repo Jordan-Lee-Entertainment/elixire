@@ -274,8 +274,8 @@ async def deactivate_user_from_email(request):
     """Actually deactivate the account."""
     try:
         cli_hash = str(request.args['token'][0])
-    except (KeyError, TypeError):
-        raise BadInput('No token provided.')
+    except (KeyError, TypeError, ValueError):
+        raise BadInput('No valid token provided.')
 
     user_id = await request.app.db.fetchval("""
     SELECT user_id
