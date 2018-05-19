@@ -1,12 +1,17 @@
+import logging
+import aiohttp
+
 from sanic import Blueprint
 from sanic import response
 
 from ..errors import FailedAuth, FeatureDisabled, BadInput
 from ..common_auth import token_check, password_check, pwd_hash,\
     check_admin, check_domain_id
+from ..common import gen_email_token
 from ..schema import validate, PROFILE_SCHEMA, DEACTIVATE_USER_SCHEMA
 
 bp = Blueprint('profile')
+log = logging.getLogger(__name__)
 
 
 @bp.get('/api/domains')
@@ -195,22 +200,105 @@ async def limits_handler(request):
 
 @bp.delete('/api/account')
 async def deactive_own_user(request):
-    """Deactivate the current user."""
+    """Deactivate the current user.
+
+    This does not delete right away for reasons.
+
+    Sends an email to them asking for actual confirmation.
+    """
     user_id = await token_check(request)
     payload = validate(request.json, DEACTIVATE_USER_SCHEMA)
-
-    if not payload['confirmation']:
-        raise BadInput('Account deletion is not confirmed.')
-
     await password_check(request, user_id, payload['password'])
 
-    # TODO: maybe send an email to ask for confirmation?
+    user_email = await request.app.db.fetchval("""
+    SELECT email
+    FROM users
+    WHERE user_id = $1
+    """, user_id)
+
+    mailgun_url = f'https://api.mailgun.net/v3/{request.app.econfig.MAILGUN_DOMAIN}/messages'
+    _inst_name = request.app.econfig.INSTANCE_NAME
+    _support = request.app.econfig.SUPPORT_EMAIL
+
+    email_token = await gen_email_token()
+
+    log.info(f'Generated email hash {email_token} for account deactivation')
+
+    await request.app.db.execute("""
+    INSERT INTO email_deletion_tokens(hash, user_id)
+    VALUES ($1, $2)
+    """, email_token, user_id)
+
+    email_body = f"""This is an automated email from {_inst_name}
+about your account deletion.
+
+Please visit {request.app.econfig.MAIN_URL}/api/delete_confirm?token={email_token} to
+confirm the deletion of your account.
+
+The link will be invalid in 12 hours. Do not share it with anyone.
+
+Reply to {_support} if you have any questions.
+
+If you did not make this request, email {_support} since your account
+might be compromised.
+
+Do not reply to this email specifically, it will not work.
+
+- {_inst_name}
+"""
+
+    # Mailgun API is cool!
+    auth = aiohttp.BasicAuth('api', request.app.econfig.MAILGUN_API_KEY)
+    data = {
+        'from': f'{_inst_name} <automated@{request.app.econfig.MAILGUN_DOMAIN}>',
+        'to': [user_email],
+        'subject': f'{_inst_name} - account deletion confirmation',
+        'text': email_body,
+    }
+
+    print(data)
+
+    resp = None
+    async with request.app.session.post(mailgun_url, auth=auth, data=data) as resp:
+        resp = resp
+        print(await resp.json())
+
+    succ = resp.status == 200
+    return response.json({
+        'success': succ
+    })
+
+
+@bp.get('/api/delete_confirm')
+async def deactivate_user_from_email(request):
+    """Actually deactivate the account."""
+    try:
+        cli_hash = str(request.args['token'][0])
+    except (KeyError, TypeError):
+        raise BadInput('No token provided.')
+
+    user_id = await request.app.db.fetchval("""
+    SELECT user_id
+    FROM email_deletion_tokens
+    WHERE hash=$1 AND now() < expiral
+    """, cli_hash)
+
+    print(cli_hash)
+    print(user_id)
+
+    if not user_id:
+        raise BadInput('No user found with that email token.')
 
     await request.app.db.execute("""
     UPDATE users
     SET active = false
     WHERE user_id = $1
     """, user_id)
+
+    await request.app.db.execute("""
+    DELETE FROM email_deletion_tokens
+    WHERE hash=$1
+    """, cli_hash)
 
     return response.json({
         'success': True

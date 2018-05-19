@@ -1,6 +1,16 @@
 HOST = 'localhost'
 PORT = 8080
 
+# basic configuration about the instance
+INSTANCE_NAME = 'elixi.re'
+MAIN_URL = 'https://elixi.re'
+USE_HTTPS = True
+SUPPORT_EMAIL = 'support@elixi.re'
+
+# Mailgun API key for things like account deletion confirmation
+MAILGUN_DOMAIN = ''
+MAILGUN_API_KEY = ''
+
 # Link / to ./frontend ?
 ENABLE_FRONTEND = True
 
@@ -70,6 +80,8 @@ ACCEPTED_MIMES = [
     'audio/webm',
     'video/webm'
 ]
+
+# Ratelimit settings
 
 RATELIMIT = {
     'requests': 5,

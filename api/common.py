@@ -74,6 +74,11 @@ async def gen_filename(request, length=3) -> str:
     return await gen_filename(request, length + 1)
 
 
+async def gen_email_token():
+    """Generate a token for email usage"""
+    return secrets.token_hex(32)
+
+
 async def _purge_cf_cache(app, purge_urls, email, apikey, zoneid):
     """Clear the Cloudflare cache for the given URLs and cf creds."""
 
