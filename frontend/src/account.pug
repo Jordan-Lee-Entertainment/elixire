@@ -48,6 +48,8 @@ block content
     button(type="button", data-toggle="modal", data-target="#password-modal").btn.btn-primary Generate Uploader Token
     hr
     button(type="button", data-toggle="modal", data-target="#revoke-modal").btn.btn-danger Revoke All Tokens
+    hr
+    button(type="button", data-toggle="modal", data-target="#gdpr-modal").btn.btn-primary Change Privacy
 
 
   div(tabindex="-1", role="dialog").modal.fade#password-modal
@@ -96,4 +98,3 @@ block content
         div.modal-footer
           button(type="button", data-dismiss="modal").btn.btn-link Cancel
           button(type="button").btn.btn-danger#revoke-btn I understand
-
