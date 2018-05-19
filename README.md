@@ -64,10 +64,10 @@ Install `tox`, the python package.
 ```bash
 cd utils
 
-./adduser.py hi hi
-./adduser.py admin admin
-./adduser.py nousage nousage
-./adduser.py quotareached quotareached
+./adduser.py h@h.co hi hihihihi
+./adduser.py a@a.co admin adminadmin
+./adduser.py n@n.co nousage nousagenousage
+./adduser.py q@q.co quotareached quotareached
 
 cd ..
 ```

@@ -1,11 +1,11 @@
 USERNAME = 'hi'
-PASSWORD = 'hi'
+PASSWORD = 'hihihihi'
 
 ADMIN_USER = 'admin'
-ADMIN_PASSWORD = 'admin'
+ADMIN_PASSWORD = 'adminadmin'
 
 NOFILES_USER = 'nousage'
-NOFILES_PASSWORD = 'nousage'
+NOFILES_PASSWORD = 'nousagenousage'
 
 QUOTA_USER = 'quotareached'
 QUOTA_PASSWORD = 'quotareached'
