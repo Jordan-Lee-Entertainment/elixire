@@ -148,6 +148,7 @@ class Client {
    * @param {String} changes.password - The password to be used to authenticate the changes (required)
    * @param {String} [changes.new_password] - Optional parameter to set the user's password
    * @param {Number} [change.domain] - Optional parameter to set the user's upload domain
+   * @param {String} [change.subdomain] - Optional parameter that sets the user's subdomain
    * @returns {Promise<Array>} An array containing the list of fields that were modified
    * @api public
    */
