@@ -1,10 +1,10 @@
 from sanic import Blueprint
 from sanic import response
 
-from ..errors import FailedAuth, FeatureDisabled
+from ..errors import FailedAuth, FeatureDisabled, BadInput
 from ..common_auth import token_check, password_check, pwd_hash,\
     check_admin, check_domain_id
-from ..schema import validate, PROFILE_SCHEMA
+from ..schema import validate, PROFILE_SCHEMA, DEACTIVATE_USER_SCHEMA
 
 bp = Blueprint('profile')
 
@@ -192,3 +192,26 @@ async def limits_handler(request):
     limits = await get_limits(request.app.db, user_id)
 
     return response.json(limits)
+
+@bp.delete('/api/account')
+async def deactive_own_user(request):
+    """Deactivate the current user."""
+    user_id = await token_check(request)
+    payload = validate(request.json, DEACTIVATE_USER_SCHEMA)
+
+    if not payload['confirmation']:
+        raise BadInput('Account deletion is not confirmed.')
+
+    await password_check(request, user_id, payload['password'])
+
+    # TODO: maybe send an email to ask for confirmation?
+
+    await request.app.db.execute("""
+    UPDATE users
+    SET active = false
+    WHERE user_id = $1
+    """, user_id)
+
+    return response.json({
+        'success': True
+    })
