@@ -1,7 +1,14 @@
 import secrets
 import random
+import io
+import base64
 
 from .creds import USERNAME, PASSWORD, ADMIN_USER, ADMIN_PASSWORD
+
+def png_data():
+    return io.BytesIO(base64.b64decode(b'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABC'
+                                       b'AQAAAC1HAwCAAAAC0lEQVQYV2NgYAAAAAM'
+                                       b'AAWgmWQ0AAAAASUVORK5CYII='))
 
 def token():
     return secrets.token_urlsafe(random.randint(100, 300))
