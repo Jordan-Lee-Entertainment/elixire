@@ -56,6 +56,10 @@ const pageList = [
   {
     title: "Admin | elixi.re",
     chunkName: "admin"
+  },
+  {
+    title: "Delete your Account | elixi.re",
+    chunkName: "deleteconfirm"
   }
 ];
 
@@ -72,7 +76,8 @@ const entryPointNames = [
   "shortlist",
   "shorten",
   "signup",
-  "admin"
+  "admin",
+  "deleteconfirm"
 ];
 let entry = {};
 for (const name of entryPointNames) {
