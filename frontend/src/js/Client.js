@@ -375,7 +375,7 @@ class Client {
   /**
    * Enters a request to delete the current user's account
    * @param {String} password - The password to login with
-   * @returns {Promise<String>} A token used to confirm account deletion
+   * @returns {Promise<Boolean>} Boolean indicating success
    * @api public
    */
   async deleteAccount(password) {
@@ -383,6 +383,22 @@ class Client {
       return await this.ratelimitedRequest("delete", "/account", req =>
         req.send({ password })
       ).then(res => res.body.email_token);
+    } catch (err) {
+      throw this.handleErr(err);
+    }
+  }
+
+  /**
+   * Confirms a user's account deletion
+   * @param {String} token - The token the user recieved in their email
+   * @returns {Promise<Boolean>} Boolean indicating success
+   * @api public
+   */
+  async deleteConfirm(token) {
+    try {
+      return await this.ratelimitedRequest("post", "/delete_confirm", req =>
+        req.query({ token })
+      ).then(r => r.body.success);
     } catch (err) {
       throw this.handleErr(err);
     }
