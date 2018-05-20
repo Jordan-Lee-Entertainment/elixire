@@ -134,3 +134,28 @@ CREATE TABLE IF NOT EXISTS email_pwd_reset_tokens (
     expiral timestamp without time zone default now() + interval '30 minutes',
     PRIMARY KEY (hash, user_id)
 );
+
+-- data dump state
+CREATE TABLE IF NOT EXISTS current_dump_state (
+    -- identify the current dump
+    user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
+
+    -- when did it properly start so we
+    -- send an email to user saying how long did it take
+    start_timestamp timestamp without time zone default now(),
+
+    -- current state of the dump
+    current_id bigint REFERENCES files (file_id) ON DELETE CASCADE,
+    last_id bigint REFERENCES files (file_id) ON DELETE CASCADE,
+
+    -- for percentages
+    total_files bigint,
+    files_done bigint,
+
+    PRIMARY KEY (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS dump_queue (
+    user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id)
+);

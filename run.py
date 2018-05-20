@@ -17,6 +17,7 @@ import api.bp.shorten
 import api.bp.fetch
 import api.bp.admin
 import api.bp.register
+import api.bp.datadump
 
 from api.errors import APIError, Ratelimited, Banned, BadInput, FailedAuth
 from api.common_auth import token_check
@@ -41,6 +42,7 @@ app.blueprint(api.bp.shorten.bp)
 app.blueprint(api.bp.fetch.bp)
 app.blueprint(api.bp.admin.bp)
 app.blueprint(api.bp.register.bp)
+app.blueprint(api.bp.datadump.bp)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
