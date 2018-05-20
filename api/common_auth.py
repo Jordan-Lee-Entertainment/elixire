@@ -34,7 +34,7 @@ async def pwd_check(request, stored: str, password: str):
                                               pwd_bytes, pwd_orig)
 
     if not await future:
-        raise FailedAuth('user or password invalid')
+        raise FailedAuth('User or password invalid')
 
 
 async def password_check(request, user_id: int, password: str):
@@ -123,12 +123,12 @@ async def login_user(request):
     user = await request.app.storage.actx_username(username)
 
     if not user:
-        log.info(f'user {username!r} does not exist')
-        raise FailedAuth('user or password invalid')
+        log.info(f'login: {username!r} does not exist')
+        raise FailedAuth('User or password invalid')
 
     if not user['active']:
-        log.info(f'user {username!r} is not active')
-        raise FailedAuth('user or password invalid')
+        log.info(f'login: {username!r} is not active')
+        raise FailedAuth('User is deactivated')
 
     await check_bans(request, user['user_id'])
     await pwd_check(request, user['password_hash'], password)

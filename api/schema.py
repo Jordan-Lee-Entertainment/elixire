@@ -81,3 +81,12 @@ LOGIN_SCHEMA = {
 DEACTIVATE_USER_SCHEMA = {
     'password': {'type': 'password', 'required': True},
 }
+
+PASSWORD_RESET_SCHEMA = {
+    'username': {'type': 'string', 'required': True}
+}
+
+PASSWORD_RESET_CONFIRM_SCHEMA = {
+    'token': {'type': 'string', 'required': True},
+    'new_password': {'type': 'password', 'required': True},
+}

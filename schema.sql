@@ -126,3 +126,11 @@ CREATE TABLE IF NOT EXISTS email_deletion_tokens (
     expiral timestamp without time zone default now() + interval '12 hours',
     PRIMARY KEY (hash, user_id)
 );
+
+-- email stuff for password reset requests
+CREATE TABLE IF NOT EXISTS email_pwd_reset_tokens (
+    hash text NOT NULL,
+    user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
+    expiral timestamp without time zone default now() + interval '30 minutes',
+    PRIMARY KEY (hash, user_id)
+);

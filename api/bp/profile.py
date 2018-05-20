@@ -1,5 +1,4 @@
 import logging
-import aiohttp
 
 from sanic import Blueprint
 from sanic import response
@@ -7,11 +6,23 @@ from sanic import response
 from ..errors import FailedAuth, FeatureDisabled, BadInput
 from ..common_auth import token_check, password_check, pwd_hash,\
     check_admin, check_domain_id
-from ..common import gen_email_token
-from ..schema import validate, PROFILE_SCHEMA, DEACTIVATE_USER_SCHEMA
+from ..common import gen_email_token, send_email
+from ..schema import validate, PROFILE_SCHEMA, DEACTIVATE_USER_SCHEMA, PASSWORD_RESET_SCHEMA, PASSWORD_RESET_CONFIRM_SCHEMA
 
 bp = Blueprint('profile')
 log = logging.getLogger(__name__)
+
+
+async def _update_password(request, user_id, new_pwd):
+    new_hash = await pwd_hash(request, new_pwd)
+
+    await request.app.db.execute("""
+        UPDATE users
+        SET password_hash = $1
+        WHERE user_id = $2
+    """, new_hash, user_id)
+
+    await request.app.storage.invalidate(user_id, 'password_hash')
 
 
 @bp.get('/api/domains')
@@ -143,16 +154,7 @@ async def change_profile(request):
 
     if new_pwd and new_pwd != password:
         # we are already good from password_check call
-        new_hash = await pwd_hash(request, new_pwd)
-
-        await request.app.db.execute("""
-            UPDATE users
-            SET password_hash = $1
-            WHERE user_id = $2
-        """, new_hash, user_id)
-
-        await request.app.storage.invalidate(user_id, 'password_hash')
-
+        await _update_password(request, user_id, new_pwd)
         updated.append('password')
 
     return response.json({
@@ -216,11 +218,13 @@ async def deactive_own_user(request):
     WHERE user_id = $1
     """, user_id)
 
-    mailgun_url = f'https://api.mailgun.net/v3/{request.app.econfig.MAILGUN_DOMAIN}/messages'
+    if not user_email:
+        raise BadInput('No email was found.')
+
     _inst_name = request.app.econfig.INSTANCE_NAME
     _support = request.app.econfig.SUPPORT_EMAIL
 
-    email_token = await gen_email_token()
+    email_token = await gen_email_token(request, user_id, 'email_deletion_tokens')
 
     log.info(f'Generated email hash {email_token} for account deactivation')
 
@@ -247,26 +251,11 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {request.app.econfig.MAIN_URL}
 """
 
-    # Mailgun API is cool!
-    auth = aiohttp.BasicAuth('api', request.app.econfig.MAILGUN_API_KEY)
-    data = {
-        'from': f'{_inst_name} <automated@{request.app.econfig.MAILGUN_DOMAIN}>',
-        'to': [user_email],
-        'subject': f'{_inst_name} - account deletion confirmation',
-        'text': email_body,
-    }
+    resp = await send_email(request, user_email,
+                            f'{_inst_name} - account deactivation request', email_body)
 
-    print(data)
-
-    resp = None
-    async with request.app.session.post(mailgun_url, auth=auth, data=data) as resp:
-        resp = resp
-        print(await resp.json())
-
-    succ = resp.status == 200
     return response.json({
-        'email_token': email_token,
-        'success': succ
+        'success': resp.status == 200
     })
 
 
@@ -284,9 +273,6 @@ async def deactivate_user_from_email(request):
     WHERE hash=$1 AND now() < expiral
     """, cli_hash)
 
-    print(cli_hash)
-    print(user_id)
-
     if not user_id:
         raise BadInput('No user found with that email token.')
 
@@ -300,6 +286,88 @@ async def deactivate_user_from_email(request):
     DELETE FROM email_deletion_tokens
     WHERE hash=$1
     """, cli_hash)
+
+    log.warning(f'Deactivated user ID {user_id} by request.')
+
+    return response.json({
+        'success': True
+    })
+
+@bp.post('/api/reset_password')
+async def reset_password_req(request):
+    """Send a password reset request."""
+    payload = validate(request.json, PASSWORD_RESET_SCHEMA)
+    username = payload['username']
+
+    udata = await request.app.db.fetchrow("""
+    SELECT email, user_id
+    FROM users
+    WHERE username = $1
+    """, username)
+
+    if not udata:
+        raise BadInput('User not found')
+
+    user_email = udata['email']
+    user_id = udata['user_id']
+
+    _inst_name = request.app.econfig.INSTANCE_NAME
+    _support = request.app.econfig.SUPPORT_EMAIL
+
+    email_token = await gen_email_token(request, user_id, 'email_pwd_reset_tokens')
+
+    await request.app.db.execute("""
+    INSERT INTO email_pwd_reset_tokens (hash, user_id)
+    VALUES ($1, $2)
+    """, email_token, user_id)
+
+    email_body = f"""This is an automated email from {_inst_name}
+about your password reset.
+
+Please visit {request.app.econfig.MAIN_URL}/password_reset.html#{email_token} to
+reset your password.
+
+The link will be invalid in 30 minutes. Do not share the link with anyone else.
+Nobody from support will ask you for this link.
+
+Reply to {_support} if you have any questions.
+
+Do not reply to this email specifically, it will not work.
+
+- {_inst_name}, {request.app.econfig.MAIN_URL}
+"""
+
+    resp = await send_email(request, user_email,
+                            f'{_inst_name} - password reset request', email_body)
+
+    return response.json({
+        'success': resp.status == 200
+    })
+
+
+@bp.post('/api/reset_password_confirm')
+async def password_reset_confirmation(request):
+    """Handle the confirmation of a password reset."""
+    payload = validate(request.json, PASSWORD_RESET_CONFIRM_SCHEMA)
+    token = payload['token']
+    new_pwd = payload['new_password']
+
+    user_id = await request.app.db.fetchval("""
+    SELECT user_id
+    FROM email_pwd_reset_tokens
+    WHERE hash = $1 AND now() < expiral
+    """, token)
+
+    if not user_id:
+        raise BadInput('Invalid token.')
+
+    # reset password
+    await _update_password(request, user_id, new_pwd)
+
+    await request.app.db.execute("""
+    DELETE FROM email_pwd_reset_tokens
+    WHERE hash = $1
+    """, token)
 
     return response.json({
         'success': True
