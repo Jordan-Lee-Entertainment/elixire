@@ -265,6 +265,7 @@ Do not reply to this email specifically, it will not work.
 
     succ = resp.status == 200
     return response.json({
+        'email_token': email_token,
         'success': succ
     })
 
