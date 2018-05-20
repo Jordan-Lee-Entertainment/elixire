@@ -48,6 +48,7 @@ block content
     button(type="button", data-toggle="modal", data-target="#password-modal").btn.btn-primary Generate Uploader Token
     hr
     button(type="button", data-toggle="modal", data-target="#revoke-modal").btn.btn-danger Revoke All Tokens
+    button(type="button", data-toggle="modal", data-target="#delete-modal").btn.btn-danger#delete-modal-btn Delete Account
     hr
     button(type="button", data-toggle="modal", data-target="#gdpr-modal").btn.btn-primary Change Privacy
 
@@ -73,6 +74,30 @@ block content
         div.modal-footer
           button(type="button", data-dismiss="modal").btn.btn-link Cancel
           button(type="button").btn.btn-primary#generate-token Generate
+	  
+
+
+  div(tabindex="-1", role="dialog").modal.fade#delete-modal
+    div(role="document").modal-dialog
+      div.modal-content
+        div.modal-header
+          h5.modal-title Enter password
+          button(type="button", data-dismiss="modal").close
+            span &times;
+        div.modal-body.needs-validation
+          p.text-muted Enter your password below to delete your account, you'll recieve an email with a confirmation link to delete your account.
+          form(novalidate=true).needs-validation#delete-form
+            div.form-group
+              label(for="delete-password") Password
+              input(type="password", required="true", placeholder="Password").form-control#delete-password
+              div.invalid-feedback Incorrect password
+          div
+            span.font-weight-bold.text-danger Note:
+            span.font-weight-normal.text-danger This will PERMANENTLY delete your account and all its files! Make sure you know what you're doing!
+        div.modal-footer
+          button(type="button", data-dismiss="modal").btn.btn-link Cancel
+          button(type="button").btn.btn-danger#delete-btn I understand
+
 
   div(tabindex="-1", role="dialog").modal.fade#revoke-modal
     div(role="document").modal-dialog
