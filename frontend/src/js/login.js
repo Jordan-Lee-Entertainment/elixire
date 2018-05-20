@@ -55,4 +55,22 @@ window.addEventListener("load", async function() {
       }
     }
   }
+
+  const resetForm = document.getElementById("reset-form");
+  const resetUsername = document.getElementById("reset-username");
+  resetForm.addEventListener("submit", function(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    return false;
+  });
+  const resetBtn = document.getElementById("reset-btn");
+  resetBtn.addEventListener("click", async function() {
+    try {
+      await client.resetPassword(resetUsername);
+      resetModalBtn.click();
+    } catch (err) {
+      resetUsername.setCustomValidity("Invalid username");
+      resetForm.classList = "was-validated needs-validation";
+    }
+  });
 });

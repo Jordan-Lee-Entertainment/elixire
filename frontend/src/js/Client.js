@@ -405,6 +405,41 @@ class Client {
   }
 
   /**
+   * Sends an email to reset a user's password
+   * @param {String} username - The username to reset the password forgotten
+   * @returns {Promise<Boolean>} Boolean indicating success
+   * @api public
+   */
+  async resetPassword(username) {
+    try {
+      return await this.ratelimitedRequest("post", "/reset_password", req =>
+        req.send({ username })
+      ).then(r => r.body.success);
+    } catch (err) {
+      throw this.handleErr(err);
+    }
+  }
+
+  /**
+   * Confirms a user's password reset using token from email
+   * @param {String} token - The token the user got from their email
+   * @param {Stirng} password - The password to change to
+   * @returns {Promise<Boolean>} Boolean indicating success
+   * @api public
+   */
+  async confirmPasswordReset(token, password) {
+    try {
+      return await this.ratelimitedRequest(
+        "post",
+        "/reset_password_confirm",
+        req => req.send({ token, new_password: password })
+      ).then(r => r.body.success);
+    } catch (err) {
+      throw this.handleErr(err);
+    }
+  }
+
+  /**
    * The files and the shortened urls created
    * @typedef AllContent
    * @type {Object}
@@ -441,20 +476,22 @@ class Client {
    */
   handleErr(err) {
     console.log(err, err.status);
+    let newErr = err;
     if (err.status == 403) {
-      return new Error("BAD_AUTH");
+      newErr = new Error("BAD_AUTH");
     } else if (err.status == 400) {
-      return new Error("BAD_REQUEST");
+      newErr = new Error("BAD_REQUEST");
     } else if (err.status == 415) {
-      return new Error("BAD_IMAGE");
+      newErr = new Error("BAD_IMAGE");
     } else if (err.status == 429) {
-      return new Error("RATELIMITED");
+      newErr = new Error("RATELIMITED");
     } else if (err.status == 404) {
-      return new Error("NOT_FOUND");
+      newErr = new Error("NOT_FOUND");
     } else if (err.status == 469) {
-      return new Error("QUOTA_EXPLODED");
+      newErr = new Error("QUOTA_EXPLODED");
     }
-    return err;
+    if (err != newErr) newErr.response = err.response;
+    return newErr;
   }
 
   /**
