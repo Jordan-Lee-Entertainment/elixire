@@ -236,7 +236,7 @@ async def deactive_own_user(request):
     email_body = f"""This is an automated email from {_inst_name}
 about your account deletion.
 
-Please visit {request.app.econfig.MAIN_URL}/api/delete_confirm?token={email_token} to
+Please visit {request.app.econfig.MAIN_URL}/deleteconfirm.html#{email_token} to
 confirm the deletion of your account.
 
 The link will be invalid in 12 hours. Do not share it with anyone.
