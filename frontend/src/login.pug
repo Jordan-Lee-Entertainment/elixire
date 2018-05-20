@@ -16,10 +16,26 @@ block content
           input(type="checkbox").form-check-input#keep-logged-in
           label(for="keep-logged-in").form-check-label Keep me signed in
       br
-      span.text-muted
-        | Forgotten your password? Ask for help on our 
-        a(href="https://discord.gg/Yt83sPJ") Discord guild
-        | !
+      a(href="#", data-toggle="modal", data-target="#reset-modal").text-muted#reset Forgotten your password? 
+
+      div(tabindex="-1", role="dialog", aria-hidden="true").modal.fade#reset-modal
+        div(role="document").modal-dialog
+          div.modal-content
+            div.modal-header
+              h5 Password Reset
+              button(type="button", data-dismiss="modal").close
+                span &times;
+            div.modal-body
+              | Enter your username below and we'll send you a link where you can reset your password
+              form(novalidate="true").needs-validation#reset-form
+                div.form-group
+                  label(for="reset-username") Username
+                  input(type="text", required="true").form-control#reset-username
+                  div.invalid-feedback Incorrect username
+            div.modal-footer
+              button(type="button", data-dismiss="modal").btn.btn-secondary Nevermind!
+              button(type="button").btn.btn-primary#reset-btn Reset
+
 
       div(tabindex="-1", role="dialog", aria-hidden="true").modal.fade#remember-modal
         div(role="document").modal-dialog
