@@ -53,6 +53,9 @@ FORCE_IP_ROUTES = (
     '/api/hello',
     '/api/register',
     '/api/delete_confirm',
+
+    '/api/reset_password',
+    '/api/reset_password_confirm'
 )
 
 NOT_API_RATELIMIT = (

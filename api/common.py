@@ -3,8 +3,9 @@ import secrets
 import os
 
 import itsdangerous
+import aiohttp
 
-from .errors import FailedAuth
+from .errors import FailedAuth, BadInput
 
 VERSION = '2.0.0'
 ALPHABET = string.ascii_lowercase + string.digits
@@ -74,9 +75,37 @@ async def gen_filename(request, length=3) -> str:
     return await gen_filename(request, length + 1)
 
 
-async def gen_email_token():
+async def gen_email_token(request, user_id, table: str, count = 0):
     """Generate a token for email usage"""
-    return secrets.token_hex(32)
+    if count == 11:
+        # it really shouldn't happen,
+        # but we better be ready for it.
+        raise BadInput('Failed to generate an email hash.')
+
+    possible = secrets.token_hex(32)
+
+    # check if hash already exists
+    other_id = await request.app.db.fetchval(f"""
+    SELECT user_id
+    FROM {table}
+    WHERE hash = $1 AND now() < expiral
+    """, possible)
+
+    if other_id:
+        # retry with count + 1
+        await gen_email_token(request, user_id, table, count + 1)
+
+    # check if there are more than 3 issues hashes for the user.
+    hashes = await request.app.db.fetchval(f"""
+    SELECT COUNT(*)
+    FROM {table}
+    WHERE user_id = $1 AND now() < expiral
+    """, user_id)
+
+    if hashes > 3:
+        raise BadInput('You already generated more than 3 tokens in the time period.')
+
+    return possible
 
 
 async def _purge_cf_cache(app, purge_urls, email, apikey, zoneid):
@@ -274,3 +303,22 @@ def transform_wildcard(domain, subdomain_name):
         domain = domain.replace("*.", "")
 
     return domain
+
+
+async def send_email(request, user_email, subject, email_body):
+    """Send an email to a user using the Mailgun API."""
+    mailgun_url = f'https://api.mailgun.net/v3/{request.app.econfig.MAILGUN_DOMAIN}/messages'
+
+    _inst_name = request.app.econfig.INSTANCE_NAME
+
+    auth = aiohttp.BasicAuth('api', request.app.econfig.MAILGUN_API_KEY)
+    data = {
+        'from': f'{_inst_name} <automated@{request.app.econfig.MAILGUN_DOMAIN}>',
+        'to': [user_email],
+        'subject': subject,
+        'text': email_body,
+    }
+
+    async with request.app.session.post(mailgun_url,
+                                        auth=auth, data=data) as resp:
+        return resp
