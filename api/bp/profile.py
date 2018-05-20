@@ -259,7 +259,7 @@ Do not reply to this email specifically, it will not work.
     })
 
 
-@bp.get('/api/delete_confirm')
+@bp.post('/api/delete_confirm')
 async def deactivate_user_from_email(request):
     """Actually deactivate the account."""
     try:
