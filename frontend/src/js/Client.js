@@ -373,6 +373,22 @@ class Client {
   }
 
   /**
+   * Enters a request to delete the current user's account
+   * @param {String} password - The password to login with
+   * @returns {Promise<String>} A token used to confirm account deletion
+   * @api public
+   */
+  async deleteAccount(password) {
+    try {
+      return await this.ratelimitedRequest("delete", "/account", req =>
+        req.send({ password })
+      ).then(res => res.body.email_token);
+    } catch (err) {
+      throw this.handleErr(err);
+    }
+  }
+
+  /**
    * The files and the shortened urls created
    * @typedef AllContent
    * @type {Object}

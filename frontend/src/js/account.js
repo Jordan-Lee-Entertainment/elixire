@@ -92,6 +92,34 @@ window.addEventListener("DOMContentLoaded", async function() {
     }
   });
 
+  const deleteForm = document.getElementById("delete-form");
+  deleteForm.addEventListener("submit", function(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    return false;
+  });
+
+  const deletePassword = document.getElementById("delete-password");
+  const deleteBtn = document.getElementById("delete-btn");
+  const deleteAccountBtn = document.getElementById("delete-modal-btn");
+  deleteBtn.addEventListener("click", function() {
+    deleteAccount();
+  });
+  deletePassword.addEventListener("keydown", function(ev) {
+    if (ev.key == "Enter") {
+      deleteAccount();
+    }
+  });
+  async function deleteAccount() {
+    try {
+      const emailToken = await client.deleteAccount(deletePassword.value);
+      deleteAccountBtn.click();
+    } catch (err) {
+      deletePassword.setCustomValidity("Invalid Password!");
+      deleteForm.classList = "needs-validation was-validated";
+    }
+  }
+
   async function revokeToken() {
     try {
       await client.revokeTokens(revokePassword.value);
