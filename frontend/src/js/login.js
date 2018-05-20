@@ -66,7 +66,7 @@ window.addEventListener("load", async function() {
   const resetBtn = document.getElementById("reset-btn");
   resetBtn.addEventListener("click", async function() {
     try {
-      await client.resetPassword(resetUsername);
+      await client.resetPassword(resetUsername.value);
       resetModalBtn.click();
     } catch (err) {
       resetUsername.setCustomValidity("Invalid username");
