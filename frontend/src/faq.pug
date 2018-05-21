@@ -1,0 +1,73 @@
+extends template.pug
+block content
+  h1 FAQ
+
+  h3 I can't log in!
+  ul
+   li Copying given password? Remove 's from start and end of it.
+   li Reset your password on the login page. Keep in mind that there's a small bug on frontend that says that it failed even though it sends you an email.
+   
+  h3 I keep getting logged out!
+  ul
+   li On webui, we use special tokens that last 3 days for security, if you don't check "Keep me signed in".
+   
+  h3 When I changed password it went green then said "password wrong"!
+  ul
+   li UI bug, related to the one on "I can't log in!", follow the second steps from it.
+   
+  h3 How can I get a token?
+  ul
+   li Login to webui, click on your username, go to My Account, click on "Generate Uploader Token", follow instructions.
+   
+  h3 How can I use KShare?
+  ul
+   li Get a token and on the token menu, download KShare config. Add it to KShare with help of #[a( href='https://github.com/ArsenArsen/KShare/wiki/Destinations' ) this guide.]
+   
+  h3 How can I set domain?
+  ul
+   li Go to webui, click on username, go to My Account, enter password, pick a domain from dropdown, save, and all future uploads will be on that domain (until you change it).
+  
+  h3 What can I upload?
+  ul
+   li Any files with the following mimetypes:
+     ul
+       li image/png
+       li image/jpeg
+       li image/gif
+       li image/webp
+       li image/svg+xml
+       li audio/webm
+       li video/webm
+       li text/plain
+   li ...as long as they follow the rules, which are visible in the #[a(href="https://discord.gg/Yt83sPJ") Discord guild.]
+   
+  h3 How can I get uploader configs?
+  ul
+    li Login to webui, click on your username, go to My Account, click on "Generate Uploader Token", enter password. On the page that'll open, you can find the configs that are generated for you.
+    
+  h3 Which domains do you have?
+  ul
+    li Go to #[a( href='https://elixi.re/api/domains' ) https://elixi.re/api/domains] for json version
+    li Go to my account page to see domain dropdown
+ 
+  h3 Can I delete my account?
+  ul
+    li Yes, go to the "my account" page.
+
+  h3 Which configs are available?
+  ul
+    li KShare (linux), ShareX (windows) and ElixireManager.sh (linux), you can download them on the token menu (see "How can I get token?")
+    li We're also supported in tigcap, but it's a little buggy
+    
+  h3 Why is the source code on GitLab?
+  ul
+    li We wanted to develop stuff in private at first, until we got everything working, we wanted an organization so no developer would get unfair credit, and github didn't offer free private repos on organizations.
+    li #[a(href="http://www.businessinsider.com/githubs-oval-office-2013-9") I personally believe that github wastes their money a lot] and #[a(href="https://where.coraline.codes/blog/my-year-at-github/") doesn't treat their employees well]. And I believe that it's wrong for the biggest site for open source projects to be closed source itself.
+    li However, a backup of the code is hosted on a couple other git instances.  We won't announce a list to prevent false claims from taking down all our public source codes.
+    
+  h3 I'm concerned about my privacy, my information, my domains and/or future administration of elixi.re services, due to naniworks:
+  ul
+    li The service and the code will still belong to our core dev team and the code will stay under MIT. 
+    li We'll have the right to leave naniworks at any point, though we hope that this doesn't need to happen.
+    li We'll be allowed to run elixi.re the way we want, as always.
+    li We won't pass any of your information or domains to naniworks without disclosing it beforehand (there's currently no plans for this).
