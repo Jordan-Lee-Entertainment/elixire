@@ -71,6 +71,7 @@ window.addEventListener("load", function() {
   }
   others.appendChild(fragment);
   function doBig() {
+    bigImage.src = `//${domain}/t/s${files[selected]}`; // we already have this in the cache, so we use this so switching isn't super slow
     bigImage.src = `//${domain}/i/${files[selected]}`;
   }
 
