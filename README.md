@@ -1,12 +1,12 @@
-elixi.re v2
-===========
+Elixire v2
+==========
 
 ```
 "elixirae is the futureae"
   - lunae bunae genserv, 2018
 ```
 
-elixi.re is a imagehost solution, the v1 was written in PHP,
+Elixire is an image host solution, the v1 was written in PHP,
 v2 is being written in Python.
 
 *(no, we won't write Elixir, read BACKEND.md for the why)*
