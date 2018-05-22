@@ -1,10 +1,9 @@
 extends template.pug
-block content
-  h1 Album! OwO!
-  div.player
+block body
+  div.player#player
     div.background
       div.image
-        img(src="#")
-      div.control-left <
-      div.control-right >
-    
+        img()#big-image
+      img(src=require("@/icons/left.svg")).control-left.control.hover-controls#left-arrow
+      img(src=require("@/icons/right.svg")).control-right.control.hover-controls#right-arrow
+      div.others.hover-controls#others.hoverable
