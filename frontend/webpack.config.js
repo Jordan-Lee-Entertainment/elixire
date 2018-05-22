@@ -38,6 +38,10 @@ const pageList = [
     chunkName: "about"
   },
   {
+    title: "FAQ | elixi.re",
+    chunkName: "faq"
+  },
+  {
     title: "My Files | elixi.re",
     chunkName: "list"
   },
@@ -80,6 +84,7 @@ const entryPointNames = [
   "theme",
   "themeCSS",
   "about",
+  "faq",
   "list",
   "shortlist",
   "shorten",
