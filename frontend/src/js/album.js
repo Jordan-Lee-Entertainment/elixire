@@ -89,4 +89,14 @@ window.addEventListener("load", function() {
       doBig();
     }
   });
+
+  document.addEventListener("keyup", function(ev) {
+    if (ev.keyCode == 37 && files[Number(selected) - 1]) {
+      selected--;
+      doBig();
+    } else if (ev.keyCode == 39 && files[Number(selected) + 1]) {
+      selected++;
+      doBig();
+    }
+  });
 });
