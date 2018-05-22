@@ -64,6 +64,10 @@ const pageList = [
   {
     title: "Password Reset | elixi.re",
     chunkName: "password_reset"
+  },
+  {
+    title: "Album | elixi.re",
+    chunkName: "album"
   }
 ];
 
@@ -82,7 +86,8 @@ const entryPointNames = [
   "signup",
   "admin",
   "deleteconfirm",
-  "password_reset"
+  "password_reset",
+  "album"
 ];
 let entry = {};
 for (const name of entryPointNames) {

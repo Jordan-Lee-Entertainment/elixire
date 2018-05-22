@@ -1,0 +1,134 @@
+.body {
+  background-color: #111;
+  color: #fff;
+  height: calc(100vh - 56px);
+  padding: 0;
+}
+
+.player,
+.background,
+.image {
+  height: calc(100vh - 56px);
+}
+
+.container {
+  display: none;
+}
+
+.background {
+  position: relative;
+}
+
+.background .control-left,
+.background .control-right {
+}
+
+.others {
+  position: absolute;
+  width: 100vw;
+  white-space: nowrap;
+  overflow-y: hidden;
+  // overflow-x: overlay;
+  overflow: auto;
+  max-height: calc(10vh + 30px);
+  padding-bottom: 5px;
+  padding-top: 15px;
+  bottom: 0;
+  background: linear-gradient(rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.8));
+  align-items: baseline;
+  display: flex;
+  flex-direction: row;
+}
+
+.others::-webkit-scrollbar-button {
+  display: none;
+}
+
+.others::-webkit-scrollbar {
+  height: 5px;
+}
+
+.others::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.others::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0);
+}
+
+.others .mini-player {
+  display: inline-block;
+}
+
+.others .mini-player:not(:first-child) {
+  margin-left: 0.4em;
+}
+
+.others .mini-player img {
+  cursor: pointer;
+  max-width: 25vw;
+  max-height: 10vh;
+  border-radius: 1.5px;
+  user-drag: none;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+
+.background .control-left {
+  left: 0;
+}
+
+.background .control-right {
+  right: 0;
+}
+
+.image {
+  text-align: center;
+  max-width: 100vw;
+  max-height: 100%;
+  line-height: calc(100vh - 59px);
+  width: auto;
+  box-sizing: border-box;
+}
+
+.image img {
+  border-radius: 20px;
+  padding-top: 2vh;
+  padding-bottom: 5vh;
+  padding-left: 2vw;
+  padding-right: 2vw;
+  max-width: 100vw;
+  max-height: calc(100vh - 56px);
+  user-drag: none;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+
+.player:not(.mouse-moving) .hover-controls {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.hover-controls {
+  opacity: 1;
+  transition: opacity 0.1s ease-in-out;
+}
+
+.control {
+  position: absolute;
+  height: 5vh;
+  cursor: pointer;
+  top: 0;
+  bottom: 0;
+  margin: auto;
+  font-size: 6em;
+  line-height: 6em;
+  display: inline;
+}
