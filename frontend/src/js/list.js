@@ -18,13 +18,18 @@ window.addEventListener("load", async function() {
   const modalShowBtn = document.getElementById("show-delete-modal");
   const deleteAlerts = {};
   const fileContainers = {};
+  const loadedFiles = [];
   await loadMore(0);
   async function loadMore(pageNum = 0) {
     const frag = document.createDocumentFragment();
     const { files } = await client.getFiles(pageNum);
     const fileList = [];
     for (const shortname in files) {
-      fileList.push(files[shortname]);
+      if (!loadedFiles.includes(shortname)) {
+        // Dedupe stuff because stuff on the page can change causing dupes
+        fileList.push(files[shortname]);
+        loadedFiles.push(shortname);
+      }
     }
     if (fileList.length === 0) {
       return (loadedAll = true);
