@@ -1,7 +1,26 @@
-html
+//- TODO: does this stuff belong somewhere else?
+- const path = require("path");
+- const BASE_URL = "https://elixi.re";
+- const URL = BASE_URL + "/" + htmlWebpackPlugin.options.filename;
+- const LOGO_URL = BASE_URL + path.resolve(require("@/images/logo.png"));
+- const SITE_NAME = "elixi.re";
+
+html(prefix="og: http://ogp.me/ns#")
   head
+    meta(charset="utf-8")
+    meta(http-equiv="Content-type", content="text/html; charset=utf-8")
     title #{htmlWebpackPlugin.options.title}
     meta(name="viewport", content="width=device-width, initial-scale=1")
+    meta(name="og:title", content=htmlWebpackPlugin.options.title)
+    meta(name="og:type", content="website")
+    meta(name="og:url", content=URL)
+    meta(name="og:image", content=LOGO_URL)
+    meta(name="og:site_name", content=SITE_NAME)
+    meta(name="og:description", content=SITE_NAME + " is a free, and open-source filehost and link shortener!")
+    meta(name="og:determiner", content="a")
+    meta(name="og:locale", content="en_US")
+    meta(name="og:locale:alternate", content="en_GB")
+    link(rel="icon", href=require("@/images/small-favicon.svg"))
   body
     .page-content
       .page-navbar

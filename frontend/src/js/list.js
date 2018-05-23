@@ -69,6 +69,7 @@ window.addEventListener("load", async function() {
     try {
       await client.deleteFile(toDelete);
       fileContainers[toDelete].remove();
+      delete fileContainers[toDelete];
     } catch (err) {
       if (err.message == "NOT_FOUND") {
         deleteAlert = commonCode.sendAlert(

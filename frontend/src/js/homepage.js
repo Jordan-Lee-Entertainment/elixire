@@ -24,9 +24,7 @@ window.addEventListener("DOMContentLoaded", async function() {
   for (const domainId in domains) {
     const domainLi = document.createElement("li");
     domainLi.innerText = domains[domainId];
-    console.log("aasss");
     if ((officialDomains || []).includes(Number(domainId))) {
-      console.log("uwo");
       domainLi.classList = "official-domain";
       domainLi.appendChild(officialTag.cloneNode(true));
     }
