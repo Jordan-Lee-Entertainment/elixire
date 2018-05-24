@@ -5,8 +5,7 @@ import asyncpg
 import os
 from decimal import *
 
-sys.path.append('..')
-import config
+from common import open_db, close_db
 
 
 def byte_to_mibstring(bytecount):
@@ -18,7 +17,7 @@ def byte_to_mibstring(bytecount):
 
 
 async def main():
-    db = await asyncpg.create_pool(**config.db)
+    db, _redis = await open_db()
 
     # Total domain with cf enabled
     all_cf_domains = await db.fetch("""
@@ -195,7 +194,7 @@ Global Counts, ND: {nd_shorten_count}, D: {d_shorten_count}
 Weekly Counts, ND: {nd_shorten_count_week}, D: {d_shorten_count_week}
     """)
 
-    await db.close()
+    await close_db(db, _redis)
 
 
 if __name__ == '__main__':

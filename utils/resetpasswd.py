@@ -9,11 +9,11 @@ import aioredis
 
 sys.path.append('..')
 import config
+from common import open_db, close_db
 
 
 async def main():
-    db = await asyncpg.create_pool(**config.db)
-    redis = await aioredis.create_redis(config.redis)
+    db, redis = await open_db()
 
     username = sys.argv[1]
     password = secrets.token_urlsafe(25)
@@ -44,10 +44,7 @@ async def main():
     print(f'username: {username!r}')
     print(f'password: {password!r}')
 
-    await db.close()
-    redis.close()
-    await redis.wait_closed()
-    print('OK')
+    await close_db(db, redis)
 
 
 

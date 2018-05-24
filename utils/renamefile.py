@@ -6,13 +6,11 @@ import aiohttp
 import asyncpg
 import aioredis
 
-sys.path.append('..')
-import config
+from common import open_db, close_db
 
 
 async def main():
-    db = await asyncpg.create_pool(**config.db)
-    redis = await aioredis.create_redis(config.redis)
+    db, redis = await open_db()
     old_filename = sys.argv[1]
     new_filename = sys.argv[2]
 
@@ -35,10 +33,7 @@ async def main():
     await redis.delete(f'fspath:{domain}:{old_filename}')
     await redis.delete(f'fspath:{domain}:{new_filename}')
 
-    await db.close()
-    redis.close()
-    await redis.wait_closed()
-    print('OK')
+    await close_db(db, redis)
 
 
 if __name__ == '__main__':
