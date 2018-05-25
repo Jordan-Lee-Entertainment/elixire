@@ -6,10 +6,12 @@ import os.path
 from sanic import Blueprint, response
 
 from ..common_auth import token_check, check_admin
+from ..common import gen_email_token, send_email
 from ..errors import BadInput, FeatureDisabled
 
 log = logging.getLogger(__name__)
 bp = Blueprint('datadump')
+
 
 def _dump_json(zipdump, filepath, obj):
     objstr = json.dumps(obj, indent=4)
@@ -111,12 +113,12 @@ async def dump_user_shortens(app, zipdump, user_id):
     _dump_json(zipdump, 'shortens.json', all_shortens_l)
 
 
-async def dump_files(app, zipdump, user_id, minid, files_done, total_files):
+async def dump_files(app, zipdump, user_id, minid, files_done):
     """Dump files into the data dump zip."""
     current_id = minid
     while True:
         if files_done % 100 == 0:
-            print('file', files_done, 'out of', total_files, 'files')
+            log.info(f'Worked {files_done} files for user {user_id}')
 
         if current_id is None:
             break
@@ -160,13 +162,52 @@ async def dispatch_dump(app, user_id: int, user_name: str):
     """Dispatch the data dump to a user."""
     log.info(f'Dispatching dump for {user_id} {user_name!r}')
 
-    # remove from current state
+
+    _inst_name = app.econfig.INSTANCE_NAME
+    _support = app.econfig.SUPPORT_EMAIL
+
+    dump_token = await gen_email_token(app, user_id, 'email_dump_tokens')
+
     await app.db.execute("""
-    DELETE FROM current_dump_state
+    INSERT INTO email_dump_tokens (hash, user_id)
+    VALUES ($1, $2)
+    """, dump_token, user_id)
+
+    email_body = f"""This is an automated email from {_inst_name}
+about your data dump.
+
+Visit {app.econfig.MAIN_URL}/api/dump_get?token={dump_token} to fetch your
+data dump.
+
+The URL will be invalid in 6 hours.
+Do not share this URL. Nobody will ask you for this URL.
+
+Send an email to {_support} if any questions arise.
+Do not reply to this automated email.
+
+- {_inst_name}, {app.econfig.MAIN_URL}
+    """
+
+    user_email = await app.db.fetchval("""
+    SELECT email
+    FROM users
     WHERE user_id = $1
     """, user_id)
 
-    # TODO: send email
+    resp = await send_email(app, user_email,
+                            f'{_inst_name} - Your data dump is here!', email_body)
+
+    if resp.status == 200:
+        log.info(f'Sent email to {user_id} {user_email}')
+
+        # remove from current state
+        await app.db.execute("""
+        DELETE FROM current_dump_state
+        WHERE user_id = $1
+        """, user_id)
+    else:
+        log.error(f'Failed to send email to {user_id} {user_email}')
+
 
 
 async def do_dump(app, user_id: int):
@@ -204,7 +245,7 @@ async def do_dump(app, user_id: int):
         # and because of that, it is resumable, so in the case
         # of an application failure, the system should be able to
         # know where it left off and continue writing to the zip file.
-        await dump_files(app, zipdump, user_id, minid, 0, total_files)
+        await dump_files(app, zipdump, user_id, minid, 0)
 
         # Finally, dispatch the ZIP file via email to the user.
         await dispatch_dump(app, user_id, user_name)
@@ -218,7 +259,7 @@ async def resume_dump(app, user_id: int):
     """Resume a data dump"""
     # check the current state
     row = await app.db.fetchrow("""
-    SELECT current_id, files_done, total_files
+    SELECT current_id, files_done
     FROM current_dump_state
     WHERE user_id = $1
     """, user_id)
@@ -232,7 +273,7 @@ async def resume_dump(app, user_id: int):
         # We talked about this being the only resumable operation
         # on do_dump()
         await dump_files(app, zipdump, user_id, row['current_id'],
-                         row['files_done'], row['total_files'])
+                         row['files_done'])
 
         await dispatch_dump(app, user_id, user_name)
     except Exception:
@@ -417,3 +458,33 @@ async def data_dump_global_status(request):
         'queue': queue,
         'current': dict(current or {})
     })
+
+@bp.get('/api/dump_get')
+async def get_dump(request):
+    """Download the dump file."""
+    try:
+        dump_token = str(request.args['token'][0])
+    except (KeyError, TypeError, ValueError):
+        raise BadInput('No valid token provided.')
+
+    user_id = await request.app.db.fetchval("""
+    SELECT user_id
+    FROM email_dump_tokens
+    WHERE hash = $1 AND now() < expiral
+    """, dump_token)
+
+    if not user_id:
+        raise BadInput('Invalid or expired token.')
+
+    user_name = await request.app.db.fetchval("""
+    SELECT username
+    FROM users
+    WHERE user_id = $1
+    """, user_id)
+
+    zip_path = os.path.join(
+        request.app.econfig.DUMP_FOLDER,
+        f'{user_id}_{user_name}.zip',
+    )
+
+    return await response.file_stream(zip_path)

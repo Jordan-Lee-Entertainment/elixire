@@ -137,10 +137,10 @@ CREATE TABLE IF NOT EXISTS email_pwd_reset_tokens (
 
 -- email stuff for data dumps
 CREATE TABLE IF NOT EXISTS email_dump_tokens (
-    token text NOT NULL,
+    hash text NOT NULL,
     user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
     expiral timestamp without time zone default now() + interval '6 hours',
-    PRIMARY KEY (token, user_id)
+    PRIMARY KEY (hash, user_id)
 );
 
 -- data dump state

@@ -9,11 +9,13 @@ Elixire v2
 Elixire is an image host solution, the v1 was written in PHP,
 v2 is being written in Python.
 
-*(no, we won't write Elixir, read BACKEND.md for the why)*
+*(no, we won't write Elixir, read BACKEND.md for the reason)*
 
 # Running
 
 ```bash
+# you can use a virtual enviroment if you want.
+
 python3.6 -m pip install -Ur requirements.txt
 
 # this sets up the folder structure in ./images for you
@@ -30,6 +32,12 @@ cd frontend
 npm i
 npm run build:production
 
+# make folders you need, you set them on config.py
+mkdir images
+mkdir dumps
+mkdir thumbnails
+
+# run application, can be under pm2 or something.
 python3.6 run.py
 ```
 

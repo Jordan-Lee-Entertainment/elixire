@@ -224,7 +224,7 @@ async def deactive_own_user(request):
     _inst_name = request.app.econfig.INSTANCE_NAME
     _support = request.app.econfig.SUPPORT_EMAIL
 
-    email_token = await gen_email_token(request, user_id, 'email_deletion_tokens')
+    email_token = await gen_email_token(request.app, user_id, 'email_deletion_tokens')
 
     log.info(f'Generated email hash {email_token} for account deactivation')
 
@@ -251,7 +251,7 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {request.app.econfig.MAIN_URL}
 """
 
-    resp = await send_email(request, user_email,
+    resp = await send_email(request.app, user_email,
                             f'{_inst_name} - account deactivation request', email_body)
 
     return response.json({
@@ -314,7 +314,7 @@ async def reset_password_req(request):
     _inst_name = request.app.econfig.INSTANCE_NAME
     _support = request.app.econfig.SUPPORT_EMAIL
 
-    email_token = await gen_email_token(request, user_id, 'email_pwd_reset_tokens')
+    email_token = await gen_email_token(request.app, user_id, 'email_pwd_reset_tokens')
 
     await request.app.db.execute("""
     INSERT INTO email_pwd_reset_tokens (hash, user_id)
@@ -337,7 +337,7 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {request.app.econfig.MAIN_URL}
 """
 
-    resp = await send_email(request, user_email,
+    resp = await send_email(request.app, user_email,
                             f'{_inst_name} - password reset request', email_body)
 
     return response.json({
