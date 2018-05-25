@@ -89,7 +89,7 @@ html(prefix="og: http://ogp.me/ns#")
         .container
           #alert-area
           block content
-          span(data-toggle="modal", data-target="#gdpr-modal")#open-gdpr-modal
+          span(data-toggle="modal", data-target="#gdpr-modal", data-backdrop="static", data-keyboard="false")#open-gdpr-modal
  
           div(tabindex="-1", role="dialog").modal.fade#gdpr-modal
             div(role="document").modal-dialog
@@ -113,5 +113,6 @@ html(prefix="og: http://ogp.me/ns#")
                       input(type="password", required="true", placeholder="Password").form-control#gdpr-password
                       div.invalid-feedback Incorrect password
                 div.modal-footer
+                  button(type="button").btn.btn-danger#gdpr-delete Delete My Account
                   button(type="button").btn.btn-link#gdpr-deny No!
-                  button(type="button").btn.btn-danger#gdpr-btn I understand
+                  button(type="button").btn.btn-success#gdpr-btn I understand

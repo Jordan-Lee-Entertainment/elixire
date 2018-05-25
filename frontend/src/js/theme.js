@@ -65,6 +65,7 @@ window.addEventListener("DOMContentLoaded", async function() {
     gdprFuckJquery.click();
     const acceptBtn = document.getElementById("gdpr-btn");
     const denyBtn = document.getElementById("gdpr-deny");
+    const deleteBtn = document.getElementById("gdpr-delete");
     const password = document.getElementById("gdpr-password");
     const form = document.getElementById("gdpr-form");
     const dismissBtn = document.getElementById("dismiss-modal");
@@ -78,6 +79,24 @@ window.addEventListener("DOMContentLoaded", async function() {
     });
     acceptBtn.addEventListener("click", () => submitGdpr(true));
     denyBtn.addEventListener("click", () => submitGdpr(false));
+
+    deleteBtn.addEventListener("click", async function() {
+      try {
+        if (password.value.length < 8 || password.value.length > 100) {
+          throw new Error("BAD_AUTH");
+        }
+        await client.deleteAccount(password.value);
+        alert(
+          "Sorry to see you go, check your email for a verification link... :("
+        );
+      } catch (err) {
+        if (err.message == "BAD_AUTH") {
+          password.setCustomValidity("Invalid Password!");
+          form.classList = "needs-validation was-validated logged-in-only";
+        } else throw err;
+      }
+    });
+
     async function submitGdpr(allowed) {
       if (window.client.profile) {
         try {
