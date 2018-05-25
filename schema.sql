@@ -157,5 +157,6 @@ CREATE TABLE IF NOT EXISTS current_dump_state (
 
 CREATE TABLE IF NOT EXISTS dump_queue (
     user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
+    request_timestamp timestamp without time zone default now(),
     PRIMARY KEY (user_id)
 );
