@@ -4,7 +4,7 @@ import logging
 from sanic import Blueprint
 from sanic import response
 
-from ..common import purge_cf, FileNameType
+from ..common import purge_cf, delete_file, FileNameType
 from ..common_auth import token_check
 from ..errors import NotFound, BadInput
 
@@ -106,19 +106,7 @@ async def delete_handler(request):
     user_id = await token_check(request)
     file_name = str(request.json['filename'])
 
-    exec_out = await request.app.db.execute("""
-    UPDATE files
-    SET deleted = true
-    WHERE uploader = $1
-    AND filename = $2
-    AND deleted = false
-    """, user_id, file_name)
-
-    if exec_out == "UPDATE 0":
-        raise NotFound('You have no files with this name.')
-
-    domain_id = await purge_cf(request.app, file_name, FileNameType.FILE)
-    await request.app.storage.raw_invalidate(f'fspath:{domain_id}:{file_name}')
+    await delete_file(request, file_name, user_id)
 
     return response.json({
         'success': True

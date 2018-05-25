@@ -10,7 +10,7 @@ from sanic import Blueprint
 from sanic import response
 
 from ..common_auth import token_check, check_admin
-from ..common import gen_filename, get_domain_info, transform_wildcard
+from ..common import gen_filename, get_domain_info, transform_wildcard, delete_file
 from ..snowflake import get_snowflake
 from ..errors import BadImage, QuotaExploded, BadUpload, FeatureDisabled
 
@@ -104,11 +104,12 @@ async def scan_webhook(app, user_id: int, filename: str,
         return resp
 
 
-async def scan_file(request, **kwargs):
+async def actual_scan_file(request, **kwargs):
     """Scan a file for viruses using clamdscan.
 
     Raises BadImage on any non-successful scan.
     """
+    print('actual scan file here')
     filebody = kwargs.get('filebody')
     filesize = kwargs.get('filesize')
     filename = kwargs.get('filename')
@@ -146,6 +147,75 @@ async def scan_file(request, **kwargs):
         await scan_webhook(app, user_id, filename, filesize, complete)
         raise BadImage('Image contains a virus.')
 
+    return True
+
+
+async def scan_background(request, corotask, **kwargs):
+    """Run an existing scanning task in the background."""
+    done, not_done = await asyncio.wait([corotask])
+    done = iter(done)
+    not_done = iter(not_done)
+
+    filename = kwargs.get('filename')
+
+    try:
+        task = next(done)
+
+        exc = task.exception()
+        if exc is not None and isinstance(exc, BadImage):
+            # pls delete image
+            file_rname = kwargs.get('file_rname')
+
+            fspath = await request.app.db.fetchval("""
+            SELECT fspath
+            FROM files
+            WHERE filename = $1
+            """, file_rname)
+
+            if not fspath:
+                log.warning(f'File {file_rname} was deleted when scan finished')
+
+            try:
+                os.remove(fspath)
+            except OSError:
+                log.warning(f'File path {fspath!r} was deleted')
+
+            await delete_file(request, file_rname, None, False)
+            log.info(f'Deleted file {file_rname}')
+
+        elif exc is not None:
+            log.exception('Error in background scan')
+        else:
+            log.info(f'Background scan for {filename} is OK')
+    except StopIteration:
+        log.exception('background scan task did not finish, how??')
+
+
+async def scan_file(request, **kwargs):
+    """Run a scan on a file."""
+    coro = actual_scan_file(request, **kwargs)
+    done, not_done = await asyncio.wait([coro], timeout=request.app.econfig.SCAN_WAIT_THRESHOLD)
+
+    done = iter(done)
+    not_done = iter(not_done)
+
+    try:
+        corotask = next(done)
+
+        # if its already done in 5 seconds
+        # and it is bad, please raise exc
+        exc = corotask.exception()
+        if exc is not None:
+            raise exc
+
+        log.info('scan file done')
+    except StopIteration:
+        corotask = next(not_done)
+
+        # schedule a wait on the scan
+        log.info(f'Scheduled background scan on {kwargs.get("filename")}')
+        request.app.loop.create_task(scan_background(request, corotask, **kwargs))
+
 
 async def clear_exif(image_bytes):
     """Clears exif data of given image.
@@ -176,6 +246,60 @@ async def clear_exif(image_bytes):
     image.save(result_bytes, format='JPEG')
     image.close()
     return result_bytes.getvalue()
+
+
+async def upload_checks(request, user_id, filetup, given_extension) -> tuple:
+    """Do some upload checks."""
+    filemime, filesize, filebody, in_filename, file_rname = filetup
+
+    if not request.app.econfig.UPLOADS_ENABLED:
+        raise FeatureDisabled('uploads are currently disabled')
+
+    # check mimetype
+    if filemime not in request.app.econfig.ACCEPTED_MIMES:
+        raise BadImage('bad image type')
+
+    used = await request.app.db.fetchval("""
+    SELECT SUM(file_size)
+    FROM files
+    WHERE uploader = $1
+    AND file_id > time_snowflake(now() - interval '7 days')
+    """, user_id)
+
+    byte_limit = await request.app.db.fetchval("""
+    SELECT blimit
+    FROM limits
+    WHERE user_id = $1
+    """, user_id)
+
+    if used and used > byte_limit:
+        cnv_limit = byte_limit / 1024 / 1024
+        raise QuotaExploded('You already blew your weekly'
+                            f' limit of {cnv_limit}MB')
+
+    if used and used + filesize > byte_limit:
+        cnv_limit = byte_limit / 1024 / 1024
+        raise QuotaExploded('This file blows the weekly limit of'
+                            f' {cnv_limit}MB')
+
+    # all good with limits
+    await scan_file(request,
+                    filebody=filebody, filename=in_filename,
+                    filesize=filesize, user_id=user_id, file_rname=file_rname)
+
+    extension = f".{filemime.split('/')[-1]}"
+
+    # Get all possible extensions
+    pot_extensions = mimetypes.guess_all_extensions(filemime)
+    # if there's any potentials, check if the extension supplied by user
+    # is in potentials, and if it is, use the extension by user
+    # if it is not, use the first potential extension
+    # and if there's no potentials, just use the last part of mimetype
+    if pot_extensions:
+        extension = (given_extension if given_extension in pot_extensions
+                     else pot_extensions[0])
+
+    return extension
 
 
 @bp.post('/api/upload')
@@ -218,56 +342,17 @@ async def upload_handler(request):
 
     filesize = len(filebody)
 
+    # generate a filename so we can identify later when removing it
+    # because of virus scanning.
+    file_rname = await gen_filename(request)
+
     # Skip checks for admins
     if do_checks:
-        if not request.app.econfig.UPLOADS_ENABLED:
-            raise FeatureDisabled('uploads are currently disabled')
+        extension = await upload_checks(request, user_id,
+                                        (filemime, filesize,
+                                         filebody, in_filename, file_rname),
+                                        given_extension)
 
-        # check mimetype
-        if filemime not in request.app.econfig.ACCEPTED_MIMES:
-            raise BadImage('bad image type')
-
-        used = await request.app.db.fetchval("""
-        SELECT SUM(file_size)
-        FROM files
-        WHERE uploader = $1
-        AND file_id > time_snowflake(now() - interval '7 days')
-        """, user_id)
-
-        byte_limit = await request.app.db.fetchval("""
-        SELECT blimit
-        FROM limits
-        WHERE user_id = $1
-        """, user_id)
-
-        if used and used > byte_limit:
-            cnv_limit = byte_limit / 1024 / 1024
-            raise QuotaExploded('You already blew your weekly'
-                                f' limit of {cnv_limit}MB')
-
-        if used and used + filesize > byte_limit:
-            cnv_limit = byte_limit / 1024 / 1024
-            raise QuotaExploded('This file blows the weekly limit of'
-                                f' {cnv_limit}MB')
-
-        # all good with limits
-        await scan_file(request,
-                        filebody=filebody, filename=in_filename,
-                        filesize=filesize, user_id=user_id)
-
-        extension = f".{filemime.split('/')[-1]}"
-
-        # Get all possible extensions
-        pot_extensions = mimetypes.guess_all_extensions(filemime)
-        # if there's any potentials, check if the extension supplied by user
-        # is in potentials, and if it is, use the extension by user
-        # if it is not, use the first potential extension
-        # and if there's no potentials, just use the last part of mimetype
-        if pot_extensions:
-            extension = (given_extension if given_extension in pot_extensions
-                         else pot_extensions[0])
-
-    file_rname = await gen_filename(request)
     file_id = get_snowflake()
     out_filename = file_rname + extension
 

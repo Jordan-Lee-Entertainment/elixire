@@ -33,6 +33,12 @@ TIMED_TOKEN_AGE = 259200
 # so it is not recommended on low-end machines.
 UPLOAD_SCAN = False
 
+# How many seconds to wait scanning before
+# switching that scan to the background? (can be int or float)
+#
+# See #35 for more details.
+SCAN_WAIT_THRESHOLD = 1
+
 # When UPLOAD_SCAN is true and
 # a file is detected as being malicious,
 # we will call this discord webhook
