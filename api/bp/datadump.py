@@ -30,7 +30,10 @@ async def open_zipdump(app, user_id, resume=False) -> zipfile.ZipFile:
     )
 
     if not resume:
-        return zipfile.ZipFile(zip_path, 'x'), user_name
+        # we use w instead of x because
+        # if the dump already exists we should
+        # just overwrite it.
+        return zipfile.ZipFile(zip_path, 'w'), user_name
 
     return zipfile.ZipFile(zip_path, 'a'), user_name
 
@@ -220,6 +223,9 @@ async def resume_dump(app, user_id: int):
     WHERE user_id = $1
     """, user_id)
 
+    log.info(f'Resuming for {user_id} (files_done: {row["files_done"]}, '
+             f'total_files: {row["total_files"]})')
+
     zipdump, user_name = await open_zipdump(app, user_id, True)
 
     try:
@@ -251,7 +257,6 @@ async def dump_worker(app):
     """)
 
     if user_id:
-        log.info('RESUMING')
         await resume_dump(app, user_id)
 
     # get from queue
@@ -276,7 +281,7 @@ async def dump_worker(app):
 
         # if no user is in the queue, the function
         # will stop.
-        await dump_worker(app)
+        return await dump_worker(app)
 
     log.info('dump worker stop')
     app.dump_worker = None
@@ -300,7 +305,7 @@ def start_worker(app):
 
 
 @bp.listener('after_server_start')
-async def start_dump_worker_ss(app, loop):
+async def start_dump_worker_ss(app, _loop):
     """Start the dump worker on application startup
     so we can resume if any is there to resume."""
     start_worker(app)
@@ -309,7 +314,25 @@ async def start_dump_worker_ss(app, loop):
 @bp.post('/api/dump/request')
 async def request_data_dump(request):
     """Request a data dump to be scheduled
-    at the earliest convenience of the system."""
+    at the earliest convenience of the system.
+
+    This works by having two states:
+     - a dump queue
+     - the dump state
+
+    Every user adds themselves to the dump queue with this route.
+    Only one user can be in the dump state at a time.
+
+    The dump worker queries the dump state at least once to know
+    when to resume a dump (in the case of application failure in the middle of a dump),
+    If any user is in there, it resumes the dump, check resume_dump().
+
+    After that, it checks the oldest person in the queue, if there is any,
+    it starts making the dump for that person, check do_dump().
+
+    After resume_dump or do_dump finish they call dispatch_dump() which sends
+    an email to the user containing the dump.
+    """
     if not request.app.econfig.DUMP_ENABLED:
         raise FeatureDisabled('Data dumps are disabled in this instance')
 
