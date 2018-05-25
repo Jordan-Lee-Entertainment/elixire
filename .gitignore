@@ -19,6 +19,7 @@ frontend/output/*
 
 # elixire file storage
 /images/
+/dumps/
 /thumbnails/
 
 # Byte-compiled / optimized / DLL files
