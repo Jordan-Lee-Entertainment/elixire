@@ -60,11 +60,7 @@ window.addEventListener("DOMContentLoaded", async function() {
     document.title = "Access Denied | Elixire";
   }
 
-  if (
-    window.location.hostname != "localhost" &&
-    ((!localStorage.getItem("gdpr-consent") && !window.client.profile) ||
-      (window.client.profile && window.client.profile.consented === null))
-  ) {
+  if (window.client.profile && window.client.profile.consented === null) {
     const gdprFuckJquery = document.getElementById("open-gdpr-modal");
     gdprFuckJquery.click();
     const acceptBtn = document.getElementById("gdpr-btn");
