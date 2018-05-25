@@ -5,7 +5,7 @@ import os
 import itsdangerous
 import aiohttp
 
-from .errors import FailedAuth, BadInput
+from .errors import FailedAuth, BadInput, NotFound
 
 VERSION = '2.0.0'
 ALPHABET = string.ascii_lowercase + string.digits
@@ -188,6 +188,38 @@ async def purge_cf(app, filename: str, ftype: int) -> int:
                               domain_detail['cf_zoneid'])
 
     return domain
+
+async def delete_file(request, file_name, user_id, set_delete=True):
+    domain_id = await purge_cf(request.app, file_name, FileNameType.FILE)
+
+    if set_delete:
+        exec_out = await request.app.db.execute("""
+        UPDATE files
+        SET deleted = true
+        WHERE uploader = $1
+        AND filename = $2
+        AND deleted = false
+        """, user_id, file_name)
+
+        if exec_out == "UPDATE 0":
+            raise NotFound('You have no files with this name.')
+    else:
+        if user_id:
+            await request.app.db.execute("""
+            DELETE FROM files
+            WHERE
+                filename = $1
+            AND uploader = $2
+            AND deleted = false
+            """, file_name, user_id)
+        else:
+            await request.app.db.execute("""
+            DELETE FROM files
+            WHERE filename = $1
+            AND deleted = false
+            """, file_name)
+
+    await request.app.storage.raw_invalidate(f'fspath:{domain_id}:{file_name}')
 
 
 async def check_bans(request, user_id: int):
