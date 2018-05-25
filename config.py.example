@@ -17,6 +17,10 @@ ENABLE_FRONTEND = True
 # Which folder to store uploaded images to?
 IMAGE_FOLDER = './images'
 
+# Folder to store data dumps.
+DUMP_ENABLED = True
+DUMP_FOLDER = './dumps'
+
 db = {
     'host': 'localhost',
     'user': 'postgres',
