@@ -1,5 +1,6 @@
 import logging
 import zipfile
+import json
 import os.path
 
 from sanic import Blueprint, response
@@ -10,54 +11,129 @@ from ..errors import BadInput, FeatureDisabled
 log = logging.getLogger(__name__)
 bp = Blueprint('datadump')
 
+def _dump_json(zipdump, filepath, obj):
+    objstr = json.dumps(obj, indent=4)
+    zipdump.writestr(filepath, objstr)
 
-async def do_dump(app, user_id: int):
-    """Make a data dump for the user."""
-    # insert user in current dump state
 
+async def open_zipdump(app, user_id, resume=False) -> zipfile.ZipFile:
+    """Open the zip file relating to your dump."""
     user_name = await app.db.fetchval("""
     SELECT username
     FROM users
     WHERE user_id = $1
     """, user_id)
 
-    row = await app.db.fetchrow("""
-    SELECT MIN(file_id), MAX(file_id), COUNT(*)
+    zip_path = os.path.join(
+        app.econfig.DUMP_FOLDER,
+        f'{user_id}_{user_name}.zip',
+    )
+
+    if not resume:
+        return zipfile.ZipFile(zip_path, 'x'), user_name
+
+    return zipfile.ZipFile(zip_path, 'a'), user_name
+
+
+async def dump_user_data(app, zipdump, user_id):
+    """Insert user information into the dump."""
+    udata = await app.db.fetchrow("""
+    SELECT user_id, username, active, password_hash, email, consented, admin, subdomain, domain
+    FROM users
+    WHERE user_id = $1
+    """, user_id)
+
+    _dump_json(zipdump, 'user_data.json', dict(udata))
+
+
+async def dump_user_bans(app, zipdump, user_id):
+    """Insert user bans, if any, into the dump."""
+    bans = await app.db.fetch("""
+    SELECT user_id, reason, end_timestamp
+    FROM bans
+    WHERE user_id = $1
+    """, user_id)
+
+    treated = []
+    for row in bans:
+        goodrow = {
+            'user_id': row['user_id'],
+            'reason': row['reason'],
+            'end_timestamp': row['end_timestamp'].isotimestamp(),
+        }
+
+        treated.append(goodrow)
+
+    _dump_json(zipdump, 'bans.json', treated)
+
+
+async def dump_user_limits(app, zipdump, user_id: int):
+    """Write the current limits for the user in the dump."""
+    limits = await app.db.fetchrow("""
+    SELECT user_id, blimit, shlimit
+    FROM limits
+    WHERE user_id = $1
+    """, user_id)
+
+    _dump_json(zipdump, 'limits.json', dict(limits))
+
+
+async def dump_user_files(app, zipdump, user_id):
+    """Dump all information about the user's files."""
+    all_files = await app.db.fetch("""
+    SELECT file_id, mimetype, filename, file_size, uploader, domain
     FROM files
     WHERE uploader = $1
     """, user_id)
 
-    print(row)
-    minid = row['min']
-    maxid = row['max']
-    total_files = row['count']
+    all_files_l = []
+    for row in all_files:
+        all_files_l.append(dict(row))
 
-    await app.db.execute("""
-    INSERT INTO current_dump_state (user_id, current_id, last_id, total_files, files_done)
-    VALUES ($1, $2, $3, $4, 0)
-    """, user_id, minid, maxid, total_files)
+    _dump_json(zipdump, 'files.json', all_files_l)
 
-    # start iterating over files and adding them to a dump
 
-    # first, create a dump
-    # zip file?
-    # yeah, zip files!
-    zip_path = os.path.join(app.econfig.DUMP_FOLDER, f'{user_id}_{user_name}.zip')
-    log.info(f'Path to zip: {zip_path}')
+async def dump_user_shortens(app, zipdump, user_id):
+    """Dump all information about the user's shortens."""
+    all_shortens = await app.db.fetch("""
+    SELECT shorten_id, filename, redirto, domain
+    FROM shortens
+    WHERE uploader = $1
+    """, user_id)
 
-    zipdump = zipfile.ZipFile(zip_path, 'x')
+    all_shortens_l = []
+    for row in all_shortens:
+        all_shortens_l.append(dict(row))
 
+    _dump_json(zipdump, 'shortens.json', all_shortens_l)
+
+
+async def dump_files(app, zipdump, user_id, minid, files_done, total_files):
+    """Dump files into the data dump zip."""
     current_id = minid
-    files_done = 0
     while True:
-        print('working on id', current_id)
-        print('file', files_done, 'out of', total_files, 'files')
+        if files_done % 100 == 0:
+            print('file', files_done, 'out of', total_files, 'files')
+
         if current_id is None:
             break
 
         # add current file to dump
-        filepath = f'./{current_id}.txt'.encode('utf-8')
-        zipdump.write(filepath, 'TEST')
+        fdata = await app.db.fetchrow("""
+        SELECT fspath, filename
+        FROM files
+        WHERE file_id = $1
+        """, current_id)
+
+        fspath = fdata['fspath']
+        filename = fdata['filename']
+        ext = os.path.splitext(fspath)[-1]
+
+        filepath = f'./files/{current_id}_{filename}{ext}'
+        try:
+            zipdump.write(fspath, filepath)
+        except FileNotFoundError:
+            log.warning(f'File not found: {current_id} {filename}')
 
         files_done += 1
 
@@ -76,31 +152,99 @@ async def do_dump(app, user_id: int):
         AND   file_id > $2
         """, user_id, current_id)
 
-    zipdump.close()
 
-    # TODO: add shortens
+async def dispatch_dump(app, user_id: int, user_name: str):
+    """Dispatch the data dump to a user."""
+    log.info(f'Dispatching dump for {user_id} {user_name!r}')
 
-    log.info(f'Dump for user {user_id} is done')
+    # remove from current state
     await app.db.execute("""
     DELETE FROM current_dump_state
     WHERE user_id = $1
     """, user_id)
 
+    # TODO: send email
+
+
+async def do_dump(app, user_id: int):
+    """Make a data dump for the user."""
+    # insert user in current dump state
+    row = await app.db.fetchrow("""
+    SELECT MIN(file_id), MAX(file_id), COUNT(*)
+    FROM files
+    WHERE uploader = $1
+    """, user_id)
+
+    minid = row['min']
+    total_files = row['count']
+
+    await app.db.execute("""
+    INSERT INTO current_dump_state (user_id, current_id, total_files, files_done)
+    VALUES ($1, $2, $3, 0)
+    """, user_id, minid, total_files)
+
+    zipdump, user_name = await open_zipdump(app, user_id)
+
+    try:
+        # those dumps just get stuff from DB
+        # and write them into JSON files insize the zip
+
+        # NOTE: they are not resumable operations
+        # TODO: Maybe copy those calls into resume_dump?
+        await dump_user_data(app, zipdump, user_id)
+        await dump_user_bans(app, zipdump, user_id)
+        await dump_user_limits(app, zipdump, user_id)
+        await dump_user_files(app, zipdump, user_id)
+        await dump_user_shortens(app, zipdump, user_id)
+
+        # this is the longest operation for a dump
+        # and because of that, it is resumable, so in the case
+        # of an application failure, the system should be able to
+        # know where it left off and continue writing to the zip file.
+        await dump_files(app, zipdump, user_id, minid, 0, total_files)
+
+        # Finally, dispatch the ZIP file via email to the user.
+        await dispatch_dump(app, user_id, user_name)
+    except Exception:
+        log.exception('Error on dumping')
+    finally:
+        zipdump.close()
+
 
 async def resume_dump(app, user_id: int):
     """Resume a data dump"""
     # check the current state
+    row = await app.db.fetchrow("""
+    SELECT current_id, files_done, total_files
+    FROM current_dump_state
+    WHERE user_id = $1
+    """, user_id)
 
-    # iterate over the last one
+    zipdump, user_name = await open_zipdump(app, user_id, True)
 
-    # dispatch to user
-    pass
+    try:
+        # We talked about this being the only resumable operation
+        # on do_dump()
+        await dump_files(app, zipdump, user_id, row['current_id'],
+                         row['files_done'], row['total_files'])
+
+        await dispatch_dump(app, user_id, user_name)
+    except Exception:
+        log.exception('error on dump files resume')
+    finally:
+        zipdump.close()
+
 
 
 async def dump_worker(app):
-    # fetch state, if there is, resume
+    """Main dump worker.
 
-    user_id = await app.db.fetchrow("""
+    Works dump resuming, manages the next user on the queue, etc.
+    """
+    log.info('dump worker start')
+
+    # fetch state, if there is, resume
+    user_id = await app.db.fetchval("""
     SELECT user_id
     FROM current_dump_state
     ORDER BY start_timestamp ASC
@@ -111,7 +255,6 @@ async def dump_worker(app):
         await resume_dump(app, user_id)
 
     # get from queue
-
     next_id = await app.db.fetchval("""
     SELECT user_id
     FROM dump_queue
@@ -119,26 +262,36 @@ async def dump_worker(app):
     """)
 
     if next_id:
-        log.info('MAKING DUMP')
         # remove from the queue
         await app.db.execute("""
         DELETE FROM dump_queue
         WHERE user_id = $1
         """, next_id)
+
         await do_dump(app, next_id)
+
+        # use recursion so that
+        # in the next call, we will fetch
+        # the next user in the queue
+
+        # if no user is in the queue, the function
+        # will stop.
+        await dump_worker(app)
 
     log.info('dump worker stop')
     app.dump_worker = None
-    
+
 
 async def dump_worker_wrapper(app):
+    """Wrap the dump_worker inside a try/except block for logging."""
     try:
         await dump_worker(app)
-    except:
+    except Exception:
         log.exception('error in dump worker task')
 
 
 def start_worker(app):
+    """Start the dump worker, but not start more than 1 of them."""
     if app.dump_worker:
         return
 
@@ -148,6 +301,8 @@ def start_worker(app):
 
 @bp.listener('after_server_start')
 async def start_dump_worker_ss(app, loop):
+    """Start the dump worker on application startup
+    so we can resume if any is there to resume."""
     start_worker(app)
 
 
@@ -160,6 +315,7 @@ async def request_data_dump(request):
 
     user_id = await token_check(request)
 
+    # check if user is already underway
     current_work = await request.app.db.fetchval("""
     SELECT start_timestamp
     FROM current_dump_state
@@ -169,6 +325,7 @@ async def request_data_dump(request):
     if current_work is not None:
         raise BadInput('Your data dump is currently being processed.')
 
+    # so that intellectual users don't queue themselves twice.
     in_queue = await request.app.db.fetchval("""
     SELECT request_timestamp
     FROM dump_queue
@@ -204,7 +361,7 @@ async def data_dump_user_status(request):
     """, user_id)
 
     if not row:
-        # TODO: show current state in queue, if any
+        # TODO: show current position in queue?
         raise BadInput('Your dump is not being processed right now.')
 
     return response.json({
@@ -216,7 +373,7 @@ async def data_dump_user_status(request):
     })
 
 
-@bp.get('/api/dump/global_status')
+@bp.get('/api/admin/dump_status')
 async def data_dump_global_status(request):
     """Only for admins: all stuff related to data dump state."""
     user_id = await token_check(request)

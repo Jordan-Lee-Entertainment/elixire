@@ -135,6 +135,14 @@ CREATE TABLE IF NOT EXISTS email_pwd_reset_tokens (
     PRIMARY KEY (hash, user_id)
 );
 
+-- email stuff for data dumps
+CREATE TABLE IF NOT EXISTS email_dump_tokens (
+    token text NOT NULL,
+    user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
+    expiral timestamp without time zone default now() + interval '6 hours',
+    PRIMARY KEY (token, user_id)
+);
+
 -- data dump state
 CREATE TABLE IF NOT EXISTS current_dump_state (
     -- identify the current dump
@@ -146,7 +154,6 @@ CREATE TABLE IF NOT EXISTS current_dump_state (
 
     -- current state of the dump
     current_id bigint REFERENCES files (file_id) ON DELETE CASCADE,
-    last_id bigint REFERENCES files (file_id) ON DELETE CASCADE,
 
     -- for percentages
     total_files bigint,
