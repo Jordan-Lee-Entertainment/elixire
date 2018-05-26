@@ -6,10 +6,14 @@
   "author": "Ave Ozkal <avezone@ave.zone>",
   "license": "MIT",
   "scripts": {
-    "test": "jest --runInBand --setupTestFrameworkScriptFile=./test/jestSetup.js",
-    "start": "webpack-dev-server --port 8081 --compress --watch --cache --open --mode development",
+    "test":
+      "jest --runInBand --setupTestFrameworkScriptFile=./test/jestSetup.js",
+    "start":
+      "webpack-dev-server --port 8081 --compress --watch --cache --open --mode development",
     "build:production": "NODE_ENV=production webpack --mode production",
-    "build:dev": "NODE_ENV=dev webpack --mode development"
+    "build:dev": "NODE_ENV=dev webpack --mode development",
+    "docs":
+      "jsdoc2md jsdoc2md --private --separators --files src/js/Client.js > docs/Client.md"
   },
   "private": true,
   "dependencies": {
@@ -42,6 +46,7 @@
     "jest": "22.3.0",
     "jest-cli": "^23.0.0-alpha.0",
     "jest-puppeteer-preset": "^2.0.1",
+    "jsdoc-to-markdown": "^4.0.1",
     "node-sass": "^4.7.2",
     "pug": "^2.0.0-rc.4",
     "pug-loader": "https://github.com/pugjs/pug-loader/tarball/master",
