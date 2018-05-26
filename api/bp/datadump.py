@@ -419,7 +419,7 @@ async def data_dump_user_status(request):
     user_id = await token_check(request)
 
     row = await request.app.db.fetchrow("""
-    SELECT user_id, start_timestamp, current_id, last_id, total_files, files_done
+    SELECT user_id, start_timestamp, current_id, total_files, files_done
     FROM current_dump_state
     WHERE user_id = $1
     """, user_id)
