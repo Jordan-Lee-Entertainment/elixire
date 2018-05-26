@@ -425,10 +425,27 @@ async def data_dump_user_status(request):
     """, user_id)
 
     if not row:
-        # TODO: show current position in queue?
-        raise BadInput('Your dump is not being processed right now.')
+        queue = await request.app.db.fetch("""
+        SELECT user_id
+        FROM dump_queue
+        ORDER BY request_timetamp ASC
+        """)
+
+        queue = [r['user_id'] for r in queue]
+
+        try:
+            pos = queue.index(user_id)
+            return response.json({
+                'state': 'in_queue',
+                'position': pos + 1,
+            })
+        except ValueError:
+            return response.json({
+                'state': 'not_in_queue'
+            })
 
     return response.json({
+        'state': 'processing',
         'start_timestamp': row['start_timestamp'].isotimestamp(),
         'current_id': str(row['current_id']),
         'total_files': row['total_files'],
