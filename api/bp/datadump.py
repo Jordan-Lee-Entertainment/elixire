@@ -428,7 +428,7 @@ async def data_dump_user_status(request):
         queue = await request.app.db.fetch("""
         SELECT user_id
         FROM dump_queue
-        ORDER BY request_timetamp ASC
+        ORDER BY request_timestamp ASC
         """)
 
         queue = [r['user_id'] for r in queue]
