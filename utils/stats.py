@@ -36,36 +36,32 @@ async def main():
     ncf_domain_count = len(all_ncf_domains)
 
     # Total non-deleted file count
-    all_nd_files = await db.fetch("""
-    SELECT *
+    nd_file_count = await db.fetchval("""
+    SELECT COUNT(*)
     FROM files
     WHERE deleted = false
     """)
-    nd_file_count = len(all_nd_files)
 
     # Total deleted file count
-    all_d_files = await db.fetch("""
-    SELECT *
+    d_file_count = await db.fetchval("""
+    SELECT COUNT(*)
     FROM files
     WHERE deleted = true
     """)
-    d_file_count = len(all_d_files)
 
     # Total non-deleted shortens
-    all_nd_shortens = await db.fetch("""
-    SELECT *
+    nd_shorten_count = await db.fetchval("""
+    SELECT COUNT(*)
     FROM shortens
     WHERE deleted = false
     """)
-    nd_shorten_count = len(all_nd_shortens)
 
     # Total deleted shortens
-    all_d_shortens = await db.fetch("""
-    SELECT *
+    d_shorten_count = await db.fetchval("""
+    SELECT COUNT(*)
     FROM shortens
     WHERE deleted = true
     """)
-    d_shorten_count = len(all_d_shortens)
 
     # Total non-deleted file size
     total_nd_file_size = await db.fetchval("""
@@ -82,22 +78,20 @@ async def main():
     """)
 
     # Total non-deleted file uploads in last week
-    total_nd_file_count_week = await db.fetch("""
-    SELECT *
+    nd_file_count_week = await db.fetchval("""
+    SELECT COUNT(*)
     FROM files
     WHERE file_id > time_snowflake(now() - interval '7 days')
     AND deleted = false
     """)
-    nd_file_count_week = len(total_nd_file_count_week)
 
     # Total deleted file uploads in last week
-    total_d_file_count_week = await db.fetch("""
-    SELECT *
+    d_file_count_week = await db.fetchval("""
+    SELECT COUNT(*)
     FROM files
     WHERE file_id > time_snowflake(now() - interval '7 days')
     AND deleted = true
     """)
-    d_file_count_week = len(total_d_file_count_week)
 
     # Total size of non-deleted file uploads in last week
     total_nd_file_size_week = await db.fetchval("""
@@ -116,38 +110,41 @@ async def main():
     """)
 
     # Total non-deleted shortens in last week
-    total_nd_shorten_count_week = await db.fetch("""
-    SELECT *
+    nd_shorten_count_week = await db.fetchval("""
+    SELECT COUNT(*)
     FROM shortens
     WHERE shorten_id > time_snowflake(now() - interval '7 days')
     AND deleted = false
     """)
-    nd_shorten_count_week = len(total_nd_shorten_count_week)
 
     # Total deleted shortens in last week
-    total_d_shorten_count_week = await db.fetch("""
-    SELECT *
+    d_shorten_count_week = await db.fetchval("""
+    SELECT COUNT(*)
     FROM shortens
     WHERE shorten_id > time_snowflake(now() - interval '7 days')
     AND deleted = true
     """)
-    d_shorten_count_week = len(total_d_shorten_count_week)
 
     # Total active user count
-    total_active_users = await db.fetch("""
-    SELECT *
+    total_active_user_count = await db.fetchval("""
+    SELECT COUNT(*)
     FROM users
     WHERE active = true
     """)
-    total_active_user_count = len(total_active_users)
+
+    # Users who are active and consented
+    total_consent_user_count = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM users
+    WHERE active = true AND consented = true
+    """)
 
     # Total inactive user count
-    total_inactive_users = await db.fetch("""
-    SELECT *
+    total_inactive_user_count = await db.fetchval("""
+    SELECT COUNT(*)
     FROM users
     WHERE active = false
     """)
-    total_inactive_user_count = len(total_inactive_users)
 
     # Biggest file
     biggest_file = await db.fetchrow("""
@@ -168,6 +165,8 @@ async def main():
     print(f"""Users
 =====
 Total active user count: {total_active_user_count}
+Total active consented user count: {total_consent_user_count} [public this]
+
 Total inactive user count: {total_inactive_user_count}
 
 Domains
