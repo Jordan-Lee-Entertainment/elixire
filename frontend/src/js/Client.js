@@ -47,7 +47,7 @@ class Client {
   /**
    * Files uploaded by the user
    * @typedef Files
-   * @type {Object.<Shortcode, File}
+   * @type {Object.<Shortcode, File>}
    */
 
   /**
@@ -70,7 +70,7 @@ class Client {
   /**
    * Shortened URLs created by the user
    * @typedef Shortens
-   * @type {Object.<Shortcode, Shorten}
+   * @type {Object.<Shortcode, Shorten>}
    */
 
   /**
