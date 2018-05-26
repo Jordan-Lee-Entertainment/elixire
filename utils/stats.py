@@ -1,8 +1,8 @@
 #!/usr/bin/env python3.6
-import sys
+import os
 import asyncio
 import asyncpg
-import os
+
 from decimal import *
 
 from common import open_db, close_db
@@ -20,20 +20,18 @@ async def main():
     db, _redis = await open_db()
 
     # Total domain with cf enabled
-    all_cf_domains = await db.fetch("""
-    SELECT *
+    cf_domain_count = await db.fetchval("""
+    SELECT COUNT(*)
     FROM domains
     WHERE cf_enabled = true
     """)
-    cf_domain_count = len(all_cf_domains)
 
     # Total domain with cf disabled
-    all_ncf_domains = await db.fetch("""
+    ncf_domain_count = await db.fetchval("""
     SELECT *
     FROM domains
     WHERE cf_enabled = false
     """)
-    ncf_domain_count = len(all_ncf_domains)
 
     # Total non-deleted file count
     nd_file_count = await db.fetchval("""
