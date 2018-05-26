@@ -56,3 +56,26 @@
 .needs-space {
   margin-left: 0.5em;
 }
+
+.none,
+.requested,
+.processing {
+  display: none;
+}
+.state-processing .processing {
+  display: block;
+}
+.state-none .none {
+  display: block;
+}
+.state-requested .requested {
+  display: block;
+}
+
+#datadump {
+  padding: 3em 1em;
+  margin: 2.5em;
+  text-align: center;
+  background-color: #6c757d36;
+  border-radius: 4px;
+}

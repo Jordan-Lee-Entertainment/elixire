@@ -469,6 +469,46 @@ class Client {
   }
 
   /**
+   * @typedef DataDumpState
+   * @type {Object}
+   * @property {String} state - The basic state the data dump is in, either in_queue not_in_queue or processing
+   * @property {Number} [files_done] - The amount of files done processing
+   * @property {Number} [total_files] - The total amount of files that need processing
+   * @property {Number} [position] - The position in the queue
+   */
+
+  /**
+   * Gets status of a data dump (if applicable)
+   * @returns {Promise<DataDumpState>} The current state of the user's data dump
+   */
+  async dumpStatus() {
+    if (!this.token) throw new Error("BAD_AUTH");
+    try {
+      return await this.ratelimitedRequest("get", "/dump/status").then(
+        res => res.body
+      );
+    } catch (err) {
+      throw this.handleErr(err);
+    }
+  }
+
+  /**
+   * Requests a data dump of the account to be added to the queue
+   * @returns {Promise<Boolean>} True if successful else fules
+   * @api public
+   */
+  async requestDump() {
+    if (!this.token) throw new Error("BAD_AUTH");
+    try {
+      return await this.ratelimitedRequest("post", "/dump/request").then(
+        r => r.body.success
+      );
+    } catch (err) {
+      throw this.handleErr(err);
+    }
+  }
+
+  /**
    * Used internally to determine what type of error to throw
    * @params {Error} err - The error encountered while sending the request
    * @returns {Error} The error to be thrown

@@ -216,4 +216,28 @@ window.addEventListener("DOMContentLoaded", async function() {
     ev.stopPropagation();
     return false;
   });
+
+  const queuePosition = document.getElementById("queue-position");
+  const dumpWrap = document.getElementById("datadump");
+  const fileNum = document.getElementById("file-num");
+  const fileMax = document.getElementById("file-max");
+  const dumpBtn = document.getElementById("request-data");
+  dumpBtn.addEventListener("click", async function() {
+    await client.requestDump();
+    await renderDataDump();
+  });
+  async function renderDataDump() {
+    const dumpStatus = await client.dumpStatus();
+    if (dumpStatus.state == "not_in_queue") {
+      dumpWrap.classList = "state-none";
+    } else if (dumpStatus.state == "in_queue") {
+      dumpWrap.classList = "state-requested";
+      queuePosition.innerText = ordinal(dumpStatus.position);
+    } else if (dumpStatus.state == "processing") {
+      dumpWrap.classList = "state-processing";
+      fileNum.innerText = dumpStatus.files_done;
+      fileMax.innerText = dumpStatus.total_files;
+    }
+  }
+  await renderDataDump();
 });

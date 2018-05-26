@@ -51,7 +51,24 @@ block content
     button(type="button", data-toggle="modal", data-target="#delete-modal").btn.btn-danger.needs-space#delete-modal-btn Delete Account
     hr
     button(type="button", data-toggle="modal", data-target="#gdpr-modal").btn.btn-primary Change Privacy
-
+  div#datadump.state-none
+    div.dump-content.none
+      h3 Request a Dump of Your Data
+      p Use the button below to request a dump of your data, note that once you've requested a data dump it cannot be stopped and that you can only request 3 dumps every 6 hours. When the dump is complete, you'll have a link emailed to you to download it.
+      button.btn.btn-primary#request-data Request Data
+    div.dump-content.requested
+      h3 Data Dump Status
+      p
+        | You've already requested a data dump, please wait you are currently 
+        b#queue-position 1st
+        |  in the queue to get processed!
+    div.dump-content.processing
+      h3 Data Dump Status
+      p
+        | Your data is being processed right now, currently on file 
+        b#file-num 1
+        |  of 
+        b#file-max 1
 
   div(tabindex="-1", role="dialog").modal.fade#password-modal
     div(role="document").modal-dialog
@@ -74,7 +91,6 @@ block content
         div.modal-footer
           button(type="button", data-dismiss="modal").btn.btn-link Cancel
           button(type="button").btn.btn-primary#generate-token Generate
-	  
 
 
   div(tabindex="-1", role="dialog").modal.fade#delete-modal
