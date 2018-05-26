@@ -430,8 +430,7 @@ async def data_dump_user_status(request):
 
     return response.json({
         'start_timestamp': row['start_timestamp'].isotimestamp(),
-        'current_id': row['current_id'],
-        'last_id': row['last_id'],
+        'current_id': str(row['current_id']),
         'total_files': row['total_files'],
         'files_done': row['files_done']
     })
@@ -444,10 +443,12 @@ async def data_dump_global_status(request):
     await check_admin(request, user_id, True)
 
     queue = await request.app.db.fetch("""
-    SELECT user_id FROM dump_queue
+    SELECT user_id
+    FROM dump_queue
+    ORDER BY request_timestamp ASC
     """)
 
-    queue = [el['user_id'] for el in queue]
+    queue = [str(el['user_id']) for el in queue]
 
     current = await request.app.db.fetchrow("""
     SELECT user_id, total_files, files_done
