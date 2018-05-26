@@ -264,8 +264,7 @@ async def resume_dump(app, user_id: int):
     WHERE user_id = $1
     """, user_id)
 
-    log.info(f'Resuming for {user_id} (files_done: {row["files_done"]}, '
-             f'total_files: {row["total_files"]})')
+    log.info(f'Resuming for {user_id} files_done: {row["files_done"]}')
 
     zipdump, user_name = await open_zipdump(app, user_id, True)
 
