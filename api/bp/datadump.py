@@ -64,7 +64,7 @@ async def dump_user_bans(app, zipdump, user_id):
         goodrow = {
             'user_id': row['user_id'],
             'reason': row['reason'],
-            'end_timestamp': row['end_timestamp'].isotimestamp(),
+            'end_timestamp': row['end_timestamp'].isoformat(),
         }
 
         treated.append(goodrow)
@@ -446,7 +446,7 @@ async def data_dump_user_status(request):
 
     return response.json({
         'state': 'processing',
-        'start_timestamp': row['start_timestamp'].isotimestamp(),
+        'start_timestamp': row['start_timestamp'].isoformat(),
         'current_id': str(row['current_id']),
         'total_files': row['total_files'],
         'files_done': row['files_done']
