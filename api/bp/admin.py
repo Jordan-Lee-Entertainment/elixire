@@ -32,7 +32,7 @@ async def list_users_handler(request, page: int):
     await check_admin(request, user_id, True)
 
     data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain
+    SELECT user_id, username, active, admin, domain, subdomain
     FROM users
     LIMIT 20
     OFFSET ($1 * 20)
@@ -52,7 +52,7 @@ async def inactive_users_handler(request, page: int):
     await check_admin(request, user_id, True)
 
     data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain
+    SELECT user_id, username, active, admin, domain, subdomain
     FROM users
     WHERE active=false
     LIMIT 20
@@ -74,7 +74,7 @@ async def get_user_handler(request, user_id: int):
     await check_admin(request, requester_id, True)
 
     udata = await request.app.db.fetchrow("""
-    SELECT user_id, username, active, admin, domain
+    SELECT user_id, username, active, admin, domain, subdomain
     FROM users
     WHERE user_id=$1
     """, user_id)
