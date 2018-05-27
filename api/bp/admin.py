@@ -85,7 +85,7 @@ async def get_user_handler(request, user_id: int):
     dudata = dict(udata)
     dudata['user_id'] = str(dudata['user_id'])
 
-    return response.json(dict(udata))
+    return response.json(dudata)
 
 
 @bp.post('/api/admin/activate/<user_id:int>')
