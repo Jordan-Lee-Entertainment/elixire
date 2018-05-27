@@ -31,7 +31,7 @@ app = Sanic()
 app.econfig = config
 
 # enable cors on api, images and shortens
-CORS(app, resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"])
+CORS(app, resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"], automatic_options=True)
 
 # load blueprints
 app.blueprint(api.bp.auth.bp)
