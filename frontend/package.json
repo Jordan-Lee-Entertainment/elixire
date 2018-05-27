@@ -14,7 +14,7 @@
   },
   "private": true,
   "dependencies": {
-    "bootstrap": "4.1.1",
+    "bootstrap": "^4.1.1",
     "clipboard": "^2.0.1",
     "file-size": "^1.0.0",
     "highlightjs": "^9.10.0",
@@ -27,7 +27,7 @@
     "@babel/core": "^7.0.0-beta.49",
     "@babel/plugin-syntax-dynamic-import": "^7.0.0-beta.49",
     "@babel/preset-env": "^7.0.0-beta.49",
-    "babel-loader": "8.0.0-beta.0",
+    "babel-loader": "^8.0.0-beta.0",
     "babel-minify-webpack-plugin": "^0.3.0",
     "babel-polyfill": "^6.26.0",
     "clean-webpack-plugin": "^0.1.18",
@@ -37,7 +37,7 @@
     "file-loader": "^1.1.6",
     "html-webpack-plugin": "^3.2.0",
     "html-webpack-template-pug": "^1.1.1",
-    "jest": "23.0.0",
+    "jest": "^23.0.0",
     "jest-cli": "^23.0.0",
     "jest-puppeteer-preset": "^3.0.1",
     "jsdoc-to-markdown": "^4.0.1",
@@ -47,7 +47,7 @@
     "puppeteer": "^1.4.0",
     "sass-loader": "^7.0.1",
     "style-loader": "^0.21.0",
-    "webpack": "4.9.1",
+    "webpack": "^4.9.1",
     "webpack-cli": "^2.1.4",
     "webpack-dev-server": "^3.1.4"
   }
