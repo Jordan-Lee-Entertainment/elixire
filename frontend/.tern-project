@@ -1,8 +1,0 @@
-{
-  "plugins": {
-    "es_modules": {},
-    "webpack": {},
-    "doc_comment": {},
-    "node": {}
-  }
-}
