@@ -60,8 +60,8 @@ async def inactive_users_handler(request, page: int):
 @bp.get('/api/admin/users/<user_id:int>')
 async def get_user_handler(request, user_id: int):
     """Get a user's details in the service."""
-    user_id = await token_check(request)
-    await check_admin(request, user_id, True)
+    requester_id = await token_check(request)
+    await check_admin(request, requester_id, True)
 
     udata = await request.app.db.fetchrow("""
     SELECT user_id, username, active, admin, domain
