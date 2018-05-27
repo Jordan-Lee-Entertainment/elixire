@@ -43,7 +43,7 @@
     "jsdoc-to-markdown": "^4.0.1",
     "node-sass": "^4.9.0",
     "pug": "^2.0.0-rc.4",
-    "pug-loader": "https://github.com/pugjs/pug-loader/tarball/master",
+    "pug-loader": "^2.4.0",
     "puppeteer": "^1.4.0",
     "sass-loader": "^7.0.1",
     "style-loader": "^0.21.0",
