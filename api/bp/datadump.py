@@ -115,12 +115,16 @@ async def dump_user_shortens(app, zipdump, user_id):
 
 async def dump_files(app, zipdump, user_id, minid, files_done):
     """Dump files into the data dump zip."""
+
+    # start from minimum id
     current_id = minid
+
     while True:
         if files_done % 100 == 0:
             log.info(f'Worked {files_done} files for user {user_id}')
 
         if current_id is None:
+            log.info(f'Finished file takeout for {user_id}')
             break
 
         # add current file to dump
@@ -155,6 +159,9 @@ async def dump_files(app, zipdump, user_id, minid, files_done):
         FROM files
         WHERE uploader = $1
         AND   file_id > $2
+
+        ORDER BY file_id ASC
+        LIMIT 1
         """, user_id, current_id)
 
 
@@ -214,13 +221,18 @@ async def do_dump(app, user_id: int):
     """Make a data dump for the user."""
     # insert user in current dump state
     row = await app.db.fetchrow("""
-    SELECT MIN(file_id), MAX(file_id), COUNT(*)
+    SELECT MIN(file_id), COUNT(*)
     FROM files
     WHERE uploader = $1
     """, user_id)
 
     minid = row['min']
     total_files = row['count']
+
+    log.info(f'==TAKEOUT==\n'
+             f'uid {user_id}\n'
+             f'min file id {minid}\n'
+             f'total files {total_files}')
 
     await app.db.execute("""
     INSERT INTO current_dump_state (user_id, current_id, total_files, files_done)
