@@ -62,7 +62,7 @@ async def test_login_baduser(test_cli):
 async def test_no_token(test_cli):
     """Test no token request."""
     response = await test_cli.get('/api/profile', headers={})
-    assert response.status == 400
+    assert response.status == 403
 
 
 async def test_invalid_token(test_cli):
