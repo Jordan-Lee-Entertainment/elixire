@@ -6,6 +6,8 @@ const EMAIL_RE = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@
 
 window.addEventListener("DOMContentLoaded", async function() {
   const username = document.getElementById("profile-username");
+  const userId = document.getElementById("user-id");
+  userId.innerText = `${client.token.split(".")[0]}`;
   await window.profilePromise;
   username.innerText = window.client.profile.username;
   if (window.client.profile.admin) {
