@@ -74,7 +74,7 @@ async def get_user_handler(request, user_id: int):
     await check_admin(request, requester_id, True)
 
     udata = await request.app.db.fetchrow("""
-    SELECT user_id, username, active, admin, domain, subdomain
+    SELECT user_id, username, active, admin, domain, subdomain, consented, email
     FROM users
     WHERE user_id=$1
     """, user_id)
