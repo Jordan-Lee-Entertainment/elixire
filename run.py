@@ -19,7 +19,7 @@ import api.bp.admin
 import api.bp.register
 import api.bp.datadump
 
-from api.errors import APIError, Ratelimited, Banned, BadInput, FailedAuth
+from api.errors import APIError, Ratelimited, Banned, FailedAuth
 from api.common_auth import token_check
 from api.common import ban_webhook, check_bans, get_ip_addr, ip_ban_webhook
 from api.ratelimit import RatelimitManager
@@ -240,7 +240,7 @@ async def global_rl(request):
 
         # check if payload makes sense
         if not isinstance(request.json, dict):
-            raise BadInput('Current payload is not a dict')
+            raise FailedAuth('Request is not identifable. No Authorization header?')
 
         user_name = request.json.get('user')
 
