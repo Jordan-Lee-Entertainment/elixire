@@ -328,7 +328,10 @@ async def setup_db(rapp, loop):
         rapp.sp_rtl[key] = RatelimitManager(app, rtl)
 
     rapp.storage = Storage(app)
+
+    # Tasks for datadump API
     rapp.dump_worker = None
+    rapp.janitor_task = None
 
 
 @app.listener('after_server_stop')
