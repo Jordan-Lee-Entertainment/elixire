@@ -1,6 +1,8 @@
 [submodule "frontend"]
 	path = frontend
 	url = git@gitlab.com:elixire/frontend.git
+	branch = master
 [submodule "admin-panel"]
 	path = admin-panel
 	url = git@gitlab.com:elixire/admin-panel.git
+	branch = master
