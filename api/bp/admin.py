@@ -6,33 +6,30 @@ from sanic import Blueprint, response
 
 from ..common_auth import token_check, check_admin
 from ..errors import NotFound, BadInput
+from ..decorators import admin_route
 
 
 bp = Blueprint('admin')
 
 
 @bp.get('/api/admin/test')
-async def test_admin(request):
+@admin_route
+async def test_admin(request, admin_id):
     """Get a json payload for admin users.
 
     This is just a test route.
     """
-    user_id = await token_check(request)
-    await check_admin(request, user_id, True)
-
     return response.json({
         'admin': True
     })
 
 
 @bp.get('/api/admin/listusers/<page:int>')
-async def list_users_handler(request, page: int):
+@admin_route
+async def list_users_handler(request, admin_id, page: int):
     """List users in the service"""
-    user_id = await token_check(request)
-    await check_admin(request, user_id, True)
-
     data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain, subdomain
+    SELECT user_id, username, active, admin, domain, subdomain, email
     FROM users
     LIMIT 20
     OFFSET ($1 * 20)
@@ -47,12 +44,10 @@ async def list_users_handler(request, page: int):
 
 
 @bp.get('/api/admin/list_inactive/<page:int>')
-async def inactive_users_handler(request, page: int):
-    user_id = await token_check(request)
-    await check_admin(request, user_id, True)
-
+@admin_route
+async def inactive_users_handler(request, admin_id, page: int):
     data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain, subdomain
+    SELECT user_id, username, active, admin, domain, subdomain, email
     FROM users
     WHERE active=false
     LIMIT 20
@@ -68,11 +63,9 @@ async def inactive_users_handler(request, page: int):
 
 
 @bp.get('/api/admin/users/<user_id:int>')
-async def get_user_handler(request, user_id: int):
+@admin_route
+async def get_user_handler(request, admin_id, user_id: int):
     """Get a user's details in the service."""
-    requester_id = await token_check(request)
-    await check_admin(request, requester_id, True)
-
     udata = await request.app.db.fetchrow("""
     SELECT user_id, username, active, admin, domain, subdomain, consented, email
     FROM users
@@ -89,7 +82,8 @@ async def get_user_handler(request, user_id: int):
 
 
 @bp.post('/api/admin/activate/<user_id:int>')
-async def activate_user(request, user_id: int):
+@admin_route
+async def activate_user(request, admin_id, user_id: int):
     """Activate one user, given its ID."""
     caller_id = await token_check(request)
     await check_admin(request, caller_id, True)
@@ -112,11 +106,9 @@ async def activate_user(request, user_id: int):
 
 
 @bp.post('/api/admin/deactivate/<user_id:int>')
-async def deactivate_user(request, user_id: int):
+@admin_route
+async def deactivate_user(request, admin_id: int, user_id: int):
     """Deactivate one user, given its ID."""
-    caller_id = await token_check(request)
-    await check_admin(request, caller_id, True)
-
     result = await request.app.db.execute("""
     UPDATE users
     SET active = false
