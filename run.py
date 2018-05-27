@@ -363,6 +363,9 @@ def main():
     # app.static('/i', './images')
 
     if config.ENABLE_FRONTEND:
+        app.static('/admin', './admin-panel/dist')
+        app.static('/admin', './admin-panel/dist/index.html')
+
         app.static('/', './frontend/output')
         app.static('/', './frontend/output/index.html')
     else:
