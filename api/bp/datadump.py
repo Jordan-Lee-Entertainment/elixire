@@ -1,6 +1,13 @@
-import logging
-import zipfile
+"""
+elixire - datadump API
+"""
+
 import json
+import time
+import logging
+import asyncio
+import zipfile
+import pathlib
 import os.path
 
 from sanic import Blueprint, response
@@ -356,11 +363,56 @@ def start_worker(app):
     app.dump_worker = app.loop.create_task(dump_worker_wrapper(app))
 
 
+async def dump_janitor(app):
+    """Main data dump janitor task.
+
+    This checks the dump folder every DUMP_JANITOR_PERIOD amount
+    of seconds.
+
+    If there is a file that is more than 6 hours old, it gets deleted.
+    """
+    dumps = pathlib.Path(app.econfig.DUMP_FOLDER)
+    while True:
+        # iterate over all ((ZIP)) files inside the dump folder
+        for fpath in dumps.glob('*.zip'):
+            fstat = fpath.stat()
+            now = time.time()
+
+            # if the current time - the last time of modification
+            # is more than 6 hours, we delete.
+            file_life = now - fstat.st_mtime
+            if file_life > 21600:
+                log.info(f'janitor: cleaning {fpath} since it is more than 6h '
+                         f'(life: {file_life}s)')
+                fpath.unlink()
+            else:
+                log.info(f'Ignoring {fpath}, life {file_life}s < 21600')
+
+        await asyncio.sleep(app.econfig.DUMP_JANITOR_PERIOD)
+
+
+async def dump_janitor_wrapper(app):
+    """Spawn a janitor task inside a try/except."""
+    try:
+        await dump_janitor(app)
+    except Exception:
+        log.exception('error in dump janitor task')
+
+
+def start_janitor(app):
+    """Start dump janitor."""
+    app.janitor_task = app.loop.create_task(dump_janitor(app))
+
+
 @bp.listener('after_server_start')
 async def start_dump_worker_ss(app, _loop):
     """Start the dump worker on application startup
     so we can resume if any is there to resume."""
-    start_worker(app)
+    if app.econfig.DUMP_ENABLED:
+        start_worker(app)
+        start_janitor(app)
+    else:
+        log.info('data dumps are disabled!')
 
 
 @bp.post('/api/dump/request')

@@ -20,6 +20,7 @@ IMAGE_FOLDER = './images'
 # Folder to store data dumps.
 DUMP_ENABLED = True
 DUMP_FOLDER = './dumps'
+DUMP_JANITOR_PERIOD = 600
 
 db = {
     'host': 'localhost',
