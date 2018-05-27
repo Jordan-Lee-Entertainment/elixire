@@ -38,7 +38,12 @@ async def list_users_handler(request, page: int):
     OFFSET ($1 * 20)
     """, page)
 
-    return response.json(list(map(dict, data)))
+    def _cnv(row):
+        drow = dict(row)
+        drow['user_id'] = str(row['user_id'])
+        return drow
+
+    return response.json(list(map(_cnv, data)))
 
 
 @bp.get('/api/admin/list_inactive/<page:int>')
@@ -54,7 +59,12 @@ async def inactive_users_handler(request, page: int):
     OFFSET ($1 * 20)
     """, page)
 
-    return response.json(list(map(dict, data)))
+    def _cnv(row):
+        drow = dict(row)
+        drow['user_id'] = str(row['user_id'])
+        return drow
+
+    return response.json(list(map(_cnv, data)))
 
 
 @bp.get('/api/admin/users/<user_id:int>')
@@ -71,6 +81,9 @@ async def get_user_handler(request, user_id: int):
 
     if not udata:
         raise NotFound('User not found')
+
+    dudata = dict(udata)
+    dudata['user_id'] = str(dudata['user_id'])
 
     return response.json(dict(udata))
 
