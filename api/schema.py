@@ -91,3 +91,8 @@ PASSWORD_RESET_CONFIRM_SCHEMA = {
     'token': {'type': 'string', 'required': True},
     'new_password': {'type': 'password', 'required': True},
 }
+
+ADMIN_MODIFY_FILE = {
+    'domain_id': {'type': 'integer', 'required': False},
+    'shortname': {'type': 'string', 'required': False},
+}
