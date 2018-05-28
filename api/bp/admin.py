@@ -239,3 +239,41 @@ async def modify_file(request, admin_id, file_id):
 async def modify_shorten(request, admin_id, shorten_id):
     """Modify file information."""
     return await handle_modify('shorten', request, shorten_id)
+
+
+@bp.get('/api/admin/domains/<domain_id:int>')
+@admin_route
+async def get_domain_stats(request, admin_id, domain_id):
+    """Get information about a domain."""
+    raw_info = await request.app.db.fetchrow("""
+    SELECT domain, official, admin_only, cf_enabled
+    FROM domains
+    WHERE domain_id = $1
+    """, domain_id)
+
+    dinfo = dict(raw_info)
+
+    stats = {}
+
+    stats['users'] = await request.app.db.fetchval("""
+    SELECT COUNT(*)
+    FROM users
+    WHERE domain = $1
+    """, domain_id)
+
+    stats['files'] = await request.app.db.fetchval("""
+    SELECT COUNT(*)
+    FROM files
+    WHERE domain = $1
+    """, domain_id)
+
+    stats['shortens'] = await request.app.db.fetchval("""
+    SELECT COUNT(*)
+    FROM files
+    WHERE domain = $1
+    """, domain_id)
+
+    return response.json({
+        'info': dinfo,
+        'stats': stats,
+    })
