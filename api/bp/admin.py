@@ -269,7 +269,7 @@ async def get_domain_stats(request, admin_id, domain_id):
 
     stats['shortens'] = await request.app.db.fetchval("""
     SELECT COUNT(*)
-    FROM files
+    FROM shortens
     WHERE domain = $1
     """, domain_id)
 
