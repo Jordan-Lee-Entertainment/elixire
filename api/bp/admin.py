@@ -9,7 +9,7 @@ from sanic import Blueprint, response
 from ..common_auth import token_check, check_admin
 from ..errors import NotFound, BadInput
 from ..decorators import admin_route
-from ..schema import validate, ADMIN_MODIFY_FILE
+from ..schema import validate, ADMIN_MODIFY_FILE, ADMIN_MODIFY_USER
 
 
 log = logging.getLogger(__name__)
@@ -302,3 +302,51 @@ async def get_domain_stats(request, admin_id, domain_id):
         'stats': stats,
         'public_stats': public_stats,
     })
+
+@bp.patch('/api/admin/user/<user_id:int>')
+@admin_route
+async def modify_user(request, admin_id, user_id):
+    """Modify a user's information."""
+    payload = validate(request.json, ADMIN_MODIFY_USER)
+
+    new_admin = payload.get('admin')
+
+    # limit is in bytes
+    new_limit_upload = payload.get('upload_limit')
+
+    # integer
+    new_limit_shorten = payload.get('shorten_limit')
+
+    updated = []
+
+    if new_admin is not None:
+        # set admin
+        await request.app.db.execute("""
+        UPDATE users
+        SET admin = $2
+        WHERE user_id = $1
+        """, user_id, new_admin)
+
+        updated.append('admin')
+
+    if new_limit_upload is not None:
+        # set new upload limit
+        await request.app.db.execute("""
+        UPDATE limits
+        SET blimit = $1
+        WHERE user_id = $2
+        """, new_limit_upload, user_id)
+
+        updated.append('upload_limit')
+
+    if new_limit_shorten is not None:
+        # set new shorten limit
+        await request.app.db.execute("""
+        UPDATE limits
+        SET shlimit = $1
+        WHERE user_id = $2
+        """, new_limit_shorten, user_id)
+
+        updated.append('shorten_limit')
+
+    return response.json(updated)
