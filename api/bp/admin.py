@@ -273,7 +273,32 @@ async def get_domain_stats(request, admin_id, domain_id):
     WHERE domain = $1
     """, domain_id)
 
+    public_stats = {}
+
+    public_stats['users'] = await request.app.db.fetchval("""
+    SELECT COUNT(*)
+    FROM users
+    WHERE domain = $1 AND consented = true
+    """, domain_id)
+
+    public_stats['files'] = await request.app.db.fetchval("""
+    SELECT COUNT(*)
+    FROM files
+    JOIN users
+      ON users.user_id = files.uploader
+    WHERE files.domain = $1 AND users.consented = true
+    """, domain_id)
+
+    public_stats['shortens'] = await request.app.db.fetchval("""
+    SELECT COUNT(*)
+    FROM shortens
+    JOIN users
+      ON users.user_id = shortens.uploader
+    WHERE shortens.domain = $1 AND users.consented = true
+    """, domain_id)
+
     return response.json({
         'info': dinfo,
         'stats': stats,
+        'public_stats': public_stats,
     })
