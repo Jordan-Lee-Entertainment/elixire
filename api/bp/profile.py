@@ -97,7 +97,7 @@ async def change_profile(request):
 
     password = payload.get('password')
     new_pwd = payload.get('new_password')
-    new_username = payload.get('user')
+    new_username = payload.get('username')
     new_domain = payload.get('domain')
     new_subdomain = payload.get('subdomain')
     new_email = payload.get('email')
