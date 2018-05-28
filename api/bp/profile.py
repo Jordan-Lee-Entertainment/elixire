@@ -1,5 +1,7 @@
 import logging
 
+import asyncpg
+
 from sanic import Blueprint
 from sanic import response
 
@@ -7,7 +9,8 @@ from ..errors import FailedAuth, FeatureDisabled, BadInput
 from ..common_auth import token_check, password_check, pwd_hash,\
     check_admin, check_domain_id
 from ..common import gen_email_token, send_email
-from ..schema import validate, PROFILE_SCHEMA, DEACTIVATE_USER_SCHEMA, PASSWORD_RESET_SCHEMA, PASSWORD_RESET_CONFIRM_SCHEMA
+from ..schema import validate, PROFILE_SCHEMA, DEACTIVATE_USER_SCHEMA, \
+    PASSWORD_RESET_SCHEMA, PASSWORD_RESET_CONFIRM_SCHEMA
 
 bp = Blueprint('profile')
 log = logging.getLogger(__name__)
@@ -67,7 +70,7 @@ async def profile_handler(request):
     # token is it being fed with, it will only check.
     user_id = await token_check(request)
     user = await request.app.db.fetchrow("""
-    SELECT user_id, username, active, email, consented, admin, subdomain, domain
+    SELECT user_id, username, active, email, consented, admin, subdomain, domain, paranoid
     FROM users
     WHERE user_id = $1
     """, user_id)
@@ -94,14 +97,39 @@ async def change_profile(request):
 
     password = payload.get('password')
     new_pwd = payload.get('new_password')
+    new_username = payload.get('username')
     new_domain = payload.get('domain')
     new_subdomain = payload.get('subdomain')
     new_email = payload.get('email')
+    new_paranoid = payload.get('paranoid')
 
     if password:
         await password_check(request, user_id, password)
     else:
         raise FailedAuth('no password provided')
+
+    if new_username is not None:
+        # query from db instead of cache
+        old_username = await request.app.db.fetchval("""
+        SELECT username
+        FROM users
+        WHERE user_id = $1
+        """, user_id)
+
+        try:
+            await request.app.db.execute("""
+            UPDATE users
+            SET username = $1
+            WHERE user_id = $2
+            """, new_username, user_id)
+        except asyncpg.exceptions.UniqueViolationError:
+            raise BadInput('Username already selected')
+
+        # if this worked, we should invalidate the old keys
+        await request.app.storage.raw_invalidate(f'uid:{old_username}',
+                                                 f'uname:{user_id}')
+
+        updated.append('username')
 
     if new_domain is not None:
         # Check if domain exists
@@ -138,6 +166,15 @@ async def change_profile(request):
         """, new_email, user_id)
 
         updated.append('email')
+
+    if new_paranoid is not None:
+        await request.app.db.execute("""
+            UPDATE users
+            SET paranoid = $1
+            WHERE user_id = $2
+        """, new_paranoid, user_id)
+
+        updated.append('paranoid')
 
     try:
         new_consent_state = payload['consented']

@@ -9,7 +9,7 @@ import io
 from sanic import Blueprint
 from sanic import response
 
-from ..common_auth import token_check, check_admin
+from ..common_auth import token_check, check_admin, check_paranoid
 from ..common import gen_filename, get_domain_info, transform_wildcard, delete_file
 from ..snowflake import get_snowflake
 from ..errors import BadImage, QuotaExploded, BadUpload, FeatureDisabled
@@ -344,7 +344,9 @@ async def upload_handler(request):
 
     # generate a filename so we can identify later when removing it
     # because of virus scanning.
-    file_rname = await gen_filename(request)
+    user_paranoid = await check_paranoid(request, user_id)
+    fname_length = 8 if user_paranoid else 3
+    file_rname = await gen_filename(request, fname_length)
 
     # Skip checks for admins
     if do_checks:

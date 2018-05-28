@@ -52,13 +52,14 @@ def validate(document, schema):
 
 
 PROFILE_SCHEMA = {
-    'user': {'type': 'string'},
+    'username': {'type': 'string', 'required': False},
     'password': {'type': 'password', 'required': False},
     'subdomain': {'type': 'subdomain', 'nullable': True},
     'new_password': {'type': 'password', 'nullable': True},
     'domain': {'type': 'integer', 'nullable': True},
     'email': {'type': 'email', 'nullable': True},
     'consented': {'type': 'boolean', 'nullable': True, 'required': False},
+    'paranoid': {'type': 'boolean', 'nullable': True},
 }
 
 REGISTRATION_SCHEMA = {
