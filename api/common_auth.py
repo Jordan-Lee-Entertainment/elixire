@@ -69,6 +69,21 @@ async def check_admin(request, user_id: int, error_on_nonadmin: bool = True):
     return is_admin
 
 
+async def check_paranoid(request, user_id: int):
+    """Checks if the given user is on paranoid mode
+
+    Returns True if user is an admin, False if not.
+    Should return None if user is not found. I think.
+    """
+    is_paranoid = await request.app.db.fetchval("""
+        select paranoid
+        from users
+        where user_id = $1
+    """, user_id)
+
+    return is_paranoid
+
+
 async def check_domain(request, domain_name: str, error_on_nodomain=True):
     """Checks if a domain exists, by domain
 

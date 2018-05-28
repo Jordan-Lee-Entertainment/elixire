@@ -47,7 +47,7 @@ async def list_users_handler(request, admin_id, page: int):
 @admin_route
 async def inactive_users_handler(request, admin_id, page: int):
     data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain, subdomain, email
+    SELECT user_id, username, active, admin, domain, subdomain, email, paranoid
     FROM users
     WHERE active=false
     LIMIT 20

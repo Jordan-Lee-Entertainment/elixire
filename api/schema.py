@@ -59,6 +59,7 @@ PROFILE_SCHEMA = {
     'domain': {'type': 'integer', 'nullable': True},
     'email': {'type': 'email', 'nullable': True},
     'consented': {'type': 'boolean', 'nullable': True, 'required': False},
+    'paranoid': {'type': 'boolean', 'nullable': True},
 }
 
 REGISTRATION_SCHEMA = {

@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS users (
     email text NOT NULL,
     consented BOOLEAN DEFAULT NULL,
     admin boolean DEFAULT false,
+    paranoid boolean DEFAULT false,
 
     -- user domain information
     subdomain text DEFAULT '',

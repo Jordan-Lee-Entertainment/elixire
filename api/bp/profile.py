@@ -97,6 +97,7 @@ async def change_profile(request):
     new_domain = payload.get('domain')
     new_subdomain = payload.get('subdomain')
     new_email = payload.get('email')
+    new_paranoid = payload.get('paranoid')
 
     if password:
         await password_check(request, user_id, password)
@@ -138,6 +139,15 @@ async def change_profile(request):
         """, new_email, user_id)
 
         updated.append('email')
+
+    if new_paranoid is not None:
+        await request.app.db.execute("""
+            UPDATE users
+            SET paranoid = $1
+            WHERE user_id = $2
+        """, new_paranoid, user_id)
+
+        updated.append('paranoid')
 
     try:
         new_consent_state = payload['consented']
