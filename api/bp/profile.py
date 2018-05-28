@@ -67,7 +67,7 @@ async def profile_handler(request):
     # token is it being fed with, it will only check.
     user_id = await token_check(request)
     user = await request.app.db.fetchrow("""
-    SELECT user_id, username, active, email, consented, admin, subdomain, domain
+    SELECT user_id, username, active, email, consented, admin, subdomain, domain, paranoid
     FROM users
     WHERE user_id = $1
     """, user_id)
