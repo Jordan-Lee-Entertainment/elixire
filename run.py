@@ -338,7 +338,17 @@ async def setup_db(rapp, loop):
 
     # InfluxDB metrics stuff
     if rapp.econfig.ENABLE_METRICS:
-        rapp.ifxdb = InfluxDBClient(db=rapp.econfig.METRICS_DATABASE)
+        dbname = rapp.econfig.METRICS_DATABASE
+
+        if rapp.econfig.INFLUXDB_AUTH:
+            rapp.ifxdb = InfluxDBClient(db=dbname,
+                                        host=rapp.econfig.INFLUX_HOST,
+                                        ssl=rapp.econfig.INFLUX_SSL,
+                                        username=rapp.econfig.INFLUX_USER,
+                                        password=rapp.econfig.INFLUX_PASSWORD)
+        else:
+            rapp.ifxdb = InfluxDBClient(db=rapp.econfig.METRICS_DATABASE)
+
         rapp.ratetask = None
         rapp.rate_requests = 0
         rapp.rate_response = 0

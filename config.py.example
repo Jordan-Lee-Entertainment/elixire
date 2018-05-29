@@ -35,6 +35,13 @@ redis = 'redis://localhost'
 ENABLE_METRICS = True
 METRICS_DATABASE = 'elixire'
 
+# InfluxDB Authentication
+INFLUXDB_AUTH = False
+INFLUX_HOST = 'localhost'
+INFLUX_SSL = False
+INFLUX_USER = 'admin'
+INFLUX_PASSWORD = '123'
+
 # 72 hours, 3 days.
 TIMED_TOKEN_AGE = 259200
 
