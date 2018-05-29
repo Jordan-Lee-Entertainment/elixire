@@ -341,8 +341,9 @@ async def setup_db(rapp, loop):
         dbname = rapp.econfig.METRICS_DATABASE
 
         if rapp.econfig.INFLUXDB_AUTH:
+            host, port = rapp.econfig.INFLUX_HOST
             rapp.ifxdb = InfluxDBClient(db=dbname,
-                                        host=rapp.econfig.INFLUX_HOST,
+                                        host=host, port=port,
                                         ssl=rapp.econfig.INFLUX_SSL,
                                         username=rapp.econfig.INFLUX_USER,
                                         password=rapp.econfig.INFLUX_PASSWORD)

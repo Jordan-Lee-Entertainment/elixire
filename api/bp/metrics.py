@@ -19,7 +19,7 @@ async def ratetask(app):
     try:
         while True:
             r = await app.ifxdb.ping()
-            print(r)
+            log.info('r: %s', r)
 
             # submit and reset what we have
             # every second

@@ -37,7 +37,7 @@ METRICS_DATABASE = 'elixire'
 
 # InfluxDB Authentication
 INFLUXDB_AUTH = False
-INFLUX_HOST = 'localhost'
+INFLUX_HOST = ('localhost', 8086)
 INFLUX_SSL = False
 INFLUX_USER = 'admin'
 INFLUX_PASSWORD = '123'
