@@ -13,6 +13,9 @@ v2 is being written in Python.
 
 # Running
 
+**Dockerfiles exist in this repository. Do not attempt to run them.
+(Merge Requests "fixing" them will be closed.)**
+
 ```bash
 # you can use a virtual enviroment if you want.
 

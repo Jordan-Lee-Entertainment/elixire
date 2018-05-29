@@ -1,5 +1,4 @@
 import logging
-import datetime
 import asyncio
 
 from sanic import Blueprint
