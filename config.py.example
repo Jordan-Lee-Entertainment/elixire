@@ -30,6 +30,11 @@ db = {
 
 redis = 'redis://localhost'
 
+# Enable metrics?
+# uses InfluxDB and aioinflux to send data.
+ENABLE_METRICS = True
+METRICS_DATABASE = 'elixire'
+
 # 72 hours, 3 days.
 TIMED_TOKEN_AGE = 259200
 

@@ -8,6 +8,7 @@ import aioredis
 from sanic import Sanic, exceptions
 from sanic import response
 from sanic_cors import CORS
+from aioinflux import InfluxDBClient
 
 import api.bp.auth
 import api.bp.profile
@@ -18,6 +19,7 @@ import api.bp.fetch
 import api.bp.admin
 import api.bp.register
 import api.bp.datadump
+import api.bp.metrics
 
 from api.errors import APIError, Ratelimited, Banned, FailedAuth
 from api.common_auth import token_check
@@ -43,6 +45,7 @@ app.blueprint(api.bp.fetch.bp)
 app.blueprint(api.bp.admin.bp)
 app.blueprint(api.bp.register.bp)
 app.blueprint(api.bp.datadump.bp)
+app.blueprint(api.bp.metrics.bp)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -332,6 +335,15 @@ async def setup_db(rapp, loop):
     # Tasks for datadump API
     rapp.dump_worker = None
     rapp.janitor_task = None
+
+    # InfluxDB metrics stuff
+    if rapp.econfig.ENABLE_METRICS:
+        rapp.ifxdb = InfluxDBClient(db=rapp.econfig.METRICS_DATABASE)
+        rapp.ratetask = None
+        rapp.rate_requests = 0
+        rapp.rate_response = 0
+    else:
+        log.info('Metrics are disabled!')
 
 
 @app.listener('after_server_stop')
