@@ -44,5 +44,3 @@ async def test_admin(test_cli):
 
     assert isinstance(data, dict)
     assert data['admin']
-
-
