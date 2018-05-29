@@ -18,9 +18,6 @@ def point(measure, value):
 async def ratetask(app):
     try:
         while True:
-            r = await app.ifxdb.ping()
-            log.info('r: %s', r)
-
             # submit and reset what we have
             # every second
             await app.ifxdb.write(point('request', app.rate_requests))
