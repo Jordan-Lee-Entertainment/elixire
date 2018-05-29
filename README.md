@@ -17,8 +17,10 @@ v2 is being written in Python.
 (Merge Requests "fixing" them will be closed.)**
 
 ```bash
-# you can use a virtual enviroment if you want.
+git submodule init
+git submodule update
 
+# you can use a virtual enviroment if you want.
 python3.6 -m pip install -Ur requirements.txt
 
 # this sets up the folder structure in ./images for you
@@ -29,11 +31,11 @@ python3.6 -m pip install -Ur requirements.txt
 # Specially the "INSERT INTO domains" line.
 psql -U postgres -f schema.sql
 
-# build frontend before running the app
-# you need a reasonably decent node version
-cd frontend
-npm i
-npm run build:production
+# Update frontend and admin-panel repositories
+make update
+
+# Build the frontend and the admin-panel
+make 
 
 # make folders you need, you set them on config.py
 mkdir images
