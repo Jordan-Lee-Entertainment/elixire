@@ -364,6 +364,9 @@ async def upload_handler(request):
     domain_id, subdomain_name, domain = await get_domain_info(request, user_id)
     domain = transform_wildcard(domain, subdomain_name)
 
+    # for metrics
+    request.app.file_upload_counter += 1
+
     await request.app.db.execute("""
     INSERT INTO files (file_id, mimetype, filename,
         file_size, uploader, fspath, domain)

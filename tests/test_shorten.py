@@ -89,7 +89,6 @@ async def test_shorten_wrong_scheme(test_cli):
     some_schemes = [
         'ftp://',
         'mailto:',
-        'AAAAAAAAAA://',
         'laksjdkj::',
         token(),
     ]
@@ -107,4 +106,3 @@ async def test_shorten_wrong_scheme(test_cli):
         })
 
         assert resp.status == 400
-

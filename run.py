@@ -1,11 +1,11 @@
 import logging
-import traceback
 
 import asyncpg
 import aiohttp
 import aioredis
 
-from sanic import Sanic, exceptions
+from sanic import Sanic
+from sanic.exceptions import NotFound, FileNotFound
 from sanic import response
 from sanic_cors import CORS
 from aioinflux import InfluxDBClient
@@ -108,6 +108,10 @@ async def context_fetch(request, storage, user_name, user_id, token):
 
 @app.exception(Banned)
 async def handle_ban(request, exception):
+    """Handle the Banned exception being raised through a request.
+
+    This takes care of inserting a user ban.
+    """
     scode = exception.status_code
     reason = exception.args[0]
     rapp = request.app
@@ -168,13 +172,9 @@ def handle_api_error(request, exception):
 
 @app.exception(Exception)
 def handle_exception(request, exception):
-    # how do traceback loge???
-    val = traceback.format_exc()
-    if 'self._ip' in val:
-        return None
-
     status_code = 500
-    if isinstance(exception, (exceptions.NotFound, exceptions.FileNotFound)):
+
+    if isinstance(exception, (NotFound, FileNotFound)):
         status_code = 404
         log.warning(f'File not found: {exception!r}')
     else:
@@ -353,6 +353,9 @@ async def setup_db(rapp, loop):
         rapp.ratetask = None
         rapp.rate_requests = 0
         rapp.rate_response = 0
+
+        rapp.file_upload_counter = 0
+        rapp.page_hit_counter = 0
     else:
         log.info('Metrics are disabled!')
 
