@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import time
 
 from sanic import Blueprint
 
@@ -48,6 +49,7 @@ async def on_request(request):
 
     # increase the counter on every request
     request.app.rate_requests += 1
+    request['start_time'] = time.monotonic()
 
 
 @bp.middleware('response')
@@ -57,3 +59,11 @@ async def on_response(request, response):
 
     # increase the counter on every response from server
     request.app.rate_response += 1
+
+    # calculate latency to get a response, and submit that to influx
+    # this field won't help in the case of network failure
+    latency = time.monotonic() - request['start_time']
+
+    # submit the metric as milliseconds since it is more tangible in
+    # normal scenarios
+    await request.app.ifxdb.write(point('response_latency', latency * 1000))
