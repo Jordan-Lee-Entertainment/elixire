@@ -241,6 +241,65 @@ async def modify_shorten(request, admin_id, shorten_id):
     return await handle_modify('shorten', request, shorten_id)
 
 
+@bp.put('/api/admin/domains')
+@admin_route
+async def add_domain(request, admin_id: int):
+    """Add a domain."""
+    domain_name = str(request.json['domain'])
+    is_adminonly = bool(request.json['admin_only'])
+    is_official = bool(request.json['official'])
+
+    result = await request.app.db.execute("""
+    INSERT INTO domains
+    (domain, admin_only, official)
+    VALUES ($1, $2, $3)
+    """, domain_name, is_adminonly, is_official)
+
+    # stolen from storage.py
+    _sp = domain_name.split('.')[0]
+    subdomain_name = domain_name.replace(_sp, "*")
+    wildcard_name = f'*.{domain_name}'
+
+    await request.app.storage.raw_invalidate(f'domain_id:{domain_name}',
+                                             f'domain_id:{subdomain_name}',
+                                             f'domain_id:{wildcard_name}')
+
+    return response.json({
+        'success': True,
+        'result': result
+    })
+
+
+@bp.delete('/api/admin/domains/<domain_id:int>')
+@admin_route
+async def remove_domain(request, admin_id: int, domain_id: int):
+    """Remove a domain."""
+    domain_name = await request.app.db.fetchval("""
+    SELECT domain
+    FROM domains
+    WHERE domain_id = $1
+    """, domain_id)
+
+    result = await request.app.db.execute("""
+    DELETE FROM domains
+    WHERE domain_id = $1
+    """, domain_id)
+
+    # stolen from storage.py
+    _sp = domain_name.split('.')[0]
+    subdomain_name = domain_name.replace(_sp, "*")
+    wildcard_name = f'*.{domain_name}'
+
+    await request.app.storage.raw_invalidate(f'domain_id:{domain_name}',
+                                             f'domain_id:{subdomain_name}',
+                                             f'domain_id:{wildcard_name}')
+
+    return response.json({
+        'success': True,
+        'result': result
+    })
+
+
 @bp.get('/api/admin/domains/<domain_id:int>')
 @admin_route
 async def get_domain_stats(request, admin_id, domain_id):
