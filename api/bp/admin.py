@@ -33,7 +33,7 @@ async def test_admin(request, admin_id):
 async def list_users_handler(request, admin_id, page: int):
     """List users in the service"""
     data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain, subdomain, email, paranoid
+    SELECT user_id, username, active, admin, domain, subdomain, email, paranoid, consented
     FROM users
     LIMIT 20
     OFFSET ($1 * 20)
@@ -51,7 +51,7 @@ async def list_users_handler(request, admin_id, page: int):
 @admin_route
 async def inactive_users_handler(request, admin_id, page: int):
     data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain, subdomain, email, paranoid
+    SELECT user_id, username, active, admin, domain, subdomain, email, paranoid, consented
     FROM users
     WHERE active=false
     LIMIT 20
