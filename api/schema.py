@@ -91,3 +91,14 @@ PASSWORD_RESET_CONFIRM_SCHEMA = {
     'token': {'type': 'string', 'required': True},
     'new_password': {'type': 'password', 'required': True},
 }
+
+ADMIN_MODIFY_FILE = {
+    'domain_id': {'type': 'integer', 'required': False},
+    'shortname': {'type': 'string', 'required': False},
+}
+
+ADMIN_MODIFY_USER = {
+    'admin': {'type': 'boolean', 'required': False},
+    'upload_limit': {'type': 'integer', 'required': False},
+    'shorten_limit': {'type': 'integer', 'required': False}
+}

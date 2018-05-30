@@ -75,7 +75,7 @@ async def gen_filename(request, length=3) -> str:
     return await gen_filename(request, length + 1)
 
 
-async def gen_email_token(app, user_id, table: str, count = 0):
+async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
     """Generate a token for email usage"""
     if count == 11:
         # it really shouldn't happen,
@@ -337,7 +337,7 @@ def transform_wildcard(domain, subdomain_name):
     return domain
 
 
-async def send_email(app, user_email, subject, email_body):
+async def send_email(app, user_email: str, subject: str, email_body: str):
     """Send an email to a user using the Mailgun API."""
     econfig = app.econfig
     mailgun_url = f'https://api.mailgun.net/v3/{econfig.MAILGUN_DOMAIN}/messages'

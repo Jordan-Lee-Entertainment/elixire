@@ -38,7 +38,10 @@ async def pwd_check(request, stored: str, password: str):
 
 
 async def password_check(request, user_id: int, password: str):
-    """Query password hash from user_id and compare with given."""
+    """Query password hash from user_id and compare with given.
+
+    Raises FailedAuth on invalid password.
+    """
     stored = await request.app.db.fetchval("""
         select password_hash
         from users
@@ -48,7 +51,7 @@ async def password_check(request, user_id: int, password: str):
     await pwd_check(request, stored, password)
 
 
-async def check_admin(request, user_id: int, error_on_nonadmin: bool = True):
+async def check_admin(request, user_id: int, error_on_nonadmin: bool = True) -> bool:
     """Checks if the given user is an admin
 
     Returns True if user is an admin, False if not.
@@ -69,11 +72,10 @@ async def check_admin(request, user_id: int, error_on_nonadmin: bool = True):
     return is_admin
 
 
-async def check_paranoid(request, user_id: int):
-    """Checks if the given user is on paranoid mode
+async def check_paranoid(request, user_id: int) -> bool:
+    """If the user is in paranoid mode.
 
-    Returns True if user is an admin, False if not.
-    Should return None if user is not found. I think.
+    Returns None if user does not exist.
     """
     is_paranoid = await request.app.db.fetchval("""
         select paranoid
@@ -84,7 +86,7 @@ async def check_paranoid(request, user_id: int):
     return is_paranoid
 
 
-async def check_domain(request, domain_name: str, error_on_nodomain=True):
+async def check_domain(request, domain_name: str, error_on_nodomain=True) -> dict:
     """Checks if a domain exists, by domain
 
     returns its record it if does, returns None if it doesn't"""
@@ -176,7 +178,6 @@ async def token_check(request, wanted_type=None) -> int:
     if not user:
         raise FailedAuth('unknown user ID')
 
-    print(user)
     if not user['active']:
         raise FailedAuth('inactive user')
 
