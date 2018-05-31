@@ -34,7 +34,10 @@ async def submit(app, title, value, task=False):
     if task:
         app.loop.create_task(app.ifxdb.write(datapoint))
     else:
-        await app.ifxdb.write(datapoint)
+        try:
+            await app.ifxdb.write(datapoint)
+        except Exception:
+            log.exception('Failed to submit datapoint')
 
 
 async def ratetask(app):
