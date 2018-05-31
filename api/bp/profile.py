@@ -70,7 +70,9 @@ async def profile_handler(request):
     # token is it being fed with, it will only check.
     user_id = await token_check(request)
     user = await request.app.db.fetchrow("""
-    SELECT user_id, username, active, email, consented, admin, subdomain, domain, paranoid
+    SELECT user_id, username, active, email,
+           consented, admin, subdomain, domain, paranoid,
+           shorten_domain, shorten_subdomain
     FROM users
     WHERE user_id = $1
     """, user_id)
@@ -98,8 +100,12 @@ async def change_profile(request):
     password = payload.get('password')
     new_pwd = payload.get('new_password')
     new_username = payload.get('username')
+
     new_domain = payload.get('domain')
     new_subdomain = payload.get('subdomain')
+
+    new_shorten_subdomain = payload.get('shorten_subdomain')
+
     new_email = payload.get('email')
     new_paranoid = payload.get('paranoid')
 
@@ -157,6 +163,30 @@ async def change_profile(request):
         """, new_subdomain, user_id)
 
         updated.append('subdomain')
+
+    # shorten_subdomain CAN be None.
+    # when it is None, backend will assume the user wants the same domain
+    # for both uploads and shortens
+    try:
+        new_shorten_domain = payload['shorten_domain']
+        await request.app.db.execute("""
+            UPDATE users
+            SET shorten_domain = $1
+            WHERE user_id = $2
+        """, new_shorten_domain, user_id)
+
+        updated.append('shorten_domain')
+    except KeyError:
+        pass
+
+    if new_shorten_subdomain is not None:
+        await request.app.db.execute("""
+            UPDATE users
+            SET shorten_subdomain = $1
+            WHERE user_id = $2
+        """, new_shorten_subdomain, user_id)
+
+        updated.append('shorten_subdomain')
 
     if new_email is not None:
         await request.app.db.execute("""

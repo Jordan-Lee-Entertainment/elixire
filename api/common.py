@@ -309,7 +309,7 @@ async def ip_ban_webhook(app, ip_address: str, reason: str, period: str):
         return resp
 
 
-async def get_domain_info(request, user_id: int) -> tuple:
+async def get_domain_info(request, user_id: int, dtype=FileNameType.FILE) -> tuple:
     """Get information about a user's selected domain."""
     domain_id, subdomain_name = await request.app.db.fetchrow("""
     SELECT domain, subdomain
@@ -322,6 +322,23 @@ async def get_domain_info(request, user_id: int) -> tuple:
     FROM domains
     WHERE domain_id = $1
     """, domain_id)
+
+    if dtype == FileNameType.SHORTEN:
+        shorten_domain_id, shorten_subdomain = await request.app.db.fetchrow("""
+        SELECT shorten_domain, shorten_subdomain
+        FROM users
+        WHERE user_id = $1
+        """, user_id)
+
+        if shorten_domain_id is not None:
+            shorten_domain = await request.app.db.fetchval("""
+            SELECT domain
+            FROM domains
+            WHERE domain_id = $1
+            """, shorten_domain_id)
+
+            # if we have all the data on shorten subdomain, return it
+            return shorten_domain_id, shorten_subdomain, shorten_domain
 
     return domain_id, subdomain_name, domain
 
