@@ -22,7 +22,7 @@ from ..errors import BadImage, QuotaExploded, BadUpload, FeatureDisabled
 bp = Blueprint('upload')
 log = logging.getLogger(__name__)
 UploadContext = namedtuple('UploadContext',
-                           'user_id mime inputname shortname size body bytes, checks')
+                           'user_id mime inputname shortname size body bytes checks')
 
 
 async def jpeg_toobig_webhook(app, ctx, size_after):
@@ -296,11 +296,16 @@ async def upload_checks(app, ctx: UploadContext, given_extension: str) -> tuple:
 
 
 async def exif_checking(app, ctx) -> io.BytesIO:
+    """Check exif information of the file.
+
+    Returns the correct io.BytesIO instance to use
+    when writing the file.
+    """
     if not app.econfig.CLEAR_EXIF:
-        return
+        return ctx.bytes
 
     if ctx.mime != 'image/jpeg':
-        return
+        return ctx.bytes
 
     ratio_limit = app.econfig.EXIF_INCREASELIMIT
     noexif_body = await clear_exif(ctx.bytes)
