@@ -106,7 +106,7 @@ async def delete_handler(request):
     user_id = await token_check(request)
     file_name = str(request.json['filename'])
 
-    await delete_file(request, file_name, user_id)
+    await delete_file(request.app, file_name, user_id)
 
     return response.json({
         'success': True

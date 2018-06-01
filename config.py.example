@@ -91,7 +91,7 @@ CLEAR_EXIF = False
 # EXIF cleaning. If exif_cleaned_filesize/regular_filesize is bigger than
 # the following number, we just use non-exif cleaned versions of the files.
 # Using anything below 1.25 or so might cause false positives.
-# Set to None or 0 to disable check.
+# Set CLEAR_EXIF to False to disable cleaning
 EXIF_INCREASELIMIT = 2
 
 ACCEPTED_MIMES = [
