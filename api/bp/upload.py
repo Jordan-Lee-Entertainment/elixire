@@ -22,7 +22,7 @@ from ..errors import BadImage, QuotaExploded, BadUpload, FeatureDisabled
 bp = Blueprint('upload')
 log = logging.getLogger(__name__)
 UploadContext = namedtuple('UploadContext',
-                           'user_id mime inputname shortname size body bytes')
+                           'user_id mime inputname shortname size body bytes, checks')
 
 
 async def jpeg_toobig_webhook(app, ctx, size_after):
@@ -310,7 +310,7 @@ async def exif_checking(app, ctx) -> io.BytesIO:
 
     # if this is an admin upload or the ratio is below the limit
     # reutrn the noexif'd bytes
-    if not ctx['do_checks'] or ratio < ratio_limit:
+    if not ctx.checks or ratio < ratio_limit:
         return noexif_body
 
     # or else... send a webhook about what happened
@@ -383,7 +383,7 @@ async def upload_handler(request):
     # construct an upload context
     ctx = UploadContext(user_id, filemime,
                         in_filename, shortname, filesize,
-                        filebody, filebytes)
+                        filebody, filebytes, do_checks)
 
     if do_checks:
         extension = await upload_checks(app, ctx, given_extension)
