@@ -339,7 +339,7 @@ def _construct_url(domain, shortname, extension):
     dpath = pathlib.Path(domain)
     final_path = dpath / 'i' / f'{shortname}{extension}'
 
-    return f'httś://{final_path!s}'
+    return f'https://{final_path!s}'
 
 
 async def check_repeat(app, fspath: str, extension: str, ctx: UploadContext) -> dict:
