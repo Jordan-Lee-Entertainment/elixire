@@ -31,14 +31,14 @@ async def close_db(db, redis):
     print('CLOSE: END')
     
 
-def calculate_md5(image):
-    hash_md5 = hashlib.md5()
+def calculate_hash(image) -> str:
+    hashobj = hashlib.sha256()
 
     with open(image, "rb") as fhandler:
         for chunk in iter(lambda: fhandler.read(4096), b""):
-            hash_md5.update(chunk)
+            hashobj.update(chunk)
 
-    return hash_md5.hexdigest()
+    return hashobj.hexdigest()
 
 
 async def main():
@@ -53,7 +53,7 @@ async def main():
         print('working on', str(image), count, 'out of', total)
         # calculate md5 of image, move it to another path
         # then alter fspath
-        md5_hash = calculate_md5(image)
+        md5_hash = calculate_hash(image)
 
         simage = str(image)
         target = None

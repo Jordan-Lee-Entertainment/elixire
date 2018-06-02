@@ -80,17 +80,17 @@ async def gen_filename(request, length=3) -> str:
 
 
 def calculate_hash(fhandler) -> str:
-    """Generate a md5 hash of the given file."""
-    hash_md5 = hashlib.md5()
+    """Generate a hash of the given file."""
+    hash_obj = hashlib.sha256()
 
     for chunk in iter(lambda: fhandler.read(4096), b""):
-        hash_md5.update(chunk)
+        hash_obj.update(chunk)
 
     # so that we can reuse the same handler
     # later on
     fhandler.seek(0)
 
-    return hash_md5.hexdigest()
+    return hash_obj.hexdigest()
 
 
 async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
