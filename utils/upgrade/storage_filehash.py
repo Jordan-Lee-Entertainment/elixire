@@ -55,12 +55,19 @@ async def main():
         # then alter fspath
         md5_hash = calculate_md5(image)
 
-        spl = str(image).split('.')
+        simage = str(image)
+        target = None
 
-        ext = spl[-1]
-        imname = spl[-2].split('/')[-1]
+        if simage.find('.') != -1:
+            spl = str(image).split('.')
 
-        target = impath / md5_hash[0] / f'{md5_hash}.{ext}'
+            ext = spl[-1]
+            imname = spl[-2].split('/')[-1]
+
+            target = impath / md5_hash[0] / f'{md5_hash}.{ext}'
+        else:
+            target = impath / md5_hash[0] / md5_hash
+
         image.rename(target)
 
         domain = await pool.fetchval("""
