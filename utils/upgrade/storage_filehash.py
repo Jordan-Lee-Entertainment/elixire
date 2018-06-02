@@ -57,15 +57,18 @@ async def main():
 
         simage = str(image)
         target = None
+        shortname = None
+
 
         if simage.find('.') != -1:
             spl = str(image).split('.')
 
             ext = spl[-1]
-            imname = spl[-2].split('/')[-1]
+            shortname = spl[-2].split('/')[-1]
 
             target = impath / md5_hash[0] / f'{md5_hash}.{ext}'
         else:
+            shortname = simage.split('/')[-1]
             target = impath / md5_hash[0] / md5_hash
 
         image.rename(target)
@@ -74,17 +77,17 @@ async def main():
         SELECT domain
         FROM files
         WHERE filename = $1
-        """, imname)
+        """, shortname)
 
         execout = await pool.execute("""
         UPDATE files
         SET fspath = $2
         WHERE filename = $1
-        """, f'./{imname!s}', str(target))
+        """, shortname, f'./{target!s}')
 
-        print(f'{imname}: {execout} <= {target}')
+        print(f'{shortname}: {execout} <= {target}')
         count += 1
-        await redis.delete(f'fspath:{domain}:{imname}')
+        await redis.delete(f'fspath:{domain}:{shortname}')
 
     await close_db(pool, redis)
 
