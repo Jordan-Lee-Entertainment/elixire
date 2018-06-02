@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS users (
     domain bigint REFERENCES domains (domain_id) DEFAULT 0,
 
     shorten_subdomain text DEFAULT '',
-    shroten_domain bigint REFERENCES domains (domain_id) DEFAULT NULL
+    shorten_domain bigint REFERENCES domains (domain_id) DEFAULT NULL
 );
 
 -- user and IP bans, usually automatically managed by
