@@ -2,6 +2,8 @@ import string
 import secrets
 import os
 import hashlib
+import logging
+from pathlib import Path
 
 import itsdangerous
 import aiohttp
@@ -10,6 +12,7 @@ from .errors import FailedAuth, BadInput, NotFound
 
 VERSION = '2.0.0'
 ALPHABET = string.ascii_lowercase + string.digits
+log = logging.getLogger(__name__)
 
 
 class TokenType:
@@ -219,6 +222,32 @@ async def delete_file(app, file_name, user_id, set_delete=True):
 
         if exec_out == "UPDATE 0":
             raise NotFound('You have no files with this name.')
+
+        fspath = await app.db.fetchval("""
+        SELECT fspath
+        FROM files
+        WHERE uploader = $1
+          AND filename = $2
+        """, user_id, file_name)
+
+        # fetch all files with the same fspath
+        # and on the hash system, means the same hash
+        same_fspath = await app.db.fetchval("""
+        SELECT COUNT(*)
+        FROM files
+        WHERE fspath = $1 AND deleted = false
+        """, fspath)
+
+        if same_fspath == 0:
+            path = Path(fspath)
+            try:
+                path.unlink()
+                log.info(f'Deleted {fspath!s} since no files refer to it')
+            except FileNotFoundError:
+                log.warning(f'fspath {fspath!s} does not exist')
+        else:
+            log.info(f'there are still {same_fspath} files with the '
+                     f'same fspath {fspath!s}, not deleting')
     else:
         if user_id:
             await app.db.execute("""
