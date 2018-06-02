@@ -45,9 +45,12 @@ async def main():
     pool, redis = await open_db()
     impath = Path('./images')
 
-    images = [path for path in impath.glob('*/*')]
+    images = [path for path in impath.glob('*/*') if path.is_file()]
 
+    total = len(images)
+    count = 0
     for image in images:
+        print('working on', str(image), count, 'out of', total)
         # calculate md5 of image, move it to another path
         # then alter fspath
         md5_hash = calculate_md5(image)
@@ -70,9 +73,10 @@ async def main():
         UPDATE files
         SET fspath = $2
         WHERE filename = $1
-        """, imname, str(target))
+        """, f'./{imname!s}', str(target))
 
         print(f'{imname}: {execout} <= {target}')
+        count += 1
         await redis.delete(f'fspath:{domain}:{imname}')
 
     await close_db(pool, redis)
