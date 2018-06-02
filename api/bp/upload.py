@@ -451,6 +451,9 @@ async def upload_handler(request):
     # for metrics
     app.file_upload_counter += 1
 
+    if impath.exists():
+        filesize *= app.econfig.DUPE_DECREASE_FACTOR
+
     await app.db.execute("""
     INSERT INTO files (file_id, mimetype, filename,
         file_size, uploader, fspath, domain)
