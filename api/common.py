@@ -4,6 +4,7 @@ import os
 import hashlib
 import logging
 from pathlib import Path
+import time
 
 import itsdangerous
 import aiohttp
@@ -81,6 +82,7 @@ async def gen_filename(request, length=3) -> str:
 
 def calculate_hash(fhandler) -> str:
     """Generate a hash of the given file."""
+    hashstart = time.monotonic()
     hash_obj = hashlib.sha256()
 
     for chunk in iter(lambda: fhandler.read(4096), b""):
@@ -89,6 +91,10 @@ def calculate_hash(fhandler) -> str:
     # so that we can reuse the same handler
     # later on
     fhandler.seek(0)
+
+    hashend = time.monotonic()
+    delta = round(hashend - hashstart, 6)
+    log.info(f'Hashing file took {delta} seconds')
 
     return hash_obj.hexdigest()
 
