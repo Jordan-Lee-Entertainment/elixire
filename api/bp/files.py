@@ -59,13 +59,17 @@ async def list_handler(request):
     for ufile in user_files:
         filename = ufile['filename']
         domain = domains[ufile['domain']].replace("*.", "wildcard.")
-        basename = os.path.basename(ufile['fspath'])
 
-        file_url = f'https://{domain}/i/{basename}'
+        basename = os.path.basename(ufile['fspath'])
+        ext = basename.split('.')[-1]
+
+        fullname = f'{filename}.{ext}'
+
+        file_url = f'https://{domain}/i/{fullname}'
 
         use_https = request.app.econfig.USE_HTTPS
         prefix = 'https://' if use_https else 'http://'
-        file_url_thumb = f'{prefix}{domain}/t/s{basename}'
+        file_url_thumb = f'{prefix}{domain}/t/s{fullname}'
 
         filenames[filename] = {
             'snowflake': ufile['file_id'],
