@@ -335,6 +335,45 @@ async def gen_shortname(request, user_id: int) -> str:
     return await gen_filename(request, shortname_len)
 
 
+def _construct_url(domain, shortname, extension):
+    dpath = pathlib.Path(domain)
+    final_path = dpath / 'i' / f'{shortname}{extension}'
+
+    return f'httś://{final_path!s}'
+
+
+async def check_repeat(app, fspath: str, extension: str, ctx: UploadContext) -> dict:
+    # check which files have the same fspath (the same hash)
+    files = await app.db.fetch("""
+    SELECT filename, uploader, domain
+    FROM files
+    WHERE fspath = $1 AND files.deleted = false
+    """, fspath)
+
+    # get the first file, if any, from the uploader
+    try:
+        ufile = next(frow for frow in files if frow['uploader'] == ctx.user_id)
+    except StopIteration:
+        # no files for the user were found.
+        return
+
+    # fetch domain info about that file
+    domain = await app.db.fetchval("""
+    SELECT domain
+    FROM domains
+    WHERE domain_id = $1
+    """, ufile['domain'])
+
+    # use 'i' as subdomain by default
+    # since files.subdomain isn't a thing.
+    domain = transform_wildcard(domain, 'i')
+
+    return {
+        'url': _construct_url(domain, ufile['filename'], extension),
+        'repeated': True,
+        'shortname': ufile['filename'],
+    }
+
 
 @bp.post('/api/upload')
 async def upload_handler(request):
@@ -399,6 +438,13 @@ async def upload_handler(request):
     imfolder = app.econfig.IMAGE_FOLDER
     fspath = f'{imfolder}/{imhash[0]}/{imhash}{extension}'
 
+    impath = pathlib.Path(fspath)
+
+    if impath.exists():
+        res = await check_repeat(app, fspath, extension, ctx)
+        if res is not None:
+            return response.json(res)
+
     domain_id, subdomain_name, domain = await get_domain_info(request, user_id)
     domain = transform_wildcard(domain, subdomain_name)
 
@@ -412,21 +458,10 @@ async def upload_handler(request):
     """, file_id, filemime, shortname, filesize, user_id, fspath, domain_id)
 
     correct_bytes = await exif_checking(app, ctx)
-
-    # write to fs only if we need to
-    impath = pathlib.Path(fspath)
-
-    # if the file doesnt exist, this is the first one with the hash
-    # if it does, we can just ignore it since we already wrote something.
-    if not impath.exists():
-        with open(fspath, 'wb') as raw_file:
-            raw_file.write(correct_bytes.getvalue())
-
-    # construct final image url
-    dpath = pathlib.Path(domain)
-    file_url = dpath / 'i' / f'{shortname}{extension}'
+    with open(fspath, 'wb') as raw_file:
+        raw_file.write(correct_bytes.getvalue())
 
     return response.json({
-        'url': f'https://{str(file_url)}',
+        'url': _construct_url(domain, shortname, extension),
         'shortname': shortname,
     })
