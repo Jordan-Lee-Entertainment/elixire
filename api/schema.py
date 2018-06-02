@@ -54,9 +54,13 @@ def validate(document, schema):
 PROFILE_SCHEMA = {
     'username': {'type': 'string', 'required': False},
     'password': {'type': 'password', 'required': False},
-    'subdomain': {'type': 'subdomain', 'nullable': True},
-    'new_password': {'type': 'password', 'nullable': True},
     'domain': {'type': 'integer', 'nullable': True},
+    'subdomain': {'type': 'subdomain', 'nullable': True},
+
+    'shorten_domain': {'type': 'integer', 'nullable': True},
+    'shorten_subdomain': {'type': 'subdomain', 'nullable': True},
+
+    'new_password': {'type': 'password', 'nullable': True},
     'email': {'type': 'email', 'nullable': True},
     'consented': {'type': 'boolean', 'nullable': True, 'required': False},
     'paranoid': {'type': 'boolean', 'nullable': True},

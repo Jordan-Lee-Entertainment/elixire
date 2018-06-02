@@ -130,6 +130,38 @@ async def deactivate_user(request, admin_id: int, user_id: int):
     })
 
 
+@bp.post('/api/admin/search/user/<page:int>')
+@admin_route
+async def search_user(request, user_id: int, page: int):
+    """Search a user by pattern matching the username."""
+    try:
+        pattern = str(request.json['search_term'])
+    except (KeyError, TypeError, ValueError):
+        raise BadInput('Invalid search_term')
+
+    if not pattern:
+        raise BadInput('Insert a pattern.')
+
+    pattern = f'%{pattern}%'
+
+    rows = await request.app.db.fetch("""
+    SELECT user_id, username, active, admin, consented
+    FROM users
+    WHERE username LIKE $1
+    LIMIT 20
+    OFFSET ($2 * 20)
+    """, pattern, page)
+
+    res = []
+
+    for row in rows:
+        drow = dict(row)
+        drow['user_id'] = str(drow['user_id'])
+        res.append(drow)
+
+    return response.json(res)
+
+
 async def generic_namefetch(table, request, shortname):
     """Generic function to fetch a file or shorten information based on shortname."""
     fields = 'file_id, mimetype, filename, file_size, uploader, fspath, deleted, domain' \

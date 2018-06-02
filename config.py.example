@@ -1,17 +1,22 @@
+# elixire instance configuration file
+# Please read over all the available options.
+
+# === BASIC SETTINGS ===
 HOST = 'localhost'
 PORT = 8080
 
 # basic configuration about the instance
 INSTANCE_NAME = 'elixi.re'
 MAIN_URL = 'https://elixi.re'
-USE_HTTPS = True
 SUPPORT_EMAIL = 'support@elixi.re'
+USE_HTTPS = True
 
-# Mailgun API key for things like account deletion confirmation
+# Mailgun API credentials for instance emails.
+# (Account deletion, Data Dump, etc.)
 MAILGUN_DOMAIN = ''
 MAILGUN_API_KEY = ''
 
-# Link / to ./frontend ?
+# Link / to ./frontend and /admin to ./admin-panel ?
 ENABLE_FRONTEND = True
 
 # Which folder to store uploaded images to?
@@ -22,12 +27,14 @@ DUMP_ENABLED = True
 DUMP_FOLDER = './dumps'
 DUMP_JANITOR_PERIOD = 600
 
+# Postgres credentials
 db = {
     'host': 'localhost',
     'user': 'postgres',
     'password': '',
 }
 
+# Redis URL
 redis = 'redis://localhost'
 
 # Enable metrics?
@@ -35,26 +42,18 @@ redis = 'redis://localhost'
 ENABLE_METRICS = True
 METRICS_DATABASE = 'elixire'
 
-# InfluxDB Authentication
+# InfluxDB Authentication, if any
 INFLUXDB_AUTH = False
 INFLUX_HOST = ('localhost', 8086)
 INFLUX_SSL = False
 INFLUX_USER = 'admin'
 INFLUX_PASSWORD = '123'
 
-# 72 hours, 3 days.
+# How many seconds to keep timed tokens valid?
+# default value is 72 hours = 3 days.
 TIMED_TOKEN_AGE = 259200
 
-# run clamdscan on every upload.
-# this will use the multicore option,
-# so it is not recommended on low-end machines.
-UPLOAD_SCAN = False
-
-# How many seconds to wait scanning before
-# switching that scan to the background? (can be int or float)
-#
-# See #35 for more details.
-SCAN_WAIT_THRESHOLD = 1
+# === WEBHOOK SETTINGS ===
 
 # When UPLOAD_SCAN is true and
 # a file is detected as being malicious,
@@ -73,14 +72,29 @@ EXIF_TOOBIG_WEBHOOK = ""
 # Webhook for user registrations.
 USER_REGISTER_WEBHOOK = ""
 
+# === RATELIMIT SETTINGS ===
+
 # change this to your wanted ban period
-# '1 day', '6 hours', '10 seconds', etc.
+# valid: '1 day', '6 hours', '10 seconds', etc.
 BAN_PERIOD = '6 hours'
 IP_BAN_PERIOD = '5 minutes'
 
 # How many ratelimit payloads can be sent
 # before the current user gets banned?
 RL_THRESHOLD = 10
+
+# === UPLOAD SETTINGS ===
+
+# run clamdscan on every upload.
+# this will use the multicore option,
+# so it is not recommended on low-end machines.
+UPLOAD_SCAN = False
+
+# How many seconds to wait scanning before
+# switching that scan to the background? (can be int or float)
+#
+# See #35 for more details.
+SCAN_WAIT_THRESHOLD = 1
 
 # Should we clear EXIF values for JPEGs?
 # Needs Pillow
@@ -91,9 +105,10 @@ CLEAR_EXIF = False
 # EXIF cleaning. If exif_cleaned_filesize/regular_filesize is bigger than
 # the following number, we just use non-exif cleaned versions of the files.
 # Using anything below 1.25 or so might cause false positives.
-# Set to None or 0 to disable check.
+# Set CLEAR_EXIF to False to disable cleaning
 EXIF_INCREASELIMIT = 2
 
+# Accepted MIME types for uploading.
 ACCEPTED_MIMES = [
     'image/png',
     'image/jpeg',
@@ -104,7 +119,21 @@ ACCEPTED_MIMES = [
     'video/webm'
 ]
 
-# Ratelimit settings
+
+# Decrease factor
+# If a user sends a file that another user has sent previously,
+# then it won't count as much towards their limit.
+#
+# Setting this value to 1 will disable the feature.
+# Setting this value to 0 will make dupes ignore the weekly limit
+# Setting to any value between 0 and 1 will decrease
+# the file's actual size by that factor
+#
+# Default is 0.5 as the upload still costs processing power and bandwidth
+DUPE_DECREASE_FACTOR = 0.5
+
+
+# === RATELIMIT SETTINGS ===
 
 RATELIMIT = {
     'requests': 5,
@@ -121,11 +150,13 @@ IP_RATELIMIT = {
 #   Also, special ratelimits will be forced to use IP ratelimiting.
 SPECIAL_RATELIMITS = {}
 
-# An example of a SPECIAL_RATELIMITS:
+# An example of a valid SPECIAL_RATELIMITS:
 #   SPECIAL_RATELIMITS = {
 #       '/i/': {'requests': 100, 'second': 5},
 #       '/t/': {'requests': 200, 'second': 3},
 #   }
+
+# === THUMBNAIL SETTINGS ===
 
 # Enable thumbnails?
 THUMBNAILS = False
@@ -146,6 +177,7 @@ THUMBNAIL_SIZES = {
     't': (250, 250),
 }
 
+# === FEATURE SETTINGS ===
 # Here you can disable certain features, in case there's a big bug etc
 UPLOADS_ENABLED = True
 SHORTENS_ENABLED = True

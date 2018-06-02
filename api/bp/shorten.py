@@ -6,7 +6,7 @@ from sanic import response
 
 from ..common_auth import token_check, check_admin
 from ..errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
-from ..common import gen_filename, get_domain_info, transform_wildcard
+from ..common import gen_filename, get_domain_info, transform_wildcard, FileNameType
 from ..snowflake import get_snowflake
 
 bp = Blueprint('shorten')
@@ -81,7 +81,9 @@ async def shorten_handler(request):
     redir_rname = await gen_filename(request)
     redir_id = get_snowflake()
 
-    domain_id, subdomain_name, domain = await get_domain_info(request, user_id)
+    domain_id, subdomain_name, domain = await get_domain_info(request,
+                                                              user_id,
+                                                              FileNameType.SHORTEN)
     domain = transform_wildcard(domain, subdomain_name)
 
     await request.app.db.execute("""

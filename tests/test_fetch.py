@@ -33,7 +33,7 @@ async def test_invalid_path(test_cli):
 
 async def test_invalid_path_thumbnail(test_cli):
     fmts = ['jpg', 'png', 'jpeg', 'gif']
-    invalid_shit = [f'{username()}.{random.choice(fmts)}' for _ in range(1000)]
+    invalid_shit = [f'{username()}.{random.choice(fmts)}' for _ in range(100)]
 
     for invalid in invalid_shit:
         prefix = random.choice(['s', 't', 'l', 'm'])
