@@ -1,6 +1,9 @@
 import string
 import secrets
 import os
+import hashlib
+import logging
+from pathlib import Path
 
 import itsdangerous
 import aiohttp
@@ -9,6 +12,7 @@ from .errors import FailedAuth, BadInput, NotFound
 
 VERSION = '2.0.0'
 ALPHABET = string.ascii_lowercase + string.digits
+log = logging.getLogger(__name__)
 
 
 class TokenType:
@@ -73,6 +77,20 @@ async def gen_filename(request, length=3) -> str:
 
     # if 10 tries didnt work, try generating with length+1
     return await gen_filename(request, length + 1)
+
+
+def calculate_hash(fhandler) -> str:
+    """Generate a md5 hash of the given file."""
+    hash_md5 = hashlib.md5()
+
+    for chunk in iter(lambda: fhandler.read(4096), b""):
+        hash_md5.update(chunk)
+
+    # so that we can reuse the same handler
+    # later on
+    fhandler.seek(0)
+
+    return hash_md5.hexdigest()
 
 
 async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
@@ -189,11 +207,12 @@ async def purge_cf(app, filename: str, ftype: int) -> int:
 
     return domain
 
-async def delete_file(request, file_name, user_id, set_delete=True):
-    domain_id = await purge_cf(request.app, file_name, FileNameType.FILE)
+async def delete_file(app, file_name, user_id, set_delete=True):
+    """Delete a file, purging it from Cloudflare's cache."""
+    domain_id = await purge_cf(app, file_name, FileNameType.FILE)
 
     if set_delete:
-        exec_out = await request.app.db.execute("""
+        exec_out = await app.db.execute("""
         UPDATE files
         SET deleted = true
         WHERE uploader = $1
@@ -203,9 +222,35 @@ async def delete_file(request, file_name, user_id, set_delete=True):
 
         if exec_out == "UPDATE 0":
             raise NotFound('You have no files with this name.')
+
+        fspath = await app.db.fetchval("""
+        SELECT fspath
+        FROM files
+        WHERE uploader = $1
+          AND filename = $2
+        """, user_id, file_name)
+
+        # fetch all files with the same fspath
+        # and on the hash system, means the same hash
+        same_fspath = await app.db.fetchval("""
+        SELECT COUNT(*)
+        FROM files
+        WHERE fspath = $1 AND deleted = false
+        """, fspath)
+
+        if same_fspath == 0:
+            path = Path(fspath)
+            try:
+                path.unlink()
+                log.info(f'Deleted {fspath!s} since no files refer to it')
+            except FileNotFoundError:
+                log.warning(f'fspath {fspath!s} does not exist')
+        else:
+            log.info(f'there are still {same_fspath} files with the '
+                     f'same fspath {fspath!s}, not deleting')
     else:
         if user_id:
-            await request.app.db.execute("""
+            await app.db.execute("""
             DELETE FROM files
             WHERE
                 filename = $1
@@ -213,13 +258,13 @@ async def delete_file(request, file_name, user_id, set_delete=True):
             AND deleted = false
             """, file_name, user_id)
         else:
-            await request.app.db.execute("""
+            await app.db.execute("""
             DELETE FROM files
             WHERE filename = $1
             AND deleted = false
             """, file_name)
 
-    await request.app.storage.raw_invalidate(f'fspath:{domain_id}:{file_name}')
+    await app.storage.raw_invalidate(f'fspath:{domain_id}:{file_name}')
 
 
 async def check_bans(request, user_id: int):
