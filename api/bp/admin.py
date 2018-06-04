@@ -6,10 +6,11 @@ import asyncpg
 
 from sanic import Blueprint, response
 
+from ..decorators import admin_route
 from ..common_auth import token_check, check_admin
 from ..errors import NotFound, BadInput
-from ..decorators import admin_route
 from ..schema import validate, ADMIN_MODIFY_FILE, ADMIN_MODIFY_USER
+from ..common import delete_file, delete_shorten
 
 
 log = logging.getLogger(__name__)
@@ -271,6 +272,44 @@ async def modify_file(request, admin_id, file_id):
 async def modify_shorten(request, admin_id, shorten_id):
     """Modify file information."""
     return await handle_modify('shorten', request, shorten_id)
+
+
+@bp.delete('/api/admin/file/<file_id:int>')
+@admin_route
+async def delete_file_handler(request, admin_id, file_id):
+    """Delete a file."""
+    row = await request.app.db.fetchrow("""
+    SELECT filename, uploader
+    FROM files
+    WHERE file_id = $1
+    """, file_id)
+
+    await delete_file(request.app, row['filename'], row['uploader'])
+
+    return response.json({
+        'shortname': row['filename'],
+        'uploader': row['uploader'],
+        'success': True,
+    })
+
+
+@bp.delete('/api/admin/shorten/<shorten_id:int>')
+@admin_route
+async def delete_shorten_handler(request, admin_id, shorten_id: int):
+    """Delete a shorten."""
+    row = await request.app.db.fetchrow("""
+    SELECT filename, uploader
+    FROM shortens
+    WHERE shorten_id = $1
+    """, shorten_id)
+
+    await delete_shorten(request.app, row['filename'], row['uploader'])
+
+    return response.json({
+        'shortname': row['filename'],
+        'uploader': row['uploader'],
+        'success': True,
+    })
 
 
 @bp.put('/api/admin/domains')

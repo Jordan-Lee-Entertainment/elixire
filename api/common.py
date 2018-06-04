@@ -273,6 +273,26 @@ async def delete_file(app, file_name, user_id, set_delete=True):
     await app.storage.raw_invalidate(f'fspath:{domain_id}:{file_name}')
 
 
+async def delete_shorten(app, shortname: str, user_id: int):
+    """Remove a shorten from the system"""
+    exec_out = await app.db.execute("""
+    UPDATE shortens
+    SET deleted = true
+    WHERE uploader = $1
+    AND filename = $2
+    AND deleted = false
+    """, user_id, shortname)
+
+    # By doing this, we're cutting down DB calls by half
+    # and it still checks for user
+    if exec_out == "UPDATE 0":
+        raise NotFound('You have no shortens with this name.')
+
+    domain_id = await purge_cf(app, shortname, FileNameType.SHORTEN)
+    await app.storage.raw_invalidate(f'redir:{domain_id}:{shortname}')
+
+
+
 async def check_bans(request, user_id: int):
     """Check if the current user is already banned."""
     if user_id is not None:

@@ -4,9 +4,9 @@ import logging
 from sanic import Blueprint
 from sanic import response
 
-from ..common import purge_cf, delete_file, FileNameType
+from ..common import delete_file, delete_shorten
 from ..common_auth import token_check
-from ..errors import NotFound, BadInput
+from ..errors import BadInput
 
 bp = Blueprint('files')
 log = logging.getLogger(__name__)
@@ -106,7 +106,6 @@ async def list_handler(request):
 @bp.delete('/api/delete')
 async def delete_handler(request):
     """Invalidate a file."""
-    # TODO: Reduce code repetition between this and /api/shortendelete
     user_id = await token_check(request)
     file_name = str(request.json['filename'])
 
@@ -123,21 +122,7 @@ async def shortendelete_handler(request):
     user_id = await token_check(request)
     file_name = str(request.json['filename'])
 
-    exec_out = await request.app.db.execute("""
-    UPDATE shortens
-    SET deleted = true
-    WHERE uploader = $1
-    AND filename = $2
-    AND deleted = false
-    """, user_id, file_name)
-
-    # By doing this, we're cutting down DB calls by half
-    # and it still checks for user
-    if exec_out == "UPDATE 0":
-        raise NotFound('You have no shortens with this name.')
-
-    domain_id = await purge_cf(request.app, file_name, FileNameType.SHORTEN)
-    await request.app.storage.raw_invalidate(f'redir:{domain_id}:{file_name}')
+    await delete_shorten(request.app, file_name, user_id)
 
     return response.json({
         'success': True
