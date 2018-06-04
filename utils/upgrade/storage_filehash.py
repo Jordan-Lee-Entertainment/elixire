@@ -31,49 +31,63 @@ async def close_db(db, redis):
     print('CLOSE: END')
     
 
-def calculate_md5(image):
-    hash_md5 = hashlib.md5()
+def calculate_hash(image) -> str:
+    hashobj = hashlib.sha256()
 
     with open(image, "rb") as fhandler:
         for chunk in iter(lambda: fhandler.read(4096), b""):
-            hash_md5.update(chunk)
+            hashobj.update(chunk)
 
-    return hash_md5.hexdigest()
+    return hashobj.hexdigest()
 
 
 async def main():
     pool, redis = await open_db()
     impath = Path('./images')
 
-    images = [path for path in impath.glob('*/*')]
+    images = [path for path in impath.glob('*/*') if path.is_file()]
 
+    total = len(images)
+    count = 0
     for image in images:
+        print('working on', str(image), count, 'out of', total)
         # calculate md5 of image, move it to another path
         # then alter fspath
-        md5_hash = calculate_md5(image)
+        md5_hash = calculate_hash(image)
 
-        spl = str(image).split('.')
+        simage = str(image)
+        target = None
+        shortname = None
 
-        ext = spl[-1]
-        imname = spl[-2].split('/')[-1]
 
-        target = impath / md5_hash[0] / f'{md5_hash}.{ext}'
+        if simage.find('.') != -1:
+            spl = str(image).split('.')
+
+            ext = spl[-1]
+            shortname = spl[-2].split('/')[-1]
+
+            target = impath / md5_hash[0] / f'{md5_hash}.{ext}'
+        else:
+            shortname = simage.split('/')[-1]
+            target = impath / md5_hash[0] / md5_hash
+
         image.rename(target)
 
         domain = await pool.fetchval("""
         SELECT domain
         FROM files
         WHERE filename = $1
-        """, imname)
+        """, shortname)
 
         execout = await pool.execute("""
         UPDATE files
         SET fspath = $2
         WHERE filename = $1
-        """, imname, str(target))
+        """, shortname, f'./{target!s}')
 
-        print(f'{imname}: {execout} <= {target}')
-        await redis.delete(f'fspath:{domain}:{imname}')
+        print(f'{shortname}: {execout} <= {target}')
+        count += 1
+        await redis.delete(f'fspath:{domain}:{shortname}')
 
     await close_db(pool, redis)
 
