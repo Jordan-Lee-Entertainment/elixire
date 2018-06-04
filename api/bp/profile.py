@@ -44,7 +44,7 @@ async def domainlist_handler(request):
     SELECT domain_id, domain
     FROM domains
     {adm_string}
-    ORDER BY domain_id ASC
+    ORDER BY official DESC, domain_id ASC
     """)
 
     adm_string_official = "" if is_admin else "AND admin_only = false"
@@ -267,6 +267,7 @@ async def limits_handler(request):
 
     return response.json(limits)
 
+
 @bp.delete('/api/account')
 async def deactive_own_user(request):
     """Deactivate the current user.
@@ -291,7 +292,8 @@ async def deactive_own_user(request):
     _inst_name = request.app.econfig.INSTANCE_NAME
     _support = request.app.econfig.SUPPORT_EMAIL
 
-    email_token = await gen_email_token(request.app, user_id, 'email_deletion_tokens')
+    email_token = await gen_email_token(request.app, user_id,
+                                        'email_deletion_tokens')
 
     log.info(f'Generated email hash {email_token} for account deactivation')
 
@@ -319,7 +321,8 @@ Do not reply to this email specifically, it will not work.
 """
 
     resp = await send_email(request.app, user_email,
-                            f'{_inst_name} - account deactivation request', email_body)
+                            f'{_inst_name} - account deactivation request',
+                            email_body)
 
     return response.json({
         'success': resp.status == 200
@@ -360,6 +363,7 @@ async def deactivate_user_from_email(request):
         'success': True
     })
 
+
 @bp.post('/api/reset_password')
 async def reset_password_req(request):
     """Send a password reset request."""
@@ -381,7 +385,8 @@ async def reset_password_req(request):
     _inst_name = request.app.econfig.INSTANCE_NAME
     _support = request.app.econfig.SUPPORT_EMAIL
 
-    email_token = await gen_email_token(request.app, user_id, 'email_pwd_reset_tokens')
+    email_token = await gen_email_token(request.app, user_id,
+                                        'email_pwd_reset_tokens')
 
     await request.app.db.execute("""
     INSERT INTO email_pwd_reset_tokens (hash, user_id)
@@ -405,7 +410,8 @@ Do not reply to this email specifically, it will not work.
 """
 
     resp = await send_email(request.app, user_email,
-                            f'{_inst_name} - password reset request', email_body)
+                            f'{_inst_name} - password reset request',
+                            email_body)
 
     return response.json({
         'success': resp.status == 200
