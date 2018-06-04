@@ -10,7 +10,7 @@ from ..decorators import admin_route
 from ..common_auth import token_check, check_admin
 from ..errors import NotFound, BadInput
 from ..schema import validate, ADMIN_MODIFY_FILE, ADMIN_MODIFY_USER
-from ..common import delete_file, delete_shorten
+from ..common import delete_file, delete_shorten, send_email
 
 
 log = logging.getLogger(__name__)
@@ -86,6 +86,42 @@ async def get_user_handler(request, admin_id, user_id: int):
     return response.json(dudata)
 
 
+async def notify_activate(app, user_id: int):
+    """Inform user that they got an account."""
+    log.info(f'Sending activation email to {user_id}')
+
+    _inst_name = app.econfig.INSTANCE_NAME
+    _support = app.econfig.SUPPORT_EMAIL
+
+    email_body = f"""This is an automated email from {_inst_name}
+about your account request.
+
+Your account has been activated and you can now log in at {app.econfig.MAIN_URL}/login.html.
+
+Welcome to {_inst_name} family!
+
+Send an email to {_support} if any questions arise.
+Do not reply to this automated email.
+
+- {_inst_name}, {app.econfig.MAIN_URL}
+    """
+
+    user_email = await app.db.fetchval("""
+    SELECT email
+    FROM users
+    WHERE user_id = $1
+    """, user_id)
+
+    resp = await send_email(app, user_email,
+                            f'{_inst_name} - Your account is now active',
+                            email_body)
+
+    if resp.status == 200:
+        log.info(f'Sent email to {user_id} {user_email}')
+    else:
+        log.error(f'Failed to send email to {user_id} {user_email}')
+
+
 @bp.post('/api/admin/activate/<user_id:int>')
 @admin_route
 async def activate_user(request, admin_id, user_id: int):
@@ -103,6 +139,8 @@ async def activate_user(request, admin_id, user_id: int):
 
     if result == "UPDATE 0":
         raise BadInput('Provided user ID does not reference any user.')
+
+    await notify_activate(request.app, user_id)
 
     return response.json({
         'success': True,
