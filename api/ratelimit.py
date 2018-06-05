@@ -8,6 +8,7 @@ log = logging.getLogger(__name__)
 
 
 class Ratelimit:
+    """Main ratelimit bucket class."""
     def __init__(self, requests, second):
         self.requests = int(requests)
         self.second = second
@@ -76,6 +77,7 @@ class Ratelimit:
 
 
 class RatelimitManager:
+    """Manages buckets."""
     def __init__(self, app, ratelimit=None):
         self._cache = {}
         self._cooldown = None

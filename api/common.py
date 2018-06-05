@@ -54,9 +54,23 @@ def _gen_fname(length) -> str:
 async def gen_filename(request, length=3) -> str:
     """Generate a random filename, without clashes.
 
-    This has a limit of generating a 10 character filename.
-    Any attempts to get more characters will result
-    in a RuntimeError.
+    Parameters
+    ----------
+    request: sanic.Request
+        So the function can call the database.
+
+    length, optional: int
+        Minimal amount of characters to use.
+
+    Returns
+    -------
+    str
+        The generated shortname
+
+    Raises
+    ------
+    RuntimeError
+        If it tried to generate a shortname more than 10 times.
     """
     if length > 10:
         raise RuntimeError('Failed to generate a filename')
@@ -81,7 +95,21 @@ async def gen_filename(request, length=3) -> str:
 
 
 def calculate_hash(fhandler) -> str:
-    """Generate a hash of the given file."""
+    """Generate a hash of the given file.
+
+    This calls the seek(0) of the file handler
+    so it can be reused.
+
+    Parameters
+    ----------
+    fhandler: file object
+        Any file-like object.
+
+    Returns
+    -------
+    str
+        The SHA256 hash of the given file.
+    """
     hashstart = time.monotonic()
     hash_obj = hashlib.sha256()
 
@@ -100,7 +128,31 @@ def calculate_hash(fhandler) -> str:
 
 
 async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
-    """Generate a token for email usage"""
+    """Generate a token for email usage.
+
+    Calls the database to give an unique token.
+    
+    Parameters
+    ----------
+    app: sanic.App
+        Application instance for database access.
+    user_id: int
+        User snowflake ID.
+    table: str
+        The table to be used for checking.
+
+    Returns
+    -------
+    str
+        The email token to be used.
+
+    Raises
+    ------
+    BadInput
+        When the funcion entered more than 10 retries,
+        or there are more than 3 tokens issued in the span
+        of a time window (defined by the table)
+    """
     if count == 11:
         # it really shouldn't happen,
         # but we better be ready for it.
@@ -294,7 +346,14 @@ async def delete_shorten(app, shortname: str, user_id: int):
 
 
 async def check_bans(request, user_id: int):
-    """Check if the current user is already banned."""
+    """Check if the current user is already banned.
+
+    Raises
+    ------
+    FailedAuth
+        When a user is banned, or their
+        IP address is banned.
+    """
     if user_id is not None:
         reason = await request.app.storage.get_ban(user_id)
 
@@ -381,7 +440,22 @@ async def ip_ban_webhook(app, ip_address: str, reason: str, period: str):
 
 
 async def get_domain_info(request, user_id: int, dtype=FileNameType.FILE) -> tuple:
-    """Get information about a user's selected domain."""
+    """Get information about a user's selected domain.
+
+    Parameters
+    ----------
+    request: sanic.Request
+        Request object for database access.
+    user_id: int
+        User's snowflake ID.
+    dtype, optional: FileNameType
+        What type of domain to get? (file or shorten)
+
+    Returns
+    -------
+    tuple
+        with 3 values: domain id, subdomain and the domain string
+    """
     domain_id, subdomain_name = await request.app.db.fetchrow("""
     SELECT domain, subdomain
     FROM users
@@ -414,7 +488,21 @@ async def get_domain_info(request, user_id: int, dtype=FileNameType.FILE) -> tup
     return domain_id, subdomain_name, domain
 
 
-def transform_wildcard(domain, subdomain_name):
+def transform_wildcard(domain: str, subdomain_name: str) -> str:
+    """Do domain transformations in the case of a wildcard.
+
+    Parameters
+    ---------
+    domain: str
+        The domain as a template for the transformation.
+    subdomain_name: str
+        The subdomain to be applied on the template.
+
+    Returns
+    -------
+    str
+        The actual domain you should use.
+    """
     # Check if it's wildcard and if we have a subdomain set
     if domain[0:2] == "*." and subdomain_name:
         domain = domain.replace("*.", f"{subdomain_name}.")

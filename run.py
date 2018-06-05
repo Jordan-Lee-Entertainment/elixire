@@ -23,7 +23,7 @@ import api.bp.metrics
 
 from api.errors import APIError, Ratelimited, Banned, FailedAuth
 from api.common_auth import token_check
-from api.common import ban_webhook, check_bans, get_ip_addr, ip_ban_webhook
+from api.common import VERSION, ban_webhook, check_bans, get_ip_addr, ip_ban_webhook
 from api.ratelimit import RatelimitManager
 from api.storage import Storage
 
@@ -374,7 +374,8 @@ async def close_db(rapp, _loop):
 @app.get('/api/hello')
 async def test_route(_request):
     return response.json({
-        'name': 'elixire'
+        'name': 'elixire',
+        'version': VERSION,
     })
 
 
