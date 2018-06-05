@@ -9,7 +9,15 @@ from .errors import NotFound
 
 log = logging.getLogger(__name__)
 
-def unix_time(dt):
+
+def unix_time(dt: datetime.datetime) -> int:
+    """Convert a datetime object to a UNIX timestamp.
+
+    Returns
+    -------
+    int
+        The UNIX timestamp of the datetime object.
+    """
     epoch = datetime.datetime.utcfromtimestamp(0)
     return (dt - epoch).total_seconds()
 
@@ -32,6 +40,10 @@ def prefix(user_id: int) -> str:
 
 
 class Storage:
+    """Storage system.
+
+    This is used by the codebase to provide caching with Redis.
+    """
     def __init__(self, app):
         self.app = app
         self.db = app.db
@@ -100,12 +112,27 @@ class Storage:
             await conn.set(key, value if value is not None else 'false', **kwargs)
 
     async def set_multi_one(self, keys: list, value):
-        """Set multiple keys to one given value."""
+        """Set multiple keys to one given value.
+
+        Parameters
+        ----------
+        keys: List[str]
+            List of keys to set.
+        value: any
+            Value to set for the keys.
+        """
         for key in keys:
             await self.set(key, value)
 
     async def raw_invalidate(self, *keys: tuple):
-        """Invalidate/delete a set of keys."""
+        """Invalidate/delete a set of keys.
+
+        Parameters
+        ----------
+        multiple: str
+            Any amount of parameters can be given.
+            Those represent the keys to be invalidated.
+        """
         log.info(f'Invalidating {len(keys)} keys: {keys}')
         with await self.redis as conn:
             await conn.delete(*keys)
@@ -116,45 +143,60 @@ class Storage:
         keys = (f'{ukey}:{field}' for field in fields)
         await self.raw_invalidate(*keys)
 
-    async def get_uid(self, username: str) -> int:
-        """Get an user ID given a username."""
-        uid = await self.get(f'uid:{username}', int)
+    async def _generic_1(self, key: str, key_type,
+                         query: str, *query_args: tuple):
+        """Generic storage function for Storage.get_uid
+        and Storage.get_username.
 
-        # db fetching didnt work before
-        if uid is False:
+        Parameters
+        ----------
+        key: str
+            The key to fetch from Redis.
+        key_type: any
+            The key type.
+        query: str
+            The Postgres query to run if Redis
+            does not have the key.
+        *query_args: Tuple[any]
+            Any arguments to the query.
+
+        Returns
+        -------
+        None
+            When nothing is found on the cache or
+            the database.
+        any
+            Any value that is cached, or found in database.
+        """
+        val = await self.get(key, key_type)
+
+        if val is False:
             return
 
-        if uid is None:
-            uid = await self.db.fetchval("""
+        if val is None:
+            val = await self.db.fetchval(query, *query_args)
+
+            await self.set(key, val or 'false')
+
+        return val
+
+    async def get_uid(self, username: str) -> int:
+        """Get an user ID given a username."""
+        return await self._generic_1(f'uid:{username}', int, """
             SELECT user_id
             FROM users
-            WHERE username=$1
+            WHERE username = $1
             LIMIT 1
-            """, username)
-
-            await self.set(f'uid:{username}', uid or 'false')
-
-        return uid
+        """, username)
 
     async def get_username(self, user_id: int) -> str:
         """Get a username given user ID."""
-        key = f'uname:{user_id}'
-        uname = await self.get(key, str)
-
-        if uname is False:
-            return
-
-        if uname is None:
-            uname = await self.db.fetchval("""
+        return await self._generic_1(f'uname:{user_id}', str, """
             SELECT username
             FROM users
             WHERE user_id = $1
             LIMIT 1
-            """, user_id)
-
-            await self.set(f'uname:{user_id}', uname or 'false')
-
-        return uname
+        """, user_id)
 
     async def actx_username(self, username: str) -> dict:
         """Fetch authentication context important stuff
@@ -216,45 +258,25 @@ class Storage:
     async def get_fspath(self, shortname: str, domain_id: int) -> str:
         """Get the filesystem path of an image."""
         key = f'fspath:{domain_id}:{shortname}'
-        fspath = await self.get(key, str)
-
-        if fspath is False:
-            return
-
-        if fspath is None:
-            fspath = await self.db.fetchval("""
+        return await self._generic_1(key, str, """
             SELECT fspath
             FROM files
             WHERE filename = $1
-            AND deleted = false
-            AND domain = $2
+              AND deleted = false
+              AND domain = $2
             LIMIT 1
-            """, shortname, domain_id)
-
-            await self.set(key, fspath or 'false')
-
-        return fspath
+        """, shortname, domain_id)
 
     async def get_urlredir(self, filename: str, domain_id: int) -> str:
         """Get a redirection of an URL."""
         key = f'redir:{domain_id}:{filename}'
-        url = await self.get(key, str)
-
-        if url is False:
-            return
-
-        if url is None:
-            url = await self.db.fetchval("""
+        return await self._generic_1(key, str, """
             SELECT redirto
             FROM shortens
             WHERE filename = $1
             AND deleted = false
             AND domain = $2
-            """, filename, domain_id)
-
-            await self.set(key, url or 'false')
-
-        return url
+        """, filename, domain_id)
 
     async def get_ipban(self, ip_address: str) -> str:
         """Get the reason for a specific IP ban."""
