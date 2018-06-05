@@ -392,6 +392,17 @@ async def upload_handler(request):
     # weekly limits, etc.
     do_checks = not ('admin' in request.args and request.args['admin'])
 
+    print(request.raw_args)
+    try:
+        given_domain = int(request.raw_args['domain'])
+    except KeyError:
+        given_domain = None
+
+    try:
+        given_subdomain = str(request.raw_args['subdomain'])
+    except KeyError:
+        given_subdomain = None
+
     # if the user is admin and they wanted an admin
     # upload, check if they're actually an admin
     if not do_checks:
@@ -445,7 +456,20 @@ async def upload_handler(request):
         if res is not None:
             return response.json(res)
 
-    domain_id, subdomain_name, domain = await get_domain_info(request, user_id)
+    domain_data = await get_domain_info(request, user_id)
+
+    domain_id = given_domain or domain_data[0]
+    subdomain_name = given_subdomain or domain_data[1]
+
+    if given_domain is None:
+        domain = domain_data[2]
+    else:
+        domain = await app.db.fetchval("""
+        SELECT domain
+        FROM domains
+        WHERE domain_id = $1
+        """, given_domain)
+
     domain = transform_wildcard(domain, subdomain_name)
 
     # for metrics
