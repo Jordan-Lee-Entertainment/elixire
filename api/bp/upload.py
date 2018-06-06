@@ -445,7 +445,7 @@ async def upload_handler(request):
 
     file_id = get_snowflake()
 
-    imhash = calculate_hash(filebytes)
+    imhash = await calculate_hash(app, filebytes)
     imfolder = app.econfig.IMAGE_FOLDER
     fspath = f'{imfolder}/{imhash[0]}/{imhash}{extension}'
 

@@ -3,8 +3,8 @@ import secrets
 import os
 import hashlib
 import logging
-from pathlib import Path
 import time
+from pathlib import Path
 
 import itsdangerous
 import aiohttp
@@ -94,7 +94,7 @@ async def gen_filename(request, length=3) -> str:
     return await gen_filename(request, length + 1)
 
 
-def calculate_hash(fhandler) -> str:
+def _calculate_hash(fhandler) -> str:
     """Generate a hash of the given file.
 
     This calls the seek(0) of the file handler
@@ -125,6 +125,16 @@ def calculate_hash(fhandler) -> str:
     log.info(f'Hashing file took {delta} seconds')
 
     return hash_obj.hexdigest()
+
+
+async def calculate_hash(app, fhandle) -> str:
+    """Calculate a hash of the given file handle.
+
+    Uses run_in_executor to do the job asynchronously so
+    the application doesn't lock up on large files.
+    """
+    fut = app.loop.run_in_executor(None, _calculate_hash, fhandle)
+    return await fut
 
 
 async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
