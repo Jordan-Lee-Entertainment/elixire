@@ -20,6 +20,7 @@ import api.bp.admin
 import api.bp.register
 import api.bp.datadump
 import api.bp.metrics
+import api.bp.personal_stats
 
 from api.errors import APIError, Ratelimited, Banned, FailedAuth
 from api.common_auth import token_check
@@ -46,10 +47,14 @@ app.blueprint(api.bp.admin.bp)
 app.blueprint(api.bp.register.bp)
 app.blueprint(api.bp.datadump.bp)
 app.blueprint(api.bp.metrics.bp)
+app.blueprint(api.bp.personal_stats.bp)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
+# Force IP ratelimiting on those routes, as they
+# don't provide an authentication context hint
+# from the start.
 FORCE_IP_ROUTES = (
     '/api/login',
     '/api/apikey',
@@ -65,10 +70,13 @@ FORCE_IP_ROUTES = (
     '/api/dump_get',
 )
 
+# Enforce IP ratelimit on /s/.
 NOT_API_RATELIMIT = (
     '/s/',
 )
 
+# Enforce special ratelimit settings
+# on /i/ and /t/
 SPECIAL_RATELIMITS = {
     '/i/': config.SPECIAL_RATELIMITS.get('/i/', config.IP_RATELIMIT),
     '/t/': config.SPECIAL_RATELIMITS.get('/t/', config.IP_RATELIMIT),
@@ -77,6 +85,7 @@ SPECIAL_RATELIMITS = {
 
 
 async def options_handler(request, *args, **kwargs):
+    """Dummy OPTIONS handler for CORS stuff."""
     return response.text('ok')
 
 
