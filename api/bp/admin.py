@@ -216,7 +216,7 @@ async def generic_namefetch(table, request, shortname):
     """, shortname)
 
     if not row:
-        return
+        return response.json(None)
 
     drow = dict(row)
     drow[id_field] = str(drow[id_field])
