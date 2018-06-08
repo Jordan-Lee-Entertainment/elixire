@@ -29,6 +29,9 @@ async def submit(app, title, value, task=False):
     could be spawned in a task, decreasing overall response latency
     after it is measured.
     """
+    if not app.econfig.ENABLE_METRICS:
+        return
+
     datapoint = point(title, value)
 
     if task:

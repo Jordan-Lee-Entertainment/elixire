@@ -345,7 +345,14 @@ async def setup_db(rapp, loop):
     rapp.dump_worker = None
     rapp.janitor_task = None
 
-    # InfluxDB metrics stuff
+    # metrics stuff
+    rapp.rate_requests = 0
+    rapp.rate_response = 0
+
+    rapp.file_upload_counter = 0
+    rapp.page_hit_counter = 0
+
+    # InfluxDB comms
     if rapp.econfig.ENABLE_METRICS:
         dbname = rapp.econfig.METRICS_DATABASE
 
@@ -360,11 +367,6 @@ async def setup_db(rapp, loop):
             rapp.ifxdb = InfluxDBClient(db=rapp.econfig.METRICS_DATABASE)
 
         rapp.ratetask = None
-        rapp.rate_requests = 0
-        rapp.rate_response = 0
-
-        rapp.file_upload_counter = 0
-        rapp.page_hit_counter = 0
     else:
         log.info('Metrics are disabled!')
 
