@@ -10,6 +10,7 @@ from sanic import Blueprint, response
 from ..snowflake import get_snowflake
 from ..errors import BadInput, FeatureDisabled
 from ..schema import validate, REGISTRATION_SCHEMA
+from ..common import send_email
 
 bp = Blueprint('register')
 
@@ -42,7 +43,38 @@ async def register_webhook(app, wh_url, user_id, username, discord_user, email):
     }
 
     async with app.session.post(wh_url, json=payload) as resp:
-        return resp
+        return resp.status == 200
+
+
+async def send_register_email(app, email: str) -> bool:
+    """Send an email about the signup."""
+    _inst_name = app.econfig.INSTANCE_NAME
+    _support = app.econfig.SUPPORT_EMAIL
+
+    email_body = f"""This is an automated email from {_inst_name}
+about your signup.
+
+It has been successfully dispatched to the system so that admins can
+activate the account. You will not be able to login until the account
+is activated.
+
+Accounts that aren't on the discord server won't be activated.
+{app.econfig.MAIN_INVITE}
+
+Please do not re-register the account. It will just decrease your chances
+of actually getting an account activated.
+
+Reply to {_support} if you have any questions.
+Do not reply to this email specifially, it will not work.
+
+ - {_inst_name}, {app.econfig.MAIN_URL}
+"""
+
+    resp = await send_email(app, email,
+                            f'{_inst_name} - signup confirmation',
+                            email_body)
+
+    return resp.status == 200
 
 
 @bp.post('/api/register')
@@ -61,9 +93,6 @@ async def register_user(request):
     password = payload['password']
     discord_user = payload['discord_user']
     email = payload['email']
-
-    if len(password) < 8:
-        raise BadInput('Password is less than 8 chars.')
 
     # borrowed from utils/adduser
     user_id = get_snowflake()
@@ -88,9 +117,11 @@ async def register_user(request):
     await request.app.storage.raw_invalidate(f'uid:{username}')
 
     app = request.app
-    await register_webhook(app, app.econfig.USER_REGISTER_WEBHOOK,
-                           user_id, username, discord_user, email)
+
+    succ = await send_register_email(app, email)
+    succ_wb = await register_webhook(app, app.econfig.USER_REGISTER_WEBHOOK,
+                                     user_id, username, discord_user, email)
 
     return response.json({
-        'success': True
+        'success': succ and succ_wb,
     })

@@ -8,6 +8,7 @@ PORT = 8080
 # basic configuration about the instance
 INSTANCE_NAME = 'elixi.re'
 MAIN_URL = 'https://elixi.re'
+MAIN_INVITE = 'https://discord.gg/123456'
 SUPPORT_EMAIL = 'support@elixi.re'
 USE_HTTPS = True
 
