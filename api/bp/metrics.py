@@ -79,6 +79,19 @@ async def page_hit_task(app):
         log.exception('file upload task err')
 
 
+async def file_count_task(app):
+    try:
+        while True:
+            total_files = await app.db.fetchval("""
+            SELECT COUNT(*)
+            FROM files
+            """)
+            await submit(app, 'total_files', total_files)
+            await asyncio.sleep(3600)
+    except Exception:
+        log.exception('file count task err')
+
+
 @bp.listener('after_server_start')
 async def create_db(app, loop):
     if not app.econfig.ENABLE_METRICS:
@@ -93,6 +106,7 @@ async def create_db(app, loop):
     app.ratetask = loop.create_task(ratetask(app))
     app.file_upload_task = loop.create_task(file_upload_task(app))
     app.page_hit_task = loop.create_task(page_hit_task(app))
+    app.file_count_task = app.loop.create_task(file_count_task(app))
 
 
 @bp.middleware('request')
