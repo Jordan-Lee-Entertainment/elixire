@@ -14,9 +14,11 @@ from sanic import Blueprint
 from sanic import response
 
 from ..common_auth import token_check, check_admin, check_paranoid
-from ..common import gen_filename, get_domain_info, transform_wildcard, delete_file, calculate_hash
+from ..common import gen_filename, get_domain_info, transform_wildcard, \
+    delete_file, calculate_hash
 from ..snowflake import get_snowflake
 from ..errors import BadImage, QuotaExploded, BadUpload, FeatureDisabled
+from .metrics import is_consenting
 
 
 bp = Blueprint('upload')
@@ -474,6 +476,9 @@ async def upload_handler(request):
 
     # for metrics
     app.file_upload_counter += 1
+
+    if await is_consenting(app, user_id):
+        app.upload_counter_pub += 1
 
     if impath.exists():
         filesize *= app.econfig.DUPE_DECREASE_FACTOR

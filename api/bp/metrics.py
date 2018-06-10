@@ -34,9 +34,17 @@ def point(measure, value):
     }
 
 
+async def is_consenting(app, user_id: int):
+    return await app.db.fetchval("""
+    SELECT consented
+    FROM users
+    WHERE user_id = $1
+    """, user_id)
+
+
 async def submit(app, title, value, task=False):
     """Submit a datapoint to InfluxDB.
-    
+
     This was written so that the datapoint write routine
     could be spawned in a task, decreasing overall response latency
     after it is measured.
@@ -66,6 +74,12 @@ async def ratetask(app):
             await submit(app, 'response', app.rate_response)
             app.rate_response = 0
 
+            await submit(app, 'request_pub', app.rreq_public)
+            app.rreq_public = 0
+
+            await submit(app, 'response_pub', app.rres_public)
+            app.rres_public = 0
+
             await asyncio.sleep(1)
     except Exception:
         log.exception('ratetask err')
@@ -76,6 +90,10 @@ async def file_upload_task(app):
         while True:
             await submit(app, 'file_upload_hour', app.file_upload_counter)
             app.file_upload_counter = 0
+
+            await submit(app, 'file_upload_hour_pub', app.upload_counter_pub)
+            app.upload_counter_pub = 0
+
             await asyncio.sleep(3600)
     except Exception:
         log.exception('file upload task err')
@@ -98,7 +116,39 @@ async def file_count_task(app):
             SELECT COUNT(*)
             FROM files
             """)
+
+            total_files_public = await app.db.fetchval("""
+            SELECT COUNT(*)
+            FROM files
+            JOIN users on files.uploader = users.user_id
+            WHERE users.consented = true
+            """)
+
             await submit(app, 'total_files', total_files)
+            await submit(app, 'total_files_public', total_files_public)
+            await asyncio.sleep(3600)
+    except Exception:
+        log.exception('file count task err')
+
+
+async def file_size_task(app):
+    try:
+        while True:
+            # sizes being submitted in megabytes
+            total_size = await app.db.fetchval("""
+            SELECT SUM(file_size) / 1048576
+            FROM files
+            """)
+
+            total_size_public = await app.db.fetchval("""
+            SELECT SUM(file_size) / 1048576
+            FROM files
+            JOIN users ON files.uploader = users.user_id
+            WHERE users.consented = true
+            """)
+
+            await submit(app, 'total_size', total_size)
+            await submit(app, 'total_size_public', total_size_public)
             await asyncio.sleep(3600)
     except Exception:
         log.exception('file count task err')
@@ -129,6 +179,14 @@ async def on_request(request):
     # increase the counter on every request
     request.app.rate_requests += 1
 
+    try:
+        user_id, _ = request.headers['x-context']
+
+        if await is_consenting(request.app, user_id):
+            request.app.rreq_public += 1
+    except KeyError:
+        pass
+
     # so we can measure response latency
     request['start_time'] = time.monotonic()
 
@@ -152,3 +210,13 @@ async def on_response(request, response):
     # submit the metric as milliseconds since it is more tangible in
     # normal scenarios
     await submit(request.app, 'response_latency', latency * 1000, True)
+
+    try:
+        user_id, _ = request.headers['x-context']
+
+        if await is_consenting(request.app, user_id):
+            request.app.rres_public += 1
+
+        await submit(request.app, 'response_latency_pub', latency * 1000, True)
+    except KeyError:
+        pass

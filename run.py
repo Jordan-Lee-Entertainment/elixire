@@ -351,7 +351,12 @@ async def setup_db(rapp, loop):
     rapp.rate_requests = 0
     rapp.rate_response = 0
 
+    rapp.rreq_public = 0
+    rapp.rres_public = 0
+
     rapp.file_upload_counter = 0
+    rapp.upload_counter_pub = 0
+
     rapp.page_hit_counter = 0
 
     # InfluxDB comms
