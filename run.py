@@ -384,9 +384,18 @@ async def close_db(rapp, _loop):
 
 
 @app.get('/api/hello')
-async def test_route(_request):
+async def test_route(request):
     return response.json({
-        'name': 'elixire',
+        'name': request.app.econfig.INSTANCE_NAME,
+        'version': VERSION,
+    })
+
+
+@app.get('/api/hewwo')
+async def h_hewwo(request):
+    """owo"""
+    return response.json({
+        'name': request.app.econfig.INSTANCE_NAME,
         'version': VERSION,
     })
 
