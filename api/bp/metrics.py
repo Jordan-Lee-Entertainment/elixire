@@ -180,7 +180,7 @@ async def on_request(request):
     request.app.rate_requests += 1
 
     try:
-        user_id, _ = request.headers['x-context']
+        user_id, _ = request['ctx']
 
         if await is_consenting(request.app, user_id):
             request.app.rreq_public += 1
@@ -212,7 +212,7 @@ async def on_response(request, response):
     await submit(request.app, 'response_latency', latency * 1000, True)
 
     try:
-        user_id, _ = request.headers['x-context']
+        user_id, _ = request['ctx']
 
         if await is_consenting(request.app, user_id):
             request.app.rres_public += 1

@@ -85,7 +85,6 @@ SPECIAL_RATELIMITS = {
 }
 
 
-
 async def options_handler(request, *args, **kwargs):
     """Dummy OPTIONS handler for CORS stuff."""
     return response.text('ok')
@@ -127,7 +126,7 @@ async def handle_ban(request, exception):
     reason = exception.args[0]
     rapp = request.app
 
-    if 'X-Context' not in request.headers:
+    if 'ctx' not in request:
         # use the IP as banning point
         ip_addr = get_ip_addr(request)
 
@@ -142,7 +141,7 @@ async def handle_ban(request, exception):
         await rapp.storage.raw_invalidate(f'ipban:{ip_addr}')
         await ip_ban_webhook(rapp, ip_addr, f'[ip ban] {reason}', period)
     else:
-        user_id, user_name = request.headers['X-Context']
+        user_id, user_name = request['ctx']
 
         log.warning(f'Banning {user_name} {user_id} with reason {reason!r}')
 
@@ -240,7 +239,7 @@ async def global_rl(request):
     if '/api' not in request.url:
         return
 
-    # from here onwards, only api ratelimiting (user-based, X-Context, etc)
+    # from here onwards, only api ratelimiting (user-based, context, etc)
     storage = request.app.storage
 
     # process ratelimiting
@@ -266,8 +265,8 @@ async def global_rl(request):
     if all(v is None for v in context):
         raise FailedAuth('Can not identify user')
 
-    # embed request context inside X-Context
-    request.headers['X-Context'] = context
+    # embed request context inside context
+    request['ctx'] = context
     bucket = rtl.get_bucket(user_name)
 
     # ignore when rtl isnt properly initialized
@@ -288,12 +287,12 @@ async def rl_header_set(request, response):
     if request.method == 'OPTIONS':
         return
 
-    # TODO: use the ip address instead of X-Context
-    # or maybe... we could embed the ip address inside some X-Context-IP
+    # TODO: use the ip address instead of context
+    # or maybe... we could embed the ip address inside some Context-IP
     # or something.
 
     try:
-        _, username = request.headers['x-context']
+        _, username = request['ctx']
     except KeyError:
         # No context provided.
         return
@@ -306,11 +305,6 @@ async def rl_header_set(request, response):
         response.headers['X-RateLimit-Limit'] = bucket.requests
         response.headers['X-RateLimit-Remaining'] = bucket._tokens
         response.headers['X-RateLimit-Reset'] = bucket._window + bucket.second
-
-    try:
-        request.headers.pop('x-context')
-    except KeyError:
-        pass
 
 
 @app.listener('before_server_start')
