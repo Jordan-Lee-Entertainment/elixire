@@ -381,7 +381,7 @@ async def deactivate_user_from_email(request):
     if not user_id:
         raise BadInput('No user found with that email token.')
 
-    await delete_user(app, user_id)
+    await delete_user(request.app, user_id)
 
     await request.app.db.execute("""
     DELETE FROM email_deletion_tokens
