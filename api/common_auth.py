@@ -12,6 +12,18 @@ from .schema import validate, LOGIN_SCHEMA
 log = logging.getLogger(__name__)
 
 
+def get_token(request) -> str:
+    """Get a token from the request.
+
+    Fetches a token from the url arguments,
+    if it fails, will fetch from the Authorization header.
+    """
+    try:
+        return request.raw_args['token']
+    except KeyError:
+        return request.headers['Authorization']
+
+
 async def pwd_hash(request, password: str) -> str:
     """Generate a hash for any given password"""
     password_bytes = bytes(password, 'utf-8')
@@ -159,7 +171,7 @@ async def token_check(request, wanted_type=None) -> int:
     By default does not care about the token type.
     """
     try:
-        token = request.headers['Authorization']
+        token = get_token(request)
     except (TypeError, KeyError):
         raise BadInput('no token provided')
 

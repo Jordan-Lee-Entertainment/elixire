@@ -23,8 +23,9 @@ import api.bp.metrics
 import api.bp.personal_stats
 
 from api.errors import APIError, Ratelimited, Banned, FailedAuth
-from api.common_auth import token_check
-from api.common import VERSION, ban_webhook, check_bans, get_ip_addr, ip_ban_webhook
+from api.common_auth import token_check, get_token
+from api.common import VERSION, ban_webhook, check_bans, \
+    get_ip_addr, ip_ban_webhook
 from api.ratelimit import RatelimitManager
 from api.storage import Storage
 
@@ -195,7 +196,6 @@ def handle_exception(request, exception):
     }, status=status_code)
 
 
-
 @app.middleware('request')
 async def global_rl(request):
     # handle global ratelimiting on all routes
@@ -246,13 +246,14 @@ async def global_rl(request):
     user_name, user_id, token = None, None, None
     try:
         # should raise KeyError
-        token = request.headers['Authorization']
+        token = get_token(request)
     except (TypeError, KeyError):
         # no token provided.
 
         # check if payload makes sense
         if not isinstance(request.json, dict):
-            raise FailedAuth('Request is not identifable. No Authorization header?')
+            raise FailedAuth('Request is not identifable. '
+                             'No Authorization header?')
 
         user_name = request.json.get('user')
 
@@ -397,7 +398,7 @@ def main():
     for uri in list(routelist):
         try:
             app.add_route(options_handler, uri, methods=['OPTIONS'])
-        except:
+        except Exception:
             pass
 
     # TODO: b2 / s3 support ????
@@ -413,6 +414,7 @@ def main():
         log.info('Frontend link is disabled.')
 
     app.run(host=config.HOST, port=config.PORT)
+
 
 if __name__ == '__main__':
     main()
