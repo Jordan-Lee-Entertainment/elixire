@@ -29,7 +29,8 @@ async def personal_stats_handler(request, user_id):
 
     total_files = await _get_counts(db, 'files', user_id)
     total_shortens = await _get_counts(db, 'shortens', user_id)
-    total_deleted = await _get_counts(db, 'files', user_id, 'AND deleted = true')
+    total_deleted = await _get_counts(db, 'files', user_id,
+                                      'AND deleted = true')
 
     total_bytes = await db.fetchval("""
     SELECT SUM(file_size)

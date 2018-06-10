@@ -109,7 +109,10 @@ class Storage:
                 value = str(value)
 
             log.info(f'Setting key {key!r} to {value!r}')
-            await conn.set(key, value if value is not None else 'false', **kwargs)
+
+            # the string false tells that whatever
+            # query the db did returned None.
+            await conn.set(key, value or 'false', **kwargs)
 
     async def set_multi_one(self, keys: list, value):
         """Set multiple keys to one given value.

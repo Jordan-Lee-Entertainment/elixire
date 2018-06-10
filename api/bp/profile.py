@@ -8,7 +8,7 @@ from sanic import response
 from ..errors import FailedAuth, FeatureDisabled, BadInput
 from ..common_auth import token_check, password_check, pwd_hash,\
     check_admin, check_domain_id
-from ..common import gen_email_token, send_email
+from ..common import gen_email_token, send_email, delete_file
 from ..schema import validate, PROFILE_SCHEMA, DEACTIVATE_USER_SCHEMA, \
     PASSWORD_RESET_SCHEMA, PASSWORD_RESET_CONFIRM_SCHEMA
 
@@ -329,6 +329,41 @@ Do not reply to this email specifically, it will not work.
     })
 
 
+async def delete_file_task(app, user_id: int):
+    file_shortnames = await app.db.fetch("""
+    SELECT filename
+    FROM files
+    WHERE uploader = $1
+    """, user_id)
+
+    log.info(f'Deleting {len(file_shortnames)} files'
+             'from account deletion.')
+
+    for shortname in file_shortnames:
+        # delete_file should take care of removing
+        # any others from the filesystem
+        await delete_file(app, shortname, user_id)
+
+
+async def delete_user(app, user_id):
+    """Actually delete the user and their files."""
+    await app.db.execute("""
+    UPDATE users
+    SET active = false
+    WHERE user_id = $1
+    """, user_id)
+
+    await app.db.execute("""
+    UPDATE files
+    SET deleted = true
+    WHERE uploader = $1
+    """, user_id)
+
+    # since there is a lot of db load
+    # when calling delete_file, we create a task that deletes them.
+    app.create_task(delete_file_task(app, user_id))
+
+
 @bp.post('/api/delete_confirm')
 async def deactivate_user_from_email(request):
     """Actually deactivate the account."""
@@ -346,11 +381,7 @@ async def deactivate_user_from_email(request):
     if not user_id:
         raise BadInput('No user found with that email token.')
 
-    await request.app.db.execute("""
-    UPDATE users
-    SET active = false
-    WHERE user_id = $1
-    """, user_id)
+    await delete_user(app, user_id)
 
     await request.app.db.execute("""
     DELETE FROM email_deletion_tokens

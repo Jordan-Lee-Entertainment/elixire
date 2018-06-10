@@ -52,7 +52,11 @@ def _gen_fname(length) -> str:
 
 
 async def gen_filename(request, length=3) -> str:
-    """Generate a random filename, without clashes.
+    """Generate a unique random filename.
+
+    To guarantee that the generated shortnames will
+    be unique, we query our DB if the generated
+    shortname already exists, and retry if it does.
 
     Parameters
     ----------
@@ -60,7 +64,8 @@ async def gen_filename(request, length=3) -> str:
         So the function can call the database.
 
     length, optional: int
-        Minimal amount of characters to use.
+        Minimal amount of characters to use, default 3.
+        Grows with the amount of failed generations.
 
     Returns
     -------
@@ -70,15 +75,12 @@ async def gen_filename(request, length=3) -> str:
     Raises
     ------
     RuntimeError
-        If it tried to generate a shortname more than 10 times.
+        If it tried to generate a shortname with more than 10 letters.
     """
     if length > 10:
         raise RuntimeError('Failed to generate a filename')
 
-    for _ in range(10):
-        # generate random, check against db
-        # if exists, continue loop
-        # if not, return
+    for try_count in range(10):
         random_fname = _gen_fname(length)
 
         filerow = await request.app.db.fetchrow("""
@@ -88,6 +90,8 @@ async def gen_filename(request, length=3) -> str:
         """, random_fname)
 
         if not filerow:
+            log.info(f'Took {try_count} retries to '
+                     f'generate {random_fname}')
             return random_fname
 
     # if 10 tries didnt work, try generating with length+1
@@ -141,7 +145,7 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
     """Generate a token for email usage.
 
     Calls the database to give an unique token.
-    
+
     Parameters
     ----------
     app: sanic.App
@@ -189,7 +193,8 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
     """, user_id)
 
     if hashes > 3:
-        raise BadInput('You already generated more than 3 tokens in the time period.')
+        raise BadInput('You already generated more than 3 tokens '
+                       'in the time period.')
 
     return possible
 
@@ -275,8 +280,28 @@ async def purge_cf(app, filename: str, ftype: int) -> int:
 
     return domain
 
+
 async def delete_file(app, file_name, user_id, set_delete=True):
-    """Delete a file, purging it from Cloudflare's cache."""
+    """Delete a file, purging it from Cloudflare's cache.
+
+    Parameters
+    ----------
+    app
+        Application instance.
+    file_name: str
+        File shortname to be deleted.
+    user_id: int
+        User ID making the request, so we
+        crosscheck that information with the file's uploader.
+    set_delete, optional: bool
+        If we set the deleted field to true OR
+        delete the row directly.
+
+    Raises
+    ------
+    NotFound
+        If no file is found.
+    """
     domain_id = await purge_cf(app, file_name, FileNameType.FILE)
 
     if set_delete:
@@ -352,7 +377,6 @@ async def delete_shorten(app, shortname: str, user_id: int):
 
     domain_id = await purge_cf(app, shortname, FileNameType.SHORTEN)
     await app.storage.raw_invalidate(f'redir:{domain_id}:{shortname}')
-
 
 
 async def check_bans(request, user_id: int):
@@ -449,7 +473,8 @@ async def ip_ban_webhook(app, ip_address: str, reason: str, period: str):
         return resp
 
 
-async def get_domain_info(request, user_id: int, dtype=FileNameType.FILE) -> tuple:
+async def get_domain_info(request, user_id: int,
+                          dtype=FileNameType.FILE) -> tuple:
     """Get information about a user's selected domain.
 
     Parameters
@@ -526,7 +551,8 @@ def transform_wildcard(domain: str, subdomain_name: str) -> str:
 async def send_email(app, user_email: str, subject: str, email_body: str):
     """Send an email to a user using the Mailgun API."""
     econfig = app.econfig
-    mailgun_url = f'https://api.mailgun.net/v3/{econfig.MAILGUN_DOMAIN}/messages'
+    mailgun_url = (f'https://api.mailgun.net/v3/{econfig.MAILGUN_DOMAIN}'
+                   '/messages')
 
     _inst_name = econfig.INSTANCE_NAME
 
