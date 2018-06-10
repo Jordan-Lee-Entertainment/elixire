@@ -2,13 +2,11 @@ import pytest
 
 import sys
 import os
-import secrets
 
 sys.path.append(os.getcwd())
 
-from elixire.run import app as mainapp
 import elixire.tests.creds
-from elixire.tests.common import token, username
+from elixire.run import app as mainapp
 
 
 @pytest.yield_fixture
@@ -25,5 +23,5 @@ async def test_api(test_cli):
     response = await test_cli.get('/api/hello')
     assert response.status == 200
     resp_json = await response.json()
-    assert resp_json['name'] == 'elixire'
-
+    assert isinstance(resp_json['name'], str)
+    assert isinstance(resp_json['version'], str)
