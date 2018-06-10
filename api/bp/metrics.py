@@ -217,6 +217,7 @@ async def on_response(request, response):
         if await is_consenting(request.app, user_id):
             request.app.rres_public += 1
 
-        await submit(request.app, 'response_latency_pub', latency * 1000, True)
+            await submit(request.app, 'response_latency_pub',
+                         latency * 1000, True)
     except KeyError:
         pass
