@@ -366,7 +366,7 @@ async def add_domain(request, admin_id: int):
 
     # stolen from storage.py
     _sp = domain_name.split('.')[0] + '.'
-    subdomain_name = domain_name.replace(_sp, "*.")
+    subdomain_name = domain_name.replace(_sp, "*.", 1)
     wildcard_name = f'*.{domain_name}'
 
     await request.app.storage.raw_invalidate(f'domain_id:{domain_name}',

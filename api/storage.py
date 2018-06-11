@@ -347,7 +347,7 @@ class Storage:
         """
         # hacky but it works
         _sp = domain_name.split('.')[0] + '.'
-        subdomain_name = domain_name.replace(_sp, "*.")
+        subdomain_name = domain_name.replace(_sp, "*.", 1)
         wildcard_name = f'*.{domain_name}'
 
         keys = [
