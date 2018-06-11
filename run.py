@@ -47,7 +47,6 @@ app.blueprint(api.bp.fetch.bp)
 app.blueprint(api.bp.admin.bp)
 app.blueprint(api.bp.register.bp)
 app.blueprint(api.bp.datadump.bp)
-app.blueprint(api.bp.metrics.bp)
 app.blueprint(api.bp.personal_stats.bp)
 
 logging.basicConfig(level=logging.INFO)
@@ -422,6 +421,9 @@ def main():
     else:
         log.info('Frontend link is disabled.')
 
+    # loading the blueprint here should
+    # help with middleware order.
+    app.blueprint(api.bp.metrics.bp)
     app.run(host=config.HOST, port=config.PORT)
 
 
