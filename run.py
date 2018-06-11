@@ -141,7 +141,7 @@ async def handle_ban(request, exception):
         await rapp.storage.raw_invalidate(f'ipban:{ip_addr}')
         await ip_ban_webhook(rapp, ip_addr, f'[ip ban] {reason}', period)
     else:
-        user_id, user_name = request['ctx']
+        user_name, user_id = request['ctx']
 
         log.warning(f'Banning {user_name} {user_id} with reason {reason!r}')
 
@@ -292,7 +292,7 @@ async def rl_header_set(request, response):
     # or something.
 
     try:
-        _, username = request['ctx']
+        username, _ = request['ctx']
     except KeyError:
         # No context provided.
         return
