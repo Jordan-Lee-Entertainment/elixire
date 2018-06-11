@@ -365,8 +365,8 @@ async def add_domain(request, admin_id: int):
     """, domain_name, is_adminonly, is_official)
 
     # stolen from storage.py
-    _sp = domain_name.split('.')[0]
-    subdomain_name = domain_name.replace(_sp, "*")
+    _sp = domain_name.split('.')[0] + '.'
+    subdomain_name = domain_name.replace(_sp, "*.")
     wildcard_name = f'*.{domain_name}'
 
     await request.app.storage.raw_invalidate(f'domain_id:{domain_name}',
@@ -407,8 +407,8 @@ async def remove_domain(request, admin_id: int, domain_id: int):
     """, domain_id)
 
     # stolen from storage.py
-    _sp = domain_name.split('.')[0]
-    subdomain_name = domain_name.replace(_sp, "*")
+    _sp = domain_name.split('.')[0] + '.'
+    subdomain_name = domain_name.replace(_sp, "*.")
     wildcard_name = f'*.{domain_name}'
 
     await request.app.storage.raw_invalidate(f'domain_id:{domain_name}',
