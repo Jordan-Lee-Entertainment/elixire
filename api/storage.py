@@ -346,8 +346,8 @@ class Storage:
         so that it could account for our caching.
         """
         # hacky but it works
-        _sp = domain_name.split('.')[0]
-        subdomain_name = domain_name.replace(_sp, "*")
+        _sp = domain_name.split('.')[0] + '.'
+        subdomain_name = domain_name.replace(_sp, "*.", 1)
         wildcard_name = f'*.{domain_name}'
 
         keys = [
