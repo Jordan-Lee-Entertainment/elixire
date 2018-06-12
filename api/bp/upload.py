@@ -15,7 +15,7 @@ from sanic import response
 
 from ..common_auth import token_check, check_admin, check_paranoid
 from ..common import gen_filename, get_domain_info, transform_wildcard, \
-    delete_file, calculate_hash
+    delete_file, calculate_hash, get_random_domain
 from ..snowflake import get_snowflake
 from ..errors import BadImage, QuotaExploded, BadUpload, FeatureDisabled
 from .metrics import is_consenting
@@ -405,6 +405,8 @@ async def upload_handler(request):
     except KeyError:
         given_subdomain = None
 
+    random_domain = ('random' in request.args and request.args['random'])
+
     # if the user is admin and they wanted an admin
     # upload, check if they're actually an admin
     if not do_checks:
@@ -459,6 +461,9 @@ async def upload_handler(request):
             return response.json(res)
 
     domain_data = await get_domain_info(request, user_id)
+
+    if random_domain:
+        given_domain = await get_random_domain(app)
 
     domain_id = given_domain or domain_data[0]
     subdomain_name = given_subdomain or domain_data[1]

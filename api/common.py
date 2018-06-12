@@ -523,6 +523,15 @@ async def get_domain_info(request, user_id: int,
     return domain_id, subdomain_name, domain
 
 
+async def get_random_domain(app) -> int:
+    """Get a random domain from the table."""
+    return await app.db.fetchval("""
+    SELECT domain_id FROM domains
+    ORDER BY RANDOM()
+    LIMIT 1
+    """)
+
+
 def transform_wildcard(domain: str, subdomain_name: str) -> str:
     """Do domain transformations in the case of a wildcard.
 
