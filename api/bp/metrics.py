@@ -169,6 +169,7 @@ async def create_db(app, loop):
     app.file_upload_task = loop.create_task(file_upload_task(app))
     app.page_hit_task = loop.create_task(page_hit_task(app))
     app.file_count_task = app.loop.create_task(file_count_task(app))
+    app.file_size_task = app.loop.create_task(file_size_task(app))
 
 
 @bp.middleware('request')
