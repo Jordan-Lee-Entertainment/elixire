@@ -1,10 +1,8 @@
-import bcrypt
-
 from sanic import Blueprint
 from sanic import response
 
 from ..common import TokenType
-from ..common.auth import login_user, gen_token
+from ..common.auth import login_user, gen_token, pwd_hash
 from ..schema import validate, REVOKE_SCHEMA
 
 bp = Blueprint('auth')
@@ -49,22 +47,18 @@ async def revoke_handler(request):
     payload = validate(request.json, REVOKE_SCHEMA)
     user = await login_user(request)
 
-    # we rerash password and invalidate all other tokens
+    # by rehashing the password we change the
+    # secret data that is signing the tokens,
+    # with that, we invalidate any other token
+    # used with the old hash
     user_pwd = payload['password']
-    user_pwd = bytes(user_pwd, 'utf-8')
-
-    future = request.app.loop.run_in_executor(None,
-                                              bcrypt.hashpw,
-                                              user_pwd,
-                                              bcrypt.gensalt(14))
-
-    hashed = await future
+    hashed = await pwd_hash(request, user_pwd)
 
     await request.app.db.execute("""
     UPDATE users
     SET password_hash = $1
     WHERE user_id = $2
-    """, hashed.decode('utf-8'), user['user_id'])
+    """, hashed, user['user_id'])
 
     await request.app.storage.invalidate(user['user_id'], 'password_hash')
 

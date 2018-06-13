@@ -81,3 +81,25 @@ async def test_valid_token(test_cli):
 
     assert response_valid.status == 200
 
+
+async def test_revoke(test_cli):
+    token = await login_normal(test_cli)
+
+    response_valid = await test_cli.get('/api/profile', headers={
+        'Authorization': token,
+    })
+
+    assert response_valid.status == 200
+
+    revoke_call = await test_cli.post('/api/revoke', json={
+        'user': elixire.tests.creds.USERNAME,
+        'password': elixire.tests.creds.PASSWORD
+    })
+
+    assert revoke_call.status == 200
+
+    response_invalid = await test_cli.get('/api/profile', headers={
+        'Authorization': token,
+    })
+
+    assert response_invalid.status == 403

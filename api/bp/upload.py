@@ -16,6 +16,7 @@ from sanic import response
 from ..common.auth import token_check, check_admin, check_paranoid
 from ..common import gen_filename, get_domain_info, transform_wildcard, \
     delete_file, calculate_hash, get_random_domain
+from ..common.webhook import jpeg_toobig_webhook, scan_webhook
 from ..snowflake import get_snowflake
 from ..errors import BadImage, QuotaExploded, BadUpload, FeatureDisabled
 from .metrics import is_consenting
@@ -25,89 +26,6 @@ bp = Blueprint('upload')
 log = logging.getLogger(__name__)
 UploadContext = namedtuple('UploadContext',
                            'user_id mime inputname shortname size body bytes checks')
-
-
-async def jpeg_toobig_webhook(app, ctx, size_after):
-    """Dispatch a webhook when the EXIF checking raised
-    stuff.
-    """
-    wh_url = getattr(app.econfig, 'EXIF_TOOBIG_WEBHOOK', None)
-    if not wh_url:
-        return
-
-    increase = size_after / ctx.size
-
-    uname = await app.db.fetchval("""
-        select username
-        from users
-        where user_id = $1
-    """, ctx.user_id)
-
-    payload = {
-        'embeds': [{
-            'title': 'Elixire EXIF Cleaner Size Change Warning',
-            'color': 0x420420,
-            'fields': [
-                {
-                    'name': 'user',
-                    'value': f'id: {ctx.user_id}, name: {uname}'
-                },
-                {
-                    'name': 'in filename',
-                    'value': ctx.inputname,
-                },
-                {
-                    'name': 'out filename',
-                    'value': ctx.shortname,
-                },
-                {
-                    'name': 'size change',
-                    'value': f'{ctx.size}b -> {size_after}b '
-                             f'({increase:.01f}x)',
-                }
-            ]
-        }]
-    }
-
-    async with app.session.post(wh_url,
-                                json=payload) as resp:
-        return resp
-
-
-async def scan_webhook(app, ctx: UploadContext, scan_out: str):
-    """Execute a discord webhook with information about the virus scan."""
-    uname = await app.db.fetchval("""
-        select username
-        from users
-        where user_id = $1
-    """, ctx.user_id)
-
-    webhook_payload = {
-        'embeds': [{
-            'title': 'Elixire Virus Scanning',
-            'color': 0xff0000,
-            'fields': [
-                {
-                    'name': 'user',
-                    'value': f'id: {ctx.user_id}, username: {uname}'
-                },
-
-                {
-                    'name': 'file info',
-                    'value': f'filename: `{ctx.inputname}`, {ctx.size} bytes'
-                },
-
-                {
-                    'name': 'clamdscan out',
-                    'value': f'```\n{scan_out}\n```'
-                }
-            ]
-        }],
-    }
-
-    async with app.session.post(app.econfig.UPLOAD_SCAN_WEBHOOK,
-                                json=webhook_payload) as resp:
-        return resp
 
 
 async def actual_scan_file(app, ctx):
@@ -163,7 +81,8 @@ async def scan_background(app, corotask, ctx):
             """, ctx.shortname)
 
             if not fspath:
-                log.warning(f'File {ctx.shortname} was deleted when scan finished')
+                log.warning(f'File {ctx.shortname} was '
+                            'deleted when scan finished')
 
             try:
                 os.remove(fspath)
@@ -183,12 +102,13 @@ async def scan_background(app, corotask, ctx):
 
 async def scan_file(app, ctx):
     """Run a scan on a file.
-    
+
     Schedules the scanning on the background if it takes too
     long to scan the file in question.
     """
     coro = actual_scan_file(app, ctx)
-    done, not_done = await asyncio.wait([coro], timeout=app.econfig.SCAN_WAIT_THRESHOLD)
+    done, not_done = await asyncio.wait([coro],
+                                        timeout=app.econfig.SCAN_WAIT_THRESHOLD)
 
     done = iter(done)
     not_done = iter(not_done)
@@ -207,7 +127,8 @@ async def scan_file(app, ctx):
         corotask = next(not_done)
 
         # schedule a wait on the scan
-        log.info(f'Scheduled background scan on {ctx.inputname} | {ctx.shortname}')
+        log.info('Scheduled background scan on '
+                 f'{ctx.inputname} | {ctx.shortname}')
         app.loop.create_task(scan_background(app, corotask, ctx))
 
 
@@ -242,7 +163,8 @@ async def clear_exif(image_bytes: io.BytesIO) -> io.BytesIO:
     return result_bytes
 
 
-async def upload_checks(app, ctx: UploadContext, given_extension: str) -> tuple:
+async def upload_checks(app, ctx: UploadContext,
+                        given_extension: str) -> tuple:
     """Do some upload checks."""
     user_id = ctx.user_id
 
@@ -344,7 +266,8 @@ def _construct_url(domain, shortname, extension):
     return f'https://{final_path!s}'
 
 
-async def check_repeat(app, fspath: str, extension: str, ctx: UploadContext) -> dict:
+async def check_repeat(app, fspath: str, extension: str,
+                       ctx: UploadContext) -> dict:
     # check which files have the same fspath (the same hash)
     files = await app.db.fetch("""
     SELECT filename, uploader, domain

@@ -71,7 +71,8 @@ async def ip_ban_webhook(app, ip_address: str, reason: str, period: str):
         return resp
 
 
-async def register_webhook(app, wh_url, user_id, username, discord_user, email):
+async def register_webhook(app, wh_url, user_id,
+                           username, discord_user, email):
     # call webhook
     payload = {
         'embeds': [{
@@ -100,3 +101,86 @@ async def register_webhook(app, wh_url, user_id, username, discord_user, email):
 
     async with app.session.post(wh_url, json=payload) as resp:
         return resp.status == 200
+
+
+async def jpeg_toobig_webhook(app, ctx, size_after):
+    """Dispatch a webhook when the EXIF checking raised
+    stuff.
+    """
+    wh_url = getattr(app.econfig, 'EXIF_TOOBIG_WEBHOOK', None)
+    if not wh_url:
+        return
+
+    increase = size_after / ctx.size
+
+    uname = await app.db.fetchval("""
+        select username
+        from users
+        where user_id = $1
+    """, ctx.user_id)
+
+    payload = {
+        'embeds': [{
+            'title': 'Elixire EXIF Cleaner Size Change Warning',
+            'color': 0x420420,
+            'fields': [
+                {
+                    'name': 'user',
+                    'value': f'id: {ctx.user_id}, name: {uname}'
+                },
+                {
+                    'name': 'in filename',
+                    'value': ctx.inputname,
+                },
+                {
+                    'name': 'out filename',
+                    'value': ctx.shortname,
+                },
+                {
+                    'name': 'size change',
+                    'value': f'{ctx.size}b -> {size_after}b '
+                             f'({increase:.01f}x)',
+                }
+            ]
+        }]
+    }
+
+    async with app.session.post(wh_url,
+                                json=payload) as resp:
+        return resp
+
+
+async def scan_webhook(app, ctx, scan_out: str):
+    """Execute a discord webhook with information about the virus scan."""
+    uname = await app.db.fetchval("""
+        select username
+        from users
+        where user_id = $1
+    """, ctx.user_id)
+
+    webhook_payload = {
+        'embeds': [{
+            'title': 'Elixire Virus Scanning',
+            'color': 0xff0000,
+            'fields': [
+                {
+                    'name': 'user',
+                    'value': f'id: {ctx.user_id}, username: {uname}'
+                },
+
+                {
+                    'name': 'file info',
+                    'value': f'filename: `{ctx.inputname}`, {ctx.size} bytes'
+                },
+
+                {
+                    'name': 'clamdscan out',
+                    'value': f'```\n{scan_out}\n```'
+                }
+            ]
+        }],
+    }
+
+    async with app.session.post(app.econfig.UPLOAD_SCAN_WEBHOOK,
+                                json=webhook_payload) as resp:
+        return resp

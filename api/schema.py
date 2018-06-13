@@ -74,7 +74,7 @@ REGISTRATION_SCHEMA = {
 }
 
 REVOKE_SCHEMA = {
-    # can't use type password here
+    'user': {'type': 'string', 'nullable': False, 'required': True},
     'password': {'type': 'string', 'required': True},
 }
 
