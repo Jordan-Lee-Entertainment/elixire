@@ -477,10 +477,6 @@ async def upload_handler(request):
         WHERE domain_id = $1
         """, given_domain)
 
-    # make sure we have at least
-    # something of a subdomain before
-    # calling transform_wildcard (default as 'i')
-    subdomain_name = subdomain_name or 'i'
     domain = transform_wildcard(domain, subdomain_name)
 
     # for metrics
