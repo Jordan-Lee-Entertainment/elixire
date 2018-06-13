@@ -7,11 +7,11 @@ import asyncpg
 from sanic import Blueprint, response
 
 from ..decorators import admin_route
-from ..common.auth import token_check, check_admin
 from ..errors import NotFound, BadInput
 from ..schema import validate, ADMIN_MODIFY_FILE, ADMIN_MODIFY_USER
 from ..common import delete_file, delete_shorten
-from ..common.email import send_email
+from ..common.email import fmt_email, send_user_email, activate_email_send, \
+    uid_from_email, clean_etoken
 
 
 log = logging.getLogger(__name__)
@@ -94,31 +94,23 @@ async def notify_activate(app, user_id: int):
     """Inform user that they got an account."""
     log.info(f'Sending activation email to {user_id}')
 
-    _inst_name = app.econfig.INSTANCE_NAME
-    _support = app.econfig.SUPPORT_EMAIL
-
-    email_body = f"""This is an automated email from {_inst_name}
+    body = fmt_email(app, """This is an automated email from {inst_name}
 about your account request.
 
-Your account has been activated and you can now log in at {app.econfig.MAIN_URL}/login.html.
+Your account has been activated and you can now log in at {main_url}/login.html.
 
-Welcome to {_inst_name} family!
+Welcome to {inst_name} family!
 
-Send an email to {_support} if any questions arise.
+Send an email to {support} if any questions arise.
 Do not reply to this automated email.
 
-- {_inst_name}, {app.econfig.MAIN_URL}
-    """
+- {inst_name}, {main_url}
+    """)
 
-    user_email = await app.db.fetchval("""
-    SELECT email
-    FROM users
-    WHERE user_id = $1
-    """, user_id)
-
-    resp = await send_email(app, user_email,
-                            f'{_inst_name} - Your account is now active',
-                            email_body)
+    subject = fmt_email(app, "{inst_name} - Your account is now active")
+    resp, user_email = await send_user_email(app, user_id,
+                                             subject,
+                                             body)
 
     if resp.status == 200:
         log.info(f'Sent email to {user_id} {user_email}')
@@ -130,9 +122,6 @@ Do not reply to this automated email.
 @admin_route
 async def activate_user(request, admin_id, user_id: int):
     """Activate one user, given its ID."""
-    caller_id = await token_check(request)
-    await check_admin(request, caller_id, True)
-
     result = await request.app.db.execute("""
     UPDATE users
     SET active = true
@@ -149,6 +138,42 @@ async def activate_user(request, admin_id, user_id: int):
     return response.json({
         'success': True,
         'result': result,
+    })
+
+
+@bp.post('/api/admin/activate_email/<user_id:int>')
+@admin_route
+async def activation_email(request, admin_id, user_id):
+    await request.app.storage.invalidate(user_id, 'active')
+
+    resp, user_email = await activate_email_send(request.app, user_id)
+    return response.json({
+        'success': resp.status == 200,
+    })
+
+
+@bp.get('/api/activate_email')
+async def activate_user_from_email(request):
+    try:
+        email_token = str(request.raw_args['token'])
+    except (KeyError, TypeError):
+        raise BadInput('No token provided')
+
+    app = request.app
+    user_id = await uid_from_email(app, email_token, 'email_activation_tokens')
+
+    res = await request.app.db.execute("""
+    UPDATE users
+    SET active = true
+    WHERE user_id = $1
+    """, user_id)
+
+    await request.app.storage.invalidate(user_id, 'active')
+    await clean_etoken(app, email_token, 'email_activation_tokens')
+    log.info(f'Activated user id {user_id}')
+
+    return response.json({
+        'success': res == 'UPDATE 1'
     })
 
 
@@ -489,6 +514,7 @@ async def get_domain_stats(request, admin_id, domain_id):
         'stats': stats,
         'public_stats': public_stats,
     })
+
 
 @bp.patch('/api/admin/user/<user_id:int>')
 @admin_route

@@ -147,6 +147,14 @@ CREATE TABLE IF NOT EXISTS email_dump_tokens (
     PRIMARY KEY (hash, user_id)
 );
 
+-- email stuff for account activations
+CREATE TABLE IF NOT EXISTS email_activation_tokens (
+    hash text NOT NULL,
+    user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
+    expiral timestamp without time zone default now() + interval '1 day',
+    PRIMARY KEY (hash, user_id)
+);
+
 -- data dump state
 CREATE TABLE IF NOT EXISTS current_dump_state (
     -- identify the current dump

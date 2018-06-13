@@ -70,6 +70,7 @@ FORCE_IP_ROUTES = (
     '/api/reset_password_confirm',
 
     '/api/dump_get',
+    '/api/activate_email',
 )
 
 # Enforce IP ratelimit on /s/.

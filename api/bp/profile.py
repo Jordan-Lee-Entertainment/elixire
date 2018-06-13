@@ -8,7 +8,8 @@ from sanic import response
 from ..errors import FailedAuth, FeatureDisabled, BadInput
 from ..common.auth import token_check, password_check, pwd_hash,\
     check_admin, check_domain_id
-from ..common.email import gen_email_token, send_email
+from ..common.email import gen_email_token, send_email, uid_from_email, \
+    clean_etoken
 from ..schema import validate, PROFILE_SCHEMA, DEACTIVATE_USER_SCHEMA, \
     PASSWORD_RESET_SCHEMA, PASSWORD_RESET_CONFIRM_SCHEMA
 from ..common import delete_file
@@ -373,21 +374,11 @@ async def deactivate_user_from_email(request):
     except (KeyError, TypeError, ValueError):
         raise BadInput('No valid token provided.')
 
-    user_id = await request.app.db.fetchval("""
-    SELECT user_id
-    FROM email_deletion_tokens
-    WHERE hash=$1 AND now() < expiral
-    """, cli_hash)
+    app = request.app
+    user_id = await uid_from_email(app, cli_hash, 'email_deletion_tokens')
 
-    if not user_id:
-        raise BadInput('No user found with that email token.')
-
-    await delete_user(request.app, user_id)
-
-    await request.app.db.execute("""
-    DELETE FROM email_deletion_tokens
-    WHERE hash=$1
-    """, cli_hash)
+    await delete_user(app, user_id)
+    await clean_etoken(app, cli_hash, 'email_deletion_tokens')
 
     log.warning(f'Deactivated user ID {user_id} by request.')
 
@@ -457,22 +448,12 @@ async def password_reset_confirmation(request):
     token = payload['token']
     new_pwd = payload['new_password']
 
-    user_id = await request.app.db.fetchval("""
-    SELECT user_id
-    FROM email_pwd_reset_tokens
-    WHERE hash = $1 AND now() < expiral
-    """, token)
-
-    if not user_id:
-        raise BadInput('Invalid token.')
+    app = request.app
+    user_id = await uid_from_email(app, token, 'email_pwd_reset_tokens')
 
     # reset password
     await _update_password(request, user_id, new_pwd)
-
-    await request.app.db.execute("""
-    DELETE FROM email_pwd_reset_tokens
-    WHERE hash = $1
-    """, token)
+    await clean_etoken(app, token, 'email_pwd_reset_tokens')
 
     return response.json({
         'success': True
