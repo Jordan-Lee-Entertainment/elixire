@@ -204,13 +204,16 @@ async def on_response(request, response):
     # increase the counter on every response from server
     request.app.rate_response += 1
 
-    # calculate latency to get a response, and submit that to influx
-    # this field won't help in the case of network failure
-    latency = time.monotonic() - request['start_time']
+    try:
+        # calculate latency to get a response, and submit that to influx
+        # this field won't help in the case of network failure
+        latency = time.monotonic() - request['start_time']
 
-    # submit the metric as milliseconds since it is more tangible in
-    # normal scenarios
-    await submit(request.app, 'response_latency', latency * 1000, True)
+        # submit the metric as milliseconds since it is more tangible in
+        # normal scenarios
+        await submit(request.app, 'response_latency', latency * 1000, True)
+    except KeyError:
+        pass
 
     try:
         _, user_id = request['ctx']

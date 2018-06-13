@@ -13,7 +13,7 @@ import PIL.ExifTags
 from sanic import Blueprint
 from sanic import response
 
-from ..common_auth import token_check, check_admin, check_paranoid
+from ..common.auth import token_check, check_admin, check_paranoid
 from ..common import gen_filename, get_domain_info, transform_wildcard, \
     delete_file, calculate_hash, get_random_domain
 from ..snowflake import get_snowflake

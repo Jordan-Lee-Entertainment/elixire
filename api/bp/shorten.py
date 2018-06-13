@@ -4,9 +4,10 @@ import urllib.parse
 from sanic import Blueprint
 from sanic import response
 
-from ..common_auth import token_check, check_admin
+from ..common.auth import token_check, check_admin
 from ..errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
-from ..common import gen_filename, get_domain_info, transform_wildcard, FileNameType
+from ..common import gen_filename, get_domain_info, transform_wildcard, \
+    FileNameType
 from ..snowflake import get_snowflake
 
 bp = Blueprint('shorten')

@@ -23,9 +23,9 @@ import api.bp.metrics
 import api.bp.personal_stats
 
 from api.errors import APIError, Ratelimited, Banned, FailedAuth
-from api.common_auth import token_check, get_token
-from api.common import VERSION, ban_webhook, check_bans, \
-    get_ip_addr, ip_ban_webhook
+from api.common.auth import token_check, get_token
+from api.common import VERSION, check_bans, get_ip_addr
+from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.ratelimit import RatelimitManager
 from api.storage import Storage
 
@@ -35,7 +35,8 @@ app = Sanic()
 app.econfig = config
 
 # enable cors on api, images and shortens
-CORS(app, resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"], automatic_options=True)
+CORS(app, resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"],
+     automatic_options=True)
 
 # load blueprints
 app.blueprint(api.bp.auth.bp)

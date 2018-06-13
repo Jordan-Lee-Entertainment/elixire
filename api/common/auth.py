@@ -6,8 +6,8 @@ import itsdangerous
 import logging
 
 from .common import SIGNERS, TokenType, check_bans
-from .errors import BadInput, FailedAuth, NotFound
-from .schema import validate, LOGIN_SCHEMA
+from ..errors import BadInput, FailedAuth, NotFound
+from ..schema import validate, LOGIN_SCHEMA
 
 log = logging.getLogger(__name__)
 

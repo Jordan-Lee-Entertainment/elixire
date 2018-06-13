@@ -5,7 +5,7 @@ from sanic import Blueprint
 from sanic import response
 
 from ..common import delete_file, delete_shorten
-from ..common_auth import token_check
+from ..common.auth import token_check
 from ..errors import BadInput
 
 bp = Blueprint('files')

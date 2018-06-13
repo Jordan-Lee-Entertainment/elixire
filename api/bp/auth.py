@@ -4,7 +4,7 @@ from sanic import Blueprint
 from sanic import response
 
 from ..common import TokenType
-from ..common_auth import login_user, gen_token
+from ..common.auth import login_user, gen_token
 from ..schema import validate, REVOKE_SCHEMA
 
 bp = Blueprint('auth')

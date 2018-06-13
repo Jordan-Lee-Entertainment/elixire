@@ -10,40 +10,10 @@ from sanic import Blueprint, response
 from ..snowflake import get_snowflake
 from ..errors import BadInput, FeatureDisabled
 from ..schema import validate, REGISTRATION_SCHEMA
-from ..common import send_email
+from ..common.email import send_email
+from ..common.webhook import register_webhook
 
 bp = Blueprint('register')
-
-
-async def register_webhook(app, wh_url, user_id, username, discord_user, email):
-    # call webhook
-    payload = {
-        'embeds': [{
-            'title': 'user registration webhook',
-            'color': 0x7289da,
-            'fields': [
-                {
-                    'name': 'userid',
-                    'value': str(user_id),
-                },
-                {
-                    'name': 'user name',
-                    'value': username,
-                },
-                {
-                    'name': 'discord user',
-                    'value': discord_user,
-                },
-                {
-                    'name': 'email',
-                    'value': email,
-                }
-            ]
-        }]
-    }
-
-    async with app.session.post(wh_url, json=payload) as resp:
-        return resp.status == 200
 
 
 async def send_register_email(app, email: str) -> bool:

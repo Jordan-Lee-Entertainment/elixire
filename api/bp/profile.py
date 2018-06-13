@@ -6,11 +6,12 @@ from sanic import Blueprint
 from sanic import response
 
 from ..errors import FailedAuth, FeatureDisabled, BadInput
-from ..common_auth import token_check, password_check, pwd_hash,\
+from ..common.auth import token_check, password_check, pwd_hash,\
     check_admin, check_domain_id
-from ..common import gen_email_token, send_email, delete_file
+from ..common.email import gen_email_token, send_email
 from ..schema import validate, PROFILE_SCHEMA, DEACTIVATE_USER_SCHEMA, \
     PASSWORD_RESET_SCHEMA, PASSWORD_RESET_CONFIRM_SCHEMA
+from ..common import delete_file
 
 bp = Blueprint('profile')
 log = logging.getLogger(__name__)

@@ -2,7 +2,7 @@
     elixire - route decorators
 """
 
-from .common_auth import token_check, check_admin
+from .common.auth import token_check, check_admin
 
 
 def auth_route(handler):

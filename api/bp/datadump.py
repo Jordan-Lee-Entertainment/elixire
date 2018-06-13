@@ -12,8 +12,8 @@ import os.path
 
 from sanic import Blueprint, response
 
-from ..common_auth import token_check, check_admin
-from ..common import gen_email_token, send_email
+from ..common.auth import token_check, check_admin
+from ..common.email import gen_email_token, send_email
 from ..errors import BadInput, FeatureDisabled
 
 log = logging.getLogger(__name__)
