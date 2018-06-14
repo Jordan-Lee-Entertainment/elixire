@@ -42,9 +42,9 @@ async def open_zipdump(app, user_id, resume=False) -> zipfile.ZipFile:
         # we use w instead of x because
         # if the dump already exists we should
         # just overwrite it.
-        return zipfile.ZipFile(zip_path, 'w'), user_name
+        return zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_BZIP2), user_name
 
-    return zipfile.ZipFile(zip_path, 'a'), user_name
+    return zipfile.ZipFile(zip_path, 'a', compression=zipfile.ZIP_BZIP2), user_name
 
 
 async def dump_user_data(app, zipdump, user_id):
