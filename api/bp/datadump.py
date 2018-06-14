@@ -42,15 +42,18 @@ async def open_zipdump(app, user_id, resume=False) -> zipfile.ZipFile:
         # we use w instead of x because
         # if the dump already exists we should
         # just overwrite it.
-        return zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_BZIP2), user_name
+        return zipfile.ZipFile(zip_path, 'w',
+                               compression=zipfile.ZIP_DEFLATED), user_name
 
-    return zipfile.ZipFile(zip_path, 'a', compression=zipfile.ZIP_BZIP2), user_name
+    return zipfile.ZipFile(zip_path, 'a',
+                           compression=zipfile.ZIP_DEFLATED), user_name
 
 
 async def dump_user_data(app, zipdump, user_id):
     """Insert user information into the dump."""
     udata = await app.db.fetchrow("""
-    SELECT user_id, username, active, password_hash, email, consented, admin, subdomain, domain
+    SELECT user_id, username, active, password_hash, email,
+           consented, admin, subdomain, domain
     FROM users
     WHERE user_id = $1
     """, user_id)
@@ -147,7 +150,11 @@ async def dump_files(app, zipdump, user_id, minid, files_done):
 
         filepath = f'./files/{current_id}_{filename}{ext}'
         try:
-            zipdump.write(fspath, filepath)
+            fut = app.loop.run_in_executor(None,
+                                           zipdump.write,
+                                           fspath, filepath)
+
+            await fut
         except FileNotFoundError:
             log.warning(f'File not found: {current_id} {filename}')
 
@@ -175,7 +182,6 @@ async def dump_files(app, zipdump, user_id, minid, files_done):
 async def dispatch_dump(app, user_id: int, user_name: str):
     """Dispatch the data dump to a user."""
     log.info(f'Dispatching dump for {user_id} {user_name!r}')
-
 
     _inst_name = app.econfig.INSTANCE_NAME
     _support = app.econfig.SUPPORT_EMAIL
@@ -209,7 +215,8 @@ Do not reply to this automated email.
     """, user_id)
 
     resp = await send_email(app, user_email,
-                            f'{_inst_name} - Your data dump is here!', email_body)
+                            f'{_inst_name} - Your data dump is here!',
+                            email_body)
 
     if resp.status == 200:
         log.info(f'Sent email to {user_id} {user_email}')
@@ -221,7 +228,6 @@ Do not reply to this automated email.
         """, user_id)
     else:
         log.error(f'Failed to send email to {user_id} {user_email}')
-
 
 
 async def do_dump(app, user_id: int):
