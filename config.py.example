@@ -178,6 +178,9 @@ THUMBNAIL_SIZES = {
     't': (250, 250),
 }
 
+# Sets the minimum shortname length
+SHORTNAME_LEN = 3
+
 # === FEATURE SETTINGS ===
 # Here you can disable certain features, in case there's a big bug etc
 UPLOADS_ENABLED = True

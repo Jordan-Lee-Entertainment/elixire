@@ -255,7 +255,7 @@ async def gen_shortname(request, user_id: int) -> str:
     Checks if the user is in paranoid mode.
     """
     is_paranoid = await check_paranoid(request, user_id)
-    shortname_len = 8 if is_paranoid else 3
+    shortname_len = 8 if is_paranoid else request.app.econfig.SHORTNAME_LEN
     return await gen_filename(request, shortname_len)
 
 
