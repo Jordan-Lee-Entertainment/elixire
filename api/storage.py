@@ -42,6 +42,7 @@ def prefix(user_id: int) -> str:
 def solve_domain(domain_name: str) -> list:
     """Solve a domain into its Redis keys."""
     k = domain_name.find('.')
+    raw_wildcard = f'*.{domain_name}'
     wildcard_name = f'*.{domain_name[k + 1:]}'
 
     return [
@@ -51,6 +52,7 @@ def solve_domain(domain_name: str) -> list:
         # example 2: domain_name = pretty.please-yiff.me
         # wildcard_name = *.please-yiff.me
 
+        f'domain_id:{raw_wildcard}',
         f'domain_id:{domain_name}',
         f'domain_id:{wildcard_name}',
     ]
