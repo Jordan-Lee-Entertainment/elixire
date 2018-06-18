@@ -12,6 +12,7 @@ from ..schema import validate, ADMIN_MODIFY_FILE, ADMIN_MODIFY_USER
 from ..common import delete_file, delete_shorten
 from ..common.email import fmt_email, send_user_email, activate_email_send, \
     uid_from_email, clean_etoken
+from ..storage import solve_domain
 
 
 log = logging.getLogger(__name__)
@@ -231,7 +232,8 @@ async def search_user(request, user_id: int, page: int):
 
 
 async def generic_namefetch(table, request, shortname):
-    """Generic function to fetch a file or shorten information based on shortname."""
+    """Generic function to fetch a file or shorten
+    information based on shortname."""
     fields = 'file_id, mimetype, filename, file_size, uploader, fspath, deleted, domain' \
              if table == 'files' else \
              'shorten_id, filename, redirto, uploader, deleted, domain'
@@ -319,8 +321,10 @@ async def handle_modify(atype: str, request, thing_id):
             raise BadInput('Shortname already exists.')
 
         # Invalidate both old and new
-        await request.app.storage.raw_invalidate(f'fspath:{old_domain}:{thing_name}')
-        await request.app.storage.raw_invalidate(f'fspath:{old_domain}:{new_shortname}')
+        await request.app.storage.raw_invalidate(*[
+            f'fspath:{old_domain}:{thing_name}',
+            f'fspath:{old_domain}:{new_shortname}',
+        ])
 
         updated.append('shortname')
 
@@ -393,14 +397,8 @@ async def add_domain(request, admin_id: int):
     VALUES ($1, $2, $3)
     """, domain_name, is_adminonly, is_official)
 
-    # stolen from storage.py
-    _sp = domain_name.split('.')[0] + '.'
-    subdomain_name = domain_name.replace(_sp, "*.", 1)
-    wildcard_name = f'*.{domain_name}'
-
-    await request.app.storage.raw_invalidate(f'domain_id:{domain_name}',
-                                             f'domain_id:{subdomain_name}',
-                                             f'domain_id:{wildcard_name}')
+    keys = solve_domain(domain_name)
+    await request.app.storage.raw_invalidate(*keys)
 
     return response.json({
         'success': True,
@@ -435,14 +433,8 @@ async def remove_domain(request, admin_id: int, domain_id: int):
     WHERE domain_id = $1
     """, domain_id)
 
-    # stolen from storage.py
-    _sp = domain_name.split('.')[0] + '.'
-    subdomain_name = domain_name.replace(_sp, "*.")
-    wildcard_name = f'*.{domain_name}'
-
-    await request.app.storage.raw_invalidate(f'domain_id:{domain_name}',
-                                             f'domain_id:{subdomain_name}',
-                                             f'domain_id:{wildcard_name}')
+    keys = solve_domain(domain_name)
+    await request.app.storage.raw_invalidate(*keys)
 
     return response.json({
         'success': True,

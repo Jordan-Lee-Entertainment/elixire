@@ -39,6 +39,23 @@ def prefix(user_id: int) -> str:
     return f'uid:{user_id}'
 
 
+def solve_domain(domain_name: str) -> list:
+    """Solve a domain into its Redis keys."""
+    k = domain_name.find('.')
+    wildcard_name = f'*.{domain_name[k + 1:]}'
+
+    return [
+        # example: domain_name = elixi.re
+        # wildcard_name = *.elixi.re
+
+        # example 2: domain_name = pretty.please-yiff.me
+        # wildcard_name = *.please-yiff.me
+
+        f'domain_id:{domain_name}',
+        f'domain_id:{wildcard_name}',
+    ]
+
+
 class Storage:
     """Storage system.
 
@@ -345,16 +362,8 @@ class Storage:
         The old function was common_auth.check_domain and was modified
         so that it could account for our caching.
         """
-        k = domain_name.find('.')
-        wildcard_name = f'*.{domain_name[k + 1:]}'
 
-        keys = [
-            # example, domain_name = elixi.re
-            # wildcard_name = *.elixi.re
-            f'domain_id:{domain_name}',
-            f'domain_id:{wildcard_name}',
-        ]
-
+        keys = solve_domain(domain_name)
         possible_ids = await self.get_multi(keys, int)
 
         try:
@@ -376,7 +385,7 @@ class Storage:
             FROM domains
             WHERE domain = $1
                OR domain = $2
-            """, domain_name, wildcard_name)
+            """, *keys)
 
             if domain_id is None:
                 await self.set_multi_one(keys, 'false')
