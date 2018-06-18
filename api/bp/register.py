@@ -55,7 +55,7 @@ async def register_user(request):
     Look into /api/admin/activate for registration acceptance.
     """
     if not request.app.econfig.REGISTRATIONS_ENABLED:
-        raise FeatureDisabled('registrations are currently disabled')
+        raise FeatureDisabled('Registrations are currently disabled')
 
     payload = validate(request.json, REGISTRATION_SCHEMA)
 
@@ -76,7 +76,7 @@ async def register_user(request):
         VALUES ($1, $2, $3, $4, false)
         """, user_id, username, hashed.decode('utf-8'), email)
     except asyncpg.exceptions.UniqueViolationError:
-        raise BadInput('Username exists.')
+        raise BadInput('Username or email already exist.')
 
     await request.app.db.execute("""
     INSERT INTO limits (user_id) VALUES ($1)

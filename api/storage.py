@@ -354,9 +354,9 @@ class Storage:
             # example, domain_name = elixi.re
             # subdomain_name = *.re
             # wildcard_name = *.elixi.re
+            f'domain_id:{wildcard_name}',
             f'domain_id:{domain_name}',
             f'domain_id:{subdomain_name}',
-            f'domain_id:{wildcard_name}',
         ]
 
         possible_ids = await self.get_multi(keys, int)
@@ -377,7 +377,8 @@ class Storage:
             if domain_id is None:
                 await self.set_multi_one(keys, 'false')
                 if err_flag:
-                    raise NotFound('This domain does not exist in this elixire instance.')
+                    raise NotFound('This domain does not exist in '
+                                   'this elixire instance.')
                 return None
 
             await self.set_multi_one(keys, domain_id)
