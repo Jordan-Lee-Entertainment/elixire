@@ -39,23 +39,26 @@ def prefix(user_id: int) -> str:
     return f'uid:{user_id}'
 
 
-def solve_domain(domain_name: str) -> list:
+def solve_domain(domain_name: str, redis=True) -> list:
     """Solve a domain into its Redis keys."""
     k = domain_name.find('.')
     raw_wildcard = f'*.{domain_name}'
     wildcard_name = f'*.{domain_name[k + 1:]}'
 
-    return [
+    domains = [
         # example: domain_name = elixi.re
         # wildcard_name = *.elixi.re
 
         # example 2: domain_name = pretty.please-yiff.me
         # wildcard_name = *.please-yiff.me
 
-        f'domain_id:{raw_wildcard}',
-        f'domain_id:{domain_name}',
-        f'domain_id:{wildcard_name}',
+        raw_wildcard, domain_name, wildcard_name
     ]
+
+    if redis:
+        return list(map(lambda d: f'domain_id:{d}', domains))
+
+    return domains
 
 
 class Storage:
@@ -365,7 +368,7 @@ class Storage:
         so that it could account for our caching.
         """
 
-        keys = solve_domain(domain_name)
+        keys = solve_domain(domain_name, True)
         possible_ids = await self.get_multi(keys, int)
 
         try:
@@ -382,13 +385,16 @@ class Storage:
             # set *.re (in the case of domain_name = 'elixi.re') to
             # an actual domain id, but since we use domain_name
             # first, it shouldn't become a problem.
+
+            keys_db = solve_domain(domain_name, False)
+
             domain_id = await self.db.fetchval("""
             SELECT domain_id
             FROM domains
             WHERE domain = $1
                OR domain = $2
                OR domain = $3
-            """, *keys)
+            """, *keys_db)
 
             if domain_id is None:
                 await self.set_multi_one(keys, 'false')
