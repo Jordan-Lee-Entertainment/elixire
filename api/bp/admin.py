@@ -39,6 +39,7 @@ async def list_users_handler(request, admin_id, page: int):
     SELECT user_id, username, active, admin, domain,
       subdomain, email, paranoid, consented
     FROM users
+    ORDER BY user_id ASC
     LIMIT 20
     OFFSET ($1 * 20)
     """, page)
@@ -59,6 +60,7 @@ async def inactive_users_handler(request, admin_id, page: int):
       email, paranoid, consented
     FROM users
     WHERE active=false
+    ORDER BY user_id ASC
     LIMIT 20
     OFFSET ($1 * 20)
     """, page)
@@ -217,6 +219,7 @@ async def search_user(request, user_id: int, page: int):
     SELECT user_id, username, active, admin, consented
     FROM users
     WHERE username LIKE $1
+    ORDER BY user_id ASC
     LIMIT 20
     OFFSET ($2 * 20)
     """, pattern, page)
