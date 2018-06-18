@@ -387,6 +387,7 @@ class Storage:
             FROM domains
             WHERE domain = $1
                OR domain = $2
+               OR domain = $3
             """, *keys)
 
             if domain_id is None:
