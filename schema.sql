@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS users (
     -- purposes, we can mark is as inactive.
     active boolean DEFAULT true,
     password_hash text,
-    email text NOT NULL,
+    email text UNIQUE NOT NULL,
     consented BOOLEAN DEFAULT NULL,
     admin boolean DEFAULT false,
     paranoid boolean DEFAULT false,
