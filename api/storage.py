@@ -345,40 +345,46 @@ class Storage:
         The old function was common_auth.check_domain and was modified
         so that it could account for our caching.
         """
-        # hacky but it works
-        _sp = domain_name.split('.')[0] + '.'
-        subdomain_name = domain_name.replace(_sp, "*.", 1)
-        wildcard_name = f'*.{domain_name}'
+        k = domain_name.find('.')
+        wildcard_name = f'*.{domain_name[k + 1:]}'
 
         keys = [
             # example, domain_name = elixi.re
-            # subdomain_name = *.re
             # wildcard_name = *.elixi.re
-            f'domain_id:{wildcard_name}',
             f'domain_id:{domain_name}',
-            f'domain_id:{subdomain_name}',
+            f'domain_id:{wildcard_name}',
         ]
 
         possible_ids = await self.get_multi(keys, int)
 
         try:
+            # get the first key that resolves correctly
             return next(possible for possible in possible_ids
-                        if not isinstance(possible, bool) and possible is not None)
+                        if not isinstance(possible, bool)
+                        and possible is not None)
         except StopIteration:
-            # fetch from db
+            # if no keys solve to any domain, id
+            # query from db and set those keys
+            # to the found id
+
+            # This causes some problems since we might
+            # set *.re (in the case of domain_name = 'elixi.re') to
+            # an actual domain id, but since we use domain_name
+            # first, it shouldn't become a problem.
             domain_id = await self.db.fetchval("""
             SELECT domain_id
             FROM domains
             WHERE domain = $1
                OR domain = $2
-               OR domain = $3
-            """, domain_name, subdomain_name, wildcard_name)
+            """, domain_name, wildcard_name)
 
             if domain_id is None:
                 await self.set_multi_one(keys, 'false')
+
                 if err_flag:
                     raise NotFound('This domain does not exist in '
                                    'this elixire instance.')
+
                 return None
 
             await self.set_multi_one(keys, domain_id)
