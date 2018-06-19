@@ -30,7 +30,7 @@ async def main():
             path.unlink()
             complete += 1
         except FileNotFoundError:
-            print('failed for', fspath)
+            print(f'failed for {fspath!r}')
 
     print(f'deleted {complete} files out of {len(deleted_paths)}')
 
