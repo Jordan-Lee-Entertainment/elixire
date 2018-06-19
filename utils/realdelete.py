@@ -20,7 +20,7 @@ async def main():
     """)
 
     # go through each path, delete it.
-    print('working through', len(deleted_paths), 'paths')
+    print(f'working through {len(deleted_paths)} paths')
     complete = 0
 
     for row in deleted_paths:
@@ -32,7 +32,7 @@ async def main():
         except FileNotFoundError:
             print('failed for', fspath)
 
-    print('deleted', complete, 'files out of', len(deleted_paths))
+    print(f'deleted {complete} files out of {len(deleted_paths)}')
 
     await close_db(db, redis)
 
