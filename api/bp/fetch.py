@@ -41,7 +41,8 @@ async def filecheck(request, filename):
 async def file_handler(request, filename):
     """Handles file serves."""
     filepath = await filecheck(request, filename)
-    return await response.file(filepath)
+    return await response.file(filepath, headers={"Content-Security-Policy":
+                                                  "script-src 'none'"})
 
 
 @bp.get('/t/<filename>')
@@ -72,4 +73,5 @@ async def thumbnail_handler(request, filename):
 
     # yes, we are doing more I/O by using response.file
     # and not sending the bytes ourselves.
-    return await response.file(thumbpath)
+    return await response.file(thumbpath, headers={"Content-Security-Policy":
+                                                   "script-src 'none'"})
