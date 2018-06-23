@@ -38,6 +38,13 @@ db = {
 # Redis URL
 redis = 'redis://localhost'
 
+# d1 configuration, generate a key with:
+#  >>> from cryptography.fernet import Fernet
+#  >>> Fernet.generate_key()
+#
+# Use the same generated key on d1.
+SECRET_KEY = b''
+
 # Enable metrics?
 # uses InfluxDB and aioinflux to send data.
 ENABLE_METRICS = True

@@ -21,6 +21,7 @@ import api.bp.register
 import api.bp.datadump
 import api.bp.metrics
 import api.bp.personal_stats
+import api.bp.d1check
 
 from api.errors import APIError, Ratelimited, Banned, FailedAuth
 from api.common.auth import token_check, get_token
@@ -49,6 +50,7 @@ app.blueprint(api.bp.admin.bp)
 app.blueprint(api.bp.register.bp)
 app.blueprint(api.bp.datadump.bp)
 app.blueprint(api.bp.personal_stats.bp)
+app.blueprint(api.bp.d1check.bp)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -71,6 +73,7 @@ FORCE_IP_ROUTES = (
 
     '/api/dump_get',
     '/api/activate_email',
+    '/api/check',
 )
 
 # Enforce IP ratelimit on /s/.

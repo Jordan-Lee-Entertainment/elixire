@@ -23,3 +23,5 @@ pyflakes==2.0.0
 git+https://github.com/yunstanford/pytest-sanic@51ea50f6f4fdc50c5821c100a03de338298e2927
 
 aioinflux==0.3.2
+
+cryptography==2.2.2
