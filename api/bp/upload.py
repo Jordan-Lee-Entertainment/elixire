@@ -173,7 +173,7 @@ async def upload_checks(app, ctx: UploadContext,
 
     # check mimetype
     if ctx.mime not in app.econfig.ACCEPTED_MIMES:
-        raise BadImage('Bad image type')
+        raise BadImage(f'Bad image mime type: {ctx.mime!r}')
 
     # check user's limits
     used = await app.db.fetchval("""
