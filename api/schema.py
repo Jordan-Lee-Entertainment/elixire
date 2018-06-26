@@ -25,7 +25,7 @@ class ElixireValidator(Validator):
          - Less than 100.
         """
         # Would it be interesting to measure entropy?
-        return len(value) >= 8 and len(value) < 100
+        return len(value) >= 8 and len(value) <= 100
 
     def _validate_type_subdomain(self, value) -> bool:
         """Validate subdomains."""
