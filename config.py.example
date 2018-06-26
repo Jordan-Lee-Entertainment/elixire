@@ -10,6 +10,8 @@ INSTANCE_NAME = 'elixi.re'
 MAIN_URL = 'https://elixi.re'
 MAIN_INVITE = 'https://discord.gg/123456'
 SUPPORT_EMAIL = 'support@elixi.re'
+
+# If URLs over the API show http or https by default.
 USE_HTTPS = True
 
 # Mailgun API credentials for instance emails.
@@ -26,6 +28,12 @@ IMAGE_FOLDER = './images'
 # Folder to store data dumps.
 DUMP_ENABLED = True
 DUMP_FOLDER = './dumps'
+
+# The dump janitor checks the directory
+# for files that are over 6 hours long and deletes them
+# to save space.
+#
+# It runs every DUMP_JANITOR_PERIOD seconds checking for files.
 DUMP_JANITOR_PERIOD = 600
 
 # Postgres credentials
@@ -43,11 +51,12 @@ redis = 'redis://localhost'
 #  >>> Fernet.generate_key()
 #
 # Use the same generated key on d1.
-SECRET_KEY = b''
+# Set as None to keep d1-specific routes disabled.
+SECRET_KEY = None
 
 # Enable metrics?
 # uses InfluxDB and aioinflux to send data.
-ENABLE_METRICS = True
+ENABLE_METRICS = False
 METRICS_DATABASE = 'elixire'
 
 # InfluxDB Authentication, if any
@@ -61,25 +70,6 @@ INFLUX_PASSWORD = '123'
 # default value is 72 hours = 3 days.
 TIMED_TOKEN_AGE = 259200
 
-# === WEBHOOK SETTINGS ===
-
-# When UPLOAD_SCAN is true and
-# a file is detected as being malicious,
-# we will call this discord webhook
-# with data about the upload.
-UPLOAD_SCAN_WEBHOOK = ""
-
-# Webhook for banned users.
-# Comment the line to disable the webhook.
-USER_BAN_WEBHOOK = ""
-IP_BAN_WEBHOOK = ""
-
-# Webhook for JPEGs that grew too much after EXIF cleaning.
-EXIF_TOOBIG_WEBHOOK = ""
-
-# Webhook for user registrations.
-USER_REGISTER_WEBHOOK = ""
-
 # === RATELIMIT SETTINGS ===
 
 # change this to your wanted ban period
@@ -87,8 +77,8 @@ USER_REGISTER_WEBHOOK = ""
 BAN_PERIOD = '6 hours'
 IP_BAN_PERIOD = '5 minutes'
 
-# How many ratelimit payloads can be sent
-# before the current user gets banned?
+# How many ratelimits can be triggered by
+# a client before they get banned?
 RL_THRESHOLD = 10
 
 # === UPLOAD SETTINGS ===
@@ -101,11 +91,11 @@ UPLOAD_SCAN = False
 # How many seconds to wait scanning before
 # switching that scan to the background? (can be int or float)
 #
-# See #35 for more details.
+# See issue #35 for more details.
 SCAN_WAIT_THRESHOLD = 1
 
 # Should we clear EXIF values for JPEGs?
-# Needs Pillow
+# Needs Pillow (should be already installed by requirements.txt)
 CLEAR_EXIF = False
 
 # To prevent potential exploits to take over a lot of storage space
@@ -117,6 +107,7 @@ CLEAR_EXIF = False
 EXIF_INCREASELIMIT = 2
 
 # Accepted MIME types for uploading.
+# NOTE: MIME type checking is ignored for admins.
 ACCEPTED_MIMES = [
     'image/png',
     'image/jpeg',
@@ -128,7 +119,7 @@ ACCEPTED_MIMES = [
 ]
 
 
-# Decrease factor
+# Decrease factor for duplicated.
 # If a user sends a file that another user has sent previously,
 # then it won't count as much towards their limit.
 #
@@ -141,13 +132,37 @@ ACCEPTED_MIMES = [
 DUPE_DECREASE_FACTOR = 0.5
 
 
+# === WEBHOOK SETTINGS ===
+# All webhooks here are Discord Webhooks.
+
+# When UPLOAD_SCAN is true and
+# a file is detected as being malicious,
+# we will call this discord webhook
+# with data about the upload.
+UPLOAD_SCAN_WEBHOOK = ""
+
+# Webhook for banned users.
+# Comment the line to disable those webhooks.
+USER_BAN_WEBHOOK = ""
+IP_BAN_WEBHOOK = ""
+
+# Webhook for JPEGs that grew too much after EXIF cleaning.
+EXIF_TOOBIG_WEBHOOK = ""
+
+# Webhook for user registrations.
+USER_REGISTER_WEBHOOK = ""
+
 # === RATELIMIT SETTINGS ===
 
+# By default, all requests fall under a
+# 5 requests every 3 seconds rule.
 RATELIMIT = {
     'requests': 5,
     'second': 3,
 }
 
+# A bigger ratelimit is set for IPs alone
+# when they're requesting an image, etc.
 IP_RATELIMIT = {
     'requests': 10,
     'second': 5,
@@ -167,21 +182,21 @@ SPECIAL_RATELIMITS = {}
 # === THUMBNAIL SETTINGS ===
 
 # Enable thumbnails?
-THUMBNAILS = False
+THUMBNAILS = True
 THUMBNAIL_FOLDER = './thumbnails'
 
 # Thumbnail sizing
 THUMBNAIL_SIZES = {
-    # large
+    # large (5000x5000)
     'l': (5000, 5000),
 
-    # medium
+    # medium (1000x1000)
     'm': (1000, 1000),
 
-    # small
+    # small (500x500)
     's': (500, 500),
 
-    # tiny
+    # tiny (250x250)
     't': (250, 250),
 }
 
@@ -189,8 +204,16 @@ THUMBNAIL_SIZES = {
 SHORTNAME_LEN = 3
 
 # === FEATURE SETTINGS ===
-# Here you can disable certain features, in case there's a big bug etc
+# Disabled features will raise a 503 to
+# whoever requests the route
+
+# Can be used for private instances to disable
+# registrations, or for an instance with heavy load
+# to disable it for debug.
+
 UPLOADS_ENABLED = True
 SHORTENS_ENABLED = True
 REGISTRATIONS_ENABLED = True
+
+# Enable users to change their own profile information?
 PATCH_API_PROFILE_ENABLED = True

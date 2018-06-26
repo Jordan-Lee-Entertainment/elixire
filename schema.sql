@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS domains (
     domain text
 );
 
+-- edit this line if you are not elixi.re
 INSERT INTO domains (domain_id, domain) VALUES (0, 'elixi.re');
 
 CREATE TABLE IF NOT EXISTS users (
