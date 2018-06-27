@@ -58,9 +58,10 @@ make update
 make 
 
 # Read carefully over the configuration file
-# as 
+# to enable/disable instance features (like registration and webhooks)
+cp config.py.example config.py
 
-# run application, can be under pm2 or something.
+# run application, can be under pm2 or anything, really
 python3.6 run.py
 ```
 
