@@ -22,10 +22,11 @@ import api.bp.datadump
 import api.bp.metrics
 import api.bp.personal_stats
 import api.bp.d1check
+import api.bp.misc
 
 from api.errors import APIError, Ratelimited, Banned, FailedAuth
 from api.common.auth import token_check, get_token
-from api.common import VERSION, check_bans, get_ip_addr
+from api.common import check_bans, get_ip_addr
 from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.ratelimit import RatelimitManager
 from api.storage import Storage
@@ -51,6 +52,7 @@ app.blueprint(api.bp.register.bp)
 app.blueprint(api.bp.datadump.bp)
 app.blueprint(api.bp.personal_stats.bp)
 app.blueprint(api.bp.d1check.bp)
+app.blueprint(api.bp.misc.bp)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -65,6 +67,7 @@ FORCE_IP_ROUTES = (
     '/api/domains',
     '/api/hello',
     '/api/hewwo',
+    '/api/features',
     '/api/register',
     '/api/delete_confirm',
 
@@ -385,23 +388,6 @@ async def close_db(rapp, _loop):
     log.info('closing redis')
     rapp.redis.close()
     await rapp.redis.wait_closed()
-
-
-@app.get('/api/hello')
-async def test_route(request):
-    return response.json({
-        'name': request.app.econfig.INSTANCE_NAME,
-        'version': VERSION,
-    })
-
-
-@app.get('/api/hewwo')
-async def h_hewwo(request):
-    """owo"""
-    return response.json({
-        'name': request.app.econfig.INSTANCE_NAME,
-        'version': VERSION,
-    })
 
 
 def main():

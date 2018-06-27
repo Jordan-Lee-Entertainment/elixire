@@ -22,13 +22,16 @@ def app():
 def test_cli(loop, app, test_client):
     return loop.run_until_complete(test_client(app))
 
-async def check_exists(test_cli, shortname, token, not_exists=False):
+
+async def check_exists(test_cli, shortname, utoken, not_exists=False):
+    """Check if a file exists, given the shortname, token, etc."""
     resp = await test_cli.get('/api/list?page=0', headers={
-        'Authorization': token,
+        'Authorization': utoken,
     })
+
     assert resp.status == 200
     rjson = await resp.json()
-    
+
     assert isinstance(rjson['files'], dict)
 
     if not_exists:
@@ -79,13 +82,12 @@ async def test_delete_file(test_cli):
     resp_del = await test_cli.delete('/api/delete', headers={
         'Authorization': utoken
     }, json={
-        'filename': respjson['shortname']    
+        'filename': respjson['shortname']
     })
 
     assert resp_del.status == 200
     rdel_json = await resp_del.json()
     assert isinstance(rdel_json, dict)
-    assert rdel_json['success'] == True
+    assert rdel_json['success']
 
     await check_exists(test_cli, respjson['shortname'], utoken, True)
-
