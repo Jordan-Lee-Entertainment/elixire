@@ -41,6 +41,7 @@ db = {
     'host': 'localhost',
     'user': 'postgres',
     'password': '',
+    # 'database': 'dab'
 }
 
 # Redis URL

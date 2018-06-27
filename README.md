@@ -44,6 +44,9 @@ mkdir thumbnails
 # Specially the "INSERT INTO domains" line.
 psql -U postgres -f schema.sql
 
+# Edit frontend/config.json and admin-panel/config.json
+# so they're pointing to your domain.
+
 # this sets up the folder structure in ./images for you
 # do not run 'cd utils/upgrade' then run the script.
 ./utils/upgrade/folder_sharding.py
