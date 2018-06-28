@@ -147,9 +147,11 @@ async def activate_user(request, admin_id, user_id: int):
 @bp.post('/api/admin/activate_email/<user_id:int>')
 @admin_route
 async def activation_email(request, admin_id, user_id):
+    """Send an email to the user so they become able
+    to activate their account manually."""
     await request.app.storage.invalidate(user_id, 'active')
 
-    resp, user_email = await activate_email_send(request.app, user_id)
+    resp, _email = await activate_email_send(request.app, user_id)
     return response.json({
         'success': resp.status == 200,
     })
@@ -157,6 +159,7 @@ async def activation_email(request, admin_id, user_id):
 
 @bp.get('/api/activate_email')
 async def activate_user_from_email(request):
+    """Called when a user clicks the activation URL in their email."""
     try:
         email_token = str(request.raw_args['token'])
     except (KeyError, TypeError):
@@ -218,7 +221,7 @@ async def search_user(request, user_id: int, page: int):
     rows = await request.app.db.fetch("""
     SELECT user_id, username, active, admin, consented
     FROM users
-    WHERE username LIKE $1
+    WHERE username LIKE $1 OR user_id::text LIKE pattern
     ORDER BY user_id ASC
     LIMIT 20
     OFFSET ($2 * 20)
