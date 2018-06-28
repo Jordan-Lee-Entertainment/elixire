@@ -3,6 +3,7 @@ import secrets
 import asyncio
 import sys
 from collections import namedtuple
+from pathlib import Path
 
 import bcrypt
 import asyncpg
@@ -102,10 +103,42 @@ async def adduser(ctx):
     """)
 
 
+async def deletefiles(ctx):
+    """cleanup_files
+
+    Delete all files that are marked as deleted in the image directory.
+    This is a legacy operation for instances that did not update
+    to a version that deletes files.
+    """
+    to_delete = await ctx.db.fetch("""
+    SELECT fspath
+    FROM files
+    WHERE files.deleted = true
+    """)
+
+    print(f'deleting {len(to_delete)} files')
+    completed = 0
+
+    for row in to_delete:
+        fspath = row['fspath']
+        path = Path(fspath)
+        try:
+            path.unlink()
+            completed += 1
+        except FileNotFoundError:
+            print(f'fspath {fspath!r} not found')
+
+    print(f"""
+    out of {len(to_delete)} files to be deleted
+    {completed} were actually deleted
+    """)
+
+
 OPERATIONS = {
     'list': ('List all available operations', list_ops),
     'help': ('Get help for an operation', manage_help),
     'adduser': ('Add a user into the instance', adduser),
+    'cleanup_files': ('Delete files from the images folder', deletefiles),
 }
 
 
