@@ -404,7 +404,7 @@ def main():
     # app.static('/i', './images')
 
     if config.ENABLE_FRONTEND:
-        app.static('/humans.txt', './humans.txt')
+        app.static('/humans.txt', './static/humans.txt')
 
         app.static('/admin', './admin-panel/dist')
         app.static('/admin', './admin-panel/dist/index.html')
