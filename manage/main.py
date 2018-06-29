@@ -1,6 +1,7 @@
 import argparse
 import secrets
 import asyncio
+import logging
 import sys
 from collections import namedtuple
 from pathlib import Path
@@ -10,8 +11,10 @@ import asyncpg
 import aioredis
 
 from api.snowflake import get_snowflake
+from api.bp.profile import delete_user
 
-Context = namedtuple('ArgContext', 'args db redis')
+log = logging.getLogger(__name__)
+Context = namedtuple('ArgContext', 'args db redis loop')
 
 
 async def connect_db(config, loop):
@@ -176,12 +179,39 @@ async def rename_file(ctx):
     print('OK')
 
 
+async def del_user(ctx):
+    """delete_user <username>
+
+    Delete a single user. This does not deactivate the user,
+    so it will delete all information.
+    """
+    try:
+        username = ctx.args.args[0]
+    except IndexError:
+        return print('No username provided')
+
+    userid = await ctx.db.fetchval("""
+    SELECT user_id
+    FROM users
+    WHERE username = $1
+    """, username)
+
+    if not userid:
+        return print('no user found')
+
+    task = await delete_user(ctx, userid, True)
+    await asyncio.shield(task)
+
+    print('OK')
+
+
 OPERATIONS = {
     'list': ('List all available operations', list_ops),
     'help': ('Get help for an operation', manage_help),
     'adduser': ('Add a user into the instance', adduser),
     'cleanup_files': ('Delete files from the images folder', deletefiles),
     'rename_file': ('Rename a single file', rename_file),
+    'deluser': ('Delete a user and their files', del_user),
 }
 
 
@@ -201,12 +231,14 @@ def main(config):
     loop = asyncio.get_event_loop()
     db, redis = loop.run_until_complete(connect_db(config, loop))
 
-    ctx = Context(args, db, redis)
+    ctx = Context(args, db, redis, loop)
 
     try:
         _desc, func = OPERATIONS[args.operation]
         loop.run_until_complete(func(ctx))
     except KeyError:
         print('invalid operation')
+    except Exception:
+        log.exception('oops.')
 
     loop.run_until_complete(close_ctx(ctx))

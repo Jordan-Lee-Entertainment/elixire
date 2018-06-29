@@ -331,14 +331,15 @@ Do not reply to this email specifically, it will not work.
     })
 
 
-async def delete_file_task(app, user_id: int):
+async def delete_file_task(app, user_id: int, delete=False):
+    """Delete all the files from the user."""
     file_shortnames = await app.db.fetch("""
     SELECT filename
     FROM files
     WHERE uploader = $1
     """, user_id)
 
-    log.info(f'Deleting {len(file_shortnames)} files'
+    log.info(f'Deleting {len(file_shortnames)} files '
              'from account deletion.')
 
     for shortname in file_shortnames:
@@ -346,8 +347,15 @@ async def delete_file_task(app, user_id: int):
         # any others from the filesystem
         await delete_file(app, shortname, user_id)
 
+    if delete:
+        log.info(f'Deleting user id {user_id}')
+        await app.db.execute("""
+        DELETE FROM users
+        WHERE user_id = $1
+        """, user_id)
 
-async def delete_user(app, user_id):
+
+async def delete_user(app, user_id, delete=False):
     """Actually delete the user and their files."""
     await app.db.execute("""
     UPDATE users
@@ -363,7 +371,7 @@ async def delete_user(app, user_id):
 
     # since there is a lot of db load
     # when calling delete_file, we create a task that deletes them.
-    app.create_task(delete_file_task(app, user_id))
+    return app.loop.create_task(delete_file_task(app, user_id, delete))
 
 
 @bp.post('/api/delete_confirm')
