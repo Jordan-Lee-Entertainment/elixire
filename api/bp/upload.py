@@ -313,7 +313,7 @@ async def upload_metrics(app, ctx):
 
     await submit(app, 'upload_latency', delta, True)
 
-    if is_consenting(app, ctx.user_id):
+    if await is_consenting(app, ctx.user_id):
         await submit(app, 'upload_latency_pub', delta, True)
 
 
