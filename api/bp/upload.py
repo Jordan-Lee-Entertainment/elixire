@@ -19,13 +19,14 @@ from ..common import gen_filename, get_domain_info, transform_wildcard, \
 from ..common.webhook import jpeg_toobig_webhook, scan_webhook
 from ..snowflake import get_snowflake
 from ..errors import BadImage, QuotaExploded, BadUpload, FeatureDisabled
-from .metrics import is_consenting
+from .metrics import is_consenting, submit
 
 
 bp = Blueprint('upload')
 log = logging.getLogger(__name__)
 UploadContext = namedtuple('UploadContext',
-                           'user_id mime inputname shortname size body bytes checks')
+                           'user_id mime inputname shortname size '
+                           'body bytes checks start_timestamp')
 
 
 async def actual_scan_file(app, ctx):
@@ -163,17 +164,9 @@ async def clear_exif(image_bytes: io.BytesIO) -> io.BytesIO:
     return result_bytes
 
 
-async def upload_checks(app, ctx: UploadContext,
-                        given_extension: str) -> tuple:
-    """Do some upload checks."""
+async def check_limits(app, ctx):
+    """Check if the user can upload the file."""
     user_id = ctx.user_id
-
-    if not app.econfig.UPLOADS_ENABLED:
-        raise FeatureDisabled('Uploads are currently disabled')
-
-    # check mimetype
-    if ctx.mime not in app.econfig.ACCEPTED_MIMES:
-        raise BadImage(f'Bad image mime type: {ctx.mime!r}')
 
     # check user's limits
     used = await app.db.fetchval("""
@@ -199,6 +192,19 @@ async def upload_checks(app, ctx: UploadContext,
     if used and used + ctx.size > byte_limit:
         raise QuotaExploded('This file blows the weekly limit of'
                             f' {cnv_limit}MB')
+
+
+async def upload_checks(app, ctx: UploadContext,
+                        given_extension: str) -> tuple:
+    """Do some upload checks."""
+    if not app.econfig.UPLOADS_ENABLED:
+        raise FeatureDisabled('Uploads are currently disabled')
+
+    # check mimetype
+    if ctx.mime not in app.econfig.ACCEPTED_MIMES:
+        raise BadImage(f'Bad image mime type: {ctx.mime!r}')
+
+    await check_limits(app, ctx)
 
     # check the file for viruses
     await scan_file(app, ctx)
@@ -300,24 +306,19 @@ async def check_repeat(app, fspath: str, extension: str,
     }
 
 
-@bp.post('/api/upload')
-async def upload_handler(request):
-    """
-    True hell happens in this function.
+async def upload_metrics(app, ctx):
+    """Upload total time taken for procesisng to InfluxDB."""
+    end = time.monotonic()
+    delta = round((end - ctx.start_timestamp) * 1000, 5)
 
-    We need to check a lot of shit around here.
+    await submit(app, 'upload_latency', delta, True)
 
-    If things crash, we die.
-    """
-    app = request.app
-    user_id = await token_check(request)
+    if is_consenting(app, ctx.user_id):
+        await submit(app, 'upload_latency_pub', delta, True)
 
-    # if admin is set on request.args, we will
-    # do an "admin upload", without any checking for viruses,
-    # weekly limits, etc.
-    do_checks = not ('admin' in request.args and request.args['admin'])
 
-    print(request.raw_args)
+def _fetch_domain(request):
+    """Fetch domain information, if any"""
     try:
         given_domain = int(request.raw_args['domain'])
     except KeyError:
@@ -328,7 +329,21 @@ async def upload_handler(request):
     except KeyError:
         given_subdomain = None
 
+    return given_domain, given_subdomain
+
+
+@bp.post('/api/upload')
+async def upload_handler(request):
+    """Main upload handler."""
+    app = request.app
+    user_id = await token_check(request)
+
+    # if admin is set on request.args, we will
+    # do an "admin upload", without any checking for viruses,
+    # weekly limits, etc.
+    do_checks = not ('admin' in request.args and request.args['admin'])
     random_domain = ('random' in request.args and request.args['random'])
+    given_domain, given_subdomain = _fetch_domain(request)
 
     # if the user is admin and they wanted an admin
     # upload, check if they're actually an admin
@@ -344,14 +359,11 @@ async def upload_handler(request):
     filedata = request.files[key]
     filedata = next(iter(filedata))
 
-    in_filename = filedata.name
-    filemime = filedata.type
-
     filebody = filedata.body
     filebytes = io.BytesIO(filebody)
     filesize = len(filebody)
 
-    given_extension = os.path.splitext(in_filename)[-1].lower()
+    given_extension = os.path.splitext(filedata.name)[-1].lower()
 
     # by default, assume the extension given in the filename
     # is the one we should use.
@@ -363,9 +375,10 @@ async def upload_handler(request):
     shortname = await gen_shortname(request, user_id)
 
     # construct an upload context
-    ctx = UploadContext(user_id, filemime,
-                        in_filename, shortname, filesize,
-                        filebody, filebytes, do_checks)
+    ctx = UploadContext(user_id, filedata.type,
+                        filedata.name, shortname, filesize,
+                        filebody, filebytes, do_checks,
+                        time.monotonic())
 
     if do_checks:
         extension = await upload_checks(app, ctx, given_extension)
@@ -381,6 +394,7 @@ async def upload_handler(request):
     if impath.exists():
         res = await check_repeat(app, fspath, extension, ctx)
         if res is not None:
+            await upload_metrics(app, ctx)
             return response.json(res)
 
     domain_data = await get_domain_info(request, user_id)
@@ -415,12 +429,13 @@ async def upload_handler(request):
     INSERT INTO files (file_id, mimetype, filename,
         file_size, uploader, fspath, domain)
     VALUES ($1, $2, $3, $4, $5, $6, $7)
-    """, file_id, filemime, shortname, filesize, user_id, fspath, domain_id)
+    """, file_id, ctx.mime, shortname, filesize, user_id, fspath, domain_id)
 
     correct_bytes = await exif_checking(app, ctx)
     with open(fspath, 'wb') as raw_file:
         raw_file.write(correct_bytes.getvalue())
 
+    await upload_metrics(app, ctx)
     return response.json({
         'url': _construct_url(domain, shortname, extension),
         'shortname': shortname,
