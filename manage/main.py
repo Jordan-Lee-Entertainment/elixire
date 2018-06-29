@@ -134,11 +134,54 @@ async def deletefiles(ctx):
     """)
 
 
+async def rename_file(ctx):
+    """rename_file <shortname> <renamed>
+
+    Rename a single file to another shortname.
+    """
+    try:
+        shortname, renamed = ctx.args.args[:2]
+    except ValueError:
+        return print('not enough arguments')
+
+    domain = await ctx.db.fetchval("""
+    SELECT domain
+    FROM files
+    WHERE filename = $1
+    """, shortname)
+
+    if domain is None:
+        return print(f'no files found with shortname {shortname!r}')
+
+    existing_id = await ctx.db.fetchval("""
+    SELECT file_id
+    FROM files
+    WHERE filename = $1
+    """, renamed)
+
+    if existing_id:
+        return print(f'file {renamed} already exists, stopping!')
+
+    await ctx.db.execute("""
+    UPDATE files
+    SET filename = $1
+    WHERE filename = $2
+    AND deleted = false
+    """, renamed, shortname)
+
+    # invalidate etc
+    await ctx.redis.delete(f'fspath:{domain}:{shortname}')
+    await ctx.redis.delete(f'fspath:{domain}:{renamed}')
+
+    print('OK')
+
+
 OPERATIONS = {
     'list': ('List all available operations', list_ops),
     'help': ('Get help for an operation', manage_help),
     'adduser': ('Add a user into the instance', adduser),
     'cleanup_files': ('Delete files from the images folder', deletefiles),
+    'rename_file': ('Rename a single file', rename_file),
 }
 
 
