@@ -221,7 +221,7 @@ async def search_user(request, user_id: int, page: int):
     rows = await request.app.db.fetch("""
     SELECT user_id, username, active, admin, consented
     FROM users
-    WHERE username LIKE $1 OR user_id::text LIKE pattern
+    WHERE username LIKE $1 OR user_id::text LIKE $1
     ORDER BY user_id ASC
     LIMIT 20
     OFFSET ($2 * 20)
