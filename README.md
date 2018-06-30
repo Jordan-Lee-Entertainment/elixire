@@ -6,7 +6,7 @@ Elixire v2
   - lunae bunae genserv, 2018
 ```
 
-Elixire is an image host solution, the v1 was written in PHP,
+Elixire is an image host solution; v1 was written in PHP,
 v2 is being written in Python.
 
 *(no, we won't write Elixir, read BACKEND.md for the reason)*
@@ -20,24 +20,24 @@ Requirements:
  - Python 3.6+
  - PostgreSQL
  - Redis
- - A decent version of Node.
+ - A decent version of Node
 
 Optional requirements:
  - ClamAV, for virus scanning of uploads.
  - InfluxDB, for metrics (look into `docs/MANAGE.md` for more detail).
  - Mailgun, so that the instance becomes able to send emails to users.
- - Discord webhooks (So that the admins know when a malicious
+ - Discord webhooks (so that the admins know when a malicious
     file was uploaded, etc).
 
 ```bash
 git clone https://gitlab.com/elixire/elixire.git
 cd elixire
 
-# download the current versions for frontend and admin-panel
+# Download the current versions for frontend and admin-panel.
 git submodule init
 git submodule update
 
-# you can use a virtual enviroment if you want.
+# You are able to use a virtual enviroment if you want.
 python3.6 -m pip install -Ur requirements.txt
 
 mkdir images
@@ -51,22 +51,22 @@ psql -U postgres -f schema.sql
 # Edit frontend/config.json and admin-panel/config.json
 # so they're pointing to your domain.
 
-# this sets up the folder structure in ./images for you.
-# do not run 'cd utils/upgrade' then run the script.
+# This sets up the folder structure in ./images for you.
+# Do not run 'cd utils/upgrade' then run the script.
 ./utils/upgrade/folder_sharding.py
 
-# Update frontend and admin-panel repositories
-# Use this makefile task to update your instance
+# Update frontend and admin-panel repositories.
+# Use this makefile task to update your instance.
 make update
 
-# Build the frontend and the admin-panel
+# Build the frontend and the admin-panel.
 make 
 
 # Read carefully over the configuration file
-# to enable/disable instance features (like registration and webhooks)
+# to enable/disable instance features (like registration and webhooks).
 cp config.py.example config.py
 
-# run application, can be under pm2 or anything, really
+# Run application, also works under external process managers.
 python3.6 run.py
 ```
 
@@ -87,7 +87,7 @@ Please look under the `docs/` directory for more complete tooling documentation.
 # API Documentation
 
 [See this repo](https://gitlab.com/elixire/api-docs) for API Docs.
-Both the Client API and the Admin API are documented over there.
+Both the Client API and the Admin API are documented there.
 
 # Running tests
 
