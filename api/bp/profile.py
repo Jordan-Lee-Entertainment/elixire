@@ -2,8 +2,7 @@ import logging
 
 import asyncpg
 
-from sanic import Blueprint
-from sanic import response
+from sanic import Blueprint, response
 
 from ..errors import FailedAuth, FeatureDisabled, BadInput
 from ..common.auth import token_check, password_check, pwd_hash,\
@@ -19,6 +18,7 @@ log = logging.getLogger(__name__)
 
 
 async def _update_password(request, user_id, new_pwd):
+    """Update a user's password."""
     new_hash = await pwd_hash(request, new_pwd)
 
     await request.app.db.execute("""
@@ -30,46 +30,39 @@ async def _update_password(request, user_id, new_pwd):
     await request.app.storage.invalidate(user_id, 'password_hash')
 
 
-@bp.get('/api/domains')
-async def domainlist_handler(request):
-    """Gets the domain list."""
+async def get_limits(db, user_id) -> dict:
+    """Get a user's limit information."""
+    limits = await db.fetchrow("""
+    SELECT blimit, shlimit
+    FROM limits
+    WHERE user_id = $1
+    """, user_id)
 
-    # Only check if user's token is valid and their admin status
-    # if they gave authorization.
-    is_admin = False
-    if 'Authorization' in request.headers:
-        user_id = await token_check(request)
-        is_admin = await check_admin(request, user_id, False)
+    bytes_used = await db.fetchval("""
+    SELECT SUM(file_size)
+    FROM files
+    WHERE uploader = $1
+    AND file_id > time_snowflake(now() - interval '7 days')
+    """, user_id)
 
-    adm_string = "" if is_admin else "WHERE admin_only = false"
-    domain_records = await request.app.db.fetch(f"""
-    SELECT domain_id, domain
-    FROM domains
-    {adm_string}
-    ORDER BY official DESC, domain_id ASC
-    """)
+    shortens_used = await db.fetch("""
+    SELECT shorten_id
+    FROM shortens
+    WHERE uploader = $1
+    AND shorten_id > time_snowflake(now() - interval '7 days')
+    """, user_id)
 
-    adm_string_official = "" if is_admin else "AND admin_only = false"
-    official_domains = await request.app.db.fetch(f"""
-    SELECT domain_id
-    FROM domains
-    WHERE official = true {adm_string_official}
-    ORDER BY domain_id ASC
-    """)
-
-    # dear god
-    official_domains = [x[0] for x in official_domains]
-
-    return response.json({"domains": dict(domain_records),
-                          "officialdomains": official_domains})
+    return {
+        'limit': limits["blimit"],
+        'used': bytes_used,
+        'shortenlimit': limits["shlimit"],
+        'shortenused': len(shortens_used)
+    }
 
 
 @bp.get('/api/profile')
 async def profile_handler(request):
     """Get your basic information as a user."""
-
-    # by default, token_check won't care which
-    # token is it being fed with, it will only check.
     user_id = await token_check(request)
     user = await request.app.db.fetchrow("""
     SELECT user_id, username, active, email,
@@ -229,35 +222,6 @@ async def change_profile(request):
     return response.json({
         'updated_fields': updated,
     })
-
-
-async def get_limits(db, user_id):
-    limits = await db.fetchrow("""
-    SELECT blimit, shlimit
-    FROM limits
-    WHERE user_id = $1
-    """, user_id)
-
-    bytes_used = await db.fetchval("""
-    SELECT SUM(file_size)
-    FROM files
-    WHERE uploader = $1
-    AND file_id > time_snowflake(now() - interval '7 days')
-    """, user_id)
-
-    shortens_used = await db.fetch("""
-    SELECT shorten_id
-    FROM shortens
-    WHERE uploader = $1
-    AND shorten_id > time_snowflake(now() - interval '7 days')
-    """, user_id)
-
-    return {
-        'limit': limits["blimit"],
-        'used': bytes_used,
-        'shortenlimit': limits["shlimit"],
-        'shortenused': len(shortens_used)
-    }
 
 
 @bp.get('/api/limits')

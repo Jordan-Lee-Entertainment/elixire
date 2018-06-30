@@ -23,6 +23,7 @@ import api.bp.metrics
 import api.bp.personal_stats
 import api.bp.d1check
 import api.bp.misc
+import api.bp.index
 
 from api.errors import APIError, Ratelimited, Banned, FailedAuth
 from api.common.auth import token_check, get_token
@@ -42,6 +43,7 @@ CORS(app, resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"],
 
 # load blueprints
 app.blueprint(api.bp.auth.bp)
+app.blueprint(api.bp.index.bp)
 app.blueprint(api.bp.profile.bp)
 app.blueprint(api.bp.upload.bp)
 app.blueprint(api.bp.files.bp)
