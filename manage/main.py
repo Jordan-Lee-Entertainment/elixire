@@ -70,6 +70,7 @@ async def adduser(ctx):
     """adduser <email> <username> [password]
 
     Add a single user on the current instance.
+    The user will be activated by default.
     When password is not provided, a secure one is generated.
     """
     try:

@@ -230,6 +230,16 @@ Do not reply to this automated email.
         log.error(f'Failed to send email to {user_id} {user_email}')
 
 
+async def dump_static(app, zipdump, user_id):
+    """Dump static files. Those files are JSON encoded
+    with the required information."""
+    await dump_user_data(app, zipdump, user_id)
+    await dump_user_bans(app, zipdump, user_id)
+    await dump_user_limits(app, zipdump, user_id)
+    await dump_user_files(app, zipdump, user_id)
+    await dump_user_shortens(app, zipdump, user_id)
+
+
 async def do_dump(app, user_id: int):
     """Make a data dump for the user."""
     # insert user in current dump state
@@ -248,8 +258,10 @@ async def do_dump(app, user_id: int):
              f'total files {total_files}')
 
     await app.db.execute("""
-    INSERT INTO current_dump_state (user_id, current_id, total_files, files_done)
-    VALUES ($1, $2, $3, 0)
+    INSERT INTO current_dump_state
+        (user_id, current_id, total_files, files_done)
+    VALUES
+        ($1, $2, $3, 0)
     """, user_id, minid, total_files)
 
     zipdump, user_name = await open_zipdump(app, user_id)
@@ -257,14 +269,7 @@ async def do_dump(app, user_id: int):
     try:
         # those dumps just get stuff from DB
         # and write them into JSON files insize the zip
-
-        # NOTE: they are not resumable operations
-        # TODO: Maybe copy those calls into resume_dump?
-        await dump_user_data(app, zipdump, user_id)
-        await dump_user_bans(app, zipdump, user_id)
-        await dump_user_limits(app, zipdump, user_id)
-        await dump_user_files(app, zipdump, user_id)
-        await dump_user_shortens(app, zipdump, user_id)
+        await dump_static(app, zipdump, user_id)
 
         # this is the longest operation for a dump
         # and because of that, it is resumable, so in the case
@@ -294,8 +299,9 @@ async def resume_dump(app, user_id: int):
     zipdump, user_name = await open_zipdump(app, user_id, True)
 
     try:
-        # We talked about this being the only resumable operation
-        # on do_dump()
+        # Redump static files.
+        await dump_static(app, zipdump, user_id)
+
         await dump_files(app, zipdump, user_id, row['current_id'],
                          row['files_done'])
 

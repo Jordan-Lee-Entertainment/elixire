@@ -13,12 +13,13 @@ import PIL.ExifTags
 from sanic import Blueprint
 from sanic import response
 
-from ..common.auth import token_check, check_admin, check_paranoid
+from ..common.auth import check_admin, check_paranoid
 from ..common import gen_filename, get_domain_info, transform_wildcard, \
     delete_file, calculate_hash, get_random_domain
 from ..common.webhook import jpeg_toobig_webhook, scan_webhook
 from ..snowflake import get_snowflake
 from ..errors import BadImage, QuotaExploded, BadUpload, FeatureDisabled
+from ..decorators import auth_route
 from .metrics import is_consenting, submit
 
 
@@ -333,10 +334,10 @@ def _fetch_domain(request):
 
 
 @bp.post('/api/upload')
-async def upload_handler(request):
+@auth_route
+async def upload_handler(request, user_id):
     """Main upload handler."""
     app = request.app
-    user_id = await token_check(request)
 
     # if admin is set on request.args, we will
     # do an "admin upload", without any checking for viruses,
