@@ -11,7 +11,7 @@ v2 is being written in Python.
 
 *(no, we won't write Elixir, read BACKEND.md for the reason)*
 
-# Running
+# Installation and Running
 
 **Dockerfiles exist in this repository. Do not attempt to run them.
 (Merge Requests "fixing" them will be closed.)**
@@ -23,7 +23,11 @@ Requirements:
  - A decent version of Node.
 
 Optional requirements:
- - ClamAV
+ - ClamAV, for virus scanning of uploads.
+ - InfluxDB, for metrics (look into `docs/MANAGE.md` for more detail).
+ - Mailgun, so that the instance becomes able to send emails to users.
+ - Discord webhooks (So that the admins know when a malicious
+    file was uploaded, etc).
 
 ```bash
 git clone https://gitlab.com/elixire/elixire.git
@@ -47,11 +51,12 @@ psql -U postgres -f schema.sql
 # Edit frontend/config.json and admin-panel/config.json
 # so they're pointing to your domain.
 
-# this sets up the folder structure in ./images for you
+# this sets up the folder structure in ./images for you.
 # do not run 'cd utils/upgrade' then run the script.
 ./utils/upgrade/folder_sharding.py
 
 # Update frontend and admin-panel repositories
+# Use this makefile task to update your instance
 make update
 
 # Build the frontend and the admin-panel
@@ -77,13 +82,7 @@ Here's some important notes while this is still a todo:
 
 ## Tools
 
- - `utils/adduser.py` to add a new user into the instance.
- - `utils/stats.py` displays neat facts about your instance.
- - `utils/resetpasswd.py` in the case a user wants to reset a password.
- - `utils/renamefile.py` in the case you want to rename a file's shortname.
-
-More utilities are under the `utils/` directory, Most of the utils are
-superseeded by their equivalents in the Admin API.
+Please look under the `docs/` directory for more complete tooling documentation.
 
 # API Documentation
 
@@ -94,7 +93,7 @@ Both the Client API and the Admin API are documented over there.
 
 **NOTE: DO NOT RUN TESTS IN YOUR PRODUCTION ENVIRONMENT. AT ALL.**
 
-Install `tox`, the python package.
+Install `tox` manually (the python package, not the messgender).
 
 ```bash
 cd utils
