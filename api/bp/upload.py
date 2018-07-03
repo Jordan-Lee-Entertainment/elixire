@@ -20,6 +20,7 @@ from ..common.webhook import jpeg_toobig_webhook, scan_webhook
 from ..snowflake import get_snowflake
 from ..errors import BadImage, QuotaExploded, BadUpload, FeatureDisabled
 from ..decorators import auth_route
+from ..permissions import Permissions, domain_permissions
 from .metrics import is_consenting, submit
 
 
@@ -405,6 +406,9 @@ async def upload_handler(request, user_id):
 
     domain_id = given_domain or domain_data[0]
     subdomain_name = given_subdomain or domain_data[1]
+
+    # check if domain is uploadable
+    await domain_permissions(app, domain_id, Permissions.UPLOAD)
 
     if given_domain is None:
         domain = domain_data[2]

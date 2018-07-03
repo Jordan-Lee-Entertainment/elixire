@@ -31,7 +31,13 @@ CREATE TABLE IF NOT EXISTS domains (
     cf_zoneid text,
     cf_apikey text,
 
-    domain text
+    domain text,
+    
+    -- permissions' bits:
+    -- I: image upload permission
+    -- S: shorten permission
+    -- default is 3 since it is 0b11.
+    permissions int DEFAULT 3
 );
 
 -- edit this line if you are not elixi.re

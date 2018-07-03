@@ -9,6 +9,7 @@ from ..errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
 from ..common import gen_filename, get_domain_info, transform_wildcard, \
     FileNameType
 from ..snowflake import get_snowflake
+from ..permissions import Permissions, domain_permissions
 
 bp = Blueprint('shorten')
 
@@ -30,8 +31,8 @@ async def shorten_serve_handler(request, filename):
 @bp.post('/api/shorten')
 async def shorten_handler(request):
     """Handles addition of shortened links."""
-
     user_id = await token_check(request)
+
     try:
         url_toredir = str(request.json['url'])
         url_parsed = urllib.parse.urlparse(url_toredir)
@@ -85,6 +86,8 @@ async def shorten_handler(request):
     domain_id, subdomain_name, domain = await get_domain_info(request,
                                                               user_id,
                                                               FileNameType.SHORTEN)
+
+    await domain_permissions(request.app, domain_id, Permissions.SHORTEN)
     domain = transform_wildcard(domain, subdomain_name)
 
     await request.app.db.execute("""
