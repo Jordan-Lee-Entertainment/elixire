@@ -196,6 +196,9 @@ def handle_exception(request, exception):
     if isinstance(exception, (NotFound, FileNotFound)):
         status_code = 404
         log.warning(f'File not found: {exception!r}')
+
+        if request.app.econfig.ENABLE_FRONTEND:
+            return response.file('./frontend/output/404.html')
     else:
         log.exception(f'Error in request: {exception!r}')
 
