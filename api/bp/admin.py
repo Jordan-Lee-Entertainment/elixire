@@ -434,6 +434,10 @@ async def remove_domain(request, admin_id: int, domain_id: int):
     UPDATE users set domain = 0 WHERE domain = $1
     """, domain_id)
 
+    users_shorten_count = await request.app.db.execute("""
+    UPDATE users set shorten_domain = 0 WHERE shorten_domain = $1
+    """, domain_id)
+
     result = await request.app.db.execute("""
     DELETE FROM domains
     WHERE domain_id = $1
@@ -447,6 +451,7 @@ async def remove_domain(request, admin_id: int, domain_id: int):
         'file_move_result': files_count,
         'shorten_move_result': shorten_count,
         'users_move_result': users_count,
+        'users_shorten_move_result': users_shorten_count,
         'result': result
     })
 
