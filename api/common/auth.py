@@ -5,11 +5,21 @@ import bcrypt
 import itsdangerous
 import logging
 
-from .common import SIGNERS, TokenType, check_bans
+from .common import SIGNERS, TokenType, check_bans, gen_filename
 from ..errors import BadInput, FailedAuth, NotFound
 from ..schema import validate, LOGIN_SCHEMA
 
 log = logging.getLogger(__name__)
+
+
+async def gen_shortname(request, user_id: int) -> str:
+    """Generate a shortname for a file.
+
+    Checks if the user is in paranoid mode.
+    """
+    is_paranoid = await check_paranoid(request, user_id)
+    shortname_len = 8 if is_paranoid else request.app.econfig.SHORTNAME_LEN
+    return await gen_filename(request, shortname_len)
 
 
 def get_token(request) -> str:

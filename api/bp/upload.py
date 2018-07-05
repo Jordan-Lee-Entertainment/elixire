@@ -13,8 +13,8 @@ import PIL.ExifTags
 from sanic import Blueprint
 from sanic import response
 
-from ..common.auth import check_admin
-from ..common import gen_shortname, get_domain_info, transform_wildcard, \
+from ..common.auth import gen_shortname, check_admin
+from ..common import get_domain_info, transform_wildcard, \
     delete_file, calculate_hash, get_random_domain
 from ..common.webhook import jpeg_toobig_webhook, scan_webhook
 from ..snowflake import get_snowflake
