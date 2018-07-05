@@ -13,8 +13,8 @@ import PIL.ExifTags
 from sanic import Blueprint
 from sanic import response
 
-from ..common.auth import check_admin, check_paranoid
-from ..common import gen_filename, get_domain_info, transform_wildcard, \
+from ..common.auth import check_admin
+from ..common import gen_shortname, get_domain_info, transform_wildcard, \
     delete_file, calculate_hash, get_random_domain
 from ..common.webhook import jpeg_toobig_webhook, scan_webhook
 from ..snowflake import get_snowflake
@@ -255,16 +255,6 @@ async def exif_checking(app, ctx) -> io.BytesIO:
         await jpeg_toobig_webhook(app, ctx, noexif_len)
 
     return ctx.bytes
-
-
-async def gen_shortname(request, user_id: int) -> str:
-    """Generate a shortname for a file.
-
-    Checks if the user is in paranoid mode.
-    """
-    is_paranoid = await check_paranoid(request, user_id)
-    shortname_len = 8 if is_paranoid else request.app.econfig.SHORTNAME_LEN
-    return await gen_filename(request, shortname_len)
 
 
 def _construct_url(domain, shortname, extension):

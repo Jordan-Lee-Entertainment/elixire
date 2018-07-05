@@ -8,6 +8,7 @@ from pathlib import Path
 
 import itsdangerous
 
+from auth import check_paranoid
 from ..errors import FailedAuth, NotFound
 
 VERSION = '2.0.0'
@@ -48,6 +49,16 @@ def _gen_fname(length) -> str:
     """Generate a random filename."""
     return ''.join(secrets.choice(ALPHABET)
                    for _ in range(length))
+
+
+async def gen_shortname(request, user_id: int) -> str:
+    """Generate a shortname for a file.
+
+    Checks if the user is in paranoid mode.
+    """
+    is_paranoid = await check_paranoid(request, user_id)
+    shortname_len = 8 if is_paranoid else request.app.econfig.SHORTNAME_LEN
+    return await gen_filename(request, shortname_len)
 
 
 async def gen_filename(request, length=3) -> str:

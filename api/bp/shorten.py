@@ -6,7 +6,7 @@ from sanic import response
 
 from ..common.auth import token_check, check_admin
 from ..errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
-from ..common import gen_filename, get_domain_info, transform_wildcard, \
+from ..common import gen_shortname, get_domain_info, transform_wildcard, \
     FileNameType
 from ..snowflake import get_snowflake
 from ..permissions import Permissions, domain_permissions
@@ -80,7 +80,7 @@ async def shorten_handler(request):
             raise QuotaExploded('This shorten blows the weekly limit of'
                                 f' {shorten_limit} shortens')
 
-    redir_rname = await gen_filename(request)
+    redir_rname = await gen_shortname(request, user_id)
     redir_id = get_snowflake()
 
     domain_id, subdomain_name, domain = await get_domain_info(request,

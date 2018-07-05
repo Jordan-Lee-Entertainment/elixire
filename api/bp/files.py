@@ -83,7 +83,7 @@ async def list_handler(request):
     shortens = {}
     for ushorten in user_shortens:
         filename = ushorten['filename']
-        domain = domains[ushorten['domain']]
+        domain = domains[ushorten['domain']].replace("*.", "wildcard.")
 
         use_https = request.app.econfig.USE_HTTPS
         prefix = 'https://' if use_https else 'http://'
