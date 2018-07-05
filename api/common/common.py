@@ -8,7 +8,7 @@ from pathlib import Path
 
 import itsdangerous
 
-from auth import check_paranoid
+from .auth import check_paranoid
 from ..errors import FailedAuth, NotFound
 
 VERSION = '2.0.0'
