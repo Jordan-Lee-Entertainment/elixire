@@ -43,6 +43,10 @@ async def shorten_handler(request):
         raise BadInput(f'Invalid URI scheme({url_parsed.scheme}). '
                        'Only https and http are allowed.')
 
+    if len(url_toredir) > request.app.econfig.MAX_SHORTEN_URL_LEN:
+        raise BadInput(f'Your URL is way too long ({len(url_toredir)} '
+                       f'> {request.app.econfig.MAX_SHORTEN_URL_LEN}).')
+
     # Check if admin is set in get values, if not, do checks
     # If it is set, and the admin value is truthy, do not do checks
     do_checks = not ('admin' in request.args and request.args['admin'])

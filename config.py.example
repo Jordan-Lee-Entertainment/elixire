@@ -204,6 +204,9 @@ THUMBNAIL_SIZES = {
 # Sets the minimum shortname length
 SHORTNAME_LEN = 3
 
+# Maximum length of the URL that's going to be shortened
+MAX_SHORTEN_URL_LEN = 250
+
 # === FEATURE SETTINGS ===
 # Disabled features will raise a 503 to
 # whoever requests the route
