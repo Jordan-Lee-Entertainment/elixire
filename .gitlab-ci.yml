@@ -1,0 +1,27 @@
+image: python:alpine
+
+
+run_backend:
+  image: python:alpine
+  before_script:
+    - python -V
+    - apk add --no-cache --virtual .build_deps build-base python3-dev libffi-dev
+  services:
+    - postgres:alpine
+  script:
+    - python -m pip install -Ur requirements.txt
+    - mkdir frontend/output
+    - touch frontend/output/index.html
+    - python run.py --docker
+  after_script:
+    - apk del .build_deps
+
+build_frontend:
+  image: node:alpine
+  before_script:
+    - node -v
+    - yarn -v
+  script:
+    - cd frontend
+    - yarn install
+    - node_modules/.bin/webpack
