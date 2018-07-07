@@ -3,6 +3,16 @@ image: python:alpine
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
+build_frontend:
+  image: node:alpine
+  before_script:
+    - node -v
+    - yarn -v
+  script:
+    - cd frontend
+    - yarn install
+    - node_modules/.bin/webpack
+
 run_backend:
   image: python:alpine
   before_script:
@@ -17,13 +27,3 @@ run_backend:
     - python run.py --docker
   after_script:
     - apk del .build_deps
-
-build_frontend:
-  image: node:alpine
-  before_script:
-    - node -v
-    - yarn -v
-  script:
-    - cd frontend
-    - yarn install
-    - node_modules/.bin/webpack
