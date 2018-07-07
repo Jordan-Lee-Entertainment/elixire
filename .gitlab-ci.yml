@@ -13,6 +13,11 @@ image: python:3.6-alpine
 #     - yarn install
 #     - node_modules/.bin/webpack
 
+cache:
+  # We spend way too long installing deps
+  paths:
+    - /root/.cache/pip
+
 run_backend:
   image: python:3.6-alpine
   before_script:
