@@ -1,0 +1,12 @@
+
+MAIN_URL = 'http://localhost:8080'
+
+USE_HTTPS = False
+
+db = {
+   "host": "postgres",
+   "user": "postgres",
+   "password": ""
+}
+
+redis = "redis://redis"

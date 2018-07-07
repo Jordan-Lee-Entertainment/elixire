@@ -1,17 +1,17 @@
 image: python:alpine
 
-variables:
-  GIT_SUBMODULE_STRATEGY: recursive
+# variables:
+#   GIT_SUBMODULE_STRATEGY: recursive
 
-build_frontend:
-  image: node:alpine
-  before_script:
-    - node -v
-    - yarn -v
-  script:
-    - cd frontend
-    - yarn install
-    - node_modules/.bin/webpack
+# build_frontend:
+#   image: node:alpine
+#   before_script:
+#     - node -v
+#     - yarn -v
+#   script:
+#     - cd frontend
+#     - yarn install
+#     - node_modules/.bin/webpack
 
 run_backend:
   image: python:alpine
@@ -20,10 +20,12 @@ run_backend:
     - apk add --no-cache --virtual .build_deps build-base git python3-dev libffi-dev
   services:
     - postgres:alpine
+    - redis:alpine
   script:
     - python -m pip install -Ur requirements.txt
-    - mkdir frontend/output
-    - touch frontend/output/index.html
-    - python run.py --docker
+    - mkdir frontend/output admin-panel/dist -p
+    - touch frontend/output/index.html admin-panel/dist/index.html
+    - cat config.py.example config.py.ci > config.py
+    - python run.py
   after_script:
     - apk del .build_deps
