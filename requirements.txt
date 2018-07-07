@@ -1,4 +1,4 @@
-git+https://github.com/channelcat/sanic@e1c90202682d76361c77adb7bb2176730038466a
+git+https://github.com/channelcat/sanic@f9b29fd7e746301624d3d1a3501b1c47287eb297
 sanic-cors==0.9.4
 
 asyncpg==0.16.0
@@ -10,17 +10,17 @@ cerberus==1.2
 # The worst idea ever is to add aiohttp to a project.
 # and I did it.
 # fuck aiohttp.
-aiohttp==3.3.1
+aiohttp==3.3.2
 
 # May god have mercy on my soul
-Pillow==5.1.0
+Pillow==5.2.0
 
 # testing stuff
-pytest==3.6.1
+pytest==3.6.3
 pyflakes==2.0.0
 
-# pytest-sanic==0.1.9
-git+https://github.com/yunstanford/pytest-sanic@51ea50f6f4fdc50c5821c100a03de338298e2927
+# pytest-sanic==0.1.12
+git+https://github.com/yunstanford/pytest-sanic@930f2c5e779b84a587aba0193f7e8e424a9e7366
 
 aioinflux==0.3.2
 
