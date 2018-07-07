@@ -42,7 +42,7 @@ async def file_handler(request, filename):
     """Handles file serves."""
     filepath = await filecheck(request, filename)
     return await response.file(filepath, headers={"Content-Security-Policy":
-                                                  "script-src 'none'"})
+                                                  "sandbox; frame-src 'none'"})
 
 
 @bp.get('/t/<filename>')
