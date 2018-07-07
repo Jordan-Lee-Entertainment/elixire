@@ -1,4 +1,4 @@
-image: python:alpine
+image: python:3.6-alpine
 
 # variables:
 #   GIT_SUBMODULE_STRATEGY: recursive
@@ -14,7 +14,7 @@ image: python:alpine
 #     - node_modules/.bin/webpack
 
 run_backend:
-  image: python:alpine
+  image: python:3.6-alpine
   before_script:
     - python -V
     - apk add --no-cache --virtual .build_deps build-base git python3-dev libffi-dev
