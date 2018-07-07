@@ -17,7 +17,7 @@ run_backend:
   image: python:3.6-alpine
   before_script:
     - python -V
-    - apk add --no-cache --virtual .build_deps build-base git python3-dev libffi-dev
+    - apk --update add --no-cache --virtual .build_deps build-base git python3-dev libffi-dev jpeg-dev zlib-dev freetype-dev lcms2-dev openjpeg-dev tiff-dev tk-dev tcl-dev libxml2-dev libxslt-dev libffi-dev gcc musl-dev libgcc openssl-dev curl
   services:
     - postgres:alpine
     - redis:alpine
