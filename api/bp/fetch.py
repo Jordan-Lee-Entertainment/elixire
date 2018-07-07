@@ -74,4 +74,4 @@ async def thumbnail_handler(request, filename):
     # yes, we are doing more I/O by using response.file
     # and not sending the bytes ourselves.
     return await response.file(thumbpath, headers={"Content-Security-Policy":
-                                                   "script-src 'none'"})
+                                                   "sandbox; frame-src 'none'"})
