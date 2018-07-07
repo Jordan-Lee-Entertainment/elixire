@@ -23,7 +23,7 @@ async def shorten_serve_handler(request, filename):
 
     # Sanitize the URL as sanic has a vulnerability
     # See https://github.com/channelcat/sanic/pull/1260
-    url_toredir = urllib.parse.quote_plus(url_toredir, safe=':/#')
+    url_toredir = urllib.parse.quote_plus(url_toredir, safe=':/#?&=')
 
     if not url_toredir:
         raise NotFound('No shortened links found with this name '
