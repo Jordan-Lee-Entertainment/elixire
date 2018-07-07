@@ -1,11 +1,13 @@
 image: python:alpine
 
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
 
 run_backend:
   image: python:alpine
   before_script:
     - python -V
-    - apk add --no-cache --virtual .build_deps build-base python3-dev libffi-dev
+    - apk add --no-cache --virtual .build_deps build-base git python3-dev libffi-dev
   services:
     - postgres:alpine
   script:
