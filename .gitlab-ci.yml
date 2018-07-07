@@ -37,5 +37,6 @@ run_backend:
     - touch frontend/output/index.html admin-panel/dist/index.html
     - cat config.py.example config.py.ci > config.py
     - python run.py
+    # shouldn't we use tox instead of running elixire directly?
   after_script:
     - apk del .build_deps

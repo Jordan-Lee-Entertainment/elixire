@@ -21,6 +21,10 @@ async def shorten_serve_handler(request, filename):
     domain_id = await storage.get_domain_id(request.host)
     url_toredir = await storage.get_urlredir(filename, domain_id)
 
+    # Sanitize the URL as sanic has a vulnerability
+    # See https://github.com/channelcat/sanic/pull/1260
+    url_toredir = urllib.parse.quote_plus(url_toredir, safe=':/#')
+
     if not url_toredir:
         raise NotFound('No shortened links found with this name '
                        'on this domain.')
