@@ -217,7 +217,6 @@ async def main():
     AND deleted = true {user_c_criteria}
     """)
 
-
     # Total active user count
     total_active_user_count = await db.fetchval("""
     SELECT COUNT(*)

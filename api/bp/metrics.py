@@ -155,6 +155,36 @@ async def file_size_task(app):
         log.exception('file count task err')
 
 
+async def user_count_task(app):
+    try:
+        while True:
+            active = await app.db.fetchval("""
+            SELECT COUNT(*)
+            FROM users
+            WHERE active = true
+            """)
+
+            consented = await app.db.fetchval("""
+            SELECT COUNT(*)
+            FROM users
+            WHERE active = true AND consented = true
+            """)
+
+            inactive = await app.db.fetchval("""
+            SELECT COUNT(*)
+            FROM users
+            WHERE active = false
+            """)
+
+            await submit(app, 'active_users', active)
+            await submit(app, 'consented_users', consented)
+            await submit(app, 'inactive_users', inactive)
+
+            await asyncio.sleep(3600)
+    except Exception:
+        log.exception('user count task err')
+
+
 @bp.listener('after_server_start')
 async def create_db(app, loop):
     if not app.econfig.ENABLE_METRICS:
@@ -171,6 +201,7 @@ async def create_db(app, loop):
     app.page_hit_task = loop.create_task(page_hit_task(app))
     app.file_count_task = app.loop.create_task(file_count_task(app))
     app.file_size_task = app.loop.create_task(file_size_task(app))
+    app.user_count_task = app.loop.create_task(user_count_task(app))
 
 
 @bp.middleware('request')
