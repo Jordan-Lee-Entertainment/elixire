@@ -12,7 +12,7 @@ from ..schema import validate, LOGIN_SCHEMA
 log = logging.getLogger(__name__)
 
 
-async def gen_shortname(request, user_id: int) -> str:
+async def gen_shortname(request, user_id: int) -> tuple:
     """Generate a shortname for a file.
 
     Checks if the user is in paranoid mode.

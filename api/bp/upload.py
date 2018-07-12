@@ -364,7 +364,8 @@ async def upload_handler(request, user_id):
 
     # generate a filename so we can identify later when removing it
     # because of virus scanning.
-    shortname = await gen_shortname(request, user_id)
+    shortname, tries = await gen_shortname(request, user_id)
+    await submit(app, 'shortname_gen_tries', tries, True)
 
     # construct an upload context
     ctx = UploadContext(user_id, filedata.type,

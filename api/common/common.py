@@ -50,7 +50,7 @@ def _gen_fname(length) -> str:
                    for _ in range(length))
 
 
-async def gen_filename(request, length=3) -> str:
+async def gen_filename(request, length=3, _curc=0) -> str:
     """Generate a unique random filename.
 
     To guarantee that the generated shortnames will
@@ -68,8 +68,9 @@ async def gen_filename(request, length=3) -> str:
 
     Returns
     -------
-    str
-        The generated shortname
+    tuple
+        Containing the generated shortname
+        and how many tries happened to generate it.
 
     Raises
     ------
@@ -78,6 +79,8 @@ async def gen_filename(request, length=3) -> str:
     """
     if length > 10:
         raise RuntimeError('Failed to generate a filename')
+
+    try_count = 0
 
     for try_count in range(10):
         random_fname = _gen_fname(length)
@@ -89,12 +92,14 @@ async def gen_filename(request, length=3) -> str:
         """, random_fname)
 
         if not filerow:
-            log.info(f'Took {try_count} retries to '
-                     f'generate {random_fname}')
-            return random_fname
+            total = _curc + try_count
+            log.info(f'Took {total} retries to '
+                     f'generate {random_fname!r}')
+            return random_fname, total
 
     # if 10 tries didnt work, try generating with length+1
-    return await gen_filename(request, length + 1)
+    return await gen_filename(request, length + 1,
+                              _curc + try_count + 1)
 
 
 def _calculate_hash(fhandler) -> str:

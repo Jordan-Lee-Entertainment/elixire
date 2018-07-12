@@ -34,7 +34,8 @@ def point(measure, value):
     }
 
 
-async def is_consenting(app, user_id: int):
+async def is_consenting(app, user_id: int) -> bool:
+    """Return if a user consented to data processing."""
     return await app.db.fetchval("""
     SELECT consented
     FROM users

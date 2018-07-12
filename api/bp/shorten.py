@@ -10,6 +10,7 @@ from ..common import get_domain_info, transform_wildcard, \
     FileNameType
 from ..snowflake import get_snowflake
 from ..permissions import Permissions, domain_permissions
+from .metrics import submit
 
 bp = Blueprint('shorten')
 
@@ -88,9 +89,10 @@ async def shorten_handler(request):
             raise QuotaExploded('This shorten blows the weekly limit of'
                                 f' {shorten_limit} shortens')
 
-    redir_rname = await gen_shortname(request, user_id)
-    redir_id = get_snowflake()
+    redir_rname, tries = await gen_shortname(request, user_id)
+    await submit(request.app, 'shortname_gen_tries', tries, True)
 
+    redir_id = get_snowflake()
     domain_id, subdomain_name, domain = await get_domain_info(request,
                                                               user_id,
                                                               FileNameType.SHORTEN)
