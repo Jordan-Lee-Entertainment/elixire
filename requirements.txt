@@ -1,7 +1,7 @@
 git+https://github.com/channelcat/sanic@f9b29fd7e746301624d3d1a3501b1c47287eb297
 sanic-cors==0.9.4
 
-asyncpg==0.16.0
+asyncpg==0.17.0
 aioredis==1.1.0
 bcrypt==3.1.4
 itsdangerous==0.24
