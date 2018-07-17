@@ -1,5 +1,5 @@
-git+https://github.com/channelcat/sanic@f9b29fd7e746301624d3d1a3501b1c47287eb297
-sanic-cors==0.9.4
+git+https://github.com/channelcat/sanic@599834b0e1c41d934dce30b6393926635f72b78e
+git+https://github.com/ashleysommer/sanic-cors@a17067967e0d447c870c48feca9cc53572316c3c
 
 asyncpg==0.17.0
 aioredis==1.1.0
