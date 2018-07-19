@@ -1,13 +1,18 @@
-"""Common schema information."""
+"""
+elixi.re - schema data
+    mostly containing regexes and schemas for cerberus
+"""
 import re
 
 from cerberus import Validator
 from .errors import BadInput
 
 USERNAME_REGEX = re.compile(r'^[a-zA-Z0-9]{1}[a-zA-Z0-9_]{2,19}$', re.A)
-SUBDOMAIN_REGEX = re.compile(r'^([a-zA-Z0-9_][a-zA-Z0-9_-]{0,61}[a-zA-Z0-9_]|[a-zA-Z0-9_]|)$', re.A)
+SUBDOMAIN_REGEX = re.compile(r'^([a-zA-Z0-9_][a-zA-Z0-9_-]{0,61}'
+                             r'[a-zA-Z0-9_]|[a-zA-Z0-9_]|)$', re.A)
 DISCORD_REGEX = re.compile(r'^[^\#]{2,32}\#\d{4}$', re.A)
-EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', re.A)
+EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$',
+                         re.A)
 
 
 class ElixireValidator(Validator):

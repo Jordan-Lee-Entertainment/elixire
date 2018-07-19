@@ -1,3 +1,6 @@
+"""
+elixi.re - email functions
+"""
 import secrets
 import logging
 
@@ -52,7 +55,6 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
         # retry with count + 1
         await gen_email_token(app, user_id, table, count + 1)
 
-    # check if there are more than 3 issues hashes for the user.
     hashes = await app.db.fetchval(f"""
     SELECT COUNT(*)
     FROM {table}
@@ -87,7 +89,8 @@ async def send_email(app, user_email: str, subject: str, email_body: str):
         return resp
 
 
-async def send_user_email(app, user_id, subject, body) -> tuple:
+async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
+    """Send an email to a user, given user ID."""
     user_email = await app.db.fetchval("""
     SELECT email
     FROM users
@@ -103,10 +106,12 @@ async def send_user_email(app, user_id, subject, body) -> tuple:
 
 
 def fmt_email(app, string, **kwargs):
+    """Format an email"""
     base = {
         'inst_name': app.econfig.INSTANCE_NAME,
         'support': app.econfig.SUPPORT_EMAIL,
         'main_url': app.econfig.MAIN_URL,
+        'main_invite': app.econfig.MAIN_INVITE,
     }
 
     base.update(kwargs)
@@ -115,6 +120,7 @@ def fmt_email(app, string, **kwargs):
 
 async def uid_from_email(app, token: str, table: str,
                          raise_err: bool = True) -> int:
+    """Get user ID from email."""
     user_id = await app.db.fetchval(f"""
     SELECT user_id
     FROM {table}

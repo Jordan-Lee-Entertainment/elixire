@@ -12,7 +12,7 @@ bp = Blueprint('auth')
 async def login_handler(request):
     """
     Login one user to the service
-    receives a json payload with fields "user" and "password".
+    receives a json payload with fields 'user' and 'password'.
 
     returns a timed token
     """

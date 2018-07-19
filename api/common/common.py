@@ -343,7 +343,7 @@ async def check_bans(request, user_id: int):
     ip_addr = get_ip_addr(request)
     ip_ban_reason = await request.app.storage.get_ipban(ip_addr)
     if ip_ban_reason:
-        raise FailedAuth(f'IP address is currently banned. {ip_ban_reason}')
+        raise FailedAuth(f'IP address is banned. {ip_ban_reason}')
 
 
 async def get_domain_info(request, user_id: int,
@@ -357,7 +357,8 @@ async def get_domain_info(request, user_id: int,
     user_id: int
         User's snowflake ID.
     dtype, optional: FileNameType
-        What type of domain to get? (file or shorten)
+        What type of domain to get? (file or shorten).
+        Defaults to file.
 
     Returns
     -------

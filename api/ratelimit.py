@@ -1,5 +1,6 @@
 """
-Based off discord.py's cooldown code.
+elixi.re - ratelimit code
+    Based off discord.py's cooldown code.
 """
 import time
 import logging

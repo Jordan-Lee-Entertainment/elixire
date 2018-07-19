@@ -312,7 +312,6 @@ async def resume_dump(app, user_id: int):
         zipdump.close()
 
 
-
 async def dump_worker(app):
     """Main dump worker.
 
@@ -551,6 +550,7 @@ async def data_dump_global_status(request):
         'queue': queue,
         'current': dict(current or {})
     })
+
 
 @bp.get('/api/dump_get')
 async def get_dump(request):

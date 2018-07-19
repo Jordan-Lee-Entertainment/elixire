@@ -24,6 +24,7 @@ async def domain_list(request):
 @bp.get('/api/list')
 async def list_handler(request):
     """Get list of files."""
+    # TODO: simplify this code
     try:
         print(request.args)
         page = int(request.args['page'][0])

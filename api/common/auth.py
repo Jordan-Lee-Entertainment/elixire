@@ -1,9 +1,11 @@
 """
-Common authentication-related functions.
+elixi.re - common auth
+    Common authentication-related functions.
 """
-import bcrypt
 import itsdangerous
 import logging
+
+import bcrypt
 
 from .common import SIGNERS, TokenType, check_bans, gen_filename
 from ..errors import BadInput, FailedAuth, NotFound
@@ -73,14 +75,21 @@ async def password_check(request, user_id: int, password: str):
     await pwd_check(request, stored, password)
 
 
-async def check_admin(request, user_id: int, error_on_nonadmin: bool = True) -> bool:
-    """Checks if the given user is an admin
+async def check_admin(request, user_id: int,
+                      error_on_nonadmin: bool = True) -> bool:
+    """Checks if the given user is an admin.
 
-    Returns True if user is an admin, False if not.
-    Should return None if user is not found. I think.
+    Returns
+    -------
+    bool
+        Representing if the user is an admin or not.
+    None
+        When user doesn't exist.
 
-    If error_on_nonadmin is set to True, then a FailedAuth exception will be
-    raised if the user is not an admin.
+    Raises
+    ------
+    FailedAuth
+        When user is not an admin and error_on_nonadmin is set to True.
     """
     is_admin = await request.app.db.fetchval("""
         select admin
@@ -108,7 +117,8 @@ async def check_paranoid(request, user_id: int) -> bool:
     return is_paranoid
 
 
-async def check_domain(request, domain_name: str, error_on_nodomain=True) -> dict:
+async def check_domain(request, domain_name: str,
+                       error_on_nodomain=True) -> dict:
     """Checks if a domain exists, by domain
 
     returns its record it if does, returns None if it doesn't"""

@@ -286,6 +286,7 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {request.app.econfig.MAIN_URL}
 """
 
+    # TODO: change this to send user email?
     resp = await send_email(request.app, user_email,
                             f'{_inst_name} - account deactivation request',
                             email_body)

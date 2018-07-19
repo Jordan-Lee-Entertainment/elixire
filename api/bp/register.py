@@ -10,7 +10,7 @@ from sanic import Blueprint, response
 from ..snowflake import get_snowflake
 from ..errors import BadInput, FeatureDisabled
 from ..schema import validate, REGISTRATION_SCHEMA
-from ..common.email import send_email
+from ..common.email import send_email, fmt_email
 from ..common.webhook import register_webhook
 
 bp = Blueprint('register')
@@ -19,9 +19,8 @@ bp = Blueprint('register')
 async def send_register_email(app, email: str) -> bool:
     """Send an email about the signup."""
     _inst_name = app.econfig.INSTANCE_NAME
-    _support = app.econfig.SUPPORT_EMAIL
 
-    email_body = f"""This is an automated email from {_inst_name}
+    email_body = fmt_email(app, """This is an automated email from {inst_name}
 about your signup.
 
 It has been successfully dispatched to the system so that admins can
@@ -29,16 +28,16 @@ activate the account. You will not be able to login until the account
 is activated.
 
 Accounts that aren't on the discord server won't be activated.
-{app.econfig.MAIN_INVITE}
+{main_invite}
 
 Please do not re-register the account. It will just decrease your chances
 of actually getting an account activated.
 
-Reply to {_support} if you have any questions.
+Reply to {support} if you have any questions.
 Do not reply to this email specifially, it will not work.
 
- - {_inst_name}, {app.econfig.MAIN_URL}
-"""
+ - {inst_name}, {main_url}
+""")
 
     resp = await send_email(app, email,
                             f'{_inst_name} - signup confirmation',

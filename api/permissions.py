@@ -1,3 +1,6 @@
+"""
+elixi.re - domain permission helper
+"""
 from .errors import BadInput, FeatureDisabled
 
 

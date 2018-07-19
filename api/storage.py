@@ -10,7 +10,7 @@ from .errors import NotFound
 log = logging.getLogger(__name__)
 
 
-def unix_time(dt: datetime.datetime) -> int:
+def unix_time(dtime: datetime.datetime) -> int:
     """Convert a datetime object to a UNIX timestamp.
 
     Returns
@@ -19,7 +19,7 @@ def unix_time(dt: datetime.datetime) -> int:
         The UNIX timestamp of the datetime object.
     """
     epoch = datetime.datetime.utcfromtimestamp(0)
-    return (dt - epoch).total_seconds()
+    return (dtime - epoch).total_seconds()
 
 
 def check(map_data) -> dict:

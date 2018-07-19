@@ -13,7 +13,11 @@ bp = Blueprint('index')
 
 @bp.get('/api/domains')
 async def domainlist_handler(request):
-    """Gets the domain list."""
+    """Gets the domain list.
+
+    Returns admin-only domains if an
+    Authorization header is given.
+    """
 
     # Only check if user's token is valid and their admin status
     # if they gave authorization.

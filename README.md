@@ -40,6 +40,7 @@ git submodule update
 # You are able to use a virtual enviroment if you want.
 python3.6 -m pip install -Ur requirements.txt
 
+# make sure those folders exist
 mkdir images
 mkdir dumps
 mkdir thumbnails
@@ -93,7 +94,7 @@ Both the Client API and the Admin API are documented there.
 
 **NOTE: DO NOT RUN TESTS IN YOUR PRODUCTION ENVIRONMENT. AT ALL.**
 
-Install `tox` manually (the python package, not the messgender).
+Install `tox` manually (the python package, not the messenger).
 
 ```bash
 cd utils

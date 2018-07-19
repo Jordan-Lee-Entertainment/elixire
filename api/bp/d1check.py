@@ -10,7 +10,12 @@ bp = Blueprint(__name__)
 
 @bp.post('/api/check')
 async def d1_check(request):
-    """Check endpoint for d1."""
+    """Check endpoint for d1.
+
+    Please look into d1's documentation
+    on how d1's protocol works and how this code
+    is a part of it.
+    """
     try:
         ciphertext = request.json['data']
     except (TypeError, KeyError):

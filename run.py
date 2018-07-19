@@ -110,6 +110,7 @@ def check_rtl(request, bucket):
 
 
 async def context_fetch(request, storage, user_name, user_id, token):
+    """Fetch the userid and the username for current user, if any."""
     if not user_name and token:
         user_id = await token_check(request)
 
@@ -191,6 +192,7 @@ def handle_api_error(request, exception):
 
 @app.exception(Exception)
 def handle_exception(request, exception):
+    """Handle any kind of exception."""
     status_code = 500
 
     if isinstance(exception, (NotFound, FileNotFound)):
@@ -210,7 +212,7 @@ def handle_exception(request, exception):
 
 @app.middleware('request')
 async def global_rl(request):
-    # handle global ratelimiting on all routes
+    """Global ratelimit handler."""
     if request.method == 'OPTIONS':
         return
 
@@ -404,9 +406,6 @@ def main():
             app.add_route(options_handler, uri, methods=['OPTIONS'])
         except Exception:
             pass
-
-    # TODO: b2 / s3 support ????
-    # app.static('/i', './images')
 
     if config.ENABLE_FRONTEND:
         app.static('/humans.txt', './static/humans.txt')

@@ -41,8 +41,11 @@ async def filecheck(request, filename):
 async def file_handler(request, filename):
     """Handles file serves."""
     filepath = await filecheck(request, filename)
-    return await response.file(filepath, headers={"Content-Security-Policy":
-                                                  "sandbox; frame-src 'none'"})
+    return await response.file(
+        filepath,
+        headers={
+            'Content-Security-Policy': "sandbox; frame-src 'none'"
+        })
 
 
 @bp.get('/t/<filename>')
@@ -52,6 +55,8 @@ async def thumbnail_handler(request, filename):
     thumbtype, filename = filename[0], filename[1:]
     fspath = await filecheck(request, filename)
 
+    # if thumbnails are disabled, just return
+    # the same file
     if not appcfg.THUMBNAILS:
         return await response.file(fspath)
 
@@ -59,7 +64,6 @@ async def thumbnail_handler(request, filename):
     thumbpath = os.path.join(thb_folder, f'{thumbtype}{filename}')
 
     if not os.path.isfile(thumbpath):
-        # call pillow, make it
         tstart = time.monotonic()
 
         image = Image.open(fspath)
@@ -73,5 +77,8 @@ async def thumbnail_handler(request, filename):
 
     # yes, we are doing more I/O by using response.file
     # and not sending the bytes ourselves.
-    return await response.file(thumbpath, headers={"Content-Security-Policy":
-                                                   "sandbox; frame-src 'none'"})
+    return await response.file(
+        thumbpath,
+        headers={
+            'Content-Security-Policy': "sandbox; frame-src 'none'"
+        })

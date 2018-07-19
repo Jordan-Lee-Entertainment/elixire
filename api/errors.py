@@ -1,3 +1,8 @@
+"""
+elixi.re - error classes
+"""
+
+
 class APIError(Exception):
     """General API Error"""
     status_code = 500
