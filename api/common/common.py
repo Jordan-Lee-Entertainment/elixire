@@ -422,10 +422,10 @@ def transform_wildcard(domain: str, subdomain_name: str) -> str:
         The actual domain you should use.
     """
     # Check if it's wildcard and if we have a subdomain set
-    if domain[0:2] == "*." and subdomain_name:
-        domain = domain.replace("*.", f"{subdomain_name}.")
-    # If it's wildcard but we don't have a wildcard, upload to base domain
-    elif domain[0:2] == "*.":
-        domain = domain.replace("*.", "")
+    if domain[0:2] == '*.':
+        if subdomain_name:
+            domain = domain.replace("*.", f"{subdomain_name}.")
+        else:
+            domain = domain.replace("*.", "")
 
     return domain
