@@ -56,7 +56,9 @@ app.blueprint(api.bp.personal_stats.bp)
 app.blueprint(api.bp.d1check.bp)
 app.blueprint(api.bp.misc.bp)
 
-logging.basicConfig(level=logging.INFO)
+level = getattr(config, 'LOGGING_LEVEL', 'INFO')
+logging.basicConfig(level=level)
+
 log = logging.getLogger(__name__)
 
 # Force IP ratelimiting on those routes, as they
