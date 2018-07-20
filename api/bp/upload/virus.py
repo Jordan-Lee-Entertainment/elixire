@@ -28,12 +28,12 @@ async def run_scan(app, ctx):
     )
 
     # combine outputs
-    out, err = map(lambda s: s.decode(), await scanproc.communicate(input=ctx.body))
+    out, err = map(lambda s: s.decode(), await scanproc.communicate(input=ctx.file.body))
     out = f'{out}{err}'
     scanend = time.monotonic()
 
     delta = round(scanend - scanstart, 6)
-    log.info(f'Scanning {ctx.size/1024/1024} MB took {delta} seconds')
+    log.info(f'Scanning {ctx.file.size / 1024 / 1024} MB took {delta} seconds')
     log.debug(f'output of clamdscan: {out}')
 
     if 'OK' not in out:
@@ -85,7 +85,7 @@ async def scan_file(app, ctx):
         log.info('scan file done')
     except asyncio.TimeoutError:
         # the scan took too long, reschedule it on the background
-        log.info(f'Scheduled background scan on {ctx.inputname} ({ctx.shortname})')
+        log.info(f'Scheduled background scan on {ctx.file.name} ({ctx.shortname})')
 
         new_coro = run_scan(app, ctx)
         app.loop.create_task(scan_background(app, new_coro, ctx))

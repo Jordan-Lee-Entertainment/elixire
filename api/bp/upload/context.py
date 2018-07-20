@@ -1,0 +1,109 @@
+import io
+import logging
+import mimetypes
+from collections import namedtuple
+
+from api.bp.upload.exif import clear_exif
+from api.bp.upload.virus import scan_file
+from api.common.webhook import jpeg_toobig_webhook
+from api.errors import BadImage, FeatureDisabled, QuotaExploded
+
+__all__ = ['UploadContext']
+log = logging.getLogger(__name__)
+
+
+class UploadContext(namedtuple('UploadContext', [
+    'file',  # the file that is being uploaded
+    'user_id',  # user id that is uploading
+    'shortname',  # shortname of the file
+    'do_checks',  # doing checks?
+    'start_timestamp',  # the start timestamp of this upload
+])):
+
+    async def strip_exif(self, app) -> io.BytesIO:
+        if not app.econfig.CLEAR_EXIF or self.file.mime != 'image/jpeg':
+            log.debug('not stripping exif, disabled or not jpeg')
+            return self.file.io
+
+        log.debug('going to clear exif now')
+        ratio_limit = app.econfig.EXIF_INCREASELIMIT
+        noexif_body = await clear_exif(self.file.io, loop=app.loop)
+
+        noexif_len = len(noexif_body.getvalue())
+        ratio = noexif_len / self.file.size
+
+        # if this is an admin upload or the file hasn't grown big, return the
+        # stripped exif buffer
+        #
+        # (admins get to always have their jpegs stripped of exif data)
+        if not self.do_checks or ratio < ratio_limit:
+            return noexif_body
+
+        # or else... send a webhook about what happened
+        elif ratio > ratio_limit:
+            await jpeg_toobig_webhook(app, self, noexif_len)
+
+        return self.file.io
+
+    async def perform_checks(self, app) -> str:
+        given_extension = self.file.given_extension
+
+        if not app.econfig.UPLOADS_ENABLED:
+            raise FeatureDisabled('Uploads are currently disabled')
+
+        # check mimetype
+        if self.file.mime not in app.econfig.ACCEPTED_MIMES:
+            raise BadImage(f'Bad image mime type: {self.file.mime!r}')
+
+        # check file upload limits
+        await self.check_limits(app)
+
+        # check the file for viruses
+        await scan_file(app, self)
+
+        extension = f".{self.file.mime.split('/')[-1]}"
+
+        # Get all possible extensions
+        pot_extensions = mimetypes.guess_all_extensions(self.file.mime)
+
+        # if there's any potentials, check if the extension supplied by user
+        # is in potentials, and if it is, use the extension by user
+        # if it is not, use the first potential extension
+        # and if there's no potentials, just use the last part of mimetype
+        if pot_extensions:
+            if given_extension in pot_extensions:
+                extension = given_extension
+            else:
+                extension = pot_extensions[0]
+
+        return extension
+
+    async def check_limits(self, app):
+        user_id = self.user_id
+
+        # check user's limits
+        used = await app.db.fetchval("""
+        SELECT SUM(file_size)
+        FROM files
+        WHERE uploader = $1
+        AND file_id > time_snowflake(now() - interval '7 days')
+        """, user_id)
+
+        byte_limit = await app.db.fetchval("""
+        SELECT blimit
+        FROM limits
+        WHERE user_id = $1
+        """, user_id)
+
+        # convert to megabytes so we display to the user
+        cnv_limit = byte_limit / 1024 / 1024
+
+        if used and used > byte_limit:
+            raise QuotaExploded(
+                f'You already blew your weekly limit of {cnv_limit} MB'
+            )
+
+        if used and used + self.file.size > byte_limit:
+            raise QuotaExploded(
+                f'This file would blow the weekly limit of {cnv_limit} MB'
+            )

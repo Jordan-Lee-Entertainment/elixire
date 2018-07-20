@@ -1,106 +1,21 @@
-import io
 import logging
-import mimetypes
-import os
 import pathlib
 import time
-from collections import namedtuple
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from sanic import Blueprint, response
 
-from api.bp.upload.exif import exif_checking
-from api.common import calculate_hash, get_domain_info, get_random_domain, transform_wildcard
+from api.common import get_domain_info, get_random_domain, transform_wildcard
 from api.common.auth import check_admin, gen_shortname
 from api.decorators import auth_route
-from api.errors import BadImage, BadUpload, FeatureDisabled, QuotaExploded
 from api.permissions import Permissions, domain_permissions
 from api.snowflake import get_snowflake
-from .virus import scan_file
+from .context import UploadContext
+from .file import UploadFile
 from ..metrics import is_consenting, submit
 
 bp = Blueprint('upload')
 log = logging.getLogger(__name__)
-
-UploadContext = namedtuple(
-    'UploadContext',
-    [
-        'user_id',
-        'mime',
-        'inputname',
-        'shortname',
-        'size',
-        'body',
-        'bytes',
-        'checks',
-        'start_timestamp'
-    ]
-)
-
-
-async def check_limits(app, ctx):
-    """Check if the user can upload the file."""
-    user_id = ctx.user_id
-
-    # check user's limits
-    used = await app.db.fetchval("""
-    SELECT SUM(file_size)
-    FROM files
-    WHERE uploader = $1
-    AND file_id > time_snowflake(now() - interval '7 days')
-    """, user_id)
-
-    byte_limit = await app.db.fetchval("""
-    SELECT blimit
-    FROM limits
-    WHERE user_id = $1
-    """, user_id)
-
-    # convert to megabytes so we display to the user
-    cnv_limit = byte_limit / 1024 / 1024
-
-    if used and used > byte_limit:
-        raise QuotaExploded(
-            f'You already blew your weekly limit of {cnv_limit} MB'
-        )
-
-    if used and used + ctx.size > byte_limit:
-        raise QuotaExploded(
-            f'This file would blow the weekly limit of {cnv_limit} MB'
-        )
-
-
-async def upload_checks(app, ctx: UploadContext, given_extension: str) -> str:
-    """Do some upload checks."""
-    if not app.econfig.UPLOADS_ENABLED:
-        raise FeatureDisabled('Uploads are currently disabled')
-
-    # check mimetype
-    if ctx.mime not in app.econfig.ACCEPTED_MIMES:
-        raise BadImage(f'Bad image mime type: {ctx.mime!r}')
-
-    # check file upload limits
-    await check_limits(app, ctx)
-
-    # check the file for viruses
-    await scan_file(app, ctx)
-
-    extension = f".{ctx.mime.split('/')[-1]}"
-
-    # Get all possible extensions
-    pot_extensions = mimetypes.guess_all_extensions(ctx.mime)
-
-    # if there's any potentials, check if the extension supplied by user
-    # is in potentials, and if it is, use the extension by user
-    # if it is not, use the first potential extension
-    # and if there's no potentials, just use the last part of mimetype
-    if pot_extensions:
-        if given_extension in pot_extensions:
-            extension = given_extension
-        else:
-            extension = pot_extensions[0]
-
-    return extension
 
 
 def _construct_url(domain, shortname, extension):
@@ -175,11 +90,8 @@ async def upload_handler(request, user_id):
     """Main upload handler."""
     app = request.app
 
-    log.info('Processing upload from %d', user_id)
-
-    # if admin is set on request.args, we will
-    # do an "admin upload", without any checking for viruses,
-    # weekly limits, etc.
+    # if admin is set on request.args, we will # do an "admin upload", without
+    # any checking for viruses, weekly limits, MIME, etc.
     do_checks = not ('admin' in request.args and request.args['admin'])
     random_domain = ('random' in request.args and request.args['random'])
     given_domain, given_subdomain = _fetch_domain(request)
@@ -189,103 +101,125 @@ async def upload_handler(request, user_id):
     if not do_checks:
         await check_admin(request, user_id, True)
 
-    # we'll ignore any other files that are in the request
-    try:
-        key = next(iter(request.files.keys()))
-    except StopIteration:
-        raise BadUpload('No images given')
-
-    filedata = request.files[key]
-    filedata = next(iter(filedata))
-
-    filebody = filedata.body
-    filebytes = io.BytesIO(filebody)
-    filesize = len(filebody)
-
-    given_extension = os.path.splitext(filedata.name)[-1].lower()
+    file = UploadFile.from_request(request)
 
     # by default, assume the extension given in the filename
     # is the one we should use.
-    # this will be true if the upload is an admin upload.
-    extension = given_extension
+    #
+    # this will be true if the upload is an admin upload, but if it isn't
+    # we need to check MIMEs to ensure a proper extension is used for security
+    extension = file.given_extension
 
     # generate a filename so we can identify later when removing it
     # because of virus scanning.
     shortname, tries = await gen_shortname(request, user_id)
     await submit(app, 'shortname_gen_tries', tries, True)
 
-    # construct an upload context
+    # construct an upload context, which holds the file and other data about
+    # the current upload
     ctx = UploadContext(
+        file=file,
         user_id=user_id,
-        mime=filedata.type,
-        inputname=filedata.name,
         shortname=shortname,
-        size=filesize,
-        body=filebody,
-        bytes=filebytes,
-        checks=do_checks,
+        do_checks=do_checks,
         start_timestamp=time.monotonic()
     )
 
+    # perform any checks like virus scanning and quota limits. this method will
+    # also check the MIME type, and return the extension that we should be
+    # using. (admins get to bypass!)
     if do_checks:
-        extension = await upload_checks(app, ctx, given_extension)
+        extension = await ctx.perform_checks(app)
 
+    # hash the file and give it a path on the filesystem
+    # (this sets the path and hash attributes)
+    await ctx.file.hash_file(app)
+    await ctx.file.resolve(app, extension)
+
+    # give the file an id
     file_id = get_snowflake()
+    ctx.file.id = file_id
 
-    imhash = await calculate_hash(app, filebytes)
-    imfolder = app.econfig.IMAGE_FOLDER
-    fspath = f'{imfolder}/{imhash[0]}/{imhash}{extension}'
-
-    impath = pathlib.Path(fspath)
-
-    if impath.exists():
-        res = await check_repeat(app, fspath, extension, ctx)
+    # file already exists? let's just return the existing one
+    if file.path.exists():
+        res = await check_repeat(app, file.raw_path, extension, ctx)
         if res is not None:
             await upload_metrics(app, ctx)
             return response.json(res)
 
-    domain_data = await get_domain_info(request, user_id)
+    # at this point, we have to resolve the domain (and subdomain) that the file
+    # will be placed on.
+    #
+    # however, this is quite complicated:
+    # - the user can specify ?random=1 to pick a random domain
+    # - the user can specify a specific domain or subdomain they want the file
+    #   to be uploaded on for this request SPECIFICALLY
+    # - if the user specifies a random domain, we need to use their specific
+    #   subdomain or fallback on the account specified one
+    #
+    # we also want to fallback on the user's configured domain settings in their
+    # account settings.
+
+    # get the user's domain settings
+    user_domain_id, user_subdomain, user_domain = await get_domain_info(request, user_id)
 
     if random_domain:
+        # let's get a random domain and pretend that it was specified in the
+        # request (given_subdomain is that)
         given_domain = await get_random_domain(app)
-
-    domain_id = given_domain or domain_data[0]
-    subdomain_name = given_subdomain or domain_data[1]
+        domain_id = given_domain
+        subdomain_name = given_subdomain
+    else:
+        # use the specified domain stuff from the request, but fall back
+        # to the domain info
+        domain_id = given_domain or user_domain_id
+        subdomain_name = given_subdomain or user_subdomain
 
     # check if domain is uploadable
     await domain_permissions(app, domain_id, Permissions.UPLOAD)
 
+    # if we don't have a domain yet, we need to resolve it:
     if given_domain is None:
-        domain = domain_data[2]
+        # no domain was specified in the request, let's just use the user's
+        domain = user_domain
     else:
+        # a specific domain was specified, fetch that one from database
         domain = await app.db.fetchval("""
         SELECT domain
         FROM domains
         WHERE domain_id = $1
         """, given_domain)
 
+    # the domain might have *. at the beginning, let's replace that with the
+    # provided subdomain's name
     domain = transform_wildcard(domain, subdomain_name)
 
-    # for metrics
+    # upload counter
     app.file_upload_counter += 1
-
     if await is_consenting(app, user_id):
         app.upload_counter_pub += 1
 
-    if impath.exists():
-        filesize *= app.econfig.DUPE_DECREASE_FACTOR
+    # calculate the new file size, with the dupe decrease factor multiplied in
+    # if necessary
+    file_size = ctx.file.calculate_size(app.econfig.DUPE_DECREASE_FACTOR)
 
+    # insert into database
     await app.db.execute("""
-    INSERT INTO files (file_id, mimetype, filename,
-        file_size, uploader, fspath, domain)
+    INSERT INTO files (
+        file_id, mimetype, filename,
+        file_size, uploader, fspath, domain
+    )
     VALUES ($1, $2, $3, $4, $5, $6, $7)
-    """, file_id, ctx.mime, shortname, filesize, user_id, fspath, domain_id)
+    """, file_id, ctx.file.mime, shortname, file_size, user_id, file.raw_path, domain_id)
 
-    correct_bytes = await exif_checking(app, ctx)
-    with open(fspath, 'wb') as raw_file:
-        raw_file.write(correct_bytes.getvalue())
+    # write to fs
+    buffer = await ctx.strip_exif(app)
+    with open(file.raw_path, 'wb') as raw_file:
+        raw_file.write(buffer.getvalue())
 
+    # upload file latency metrics
     await upload_metrics(app, ctx)
+
     return response.json({
         'url': _construct_url(domain, shortname, extension),
         'shortname': shortname,

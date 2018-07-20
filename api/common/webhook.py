@@ -6,9 +6,9 @@ async def ban_webhook(app, user_id: int, reason: str, period: str):
 
     if isinstance(user_id, int):
         uname = await app.db.fetchval("""
-            select username
-            from users
-            where user_id = $1
+            SELECT username
+            FROM users
+            WHERE user_id = $1
         """, user_id)
     else:
         uname = '<no username found>'
@@ -34,8 +34,7 @@ async def ban_webhook(app, user_id: int, reason: str, period: str):
         }]
     }
 
-    async with app.session.post(wh_url,
-                                json=payload) as resp:
+    async with app.session.post(wh_url, json=payload) as resp:
         return resp
 
 
@@ -66,8 +65,7 @@ async def ip_ban_webhook(app, ip_address: str, reason: str, period: str):
         }]
     }
 
-    async with app.session.post(wh_url,
-                                json=payload) as resp:
+    async with app.session.post(wh_url, json=payload) as resp:
         return resp
 
 
@@ -111,12 +109,12 @@ async def jpeg_toobig_webhook(app, ctx, size_after):
     if not wh_url:
         return
 
-    increase = size_after / ctx.size
+    increase = size_after / ctx.file.size
 
     uname = await app.db.fetchval("""
-        select username
-        from users
-        where user_id = $1
+        SELECT username
+        FROM users
+        WHERE user_id = $1
     """, ctx.user_id)
 
     payload = {
@@ -130,7 +128,7 @@ async def jpeg_toobig_webhook(app, ctx, size_after):
                 },
                 {
                     'name': 'in filename',
-                    'value': ctx.inputname,
+                    'value': ctx.file.name,
                 },
                 {
                     'name': 'out filename',
@@ -138,24 +136,23 @@ async def jpeg_toobig_webhook(app, ctx, size_after):
                 },
                 {
                     'name': 'size change',
-                    'value': f'{ctx.size}b -> {size_after}b '
+                    'value': f'{ctx.file.size}b -> {size_after}b '
                              f'({increase:.01f}x)',
                 }
             ]
         }]
     }
 
-    async with app.session.post(wh_url,
-                                json=payload) as resp:
+    async with app.session.post(wh_url, json=payload) as resp:
         return resp
 
 
 async def scan_webhook(app, ctx, scan_out: str):
     """Execute a discord webhook with information about the virus scan."""
     uname = await app.db.fetchval("""
-        select username
-        from users
-        where user_id = $1
+        SELECT username
+        FROM users
+        WHERE user_id = $1
     """, ctx.user_id)
 
     webhook_payload = {
@@ -170,7 +167,7 @@ async def scan_webhook(app, ctx, scan_out: str):
 
                 {
                     'name': 'file info',
-                    'value': f'filename: `{ctx.inputname}`, {ctx.size} bytes'
+                    'value': f'filename: `{ctx.file.name}`, {ctx.file.size} bytes'
                 },
 
                 {
