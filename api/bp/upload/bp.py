@@ -264,14 +264,11 @@ async def upload_handler(request, user_id):
     if given_domain is None:
         domain = domain_data[2]
     else:
-        domain = await app.db.fetchval(
-            """
-            SELECT domain
-            FROM domains
-            WHERE domain_id = $1
-            """,
-            given_domain
-        )
+        domain = await app.db.fetchval("""
+        SELECT domain
+        FROM domains
+        WHERE domain_id = $1
+        """, given_domain)
 
     domain = transform_wildcard(domain, subdomain_name)
 

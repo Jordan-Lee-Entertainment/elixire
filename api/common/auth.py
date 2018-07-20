@@ -91,14 +91,11 @@ async def check_admin(request, user_id: int,
     FailedAuth
         When user is not an admin and error_on_nonadmin is set to True.
     """
-    is_admin = await request.app.db.fetchval(
-        """
-        SELECT admin
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id
-    )
+    is_admin = await request.app.db.fetchval("""
+        select admin
+        from users
+        where user_id = $1
+    """, user_id)
 
     if error_on_nonadmin and not is_admin:
         raise FailedAuth('User is not an admin.')
