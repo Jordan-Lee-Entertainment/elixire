@@ -1,6 +1,7 @@
 import io
 import os
 from pathlib import Path
+from typing import Optional
 
 from api.common import calculate_hash
 from api.errors import BadUpload
@@ -8,14 +9,14 @@ from api.errors import BadUpload
 
 class UploadFile:
     def __init__(self, data):
-        self.name = data.name
+        self.name: str = data.name
         self.body = data.body
-        self.size = len(self.body)
+        self.size: int = len(self.body)
         self.io = io.BytesIO(self.body)
-        self.mime = data.type
+        self.mime: str = data.type
 
-        self.hash = None
-        self.path = None
+        self.hash: Optional[str] = None
+        self.path: Optional[Path] = None
 
     @property
     def given_extension(self):

@@ -13,10 +13,10 @@ log = logging.getLogger(__name__)
 
 
 class UploadContext(namedtuple('UploadContext', [
-    'file',  # the file that is being uploaded
-    'user_id',  # user id that is uploading
-    'shortname',  # shortname of the file
-    'do_checks',  # doing checks?
+    'file',             # the UploadFile that is being uploaded
+    'user_id',          # user id that is uploading
+    'shortname',        # shortname of the file
+    'do_checks',        # True if checks will be performed
     'start_timestamp',  # the start timestamp of this upload
 ])):
 
@@ -61,13 +61,15 @@ class UploadContext(namedtuple('UploadContext', [
         # check the file for viruses
         await scan_file(app, self)
 
+        # default to last part of mimetype
         extension = f".{self.file.mime.split('/')[-1]}"
 
-        # Get all possible extensions
+        # get all possible file extensions for this type of file
         pot_extensions = mimetypes.guess_all_extensions(self.file.mime)
 
-        # if there's any potentials, check if the extension supplied by user
-        # is in potentials, and if it is, use the extension by user
+        # use the user-provided file extension if it's a valid extension for
+        # this mimetype
+        #
         # if it is not, use the first potential extension
         # and if there's no potentials, just use the last part of mimetype
         if pot_extensions:
