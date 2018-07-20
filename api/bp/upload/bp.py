@@ -76,8 +76,7 @@ async def check_limits(app, ctx):
         )
 
 
-async def upload_checks(app, ctx: UploadContext,
-                        given_extension: str) -> tuple:
+async def upload_checks(app, ctx: UploadContext, given_extension: str) -> str:
     """Do some upload checks."""
     if not app.econfig.UPLOADS_ENABLED:
         raise FeatureDisabled('Uploads are currently disabled')
@@ -86,6 +85,7 @@ async def upload_checks(app, ctx: UploadContext,
     if ctx.mime not in app.econfig.ACCEPTED_MIMES:
         raise BadImage(f'Bad image mime type: {ctx.mime!r}')
 
+    # check file upload limits
     await check_limits(app, ctx)
 
     # check the file for viruses
@@ -101,8 +101,10 @@ async def upload_checks(app, ctx: UploadContext,
     # if it is not, use the first potential extension
     # and if there's no potentials, just use the last part of mimetype
     if pot_extensions:
-        extension = (given_extension if given_extension in pot_extensions
-                     else pot_extensions[0])
+        if given_extension in pot_extensions:
+            extension = given_extension
+        else:
+            extension = pot_extensions[0]
 
     return extension
 
