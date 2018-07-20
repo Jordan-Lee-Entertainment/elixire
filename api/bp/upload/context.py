@@ -2,6 +2,7 @@ import io
 import logging
 import mimetypes
 from collections import namedtuple
+import magic
 
 from api.bp.upload.exif import clear_exif
 from api.bp.upload.virus import scan_file
@@ -45,15 +46,23 @@ class UploadContext(namedtuple('UploadContext', [
 
         return self.file.io
 
+    def get_mime(self, file_body):
+        return magic.from_buffer(file_body, mime=True)
+
     async def perform_checks(self, app) -> str:
         given_extension = self.file.given_extension
 
         if not app.econfig.UPLOADS_ENABLED:
             raise FeatureDisabled('Uploads are currently disabled')
 
-        # check mimetype
-        if self.file.mime not in app.econfig.ACCEPTED_MIMES:
-            raise BadImage(f'Bad image mime type: {self.file.mime!r}')
+        # Get file's mimetype
+        mimetype_future = app.loop.run_in_executor(None, self.get_mime,
+                                                   self.file.body)
+        mimetype = await mimetype_future
+
+        # Check if file's mimetype is in allowed mimetypes
+        if mimetype not in app.econfig.ACCEPTED_MIMES:
+            raise BadImage(f'Bad mime type: {mimetype!r}')
 
         # check file upload limits
         await self.check_limits(app)
