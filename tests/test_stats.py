@@ -32,5 +32,5 @@ async def test_stats(test_cli):
 
     assert isinstance(rjson['total_files'], int)
     assert isinstance(rjson['total_deleted_files'], int)
-    assert isinstance(rjson['total_bytes'], float)
+    assert isinstance(rjson['total_bytes'], (float, int))
     assert isinstance(rjson['total_shortens'], int)

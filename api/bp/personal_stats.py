@@ -11,12 +11,14 @@ log = logging.getLogger(__name__)
 
 
 async def _get_counts(conn, table: str, user_id: int, extra: str = '') -> int:
-    return await conn.fetchval(f"""
+    res = await conn.fetchval(f"""
     SELECT COUNT(*)
     FROM {table}
     WHERE uploader = $1
     {extra}
     """, user_id)
+
+    return res or 0
 
 
 @bp.get('/api/stats')
