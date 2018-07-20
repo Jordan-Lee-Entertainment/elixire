@@ -81,6 +81,9 @@ async def ratetask(app):
             await submit(app, 'response_pub', app.rres_public)
             app.rres_public = 0
 
+            await submit(app, 'error', app.rerr_counter)
+            app.rerr_counter = 0
+
             await asyncio.sleep(1)
     except Exception:
         log.exception('ratetask err')
@@ -257,3 +260,8 @@ async def on_response(request, response):
                          latency * 1000, True)
     except KeyError:
         pass
+
+
+@bp.exception(Exception)
+async def handle_exc(request, exception):
+    request.app.rerr_counter += 1

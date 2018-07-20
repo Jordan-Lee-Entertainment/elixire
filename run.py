@@ -364,6 +364,8 @@ async def setup_db(rapp, loop):
     rapp.rreq_public = 0
     rapp.rres_public = 0
 
+    rapp.rerr_counter = 0
+
     rapp.file_upload_counter = 0
     rapp.upload_counter_pub = 0
 
