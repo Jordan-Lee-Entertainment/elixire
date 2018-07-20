@@ -50,14 +50,11 @@ async def scan_background(app, coro, ctx):
     except BadImage:
         # let's nuke this image
 
-        fspath = await app.db.fetchval(
-            """
-            SELECT fspath
-            FROM files
-            WHERE filename = $1
-            """,
-            ctx.shortname
-        )
+        fspath = await app.db.fetchval("""
+        SELECT fspath
+        FROM files
+        WHERE filename = $1
+        """, ctx.shortname)
 
         if not fspath:
             log.warning(f'File {ctx.shortname} was deleted when scan finished')

@@ -43,24 +43,18 @@ async def check_limits(app, ctx):
     user_id = ctx.user_id
 
     # check user's limits
-    used = await app.db.fetchval(
-        """
-        SELECT SUM(file_size)
-        FROM files
-        WHERE uploader = $1
-        AND file_id > time_snowflake(now() - interval '7 days')
-        """,
-        user_id
-    )
+    used = await app.db.fetchval("""
+    SELECT SUM(file_size)
+    FROM files
+    WHERE uploader = $1
+    AND file_id > time_snowflake(now() - interval '7 days')
+    """, user_id)
 
-    byte_limit = await app.db.fetchval(
-        """
-        SELECT blimit
-        FROM limits
-        WHERE user_id = $1
-        """,
-        user_id
-    )
+    byte_limit = await app.db.fetchval("""
+    SELECT blimit
+    FROM limits
+    WHERE user_id = $1
+    """, user_id)
 
     # convert to megabytes so we display to the user
     cnv_limit = byte_limit / 1024 / 1024
@@ -281,20 +275,11 @@ async def upload_handler(request, user_id):
     if impath.exists():
         filesize *= app.econfig.DUPE_DECREASE_FACTOR
 
-    await app.db.execute(
-        """
-        INSERT INTO files (file_id, mimetype, filename,
-            file_size, uploader, fspath, domain)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        """,
-        file_id,
-        ctx.mime,
-        shortname,
-        filesize,
-        user_id,
-        fspath,
-        domain_id
-    )
+    await app.db.execute("""
+    INSERT INTO files (file_id, mimetype, filename,
+        file_size, uploader, fspath, domain)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    """, file_id, ctx.mime, shortname, filesize, user_id, fspath, domain_id)
 
     correct_bytes = await exif_checking(app, ctx)
     with open(fspath, 'wb') as raw_file:
