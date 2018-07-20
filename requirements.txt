@@ -25,3 +25,9 @@ git+https://github.com/yunstanford/pytest-sanic@930f2c5e779b84a587aba0193f7e8e42
 aioinflux==0.3.2
 
 cryptography==2.2.2
+
+# You'll need libmagic for this.
+# On linux, use your package manager to install libmagic.
+# On win/mac, see README here:
+# https://github.com/ahupp/python-magic
+python-magic
