@@ -118,14 +118,11 @@ def _construct_url(domain, shortname, extension):
 
 async def check_repeat(app, fspath: str, extension: str, ctx: UploadContext) -> Optional[Dict[str, Any]]:
     # check which files have the same fspath (the same hash)
-    files = await app.db.fetch(
-        """
-        SELECT filename, uploader, domain
-        FROM files
-        WHERE fspath = $1 AND files.deleted = false
-        """,
-        fspath
-    )
+    files = await app.db.fetch("""
+    SELECT filename, uploader, domain
+    FROM files
+    WHERE fspath = $1 AND files.deleted = false
+    """, fspath)
 
     # get the first file, if any, from the uploader
     try:
@@ -135,14 +132,11 @@ async def check_repeat(app, fspath: str, extension: str, ctx: UploadContext) -> 
         return
 
     # fetch domain info about that file
-    domain = await app.db.fetchval(
-        """
-        SELECT domain
-        FROM domains
-        WHERE domain_id = $1
-        """,
-        ufile['domain']
-    )
+    domain = await app.db.fetchval("""
+    SELECT domain
+    FROM domains
+    WHERE domain_id = $1
+    """, ufile['domain'])
 
     # use 'i' as subdomain by default
     # since files.subdomain isn't a thing.
