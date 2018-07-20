@@ -3,7 +3,7 @@ MAIN_URL = 'http://localhost:80'
 
 USE_HTTPS = False
 
-PORT = 80
+PORT = 8000
 
 db = {
    "host": "postgres",
