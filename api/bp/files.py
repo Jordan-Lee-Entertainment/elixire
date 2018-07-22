@@ -26,7 +26,6 @@ async def list_handler(request):
     """Get list of files."""
     # TODO: simplify this code
     try:
-        print(request.args)
         page = int(request.args['page'][0])
     except (TypeError, ValueError, KeyError, IndexError):
         raise BadInput('Page parameter needs to be supplied correctly.')
@@ -73,7 +72,7 @@ async def list_handler(request):
         file_url_thumb = f'{prefix}{domain}/t/s{fullname}'
 
         filenames[filename] = {
-            'snowflake': ufile['file_id'],
+            'snowflake': str(ufile['file_id']),
             'shortname': filename,
             'size': ufile['file_size'],
 
@@ -91,7 +90,7 @@ async def list_handler(request):
         shorten_url = f'{prefix}{domain}/s/{filename}'
 
         shortens[filename] = {
-            'snowflake': ushorten['shorten_id'],
+            'snowflake': str(ushorten['shorten_id']),
             'shortname': filename,
             'redirto': ushorten['redirto'],
             'url': shorten_url,
