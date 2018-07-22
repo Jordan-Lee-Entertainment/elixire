@@ -196,6 +196,7 @@ def handle_api_error(request, exception):
 def handle_exception(request, exception):
     """Handle any kind of exception."""
     status_code = 500
+    request.app.rerr_counter += 1
 
     if isinstance(exception, (NotFound, FileNotFound)):
         status_code = 404

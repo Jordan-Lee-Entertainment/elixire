@@ -276,8 +276,3 @@ async def on_response(request, response):
                          latency * 1000, True)
     except KeyError:
         pass
-
-
-@bp.exception(Exception)
-async def handle_exc(request, exception):
-    request.app.rerr_counter += 1
