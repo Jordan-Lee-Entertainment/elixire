@@ -45,8 +45,8 @@ async def get_limits(db, user_id) -> dict:
     AND file_id > time_snowflake(now() - interval '7 days')
     """, user_id)
 
-    shortens_used = await db.fetch("""
-    SELECT shorten_id
+    shortens_used = await db.fetchval("""
+    SELECT COUNT(*)
     FROM shortens
     WHERE uploader = $1
     AND shorten_id > time_snowflake(now() - interval '7 days')
@@ -54,9 +54,9 @@ async def get_limits(db, user_id) -> dict:
 
     return {
         'limit': limits["blimit"],
-        'used': bytes_used,
+        'used': int(bytes_used),
         'shortenlimit': limits["shlimit"],
-        'shortenused': len(shortens_used)
+        'shortenused': shortens_used
     }
 
 

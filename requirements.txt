@@ -17,6 +17,7 @@ Pillow==5.2.0
 
 # testing stuff
 pytest==3.6.3
+pytest-cov==2.5.1
 pyflakes==2.0.0
 
 # pytest-sanic==0.1.12

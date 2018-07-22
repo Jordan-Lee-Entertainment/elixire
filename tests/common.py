@@ -16,6 +16,11 @@ def token():
 def username():
     return token()
 
+def email():
+    name = secrets.token_urlsafe(16)
+    domain = secrets.token_urlsafe(16)
+    return f'{name}@{domain}.com'
+
 
 async def login_normal(test_cli) -> str:
     resp = await test_cli.post('/api/login', json={
