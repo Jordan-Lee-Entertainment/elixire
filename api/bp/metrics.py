@@ -198,6 +198,18 @@ async def upload_uniq_task(app):
             """)
 
             await submit(app, 'uniq_uploaders_day', count)
+
+            countpub = await app.db.fetchval("""
+            SELECT COUNT(DISTINCT uploader)
+            FROM files
+            JOIN users ON users.user_id = files.uploader
+            WHERE file_id > time_snowflake(now() - interval '24 hours')
+              AND users.consented = true
+            """)
+
+            await submit(app, 'uniq_uploaders_day_pub', countpub)
+
+
             await asyncio.sleep(86400)
     except Exception:
         log.exception('upload uniq task err')
