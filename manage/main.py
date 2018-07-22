@@ -218,6 +218,12 @@ def account_delta(user_id):
 
 
 async def get_counts(ctx, user_id) -> str:
+    consented = await ctx.db.fetchval("""
+    SELECT consented
+    FROM users
+    WHERE user_id = $1
+    """, user_id)
+
     files = await ctx.db.fetchval("""
     SELECT COUNT(*)
     FROM files
@@ -230,7 +236,9 @@ async def get_counts(ctx, user_id) -> str:
     WHERE files.uploader = $1
     """, user_id)
 
-    return f'{files} files, {shortens} shortens'
+    cons = 'consented' if consented else 'not consented'
+
+    return f'{cons}, {files} files, {shortens} shortens'
 
 
 async def find_inactive_users(ctx):
