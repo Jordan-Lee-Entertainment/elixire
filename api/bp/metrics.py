@@ -188,6 +188,21 @@ async def user_count_task(app):
         log.exception('user count task err')
 
 
+async def upload_uniq_task(app):
+    try:
+        while True:
+            count = await app.db.fetchval("""
+            SELECT COUNT(DISTINCT uploader)
+            FROM files
+            WHERE file_id > time_snowflake(now() - interval '24 hours')
+            """)
+
+            await submit(app, 'uniq_uploaders_day', count)
+            await asyncio.sleep(86400)
+    except Exception:
+        log.exception('upload uniq task err')
+
+
 @bp.listener('after_server_start')
 async def create_db(app, loop):
     if not app.econfig.ENABLE_METRICS:
@@ -205,6 +220,7 @@ async def create_db(app, loop):
     app.file_count_task = app.loop.create_task(file_count_task(app))
     app.file_size_task = app.loop.create_task(file_size_task(app))
     app.user_count_task = app.loop.create_task(user_count_task(app))
+    app.upload_uniq_task = app.loop.create_task(upload_uniq_task(app))
 
 
 @bp.middleware('request')

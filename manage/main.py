@@ -211,13 +211,15 @@ async def del_user(ctx):
     print('OK')
 
 
-def account_delta(user_id):
+def account_delta(user_id) -> datetime.timedelta:
+    """Show an account's age."""
     tstamp = snowflake_time(user_id)
     tstamp = datetime.datetime.fromtimestamp(tstamp)
     return datetime.datetime.utcnow() - tstamp
 
 
 async def get_counts(ctx, user_id) -> str:
+    """Show consent and count information in a string."""
     consented = await ctx.db.fetchval("""
     SELECT consented
     FROM users
@@ -295,7 +297,7 @@ async def find_unused_accs(ctx):
               f'{counts}, created {delta}')
         count += 1
 
-    print(f'{count} inactive users were found')
+    print(f'{count} unused accounts were found')
 
 
 OPERATIONS = {
