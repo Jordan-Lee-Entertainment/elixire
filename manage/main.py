@@ -1,8 +1,10 @@
 import argparse
+import datetime
 import secrets
 import asyncio
 import logging
 import sys
+
 from collections import namedtuple
 from pathlib import Path
 
@@ -10,7 +12,7 @@ import bcrypt
 import asyncpg
 import aioredis
 
-from api.snowflake import get_snowflake
+from api.snowflake import get_snowflake, snowflake_time
 from api.bp.profile import delete_user
 
 log = logging.getLogger(__name__)
@@ -42,7 +44,7 @@ async def list_ops(_ctx):
     List all available operations on the manage script.
     """
     print('All available operations:')
-    for name in OPERATIONS:
+    for name in sorted(OPERATIONS):
         desc, _ = OPERATIONS[name]
         print(f'\t{name}: {desc}')
 
@@ -184,7 +186,10 @@ async def del_user(ctx):
     """delete_user <username>
 
     Delete a single user. This does not deactivate the user,
-    so it will delete all information.
+    so it will delete all information, including files.
+
+    Proceed with extreme caution as there is no going
+    back from this operation.
     """
     try:
         username = ctx.args.args[0]
@@ -206,6 +211,78 @@ async def del_user(ctx):
     print('OK')
 
 
+def account_delta(user_id):
+    tstamp = snowflake_time(user_id)
+    tstamp = datetime.datetime.fromtimestamp(tstamp)
+    return datetime.datetime.utcnow() - tstamp
+
+
+async def get_counts(ctx, user_id) -> str:
+    files = await ctx.db.fetchval("""
+    SELECT COUNT(*)
+    FROM files
+    WHERE files.uploader = $1
+    """, user_id)
+
+    shortens = await ctx.db.fetchval("""
+    SELECT COUNT(*)
+    FROM files
+    WHERE files.uploader = $1
+    """, user_id)
+
+    return f'{files} files, {shortens} shortens'
+
+
+async def find_inactive_users(ctx):
+    """Find inactive users.
+
+    The criteria for inactive users are accounts
+    that are deactivated AND are older than 2 weeks.
+    """
+    uids = await ctx.db.fetch("""
+    SELECT username, user_id
+    FROM users
+    WHERE users.active = false
+      AND now() - snowflake_time(user_id) > interval '2 weeks'
+    """)
+
+    for row in uids:
+        delta = account_delta(row['user_id'])
+        cinfo = await get_counts(ctx, row['user_id'])
+        print(f'\t- {row["username"]} {row["user_id"]}, '
+              f'{cinfo}, created {delta}')
+
+
+async def find_unused_accs(ctx):
+    """Find unused accounts.
+
+    The criteria for unused accounts are users
+    that have no files for a month.
+    """
+
+    users = await ctx.db.fetch("""
+    SELECT username, user_id
+    FROM users
+    """)
+
+    for row in users:
+        uid = row['user_id']
+
+        inactive = await ctx.db.fetchval("""
+        SELECT (now() - snowflake_time(MAX(file_id))) > interval '1 month'
+        FROM files
+        WHERE files.uploader = $1
+        """, uid)
+
+        if not inactive:
+            continue
+
+        delta = account_delta(row['user_id'])
+        counts = await get_counts(ctx, row['user_id'])
+        print(f'\t- {row["username"]} {row["user_id"]}, '
+              f'{counts}, created {delta}')
+
+
 OPERATIONS = {
     'list': ('List all available operations', list_ops),
     'help': ('Get help for an operation', manage_help),
@@ -213,16 +290,25 @@ OPERATIONS = {
     'cleanup_files': ('Delete files from the images folder', deletefiles),
     'rename_file': ('Rename a single file', rename_file),
     'deluser': ('Delete a user and their files', del_user),
+    'find_inactive': ('Find inactive users', find_inactive_users),
+    'find_unused': ('Find unused accounts', find_unused_accs),
 }
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('operation', help='a management operation '
-                                      '(list lists all available operations)')
-parser.add_argument('args', help='arguments to the operation', nargs='*')
+def set_parser():
+    """Initialize parser."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('operation', help='a management operation '
+                                          '("list" lists all '
+                                          'available operations)')
+    parser.add_argument('args', help='arguments to the operation', nargs='*')
+
+    return parser
 
 
 def main(config):
+    parser = set_parser()
+
     if len(sys.argv) < 2:
         parser.print_help()
         return
@@ -230,9 +316,9 @@ def main(config):
     args = parser.parse_args()
 
     loop = asyncio.get_event_loop()
-    db, redis = loop.run_until_complete(connect_db(config, loop))
+    conn, redis = loop.run_until_complete(connect_db(config, loop))
 
-    ctx = Context(args, db, redis, loop)
+    ctx = Context(args, conn, redis, loop)
 
     try:
         _desc, func = OPERATIONS[args.operation]
