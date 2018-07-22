@@ -260,6 +260,8 @@ async def find_inactive_users(ctx):
         print(f'\t- {row["username"]} {row["user_id"]}, '
               f'{cinfo}, created {delta}')
 
+    print(f'{len(uids)} users were found')
+
 
 async def find_unused_accs(ctx):
     """Find unused accounts.
@@ -272,6 +274,8 @@ async def find_unused_accs(ctx):
     SELECT username, user_id
     FROM users
     """)
+
+    count = 0
 
     for row in users:
         uid = row['user_id']
@@ -289,6 +293,9 @@ async def find_unused_accs(ctx):
         counts = await get_counts(ctx, row['user_id'])
         print(f'\t- {row["username"]} {row["user_id"]}, '
               f'{counts}, created {delta}')
+        count += 1
+
+    print(f'{count} inactive users were found')
 
 
 OPERATIONS = {
