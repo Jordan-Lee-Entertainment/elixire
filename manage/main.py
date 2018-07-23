@@ -9,6 +9,7 @@ from collections import namedtuple
 from pathlib import Path
 
 import bcrypt
+import aiohttp
 import asyncpg
 import aioredis
 
@@ -16,7 +17,7 @@ from api.snowflake import get_snowflake, snowflake_time
 from api.bp.profile import delete_user
 
 log = logging.getLogger(__name__)
-Context = namedtuple('ArgContext', 'args db redis loop')
+Context = namedtuple('ArgContext', 'args db redis loop session')
 
 
 async def connect_db(config, loop):
@@ -335,7 +336,7 @@ def main(config):
     loop = asyncio.get_event_loop()
     conn, redis = loop.run_until_complete(connect_db(config, loop))
 
-    ctx = Context(args, conn, redis, loop)
+    ctx = Context(args, conn, redis, loop, aiohttp.ClientSession())
 
     try:
         _desc, func = OPERATIONS[args.operation]
