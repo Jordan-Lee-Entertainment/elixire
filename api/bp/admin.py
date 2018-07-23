@@ -13,7 +13,7 @@ from ..common import delete_file, delete_shorten
 from ..common.email import fmt_email, send_user_email, activate_email_send, \
     uid_from_email, clean_etoken
 from ..storage import solve_domain
-from ..profile import get_limits
+from .profile import get_limits
 
 
 log = logging.getLogger(__name__)
