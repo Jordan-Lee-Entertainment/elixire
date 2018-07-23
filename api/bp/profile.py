@@ -307,7 +307,9 @@ async def delete_file_task(app, user_id: int, delete=False):
     log.info(f'Deleting {len(file_shortnames)} files '
              'from account deletion.')
 
-    for shortname in file_shortnames:
+    for row in file_shortnames:
+        shortname = row['filename']
+
         # delete_file should take care of removing
         # any others from the filesystem
         await delete_file(app, shortname, user_id)

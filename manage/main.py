@@ -183,7 +183,7 @@ async def rename_file(ctx):
 
 
 async def del_user(ctx):
-    """delete_user <username>
+    """del_user <username>
 
     Delete a single user. This does not deactivate the user,
     so it will delete all information, including files.
