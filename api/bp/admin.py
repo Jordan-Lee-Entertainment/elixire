@@ -13,6 +13,7 @@ from ..common import delete_file, delete_shorten
 from ..common.email import fmt_email, send_user_email, activate_email_send, \
     uid_from_email, clean_etoken
 from ..storage import solve_domain
+from ..profile import get_limits
 
 
 log = logging.getLogger(__name__)
@@ -89,6 +90,7 @@ async def get_user_handler(request, admin_id, user_id: int):
 
     dudata = dict(udata)
     dudata['user_id'] = str(dudata['user_id'])
+    dudata['limits'] = await get_limits(request.app.db, user_id)
 
     return response.json(dudata)
 
