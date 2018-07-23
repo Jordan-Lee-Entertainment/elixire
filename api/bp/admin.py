@@ -237,6 +237,55 @@ async def search_user(request, user_id: int, page: int):
     return response.json(res)
 
 
+@bp.patch('/api/admin/user/<user_id:int>')
+@admin_route
+async def modify_user(request, admin_id, user_id):
+    """Modify a user's information."""
+    payload = validate(request.json, ADMIN_MODIFY_USER)
+
+    new_admin = payload.get('admin')
+
+    # limit is in bytes
+    new_limit_upload = payload.get('upload_limit')
+
+    # integer
+    new_limit_shorten = payload.get('shorten_limit')
+
+    updated = []
+
+    if new_admin is not None:
+        # set admin
+        await request.app.db.execute("""
+        UPDATE users
+        SET admin = $2
+        WHERE user_id = $1
+        """, user_id, new_admin)
+
+        updated.append('admin')
+
+    if new_limit_upload is not None:
+        # set new upload limit
+        await request.app.db.execute("""
+        UPDATE limits
+        SET blimit = $1
+        WHERE user_id = $2
+        """, new_limit_upload, user_id)
+
+        updated.append('upload_limit')
+
+    if new_limit_shorten is not None:
+        # set new shorten limit
+        await request.app.db.execute("""
+        UPDATE limits
+        SET shlimit = $1
+        WHERE user_id = $2
+        """, new_limit_shorten, user_id)
+
+        updated.append('shorten_limit')
+
+    return response.json(updated)
+
+
 async def generic_namefetch(table, request, shortname):
     """Generic function to fetch a file or shorten
     information based on shortname."""
@@ -365,7 +414,7 @@ async def delete_file_handler(request, admin_id, file_id):
 
     return response.json({
         'shortname': row['filename'],
-        'uploader': row['uploader'],
+        'uploader': str(row['uploader']),
         'success': True,
     })
 
@@ -384,7 +433,7 @@ async def delete_shorten_handler(request, admin_id, shorten_id: int):
 
     return response.json({
         'shortname': row['filename'],
-        'uploader': row['uploader'],
+        'uploader': str(row['uploader']),
         'success': True,
     })
 
@@ -518,51 +567,3 @@ async def get_domain_stats(request, admin_id, domain_id):
         'public_stats': public_stats,
     })
 
-
-@bp.patch('/api/admin/user/<user_id:int>')
-@admin_route
-async def modify_user(request, admin_id, user_id):
-    """Modify a user's information."""
-    payload = validate(request.json, ADMIN_MODIFY_USER)
-
-    new_admin = payload.get('admin')
-
-    # limit is in bytes
-    new_limit_upload = payload.get('upload_limit')
-
-    # integer
-    new_limit_shorten = payload.get('shorten_limit')
-
-    updated = []
-
-    if new_admin is not None:
-        # set admin
-        await request.app.db.execute("""
-        UPDATE users
-        SET admin = $2
-        WHERE user_id = $1
-        """, user_id, new_admin)
-
-        updated.append('admin')
-
-    if new_limit_upload is not None:
-        # set new upload limit
-        await request.app.db.execute("""
-        UPDATE limits
-        SET blimit = $1
-        WHERE user_id = $2
-        """, new_limit_upload, user_id)
-
-        updated.append('upload_limit')
-
-    if new_limit_shorten is not None:
-        # set new shorten limit
-        await request.app.db.execute("""
-        UPDATE limits
-        SET shlimit = $1
-        WHERE user_id = $2
-        """, new_limit_shorten, user_id)
-
-        updated.append('shorten_limit')
-
-    return response.json(updated)
