@@ -18,6 +18,9 @@ from api.bp.profile import delete_user
 from api.storage import Storage
 from api.common.utils import LockStorage
 
+from .errors import PrintException
+from .utils import get_user
+
 log = logging.getLogger(__name__)
 
 
@@ -209,14 +212,7 @@ async def del_user(ctx):
     except IndexError:
         return print('No username provided')
 
-    userid = await ctx.db.fetchval("""
-    SELECT user_id
-    FROM users
-    WHERE username = $1
-    """, username)
-
-    if not userid:
-        return print('no user found')
+    userid = await get_user(ctx, username)
 
     task = await delete_user(ctx, userid, True)
     await asyncio.shield(task)
@@ -313,6 +309,28 @@ async def find_unused_accs(ctx):
     print(f'{count} unused accounts were found')
 
 
+async def unban_user(ctx):
+    """unban <username>
+
+    Unban a single user
+    """
+    try:
+        username = ctx.args.args[0]
+    except IndexError:
+        return print('No username provided')
+
+    user_id = await get_user(ctx, username)
+
+    await ctx.storage.invalidate('userban:{user_id}')
+
+    exec_out = await ctx.db.execute("""
+    DELETE FROM bans
+    WHERE user_id = $1
+    """, user_id)
+
+    print(f'SQL result: {exec_out}')
+
+
 OPERATIONS = {
     'list': ('List all available operations', list_ops),
     'help': ('Get help for an operation', manage_help),
@@ -322,6 +340,11 @@ OPERATIONS = {
     'deluser': ('Delete a user and their files', del_user),
     'find_inactive': ('Find inactive users', find_inactive_users),
     'find_unused': ('Find unused accounts', find_unused_accs),
+
+    # TODO: 'banuser': ('Ban a single user', ban_user),
+    # TODO: 'banip': ('Ban a single IP address', ban_ip),
+    'unbanuser': ('Unban a single user', unban_user),
+    # TODO: 'unbanip': ('Unban a single IP address', unban_ip),
 }
 
 
@@ -363,6 +386,8 @@ def main(config):
         loop.run_until_complete(func(ctx))
     except KeyError:
         print('invalid operation')
+    except PrintException as exc:
+        print(exc.args[0])
     except Exception:
         log.exception('oops.')
 
