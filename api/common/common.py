@@ -227,7 +227,41 @@ async def purge_cf(app, filename: str, ftype: int) -> int:
     return domain
 
 
-async def delete_file(app, file_name, user_id, set_delete=True):
+async def remove_fspath(app, shortname: str):
+    print(app, shortname)
+    if shortname is None:
+        return
+
+    fspath = await app.db.fetchval("""
+    SELECT fspath
+    FROM files
+    WHERE filename = $1
+    """, shortname)
+
+    if fspath is None:
+        return
+
+    # fetch all files with the same fspath
+    # and on the hash system, means the same hash
+    same_fspath = await app.db.fetchval("""
+    SELECT COUNT(*)
+    FROM files
+    WHERE fspath = $1 AND deleted = false
+    """, fspath)
+
+    if same_fspath == 0:
+        path = Path(fspath)
+        try:
+            path.unlink()
+            log.info(f'Deleted {fspath!s} since no files refer to it')
+        except FileNotFoundError:
+            log.warning(f'fspath {fspath!s} does not exist')
+    else:
+        log.info(f'there are still {same_fspath} files with the '
+                 f'same fspath {fspath!s}, not deleting')
+
+
+async def delete_file(app, file_name: str, user_id, set_delete=True):
     """Delete a file, purging it from Cloudflare's cache.
 
     Parameters
@@ -262,39 +296,16 @@ async def delete_file(app, file_name, user_id, set_delete=True):
         if exec_out == "UPDATE 0":
             raise NotFound('You have no files with this name.')
 
-        fspath = await app.db.fetchval("""
-        SELECT fspath
-        FROM files
-        WHERE uploader = $1
-          AND filename = $2
-        """, user_id, file_name)
-
-        # fetch all files with the same fspath
-        # and on the hash system, means the same hash
-        same_fspath = await app.db.fetchval("""
-        SELECT COUNT(*)
-        FROM files
-        WHERE fspath = $1 AND deleted = false
-        """, fspath)
-
-        if same_fspath == 0:
-            path = Path(fspath)
-            try:
-                path.unlink()
-                log.info(f'Deleted {fspath!s} since no files refer to it')
-            except FileNotFoundError:
-                log.warning(f'fspath {fspath!s} does not exist')
-        else:
-            log.info(f'there are still {same_fspath} files with the '
-                     f'same fspath {fspath!s}, not deleting')
+        await remove_fspath(app, file_name)
     else:
+        await remove_fspath(app, file_name)
+
         if user_id:
             await app.db.execute("""
             DELETE FROM files
             WHERE
                 filename = $1
             AND uploader = $2
-            AND deleted = false
             """, file_name, user_id)
         else:
             await app.db.execute("""

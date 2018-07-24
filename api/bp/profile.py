@@ -12,6 +12,7 @@ from ..common.email import gen_email_token, send_email, uid_from_email, \
 from ..schema import validate, PROFILE_SCHEMA, DEACTIVATE_USER_SCHEMA, \
     PASSWORD_RESET_SCHEMA, PASSWORD_RESET_CONFIRM_SCHEMA
 from ..common import delete_file
+from ..common.utils import int_
 
 bp = Blueprint('profile')
 log = logging.getLogger(__name__)
@@ -38,6 +39,14 @@ async def get_limits(db, user_id) -> dict:
     WHERE user_id = $1
     """, user_id)
 
+    if not limits:
+        return {
+            'limit': None,
+            'used': None,
+            'shortenlimit': None,
+            'shortenused': None
+        }
+
     bytes_used = await db.fetchval("""
     SELECT SUM(file_size)
     FROM files
@@ -54,7 +63,7 @@ async def get_limits(db, user_id) -> dict:
 
     return {
         'limit': limits["blimit"],
-        'used': int(bytes_used),
+        'used': int_(bytes_used),
         'shortenlimit': limits["shlimit"],
         'shortenused': shortens_used
     }
@@ -309,10 +318,7 @@ async def delete_file_task(app, user_id: int, delete=False):
 
     for row in file_shortnames:
         shortname = row['filename']
-
-        # delete_file should take care of removing
-        # any others from the filesystem
-        await delete_file(app, shortname, user_id)
+        await delete_file(app, shortname, user_id, False)
 
     if delete:
         log.info(f'Deleting user id {user_id}')
@@ -322,7 +328,7 @@ async def delete_file_task(app, user_id: int, delete=False):
         """, user_id)
 
 
-async def delete_user(app, user_id, delete=False):
+async def delete_user(app, user_id: int, delete=False):
     """Actually delete the user and their files."""
     await app.db.execute("""
     UPDATE users
@@ -335,6 +341,8 @@ async def delete_user(app, user_id, delete=False):
     SET deleted = true
     WHERE uploader = $1
     """, user_id)
+
+    await app.storage.invalidate(user_id, 'active', 'password_hash')
 
     # since there is a lot of db load
     # when calling delete_file, we create a task that deletes them.

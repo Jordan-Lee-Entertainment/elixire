@@ -15,9 +15,17 @@ import aioredis
 
 from api.snowflake import get_snowflake, snowflake_time
 from api.bp.profile import delete_user
+from api.storage import Storage
 
 log = logging.getLogger(__name__)
-Context = namedtuple('ArgContext', 'args db redis loop session')
+
+
+class ArgContext:
+    def __init__(self, args, db, redis, loop):
+        self.args = args
+        self.db = db
+        self.redis = redis
+        self.loop = loop
 
 
 async def connect_db(config, loop):
@@ -324,6 +332,10 @@ def set_parser():
     return parser
 
 
+async def _make_sess(ctx):
+    ctx.session = aiohttp.ClientSession()
+
+
 def main(config):
     parser = set_parser()
 
@@ -336,7 +348,10 @@ def main(config):
     loop = asyncio.get_event_loop()
     conn, redis = loop.run_until_complete(connect_db(config, loop))
 
-    ctx = Context(args, conn, redis, loop, aiohttp.ClientSession())
+    ctx = ArgContext(args, conn, redis, loop)
+    ctx.storage = Storage(ctx)
+
+    loop.run_until_complete(_make_sess(ctx))
 
     try:
         _desc, func = OPERATIONS[args.operation]
@@ -347,3 +362,4 @@ def main(config):
         log.exception('oops.')
 
     loop.run_until_complete(close_ctx(ctx))
+    loop.run_until_complete(ctx.session.close())
