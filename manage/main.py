@@ -16,6 +16,7 @@ import aioredis
 from api.snowflake import get_snowflake, snowflake_time
 from api.bp.profile import delete_user
 from api.storage import Storage
+from api.common.utils import LockStorage
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +27,9 @@ class ArgContext:
         self.db = db
         self.redis = redis
         self.loop = loop
+        self.session = None
+        self.storage = None
+        self.locks = None
 
 
 async def connect_db(config, loop):
@@ -350,6 +354,7 @@ def main(config):
 
     ctx = ArgContext(args, conn, redis, loop)
     ctx.storage = Storage(ctx)
+    ctx.locks = LockStorage()
 
     loop.run_until_complete(_make_sess(ctx))
 

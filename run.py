@@ -26,9 +26,10 @@ import api.bp.misc
 import api.bp.index
 
 from api.errors import APIError, Ratelimited, Banned, FailedAuth
-from api.common.auth import token_check, get_token
 from api.common import check_bans, get_ip_addr
+from api.common.auth import token_check, get_token
 from api.common.webhook import ban_webhook, ip_ban_webhook
+from api.common.utils import LockStorage
 from api.ratelimit import RatelimitManager
 from api.storage import Storage
 
@@ -357,6 +358,7 @@ async def setup_db(rapp, loop):
         rapp.sp_rtl[key] = RatelimitManager(app, rtl)
 
     rapp.storage = Storage(app)
+    rapp.locks = LockStorage()
 
     # Tasks for datadump API
     rapp.dump_worker = None

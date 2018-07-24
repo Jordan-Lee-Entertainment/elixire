@@ -229,7 +229,6 @@ async def purge_cf(app, filename: str, ftype: int) -> int:
 
 
 async def remove_fspath(app, shortname: str):
-    print(app, shortname)
     if shortname is None:
         return
 

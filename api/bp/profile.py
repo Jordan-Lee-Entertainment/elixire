@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 import asyncpg
 
@@ -305,6 +306,18 @@ Do not reply to this email specifically, it will not work.
     })
 
 
+async def _delete_file_wrapper(app, shortname, user_id):
+    lock = app.locks['delete_files'][user_id]
+    await lock.acquire()
+
+    try:
+        await delete_file(app, shortname, user_id, False)
+    finally:
+        lock.release()
+
+    return None
+
+
 async def delete_file_task(app, user_id: int, delete=False):
     """Delete all the files from the user."""
     file_shortnames = await app.db.fetch("""
@@ -316,9 +329,16 @@ async def delete_file_task(app, user_id: int, delete=False):
     log.info(f'Deleting {len(file_shortnames)} files '
              'from account deletion.')
 
+    tasks = []
+
     for row in file_shortnames:
         shortname = row['filename']
-        await delete_file(app, shortname, user_id, False)
+        task = app.loop.create_task(
+            _delete_file_wrapper(app, shortname, user_id)
+        )
+        tasks.append(task)
+
+    await asyncio.wait(tasks)
 
     if delete:
         log.info(f'Deleting user id {user_id}')
