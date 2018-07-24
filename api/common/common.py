@@ -6,6 +6,7 @@ import logging
 import time
 from pathlib import Path
 
+import asyncpg
 import itsdangerous
 
 from ..errors import FailedAuth, NotFound
@@ -284,13 +285,21 @@ async def delete_file(app, file_name: str, user_id, set_delete=True):
     """
     domain_id = await purge_cf(app, file_name, FileNameType.FILE)
 
+    try:
+        await app.db.execute("""
+        INSERT INTO users (user_id, username, active, password_hash, email)
+        VALUES (0, 'dummy', false, 'blah', 'd u m m y')
+        """)
+    except asyncpg.UniqueViolationError:
+        pass
+
     if set_delete:
         exec_out = await app.db.execute("""
         UPDATE files
         SET deleted = true
         WHERE uploader = $1
-        AND filename = $2
-        AND deleted = false
+          AND filename = $2
+          AND deleted = false
         """, user_id, file_name)
 
         if exec_out == "UPDATE 0":
@@ -302,16 +311,25 @@ async def delete_file(app, file_name: str, user_id, set_delete=True):
 
         if user_id:
             await app.db.execute("""
-            DELETE FROM files
+            UPDATE files
+            SET uploader = 0,
+                file_size = 0,
+                fspath = '',
+                deleted = true,
+                domain = 0
             WHERE
                 filename = $1
             AND uploader = $2
             """, file_name, user_id)
         else:
             await app.db.execute("""
-            DELETE FROM files
+            UPDATE files
+            SET uploader = 0,
+                file_size = 0,
+                fspath = '',
+                deleted = true,
+                domain = 0
             WHERE filename = $1
-            AND deleted = false
             """, file_name)
 
     await app.storage.raw_invalidate(f'fspath:{domain_id}:{file_name}')
