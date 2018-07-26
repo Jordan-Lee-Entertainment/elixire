@@ -27,10 +27,10 @@ class ElixireValidator(Validator):
         """Validate passwords.
 
          - More than 8 characters.
-         - Less than 100.
+         - Less than 32768
         """
-        # Would it be interesting to measure entropy?
-        return len(value) >= 8 and len(value) <= 100
+        # TODO: Would it be interesting to measure entropy?
+        return len(value) >= 8 and len(value) <= 32768
 
     def _validate_type_subdomain(self, value) -> bool:
         """Validate subdomains."""

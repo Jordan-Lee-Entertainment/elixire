@@ -2,8 +2,15 @@ import secrets
 import random
 import io
 import base64
+import string
 
 from .creds import USERNAME, PASSWORD, ADMIN_USER, ADMIN_PASSWORD
+EMAIL_ALPHABET = string.ascii_lowercase
+
+
+def choice_repeat(seq, length):
+    return ''.join([secrets.choice(seq) for _ in range(length)])
+
 
 def png_data():
     return io.BytesIO(base64.b64decode(b'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABC'
@@ -17,8 +24,9 @@ def username():
     return token()
 
 def email():
-    name = secrets.token_urlsafe(16)
-    domain = secrets.token_urlsafe(16)
+    name = choice_repeat(string.ascii_lowercase, 16)
+    domain = choice_repeat(string.ascii_lowercase, 16)
+
     return f'{name}@{domain}.com'
 
 
