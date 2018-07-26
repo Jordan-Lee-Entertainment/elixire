@@ -338,7 +338,8 @@ async def delete_file_task(app, user_id: int, delete=False):
         )
         tasks.append(task)
 
-    await asyncio.wait(tasks)
+    if tasks:
+        await asyncio.wait(tasks)
 
     if delete:
         log.info(f'Deleting user id {user_id}')

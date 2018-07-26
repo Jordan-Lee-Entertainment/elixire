@@ -1,0 +1,54 @@
+# TODO: banip, unbanip
+from ..utils import get_user
+
+
+async def _invalidate(ctx, user_id: int):
+    await ctx.storage.invalidate(f'userban:{user_id}')
+
+
+async def ban_user(ctx, args):
+    """Ban a single user."""
+    username = args.username
+    interval = args.interval
+    reason = args.reason
+    user_id = await get_user(ctx, username)
+    await _invalidate(ctx, user_id)
+
+    exec_out = await ctx.db.execute("""
+    INSERT INTO bans (user_id, reason, end_timestamp)
+    VALUES ($1, $2, $3)
+    """, user_id, reason)
+
+    print('AAA')
+
+
+async def unban_user(ctx, args):
+    """Unban a single user"""
+    username = args.username
+    user_id = await get_user(ctx, username)
+    await _invalidate(ctx, user_id)
+
+    exec_out = await ctx.db.execute("""
+    DELETE FROM bans
+    WHERE user_id = $1
+    """, user_id)
+
+    print(f'SQL result: {exec_out}')
+
+
+def setup(subparser):
+    parser_ban = subparser.add_parser('ban_user', help='Ban a single user.')
+
+    parser_ban.add_argument('username')
+    parser_ban.add_argument('interval')
+    parser_ban.add_argument('reason')
+    parser_ban.set_defaults(func=ban_user)
+
+    parser_unban = subparser.add_parser(
+        'unban_user', help='Unban a single user',
+        description="""
+This removes all current bans in the table.
+        """)
+
+    parser_unban.add_argument('username')
+    parser_unban.set_defaults(func=unban_user)

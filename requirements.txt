@@ -31,4 +31,6 @@ cryptography==2.2.2
 # On linux, use your package manager to install libmagic.
 # On win/mac, see README here:
 # https://github.com/ahupp/python-magic
-python-magic
+python-magic==0.4.15
+
+parsedatetime==2.4
