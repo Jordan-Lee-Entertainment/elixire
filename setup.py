@@ -6,5 +6,5 @@ setup(
     description='Image host',
     url='https://elixi.re',
     author='Ave Ozkal, Luna Mendes, Mary Strodl, slice',
-    python_requires='>=3.7'
+    python_requires='>=3.6'
 )
