@@ -2,17 +2,22 @@
 elixire - misc routes
 """
 from sanic import Blueprint, response
-from ..common import VERSION
+from ..version import VERSION, API_VERSION
 
 bp = Blueprint('misc')
 
 
+def _owo(string: str) -> str:
+    return string.replace('0', '0w0').replace('r', 'w')
+
+
 @bp.get('/api/hello')
 async def hello_route(request):
-    """Give basic information about the instance. Name and backend version."""
+    """Give basic information about the instance."""
     return response.json({
         'name': request.app.econfig.INSTANCE_NAME,
         'version': VERSION,
+        'api': API_VERSION,
     })
 
 
@@ -20,8 +25,9 @@ async def hello_route(request):
 async def h_hewwo(request):
     """owo"""
     return response.json({
-        'name': request.app.econfig.INSTANCE_NAME.replace('r', 'w'),
-        'version': VERSION.replace('0', '0w0'),
+        'name': _owo(request.app.econfig.INSTANCE_NAME),
+        'version': _owo(VERSION),
+        'api': _owo(API_VERSION),
     })
 
 

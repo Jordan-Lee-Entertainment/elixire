@@ -11,7 +11,6 @@ import itsdangerous
 
 from ..errors import FailedAuth, NotFound
 
-VERSION = '2.0.0'
 ALPHABET = string.ascii_lowercase + string.digits
 log = logging.getLogger(__name__)
 

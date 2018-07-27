@@ -1,4 +1,4 @@
-Elixire v2
+Elixire
 ==========
 
 ```
@@ -6,8 +6,11 @@ Elixire v2
   - lunae bunae genserv, 2018
 ```
 
-Elixire is an image host solution; v1 was written in PHP,
-v2 is being written in Python.
+Elixire is an open source image host solution.
+
+The first iteration of Elixire was written in PHP,
+then rewritten in Python and this is the main language
+we are working on.
 
 *(no, we won't write Elixir, read BACKEND.md for the reason)*
 
