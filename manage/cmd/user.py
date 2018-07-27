@@ -51,6 +51,33 @@ async def del_user(ctx, args):
     print('OK')
 
 
+async def resetpass(ctx, args):
+    username = args.username
+    user_id = await get_user(ctx, username)
+    password = secrets.token_urlsafe(25)
+
+    _pwd = bytes(password, 'utf-8')
+    hashed = bcrypt.hashpw(_pwd, bcrypt.gensalt(14))
+
+    # insert on db
+    dbout = await ctx.db.execute("""
+    UPDATE users
+    SET password_hash = $1
+    WHERE user_id = $2
+    """, hashed.decode('utf-8'), user_id)
+
+    # invalidate
+    await ctx.redis.delete(f'uid:{user_id}:password_hash')
+    await ctx.redis.delete(f'uid:{user_id}:active')
+
+    # print the user & password
+    print(f"""
+db out: {dbout}
+username: {username!r}, {user_id!r}
+new password: {password!r}
+    """)
+
+
 def setup(subparsers):
     parser_adduser = subparsers.add_parser(
         'adduser',
@@ -79,3 +106,12 @@ from this operation.
                                  help='Username of the user to delete')
     parser_del_user.set_defaults(func=del_user)
 
+    parser_resetpwd = subparsers.add_parser(
+        'resetpass',
+        help="Reset a user's password manually"
+    )
+
+    parser_resetpwd.add_argument('username',
+                                 help='Username')
+
+    parser_resetpwd.set_defaults(func=resetpass)
