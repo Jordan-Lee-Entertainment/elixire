@@ -3,6 +3,7 @@ elixire - admin routes
 """
 import logging
 import asyncpg
+from math import ceil
 
 from sanic import Blueprint, response
 
@@ -237,6 +238,69 @@ async def search_user(request, user_id: int, page: int):
         res.append(drow)
 
     return response.json(res)
+
+
+@bp.get('/api/admin/users/search')
+@admin_route
+async def users_search(request, admin_id):
+    """New, revamped search endpoint."""
+    args = request.raw_args
+    active = bool(args.get('active', True))
+    query = request.raw_args.get('query')
+    page = int(args.get('page', 0))
+    per_page = int(args.get('per_page', 20))
+
+    def _uname_stmt(n):
+        """Generate the username query statement."""
+        return f'AND username LIKE ${n} OR user_id::text LIKE ${n}' \
+               if query else ''
+
+    constraints = f"""
+    active = $1
+    {_uname_stmt(3)}
+    """
+
+    query = f'%{query}%'
+
+    args = [active, page]
+
+    if query:
+        args.append(query)
+
+    users = await request.app.db.fetch(f"""
+    SELECT user_id, username, active, admin, consented
+    FROM users
+    WHERE {constraints}
+    ORDER BY user_id ASC
+    LIMIT {per_page}
+    OFFSET ($2 * {per_page})
+    """, *args)
+
+    args2 = [active]
+
+    if query:
+        args2.append(query)
+
+    total_count = await request.app.db.fetchval(f"""
+    SELECT COUNT(*)
+    FROM users
+    WHERE active = $1 {_uname_stmt(2)}
+    """, *args2)
+
+    results = []
+
+    for row in users:
+        drow = dict(row)
+        drow['user_id'] = str(drow['user_id'])
+        results.append(drow)
+
+    return response.json({
+        'results': results,
+        'pagination': {
+            'total': ceil(total_count / per_page),
+            'current': page
+        }
+    })
 
 
 @bp.patch('/api/admin/user/<user_id:int>')
@@ -568,4 +632,3 @@ async def get_domain_stats(request, admin_id, domain_id):
         'stats': stats,
         'public_stats': public_stats,
     })
-
