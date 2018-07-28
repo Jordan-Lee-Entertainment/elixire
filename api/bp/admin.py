@@ -33,48 +33,6 @@ async def test_admin(request, admin_id):
     })
 
 
-@bp.get('/api/admin/listusers/<page:int>')
-@admin_route
-async def list_users_handler(request, admin_id, page: int):
-    """List users in the service"""
-    data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain,
-      subdomain, email, paranoid, consented
-    FROM users
-    ORDER BY user_id ASC
-    LIMIT 20
-    OFFSET ($1 * 20)
-    """, page)
-
-    def _cnv(row):
-        drow = dict(row)
-        drow['user_id'] = str(row['user_id'])
-        return drow
-
-    return response.json(list(map(_cnv, data)))
-
-
-@bp.get('/api/admin/list_inactive/<page:int>')
-@admin_route
-async def inactive_users_handler(request, admin_id, page: int):
-    data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain, subdomain,
-      email, paranoid, consented
-    FROM users
-    WHERE active=false
-    ORDER BY user_id ASC
-    LIMIT 20
-    OFFSET ($1 * 20)
-    """, page)
-
-    def _cnv(row):
-        drow = dict(row)
-        drow['user_id'] = str(row['user_id'])
-        return drow
-
-    return response.json(list(map(_cnv, data)))
-
-
 @bp.get('/api/admin/users/<user_id:int>')
 @admin_route
 async def get_user_handler(request, admin_id, user_id: int):
@@ -207,39 +165,6 @@ async def deactivate_user(request, admin_id: int, user_id: int):
     })
 
 
-@bp.post('/api/admin/search/user/<page:int>')
-@admin_route
-async def search_user(request, user_id: int, page: int):
-    """Search a user by pattern matching the username."""
-    try:
-        pattern = str(request.json['search_term'])
-    except (KeyError, TypeError, ValueError):
-        raise BadInput('Invalid search_term')
-
-    if not pattern:
-        raise BadInput('Insert a pattern.')
-
-    pattern = f'%{pattern}%'
-
-    rows = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, consented
-    FROM users
-    WHERE username LIKE $1 OR user_id::text LIKE $1
-    ORDER BY user_id ASC
-    LIMIT 20
-    OFFSET ($2 * 20)
-    """, pattern, page)
-
-    res = []
-
-    for row in rows:
-        drow = dict(row)
-        drow['user_id'] = str(drow['user_id'])
-        res.append(drow)
-
-    return response.json(res)
-
-
 @bp.get('/api/admin/users/search')
 @admin_route
 async def users_search(request, admin_id):
@@ -251,10 +176,14 @@ async def users_search(request, admin_id):
     per_page = int(args.get('per_page', 20))
 
     users = await request.app.db.fetch(f"""
-    SELECT user_id, username, active, admin, consented, COUNT(*) OVER() as total_count
+    SELECT user_id, username, active, admin, consented,
+           COUNT(*) OVER() as total_count
     FROM users
     WHERE active = $1
-    AND ($3 = '' OR (username LIKE '%'||$3||'%' OR user_id::text LIKE '%'||$3||'%'))
+    AND (
+            $3 = ''
+            OR (username LIKE '%'||$3||'%' OR user_id::text LIKE '%'||$3||'%')
+        )
     ORDER BY user_id ASC
     LIMIT {per_page}
     OFFSET ($2 * {per_page})
