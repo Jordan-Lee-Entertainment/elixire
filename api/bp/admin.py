@@ -245,54 +245,29 @@ async def search_user(request, user_id: int, page: int):
 async def users_search(request, admin_id):
     """New, revamped search endpoint."""
     args = request.raw_args
-    active = bool(args.get('active', True))
+    active = args.get('active', True) != 'false'
     query = request.raw_args.get('query')
     page = int(args.get('page', 0))
     per_page = int(args.get('per_page', 20))
 
-    def _uname_stmt(n):
-        """Generate the username query statement."""
-        return f'AND username LIKE ${n} OR user_id::text LIKE ${n}' \
-               if query else ''
-
-    constraints = f"""
-    active = $1
-    {_uname_stmt(3)}
-    """
-
-    query = f'%{query}%'
-
-    args = [active, page]
-
-    if query:
-        args.append(query)
-
     users = await request.app.db.fetch(f"""
-    SELECT user_id, username, active, admin, consented
+    SELECT user_id, username, active, admin, consented, COUNT(*) OVER() as total_count
     FROM users
-    WHERE {constraints}
+    WHERE active = $1
+    AND ($3 = '' OR (username LIKE $3 OR user_id::text LIKE $3))
     ORDER BY user_id ASC
     LIMIT {per_page}
     OFFSET ($2 * {per_page})
-    """, *args)
+    """, active, page, query or '')
 
-    args2 = [active]
+    def map_user(record):
+        row = dict(record)
+        row['user_id'] = str(row['user_id'])
+        del row['total_count']
+        return row
 
-    if query:
-        args2.append(query)
-
-    total_count = await request.app.db.fetchval(f"""
-    SELECT COUNT(*)
-    FROM users
-    WHERE active = $1 {_uname_stmt(2)}
-    """, *args2)
-
-    results = []
-
-    for row in users:
-        drow = dict(row)
-        drow['user_id'] = str(drow['user_id'])
-        results.append(drow)
+    results = map(map_user, users)
+    total_count = 0 if not users else users[0]['total_count']
 
     return response.json({
         'results': results,
