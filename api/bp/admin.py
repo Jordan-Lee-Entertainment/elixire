@@ -254,7 +254,7 @@ async def users_search(request, admin_id):
     SELECT user_id, username, active, admin, consented, COUNT(*) OVER() as total_count
     FROM users
     WHERE active = $1
-    AND ($3 = '' OR (username LIKE $3 OR user_id::text LIKE $3))
+    AND ($3 = '' OR (username LIKE '%'||$3||'%' OR user_id::text LIKE '%'||$3||'%'))
     ORDER BY user_id ASC
     LIMIT {per_page}
     OFFSET ($2 * {per_page})
