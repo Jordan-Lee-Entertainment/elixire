@@ -56,6 +56,9 @@ async def get_user_handler(request, admin_id, user_id: int):
 
 async def notify_activate(app, user_id: int):
     """Inform user that they got an account."""
+    if not app.econfig.NOTIFY_ACTIVATION_EMAILS:
+        return
+
     log.info(f'Sending activation email to {user_id}')
 
     body = fmt_email(app, """This is an automated email from {inst_name}
@@ -475,11 +478,8 @@ async def remove_domain(request, admin_id: int, domain_id: int):
     })
 
 
-@bp.get('/api/admin/domains/<domain_id:int>')
-@admin_route
-async def get_domain_stats(request, admin_id, domain_id):
-    """Get information about a domain."""
-    raw_info = await request.app.db.fetchrow("""
+async def _get_domain_info(db, domain_id) -> dict:
+    raw_info = await db.fetchrow("""
     SELECT domain, official, admin_only, cf_enabled
     FROM domains
     WHERE domain_id = $1
@@ -489,19 +489,19 @@ async def get_domain_stats(request, admin_id, domain_id):
 
     stats = {}
 
-    stats['users'] = await request.app.db.fetchval("""
+    stats['users'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM users
     WHERE domain = $1
     """, domain_id)
 
-    stats['files'] = await request.app.db.fetchval("""
+    stats['files'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM files
     WHERE domain = $1
     """, domain_id)
 
-    stats['shortens'] = await request.app.db.fetchval("""
+    stats['shortens'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM shortens
     WHERE domain = $1
@@ -509,13 +509,13 @@ async def get_domain_stats(request, admin_id, domain_id):
 
     public_stats = {}
 
-    public_stats['users'] = await request.app.db.fetchval("""
+    public_stats['users'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM users
     WHERE domain = $1 AND consented = true
     """, domain_id)
 
-    public_stats['files'] = await request.app.db.fetchval("""
+    public_stats['files'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM files
     JOIN users
@@ -523,7 +523,7 @@ async def get_domain_stats(request, admin_id, domain_id):
     WHERE files.domain = $1 AND users.consented = true
     """, domain_id)
 
-    public_stats['shortens'] = await request.app.db.fetchval("""
+    public_stats['shortens'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM shortens
     JOIN users
@@ -531,8 +531,38 @@ async def get_domain_stats(request, admin_id, domain_id):
     WHERE shortens.domain = $1 AND users.consented = true
     """, domain_id)
 
-    return response.json({
+    return {
         'info': dinfo,
         'stats': stats,
         'public_stats': public_stats,
-    })
+    }
+
+
+@bp.get('/api/admin/domains/<domain_id:int>')
+@admin_route
+async def get_domain_stats(request, admin_id, domain_id):
+    """Get information about a domain."""
+    return response.json(
+        await _get_domain_info(request.app.db, domain_id)
+    )
+
+
+@bp.get('/api/admin/domains')
+@admin_route
+async def get_domain_stats_all(request, admin_id):
+    """Request information about all domains"""
+    domain_ids = await request.app.db.fetch("""
+    SELECT domain_id
+    FROM domains
+    ORDER BY domain_id ASC
+    """)
+
+    domain_ids = [r[0] for r in domain_ids]
+
+    res = {}
+
+    for domain_id in domain_ids:
+        info = await _get_domain_info(request.app.db, domain_id)
+        res[domain_id] = info
+
+    return response.json(res)
