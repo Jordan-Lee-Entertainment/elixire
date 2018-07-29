@@ -178,6 +178,12 @@ async def users_search(request, admin_id):
     page = int(args.get('page', 0))
     per_page = int(args.get('per_page', 20))
 
+    if page < 0:
+        raise BadInput('Invalid page number')
+
+    if per_page < 1:
+        raise BadInput('Invalid per_page number')
+
     users = await request.app.db.fetch(f"""
     SELECT user_id, username, active, admin, consented,
            COUNT(*) OVER() as total_count
