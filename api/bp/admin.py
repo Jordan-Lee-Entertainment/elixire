@@ -702,8 +702,9 @@ async def _get_domain_info(db, domain_id) -> dict:
 
     return {
         'info': {**dinfo, **{
-            'owner_id': str(owner_id),
-            'owner': downer,
+            'owner': {**downer, **{
+                'user_id': str(owner_id)
+            }},
         }},
         'stats': stats,
         'public_stats': public_stats,
