@@ -3,6 +3,7 @@ elixire - admin routes
 """
 import logging
 import asyncpg
+from math import ceil
 
 from sanic import Blueprint, response
 
@@ -32,48 +33,6 @@ async def test_admin(request, admin_id):
     })
 
 
-@bp.get('/api/admin/listusers/<page:int>')
-@admin_route
-async def list_users_handler(request, admin_id, page: int):
-    """List users in the service"""
-    data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain,
-      subdomain, email, paranoid, consented
-    FROM users
-    ORDER BY user_id ASC
-    LIMIT 20
-    OFFSET ($1 * 20)
-    """, page)
-
-    def _cnv(row):
-        drow = dict(row)
-        drow['user_id'] = str(row['user_id'])
-        return drow
-
-    return response.json(list(map(_cnv, data)))
-
-
-@bp.get('/api/admin/list_inactive/<page:int>')
-@admin_route
-async def inactive_users_handler(request, admin_id, page: int):
-    data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain, subdomain,
-      email, paranoid, consented
-    FROM users
-    WHERE active=false
-    ORDER BY user_id ASC
-    LIMIT 20
-    OFFSET ($1 * 20)
-    """, page)
-
-    def _cnv(row):
-        drow = dict(row)
-        drow['user_id'] = str(row['user_id'])
-        return drow
-
-    return response.json(list(map(_cnv, data)))
-
-
 @bp.get('/api/admin/users/<user_id:int>')
 @admin_route
 async def get_user_handler(request, admin_id, user_id: int):
@@ -97,6 +56,9 @@ async def get_user_handler(request, admin_id, user_id: int):
 
 async def notify_activate(app, user_id: int):
     """Inform user that they got an account."""
+    if not app.econfig.NOTIFY_ACTIVATION_EMAILS:
+        return
+
     log.info(f'Sending activation email to {user_id}')
 
     body = fmt_email(app, """This is an automated email from {inst_name}
@@ -206,8 +168,103 @@ async def deactivate_user(request, admin_id: int, user_id: int):
     })
 
 
-@bp.post('/api/admin/search/user/<page:int>')
+@bp.get('/api/admin/users/search')
 @admin_route
+async def users_search(request, admin_id):
+    """New, revamped search endpoint."""
+    args = request.raw_args
+    active = args.get('active', True) != 'false'
+    query = request.raw_args.get('query')
+    page = int(args.get('page', 0))
+    per_page = int(args.get('per_page', 20))
+
+    if page < 0:
+        raise BadInput('Invalid page number')
+
+    if per_page < 1:
+        raise BadInput('Invalid per_page number')
+
+    users = await request.app.db.fetch(f"""
+    SELECT user_id, username, active, admin, consented,
+           COUNT(*) OVER() as total_count
+    FROM users
+    WHERE active = $1
+    AND (
+            $3 = ''
+            OR (username LIKE '%'||$3||'%' OR user_id::text LIKE '%'||$3||'%')
+        )
+    ORDER BY user_id ASC
+    LIMIT {per_page}
+    OFFSET ($2 * {per_page})
+    """, active, page, query or '')
+
+    def map_user(record):
+        row = dict(record)
+        row['user_id'] = str(row['user_id'])
+        del row['total_count']
+        return row
+
+    results = map(map_user, users)
+    total_count = 0 if not users else users[0]['total_count']
+
+    return response.json({
+        'results': results,
+        'pagination': {
+            'total': ceil(total_count / per_page),
+            'current': page
+        }
+    })
+
+
+# === DEPRECATED ===
+#  read https://gitlab.com/elixire/elixire/issues/61#note_91039503
+# These routes are here to maintain compatibility with some of our
+# utility software (admin panels)
+
+
+@bp.get('/api/admin/listusers/<page:int>')
+@admin_route
+async def list_users_handler(request, admin_id, page: int):
+    """List users in the service"""
+    data = await request.app.db.fetch("""
+    SELECT user_id, username, active, admin, domain,
+      subdomain, email, paranoid, consented
+    FROM users
+    ORDER BY user_id ASC
+    LIMIT 20
+    OFFSET ($1 * 20)
+    """, page)
+
+    def _cnv(row):
+        drow = dict(row)
+        drow['user_id'] = str(row['user_id'])
+        return drow
+
+    return response.json(list(map(_cnv, data)))
+
+
+@bp.get('/api/admin/list_inactive/<page:int>')
+@admin_route
+async def inactive_users_handler(request, admin_id, page: int):
+    data = await request.app.db.fetch("""
+    SELECT user_id, username, active, admin, domain, subdomain,
+      email, paranoid, consented
+    FROM users
+    WHERE active=false
+    ORDER BY user_id ASC
+    LIMIT 20
+    OFFSET ($1 * 20)
+    """, page)
+
+    def _cnv(row):
+        drow = dict(row)
+        drow['user_id'] = str(row['user_id'])
+        return drow
+
+    return response.json(list(map(_cnv, data)))
+
+
+@bp.post('/api/admin/search/user/<page:int>')
 async def search_user(request, user_id: int, page: int):
     """Search a user by pattern matching the username."""
     try:
@@ -237,6 +294,9 @@ async def search_user(request, user_id: int, page: int):
         res.append(drow)
 
     return response.json(res)
+
+
+# === END DEPRECATED ===
 
 
 @bp.patch('/api/admin/user/<user_id:int>')
@@ -507,11 +567,8 @@ async def remove_domain(request, admin_id: int, domain_id: int):
     })
 
 
-@bp.get('/api/admin/domains/<domain_id:int>')
-@admin_route
-async def get_domain_stats(request, admin_id, domain_id):
-    """Get information about a domain."""
-    raw_info = await request.app.db.fetchrow("""
+async def _get_domain_info(db, domain_id) -> dict:
+    raw_info = await db.fetchrow("""
     SELECT domain, official, admin_only, cf_enabled
     FROM domains
     WHERE domain_id = $1
@@ -521,19 +578,19 @@ async def get_domain_stats(request, admin_id, domain_id):
 
     stats = {}
 
-    stats['users'] = await request.app.db.fetchval("""
+    stats['users'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM users
     WHERE domain = $1
     """, domain_id)
 
-    stats['files'] = await request.app.db.fetchval("""
+    stats['files'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM files
     WHERE domain = $1
     """, domain_id)
 
-    stats['shortens'] = await request.app.db.fetchval("""
+    stats['shortens'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM shortens
     WHERE domain = $1
@@ -541,13 +598,13 @@ async def get_domain_stats(request, admin_id, domain_id):
 
     public_stats = {}
 
-    public_stats['users'] = await request.app.db.fetchval("""
+    public_stats['users'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM users
     WHERE domain = $1 AND consented = true
     """, domain_id)
 
-    public_stats['files'] = await request.app.db.fetchval("""
+    public_stats['files'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM files
     JOIN users
@@ -555,7 +612,7 @@ async def get_domain_stats(request, admin_id, domain_id):
     WHERE files.domain = $1 AND users.consented = true
     """, domain_id)
 
-    public_stats['shortens'] = await request.app.db.fetchval("""
+    public_stats['shortens'] = await db.fetchval("""
     SELECT COUNT(*)
     FROM shortens
     JOIN users
@@ -563,9 +620,38 @@ async def get_domain_stats(request, admin_id, domain_id):
     WHERE shortens.domain = $1 AND users.consented = true
     """, domain_id)
 
-    return response.json({
+    return {
         'info': dinfo,
         'stats': stats,
         'public_stats': public_stats,
-    })
+    }
 
+
+@bp.get('/api/admin/domains/<domain_id:int>')
+@admin_route
+async def get_domain_stats(request, admin_id, domain_id):
+    """Get information about a domain."""
+    return response.json(
+        await _get_domain_info(request.app.db, domain_id)
+    )
+
+
+@bp.get('/api/admin/domains')
+@admin_route
+async def get_domain_stats_all(request, admin_id):
+    """Request information about all domains"""
+    domain_ids = await request.app.db.fetch("""
+    SELECT domain_id
+    FROM domains
+    ORDER BY domain_id ASC
+    """)
+
+    domain_ids = [r[0] for r in domain_ids]
+
+    res = {}
+
+    for domain_id in domain_ids:
+        info = await _get_domain_info(request.app.db, domain_id)
+        res[domain_id] = info
+
+    return response.json(res)
