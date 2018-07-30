@@ -633,6 +633,34 @@ async def remove_domain(request, admin_id: int, domain_id: int):
     })
 
 
+async def _get_domain_public(db, domain_id) -> dict:
+    public_stats = {}
+
+    public_stats['users'] = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM users
+    WHERE domain = $1 AND consented = true
+    """, domain_id)
+
+    public_stats['files'] = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM files
+    JOIN users
+      ON users.user_id = files.uploader
+    WHERE files.domain = $1 AND users.consented = true
+    """, domain_id)
+
+    public_stats['shortens'] = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM shortens
+    JOIN users
+      ON users.user_id = shortens.uploader
+    WHERE shortens.domain = $1 AND users.consented = true
+    """, domain_id)
+
+    return public_stats
+
+
 async def _get_domain_info(db, domain_id) -> dict:
     raw_info = await db.fetchrow("""
     SELECT domain, official, admin_only, cf_enabled, permissions
@@ -661,31 +689,6 @@ async def _get_domain_info(db, domain_id) -> dict:
     FROM shortens
     WHERE domain = $1
     """, domain_id)
-
-    public_stats = {}
-
-    public_stats['users'] = await db.fetchval("""
-    SELECT COUNT(*)
-    FROM users
-    WHERE domain = $1 AND consented = true
-    """, domain_id)
-
-    public_stats['files'] = await db.fetchval("""
-    SELECT COUNT(*)
-    FROM files
-    JOIN users
-      ON users.user_id = files.uploader
-    WHERE files.domain = $1 AND users.consented = true
-    """, domain_id)
-
-    public_stats['shortens'] = await db.fetchval("""
-    SELECT COUNT(*)
-    FROM shortens
-    JOIN users
-      ON users.user_id = shortens.uploader
-    WHERE shortens.domain = $1 AND users.consented = true
-    """, domain_id)
-
     owner_id = await db.fetchval("""
     SELECT user_id
     FROM domain_owners
@@ -707,7 +710,7 @@ async def _get_domain_info(db, domain_id) -> dict:
             }},
         }},
         'stats': stats,
-        'public_stats': public_stats,
+        'public_stats': await _get_domain_public(db, domain_id),
     }
 
 

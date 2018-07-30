@@ -207,7 +207,7 @@ async def test_domain_patch(test_cli):
     assert isinstance(rjson, dict)
     dinfo = rjson['info']
     assert isinstance(dinfo, dict)
-    assert dinfo['owner_id'] == user_id
+    assert dinfo['owner']['user_id'] == user_id
     assert dinfo['admin_only']
     assert dinfo['official']
     assert dinfo['permissions'] == 666
@@ -245,7 +245,7 @@ async def test_domain_patch(test_cli):
     assert isinstance(rjson, dict)
     dinfo = rjson['info']
     assert isinstance(dinfo, dict)
-    assert dinfo['owner_id'] == admin_id
+    assert dinfo['owner']['user_id'] == admin_id
     assert not dinfo['admin_only']
     assert not dinfo['official']
     assert dinfo['permissions'] == 3
