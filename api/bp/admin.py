@@ -9,7 +9,8 @@ from sanic import Blueprint, response
 
 from ..decorators import admin_route
 from ..errors import NotFound, BadInput
-from ..schema import validate, ADMIN_MODIFY_FILE, ADMIN_MODIFY_USER
+from ..schema import validate, ADMIN_MODIFY_FILE, ADMIN_MODIFY_USER, \
+    ADMIN_MODIFY_DOMAIN
 from ..common import delete_file, delete_shorten
 from ..common.email import fmt_email, send_user_email, activate_email_send, \
     uid_from_email, clean_etoken
@@ -523,6 +524,71 @@ async def add_domain(request, admin_id: int):
     })
 
 
+async def _dp_check(db, domain_id: int, payload: dict,
+                    updated_fields: list, field: str):
+    """Check a field inside the payload and update it if it exists."""
+
+    if field in payload:
+        await db.execute(f"""
+        UPDATE domains
+        SET {field} = $1
+        WHERE domain_id = $2
+        """, payload[field], domain_id)
+
+        updated_fields.append(field)
+
+
+@bp.patch('/api/admin/domains/<domain_id:int>')
+@admin_route
+async def patch_domain(request, admin_id: int, domain_id: int):
+    """Patch a domain's information"""
+    payload = validate(request.json, ADMIN_MODIFY_DOMAIN)
+
+    updated_fields = []
+    db = request.app.db
+
+    if 'owner_id' in payload:
+        exec_out = await db.execute("""
+        UPDATE domain_owners
+        SET user_id = $1
+        WHERE domain_id = $2
+        """, int(payload['owner_id']), domain_id)
+
+        if exec_out != 'UPDATE 0':
+            updated_fields.append('owner_id')
+
+    # since we're passing updated_fields which is a reference to the
+    # list, it can be mutaded and it will propagate into this function.
+    await _dp_check(db, domain_id, payload, updated_fields, 'admin_only')
+    await _dp_check(db, domain_id, payload, updated_fields, 'official')
+    await _dp_check(db, domain_id, payload, updated_fields, 'cf_enabled')
+    await _dp_check(db, domain_id, payload, updated_fields, 'permissions')
+
+    return response.json({
+        'updated': updated_fields,
+    })
+
+
+@bp.put('/api/admin/domains/<domain_id:int>/owner')
+@admin_route
+async def add_owner(request, admin_id: int, domain_id: int):
+    """Add an owner to a single domain."""
+    try:
+        owner_id = request.json['owner_id']
+    except ValueError:
+        raise BadInput('Invalid number for owner ID')
+
+    exec_out = await request.app.db.execute("""
+    INSERT INTO domain_owners (domain_id, user_id)
+    VALUES ($1, $2)
+    """, domain_id, owner_id)
+
+    return response.json({
+        'success': True,
+        'output': exec_out,
+    })
+
+
 @bp.delete('/api/admin/domains/<domain_id:int>')
 @admin_route
 async def remove_domain(request, admin_id: int, domain_id: int):
@@ -569,7 +635,7 @@ async def remove_domain(request, admin_id: int, domain_id: int):
 
 async def _get_domain_info(db, domain_id) -> dict:
     raw_info = await db.fetchrow("""
-    SELECT domain, official, admin_only, cf_enabled
+    SELECT domain, official, admin_only, cf_enabled, permissions
     FROM domains
     WHERE domain_id = $1
     """, domain_id)
@@ -620,8 +686,25 @@ async def _get_domain_info(db, domain_id) -> dict:
     WHERE shortens.domain = $1 AND users.consented = true
     """, domain_id)
 
+    owner_id = await db.fetchval("""
+    SELECT user_id
+    FROM domain_owners
+    WHERE domain_id = $1
+    """, domain_id)
+
+    owner_data = await db.fetchrow("""
+    SELECT username, active, consented, admin
+    FROM users
+    WHERE user_id = $1
+    """, owner_id)
+
+    downer = dict(owner_data)
+
     return {
-        'info': dinfo,
+        'info': {**dinfo, **{
+            'owner_id': str(owner_id),
+            'owner': downer,
+        }},
         'stats': stats,
         'public_stats': public_stats,
     }

@@ -93,7 +93,7 @@ Please look under the `docs/` directory for more complete tooling documentation.
 [See this repo](https://gitlab.com/elixire/api-docs) for API Docs.
 Both the Client API and the Admin API are documented there.
 
-# Running tests
+# Setting and running a test environment
 
 **NOTE: DO NOT RUN TESTS IN YOUR PRODUCTION ENVIRONMENT. AT ALL.**
 
@@ -110,17 +110,35 @@ cd utils
 cd ..
 ```
 
-After creating admin user, enter the PSQL Shell:
+After creating the users, enter the PSQL Shell:
+
+## Setting admin to actual admin
 ```sql
 UPDATE users
 SET admin = true
 WHERE username = 'admin';
 ```
 
-Make sure to insert some big ratelimits to be able to run
-the test battery, 1000/1s should be enough for both user ratelimits
-and IP based ratelimits.
+## Fetch admin ID and setting it as owner
+```sql
+SELECT user_id
+FROM users
+WHERE username = 'admin';
+```
 
+```sql
+-- repeat this operation for any domains
+-- you added in your development environment
+
+INSERT INTO domain_owners (domain_id, user_id)
+VALUES (0, ADMIN_USER_ID_YOU_JUST_SEARCHED);
+```
+
+**Make sure to insert some big ratelimits to be able to run
+the test battery, 1000/1s should be enough for both user ratelimits
+and IP based ratelimits.**
+
+## Running
 Then, run the tests with tox.
 ```bash
 tox

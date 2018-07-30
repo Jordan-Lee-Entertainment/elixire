@@ -44,6 +44,13 @@ class ElixireValidator(Validator):
     def _validate_type_email(self, value: str) -> bool:
         return bool(EMAIL_REGEX.match(value))
 
+    def _validate_type_snowflake(self, value: str):
+        try:
+            int(value)
+            return True
+        except ValueError:
+            return False
+
 
 def validate(document, schema):
     """Validate one document against a schema."""
@@ -110,4 +117,12 @@ ADMIN_MODIFY_USER = {
     'admin': {'type': 'boolean', 'required': False},
     'upload_limit': {'type': 'integer', 'required': False},
     'shorten_limit': {'type': 'integer', 'required': False}
+}
+
+ADMIN_MODIFY_DOMAIN = {
+    'owner_id': {'type': 'snowflake', 'required': False},
+    'admin_only': {'type': 'boolean', 'required': False},
+    'official': {'type': 'boolean', 'required': False},
+    'cf_enabled': {'type': 'boolean', 'required': False},
+    'permissions': {'type': 'integer', 'required': False},
 }
