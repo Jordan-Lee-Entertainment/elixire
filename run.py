@@ -72,6 +72,7 @@ FORCE_IP_ROUTES = (
     '/api/domains',
     '/api/hello',
     '/api/hewwo',
+    '/api/science',
     '/api/features',
     '/api/register',
     '/api/delete_confirm',
