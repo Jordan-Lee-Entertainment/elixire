@@ -31,6 +31,12 @@ async def h_hewwo(request):
     })
 
 
+@bp.get('/api/science')
+async def science_route(request):
+    """*insert b4nzyblob*"""
+    return response.text("Hewoo! We're not discord we don't spy on you.")
+
+
 @bp.get('/api/features')
 async def fetch_features(request):
     """Fetch instance features.
