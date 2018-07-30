@@ -31,10 +31,10 @@ async def h_hewwo(request):
     })
 
 
-@bp.get('/api/science')
+@bp.route('/api/science')
 async def science_route(request):
     """*insert b4nzyblob*"""
-    return response.text("Hewoo! We're not discord we don't spy on you.")
+    return response.text("Hewoo! We'we nyot discowd we don't spy on nyou :3")
 
 
 @bp.get('/api/features')
