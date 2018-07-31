@@ -214,7 +214,7 @@ def handle_exception(request, exception):
         if request.app.econfig.ENABLE_FRONTEND:
             if url.startswith('/admin'):
                 return response.file(
-                    './admin-panel/dist/index.html')
+                    './admin-panel/build/index.html')
             else:
                 return response.file(
                     './frontend/output/404.html')
