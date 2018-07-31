@@ -430,8 +430,8 @@ def main():
     if config.ENABLE_FRONTEND:
         app.static('/humans.txt', './static/humans.txt')
 
-        app.static('/admin', './admin-panel/dist')
-        app.static('/admin', './admin-panel/dist/index.html')
+        app.static('/admin', './admin-panel/build')
+        app.static('/admin', './admin-panel/build/index.html')
 
         app.static('/', './frontend/output')
         app.static('/', './frontend/output/index.html')
