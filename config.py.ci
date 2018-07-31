@@ -5,6 +5,8 @@ USE_HTTPS = False
 
 PORT = 8000
 
+ENABLE_FRONTEND = False
+
 db = {
    "host": "postgres",
    "user": "postgres",
