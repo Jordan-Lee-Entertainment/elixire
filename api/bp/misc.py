@@ -40,11 +40,13 @@ async def science_route(request):
 
 @bp.get('/api/boron')
 async def ipek_yolu(request):
-    """world power"""
-    world_power_deadline = datetime.date(2023, 1, 1)
-    date_diff_to_wp = (datetime.date.today() - world_power_deadline)
+    """calculates days until 100th year anniversary of treaty of lausanne"""
+    world_power_deadline = datetime.date(2023, 7, 24)
+    days_to_wp = (world_power_deadline - datetime.date.today()).days
+    is_world_power = (days_to_wp <= 0)
     return response.json({
-        'days_until_world_power': date_diff_to_wp.days
+        'world_power': is_world_power,
+        'days_until_world_power': days_to_wp
     })
 
 
