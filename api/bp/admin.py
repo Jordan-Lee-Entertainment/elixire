@@ -509,18 +509,37 @@ async def add_domain(request, admin_id: int):
     is_adminonly = bool(request.json['admin_only'])
     is_official = bool(request.json['official'])
 
-    result = await request.app.db.execute("""
+    # default 3
+    permissions = int(request.json.get('permissions', 3))
+
+    db = request.app.db
+
+    result = await db.execute("""
     INSERT INTO domains
-    (domain, admin_only, official)
-    VALUES ($1, $2, $3)
-    """, domain_name, is_adminonly, is_official)
+        (domain, admin_only, official, permissions)
+    VALUES
+        ($1, $2, $3, $4)
+    """, domain_name, is_adminonly, is_official, permissions)
+
+    domain_id = await db.fetchval("""
+    SELECT domain_id
+    FROM domains
+    WHERE domain = $1
+    """, domain_name)
+
+    if 'owner_id' in request.json:
+        await db.execute("""
+        INSERT INTO domain_owners (domain_id, user_id)
+        VALUES ($1, $2)
+        """, domain_id, int(request.json['owner_id']))
 
     keys = solve_domain(domain_name)
     await request.app.storage.raw_invalidate(*keys)
 
     return response.json({
         'success': True,
-        'result': result
+        'result': result,
+        'new_id': domain_id,
     })
 
 
