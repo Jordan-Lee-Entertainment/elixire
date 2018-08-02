@@ -204,13 +204,15 @@ async def upload_handler(request, user_id):
     file_size = ctx.file.calculate_size(app.econfig.DUPE_DECREASE_FACTOR)
 
     # insert into database
-    await app.db.execute("""
-    INSERT INTO files (
-        file_id, mimetype, filename,
-        file_size, uploader, fspath, domain
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
-    """, file_id, ctx.file.mime, shortname, file_size, user_id, file.raw_path, domain_id)
+    await app.db.execute(
+        """
+        INSERT INTO files (
+            file_id, mimetype, filename,
+            file_size, uploader, fspath, domain
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        """, file_id, ctx.file.mime, shortname, file_size, user_id,
+        file.raw_path, domain_id)
 
     # write to fs
     buffer = await ctx.strip_exif(app)
@@ -220,7 +222,10 @@ async def upload_handler(request, user_id):
     # upload file latency metrics
     await upload_metrics(app, ctx)
 
+    instance_url = app.econfig.MAIN_URL
+
     return response.json({
         'url': _construct_url(domain, shortname, extension),
         'shortname': shortname,
+        'delete_url': f'{instance_url}/api/delete/{shortname}'
     })
