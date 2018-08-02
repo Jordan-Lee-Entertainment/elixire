@@ -39,11 +39,9 @@ def get_token(request) -> str:
 async def pwd_hash(request, password: str) -> str:
     """Generate a hash for any given password"""
     password_bytes = bytes(password, 'utf-8')
-    hashed = request.app.loop.run_in_executor(None,
-                                              bcrypt.hashpw,
-                                              password_bytes,
-                                              bcrypt.gensalt(14)
-                                              )
+    hashed = request.app.loop.run_in_executor(
+        None, bcrypt.hashpw, password_bytes, bcrypt.gensalt(14)
+    )
 
     return (await hashed).decode('utf-8')
 

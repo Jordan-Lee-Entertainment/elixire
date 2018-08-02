@@ -6,6 +6,7 @@ from sanic import response
 
 from ..common import delete_file, delete_shorten
 from ..common.auth import token_check
+from ..decorators import auth_route
 from ..errors import BadInput
 
 bp = Blueprint('files')
@@ -111,6 +112,15 @@ async def delete_handler(request):
 
     await delete_file(request.app, file_name, user_id)
 
+    return response.json({
+        'success': True
+    })
+
+
+@bp.route('/api/delete/<shortname>', methods=['GET', 'DELETE'])
+@auth_route
+async def delete_single(request, user_id, shortname):
+    await delete_file(request.app, shortname, user_id)
     return response.json({
         'success': True
     })
