@@ -1,6 +1,7 @@
 """
 elixire - misc routes
 """
+import datetime
 from sanic import Blueprint, response
 from ..version import VERSION, API_VERSION
 
@@ -35,6 +36,18 @@ async def h_hewwo(request):
 async def science_route(request):
     """*insert b4nzyblob*"""
     return response.text("Hewoo! We'we nyot discowd we don't spy on nyou :3")
+
+
+@bp.get('/api/boron')
+async def ipek_yolu(request):
+    """calculates days until 100th year anniversary of treaty of lausanne"""
+    world_power_deadline = datetime.date(2023, 7, 24)
+    days_to_wp = (world_power_deadline - datetime.date.today()).days
+    is_world_power = (days_to_wp <= 0)
+    return response.json({
+        'world_power': is_world_power,
+        'days_until_world_power': days_to_wp
+    })
 
 
 @bp.get('/api/features')
