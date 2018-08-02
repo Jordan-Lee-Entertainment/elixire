@@ -192,7 +192,10 @@ async def purge_cf(app, filename: str, ftype: int) -> int:
         WHERE filename = $1
         """, filename)
 
-        domain = detail['domain']
+        if detail is None:
+            domain = None
+        else:
+            domain = detail['domain']
     elif ftype == FileNameType.SHORTEN:
         # query shorten detail
         domain = await app.db.fetchval("""

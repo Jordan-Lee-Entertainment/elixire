@@ -72,6 +72,8 @@ FORCE_IP_ROUTES = (
     '/api/domains',
     '/api/hello',
     '/api/hewwo',
+    '/api/science',
+    '/api/boron',
     '/api/features',
     '/api/register',
     '/api/delete_confirm',
@@ -82,6 +84,8 @@ FORCE_IP_ROUTES = (
     '/api/dump_get',
     '/api/activate_email',
     '/api/check',
+
+    '/admin',
 )
 
 # Enforce IP ratelimit on /s/.
@@ -202,13 +206,19 @@ def handle_exception(request, exception):
     """Handle any kind of exception."""
     status_code = 500
     request.app.rerr_counter += 1
+    url = request.path
 
     if isinstance(exception, (NotFound, FileNotFound)):
         status_code = 404
         log.warning(f'File not found: {exception!r}')
 
         if request.app.econfig.ENABLE_FRONTEND:
-            return response.file('./frontend/output/404.html')
+            if url.startswith('/admin'):
+                return response.file(
+                    './admin-panel/build/index.html')
+            else:
+                return response.file(
+                    './frontend/output/404.html')
     else:
         log.exception(f'Error in request: {exception!r}')
 
@@ -421,8 +431,8 @@ def main():
     if config.ENABLE_FRONTEND:
         app.static('/humans.txt', './static/humans.txt')
 
-        app.static('/admin', './admin-panel/dist')
-        app.static('/admin', './admin-panel/dist/index.html')
+        app.static('/admin', './admin-panel/build')
+        app.static('/admin', './admin-panel/build/index.html')
 
         app.static('/', './frontend/output')
         app.static('/', './frontend/output/index.html')

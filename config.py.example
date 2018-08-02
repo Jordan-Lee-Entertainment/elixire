@@ -221,3 +221,6 @@ REGISTRATIONS_ENABLED = True
 
 # Enable users to change their own profile information?
 PATCH_API_PROFILE_ENABLED = True
+
+# Enable notifications for user activation?
+NOTIFY_ACTIVATION_EMAILS = True
