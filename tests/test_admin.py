@@ -20,7 +20,7 @@ def test_cli(loop, app, test_client):
     return loop.run_until_complete(test_client(app))
 
 
-def _extract_uid(token):
+def _extract_uid(token) -> str:
     split = token.split('.')
     try:
         uid, _ = split
@@ -167,3 +167,137 @@ async def test_domain_stats(test_cli):
 
     # not the best data validation...
     assert isinstance(rjson, dict)
+
+
+async def test_domain_patch(test_cli):
+    atoken = await login_admin(test_cli)
+    utoken = await login_normal(test_cli)
+
+    admin_id = _extract_uid(atoken)
+    user_id = _extract_uid(utoken)
+
+    resp = await test_cli.patch('/api/admin/domains/0', json={
+        'owner_id': user_id,
+        'admin_only': True,
+        'official': True,
+        'permissions': 666,
+    }, headers={
+        'Authorization': atoken
+    })
+
+    assert resp.status == 200
+    rjson = await resp.json()
+    assert isinstance(rjson, dict)
+
+    fields = rjson['updated']
+    assert isinstance(fields, list)
+    assert 'owner_id' in fields
+    assert 'admin_only' in fields
+    assert 'official' in fields
+    assert 'permissions' in fields
+
+    # fetch domain info
+    resp = await test_cli.get('/api/admin/domains/0', headers={
+        'Authorization': atoken,
+    })
+
+    assert resp.status == 200
+    rjson = await resp.json()
+
+    assert isinstance(rjson, dict)
+    dinfo = rjson['info']
+    assert isinstance(dinfo, dict)
+    assert dinfo['owner']['user_id'] == user_id
+    assert dinfo['admin_only']
+    assert dinfo['official']
+    assert dinfo['permissions'] == 666
+
+    # reset the domain properties
+    # to sane defaults
+    resp = await test_cli.patch('/api/admin/domains/0', json={
+        'owner_id': admin_id,
+        'admin_only': False,
+        'official': False,
+        'permissions': 3,
+    }, headers={
+        'Authorization': atoken
+    })
+
+    assert resp.status == 200
+    rjson = await resp.json()
+    assert isinstance(rjson, dict)
+
+    fields = rjson['updated']
+    assert isinstance(fields, list)
+    assert 'owner_id' in fields
+    assert 'admin_only' in fields
+    assert 'official' in fields
+    assert 'permissions' in fields
+
+    # fetch domain info, again, to make sure.
+    resp = await test_cli.get('/api/admin/domains/0', headers={
+        'Authorization': atoken,
+    })
+
+    assert resp.status == 200
+    rjson = await resp.json()
+
+    assert isinstance(rjson, dict)
+    dinfo = rjson['info']
+    assert isinstance(dinfo, dict)
+    assert dinfo['owner']['user_id'] == admin_id
+    assert not dinfo['admin_only']
+    assert not dinfo['official']
+    assert dinfo['permissions'] == 3
+
+
+async def test_user_patch(test_cli):
+    atoken = await login_admin(test_cli)
+    utoken = await login_normal(test_cli)
+
+    user_id = _extract_uid(utoken)
+
+    # request 1: change default user to admin, etc
+    resp = await test_cli.patch(f'/api/admin/user/{user_id}', json={
+        'admin': True,
+        'upload_limit': 1000,
+        'shorten_limit': 1000,
+    }, headers={
+        'Authorization': atoken,
+    })
+
+    assert resp.status == 200
+    rjson = await resp.json()
+    assert isinstance(rjson, list)
+    assert 'admin' in rjson
+    assert 'upload_limit' in rjson
+    assert 'shorten_limit' in rjson
+
+    # request 2: check by getting user info
+    resp = await test_cli.get(f'/api/admin/users/{user_id}', headers={
+        'Authorization': atoken,
+    })
+
+    assert resp.status == 200
+    rjson = await resp.json()
+    assert isinstance(rjson, dict)
+    assert rjson['admin']
+    assert isinstance(rjson['limits'], dict)
+    assert rjson['limits']['limit'] == 1000
+    assert rjson['limits']['shortenlimit'] == 1000
+
+    # request 3: changing it back
+    resp = await test_cli.patch(f'/api/admin/user/{user_id}', json={
+        'admin': False,
+        'upload_limit': 104857600,
+        'shorten_limit': 100,
+    }, headers={
+        'Authorization': atoken,
+    })
+
+    assert resp.status == 200
+    rjson = await resp.json()
+    assert isinstance(rjson, list)
+    assert 'admin' in rjson
+    assert 'upload_limit' in rjson
+    assert 'shorten_limit' in rjson

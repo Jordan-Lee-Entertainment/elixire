@@ -80,8 +80,11 @@ async def send_email(app, user_email: str, subject: str, email_body: str):
     data = {
         'from': f'{_inst_name} <automated@{econfig.MAILGUN_DOMAIN}>',
         'to': [user_email],
-        'subject': subject,
-        'text': email_body,
+
+        # make sure everything passes through fmt_email
+        # before sending
+        'subject': fmt_email(app, subject),
+        'text': fmt_email(app, email_body),
     }
 
     async with app.session.post(mailgun_url,
@@ -131,6 +134,14 @@ async def uid_from_email(app, token: str, table: str,
         raise BadInput('No user found with the token')
 
     return user_id
+
+
+async def get_owner(app, domain_id: int) -> int:
+    return await app.db.fetchval("""
+    SELECT user_id
+    FROM domain_owners
+    WHERE domain_id = $1
+    """, domain_id)
 
 
 async def clean_etoken(app, token: str, table: str) -> bool:

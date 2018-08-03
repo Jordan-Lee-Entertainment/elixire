@@ -4,6 +4,7 @@ from sanic import Blueprint
 from sanic import response
 
 from ..decorators import auth_route
+from .admin import _get_domain_public
 
 
 bp = Blueprint('personal_stats')
@@ -46,3 +47,37 @@ async def personal_stats_handler(request, user_id):
         'total_bytes': total_bytes,
         'total_shortens': total_shortens,
     })
+
+
+@bp.get('/api/stats/my_domains')
+@auth_route
+async def personal_domain_stats(request, user_id):
+    """Fetch information about the domains you own."""
+    db = request.app.db
+
+    domain_ids = await db.fetch("""
+    SELECT domain_id
+    FROM domain_owners
+    WHERE user_id = $1
+    """, user_id)
+
+    res = {}
+
+    for row in domain_ids:
+        domain_id = row['domain_id']
+
+        domain_info = await db.fetchrow("""
+        SELECT domain, cf_enabled, official, admin_only, permissions
+        FROM domains
+        WHERE domain_id = $1
+        """, domain_id)
+
+        dinfo = dict(domain_info)
+
+        public = await _get_domain_public(db, domain_id)
+        res[domain_id] = {
+            'info': dinfo,
+            'stats': public,
+        }
+
+    return response.json(res)

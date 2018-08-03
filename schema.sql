@@ -65,6 +65,18 @@ CREATE TABLE IF NOT EXISTS users (
     shorten_domain bigint REFERENCES domains (domain_id) DEFAULT NULL
 );
 
+-- This is a new table
+-- since we can't afford to make circular depedencies.
+
+-- the other approach would be having domains.owner_id
+-- referencing to users, but users already has
+-- users.domain and users.shorten_domain already referencing
+-- domains.
+CREATE TABLE IF NOT EXISTS domain_owners (
+    domain_id bigint REFERENCES domains (domain_id) PRIMARY KEY,
+    user_id bigint REFERENCES users (user_id)
+);
+
 -- user and IP bans, usually automatically managed by
 -- our ratelimiting code, but can be extended.
 CREATE TABLE IF NOT EXISTS bans (
