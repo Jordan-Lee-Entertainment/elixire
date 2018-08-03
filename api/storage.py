@@ -407,3 +407,21 @@ class Storage:
 
             await self.set_multi_one(keys, domain_id)
             return domain_id
+
+    async def get_domain_shorten(self, shortname: str) -> int:
+        """Get a domain ID for a shorten."""
+
+        return await self.db.fetchval("""
+        SELECT domain
+        FROM shortens
+        WHERE filename = $1
+        """, shortname)
+
+    async def get_domain_file(self, shortname: str) -> int:
+        """Get a domain ID for a file."""
+
+        return await self.db.fetchval("""
+        SELECT domain
+        FROM files
+        WHERE filename = $1
+        """, shortname)
