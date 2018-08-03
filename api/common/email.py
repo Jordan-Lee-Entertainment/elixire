@@ -133,6 +133,14 @@ async def uid_from_email(app, token: str, table: str,
     return user_id
 
 
+async def get_owner(app, domain_id: int) -> int:
+    return await app.db.fetchval("""
+    SELECT user_id
+    FROM domain_owners
+    WHERE domain_id = $1
+    """, domain_id)
+
+
 async def clean_etoken(app, token: str, table: str) -> bool:
     res = await app.db.execute(f"""
     DELETE FROM {table}
