@@ -57,6 +57,7 @@ async def test_upload_png(test_cli):
     respjson = await resp.json()
     assert isinstance(respjson, dict)
     assert isinstance(respjson['url'], str)
+    assert isinstance(respjson['delete_url'], str)
     await check_exists(test_cli, respjson['shortname'], utoken)
 
 
@@ -91,3 +92,14 @@ async def test_delete_file(test_cli):
     assert rdel_json['success']
 
     await check_exists(test_cli, respjson['shortname'], utoken, True)
+
+
+async def test_delete_nonexist(test_cli):
+    utoken = await login_normal(test_cli)
+    resp_del = await test_cli.delete('/api/delete', headers={
+        'Authorization': utoken
+    }, json={
+        'filename': 'lkdjklfjkgkghkkhsfklhjslkdfjglakdfjl'
+    })
+
+    assert resp_del.status == 404
