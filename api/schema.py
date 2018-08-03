@@ -126,3 +126,8 @@ ADMIN_MODIFY_DOMAIN = {
     'cf_enabled': {'type': 'boolean', 'required': False},
     'permissions': {'type': 'integer', 'required': False},
 }
+
+ADMIN_SEND_DOMAIN_EMAIL = {
+    'subject': {'type': 'string'},
+    'body': {'type': 'string'}
+}

@@ -249,3 +249,55 @@ async def test_domain_patch(test_cli):
     assert not dinfo['admin_only']
     assert not dinfo['official']
     assert dinfo['permissions'] == 3
+
+
+async def test_user_patch(test_cli):
+    atoken = await login_admin(test_cli)
+    utoken = await login_normal(test_cli)
+
+    user_id = _extract_uid(utoken)
+
+    # request 1: change default user to admin, etc
+    resp = await test_cli.patch(f'/api/admin/user/{user_id}', json={
+        'admin': True,
+        'upload_limit': 1000,
+        'shorten_limit': 1000,
+    }, headers={
+        'Authorization': atoken,
+    })
+
+    assert resp.status == 200
+    rjson = await resp.json()
+    assert isinstance(rjson, list)
+    assert 'admin' in rjson
+    assert 'upload_limit' in rjson
+    assert 'shorten_limit' in rjson
+
+    # request 2: check by getting user info
+    resp = await test_cli.get(f'/api/admin/users/{user_id}', headers={
+        'Authorization': atoken,
+    })
+
+    assert resp.status == 200
+    rjson = await resp.json()
+    assert isinstance(rjson, dict)
+    assert rjson['admin']
+    assert isinstance(rjson['limits'], dict)
+    assert rjson['limits']['limit'] == 1000
+    assert rjson['limits']['shortenlimit'] == 1000
+
+    # request 3: changing it back
+    resp = await test_cli.patch(f'/api/admin/user/{user_id}', json={
+        'admin': False,
+        'upload_limit': 104857600,
+        'shorten_limit': 100,
+    }, headers={
+        'Authorization': atoken,
+    })
+
+    assert resp.status == 200
+    rjson = await resp.json()
+    assert isinstance(rjson, list)
+    assert 'admin' in rjson
+    assert 'upload_limit' in rjson
+    assert 'shorten_limit' in rjson

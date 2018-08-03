@@ -10,7 +10,7 @@ from sanic import Blueprint, response
 from ..decorators import admin_route
 from ..errors import NotFound, BadInput
 from ..schema import validate, ADMIN_MODIFY_FILE, ADMIN_MODIFY_USER, \
-    ADMIN_MODIFY_DOMAIN
+    ADMIN_MODIFY_DOMAIN, ADMIN_SEND_DOMAIN_EMAIL
 from ..common import delete_file, delete_shorten
 from ..common.email import fmt_email, send_user_email, activate_email_send, \
     uid_from_email, clean_etoken
@@ -300,51 +300,43 @@ async def search_user(request, user_id: int, page: int):
 # === END DEPRECATED ===
 
 
+async def _pu_check(db, db_name,
+                    user_id, payload, updated_fields, field, col=None):
+    if not col:
+        col = field
+
+    val = payload.get(field)
+    if val is not None:
+        await db.execute(f"""
+        UPDATE {db_name}
+        SET {col} = $1
+        WHERE user_id = $2
+        """, val, user_id)
+
+        updated_fields.append(field)
+
+
 @bp.patch('/api/admin/user/<user_id:int>')
 @admin_route
 async def modify_user(request, admin_id, user_id):
     """Modify a user's information."""
     payload = validate(request.json, ADMIN_MODIFY_USER)
 
-    new_admin = payload.get('admin')
-
-    # limit is in bytes
-    new_limit_upload = payload.get('upload_limit')
-
-    # integer
-    new_limit_shorten = payload.get('shorten_limit')
-
     updated = []
 
-    if new_admin is not None:
-        # set admin
-        await request.app.db.execute("""
-        UPDATE users
-        SET admin = $2
-        WHERE user_id = $1
-        """, user_id, new_admin)
+    db = request.app.db
 
-        updated.append('admin')
+    # _pu_check serves as a template for the following code structure:
+    #   X = payload.get(field)
+    #   if X is not None:
+    #     update db with field
+    #     updated.append(field)
 
-    if new_limit_upload is not None:
-        # set new upload limit
-        await request.app.db.execute("""
-        UPDATE limits
-        SET blimit = $1
-        WHERE user_id = $2
-        """, new_limit_upload, user_id)
-
-        updated.append('upload_limit')
-
-    if new_limit_shorten is not None:
-        # set new shorten limit
-        await request.app.db.execute("""
-        UPDATE limits
-        SET shlimit = $1
-        WHERE user_id = $2
-        """, new_limit_shorten, user_id)
-
-        updated.append('shorten_limit')
+    await _pu_check(db, 'users', user_id, payload, updated, 'admin')
+    await _pu_check(db, 'limits', user_id, payload, updated,
+                    'upload_limit', 'blimit')
+    await _pu_check(db, 'limits', user_id, payload, updated,
+                    'shorten_limit', 'shlimit')
 
     return response.json(updated)
 
@@ -586,6 +578,28 @@ async def patch_domain(request, admin_id: int, domain_id: int):
     return response.json({
         'updated': updated_fields,
     })
+
+
+@bp.post('/api/admin/email_domain/<domain_id:int>')
+@admin_route
+async def email_domain(request, admin_id: int, domain_id: int):
+    payload = validate(request.json, ADMIN_SEND_DOMAIN_EMAIL)
+
+    owner_id = await request.app.db.fetchval("""
+    SELECT user_id
+    FROM domain_owners
+    WHERE domain_id = $1
+    """, domain_id)
+
+    resp, user_email = await send_user_email(
+        request.app, owner_id, payload['subject'], payload['body'])
+
+    return response.json({
+        'success': resp.status == 200,
+        'owner_id': owner_id,
+        'owner_email': user_email,
+    })
+
 
 
 @bp.put('/api/admin/domains/<domain_id:int>/owner')
