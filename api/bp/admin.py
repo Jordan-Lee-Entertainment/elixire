@@ -302,9 +302,37 @@ async def search_user(request, user_id: int, page: int):
 
 async def _pu_check(db, db_name,
                     user_id, payload, updated_fields, field, col=None):
+    """Checks if the given field exists on payload.
+
+    If it does exist, it will update the given database and column
+    with the given value on the payload.
+
+    Parameters
+    ----------
+    db
+        Database connection.
+    db_name: str
+        Database to update on.
+    user_id: int
+        User id we are updating the row on.
+    payload: dict
+        Request's payload.
+    updated_fields: list
+        The list of currently updated fields, to give
+        as a response on the request handler.
+    field: str
+        The field we want to search on the payload
+        and add to updated_fields
+    col: str, optional
+        The column to update, in the case col != field.
+    """
+
+    # Yes, this function takes a lot of arguments,
+    # read the comment block on modify_user to know why
     if not col:
         col = field
 
+    # check if field exists
     val = payload.get(field)
     if val is not None:
         await db.execute(f"""
