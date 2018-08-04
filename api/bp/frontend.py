@@ -25,7 +25,7 @@ async def main_admin_index(request):
 
 
 async def main_admin(request, **paths):
-    path = ''.join([p for p in paths.values()])
+    path = '/'.join([p for p in paths.values()])
     return await maybe_send(request.app, f'./admin-panel/build/{path}')
 
 
