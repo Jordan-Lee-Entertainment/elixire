@@ -24,8 +24,9 @@ async def main_admin_index(request):
     return await maybe_send(request.app, './admin-panel/build/index.html')
 
 
-async def main_admin(request, **_paths):
-    return await maybe_send(request.app, f'./admin-panel/build/{request.path}')
+async def main_admin(request, **paths):
+    path = ''.join([p for p in paths.values()])
+    return await maybe_send(request.app, f'./admin-panel/build/{path}')
 
 
 @bp.listener('before_server_start')
