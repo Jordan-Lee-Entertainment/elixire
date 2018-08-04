@@ -126,9 +126,9 @@ async def activation_email(request, admin_id, user_id):
 async def activate_user_from_email(request):
     """Called when a user clicks the activation URL in their email."""
     try:
-        email_token = str(request.raw_args['token'])
+        email_token = str(request.raw_args['key'])
     except (KeyError, TypeError):
-        raise BadInput('No token provided')
+        raise BadInput('no key provided')
 
     app = request.app
     user_id = await uid_from_email(app, email_token, 'email_activation_tokens')
