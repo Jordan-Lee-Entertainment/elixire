@@ -241,16 +241,7 @@ def main():
         except Exception:
             pass
 
-    if config.ENABLE_FRONTEND:
-        app.static('/humans.txt', './static/humans.txt')
-
-        app.static('/admin', './admin-panel/build')
-        app.static('/admin', './admin-panel/build/index.html')
-
-        app.static('/', './frontend/output')
-        app.static('/', './frontend/output/index.html')
-    else:
-        log.info('Frontend link is disabled.')
+    app.static('/humans.txt', './static/humans.txt')
 
     # loading the blueprint here should
     # help with middleware order.
