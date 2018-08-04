@@ -24,13 +24,13 @@ import api.bp.personal_stats
 import api.bp.d1check
 import api.bp.misc
 import api.bp.index
+import api.bp.ratelimit
+import api.bp.frontend
 
-from api.errors import APIError, Ratelimited, Banned, FailedAuth
-from api.common import check_bans, get_ip_addr
-from api.common.auth import token_check, get_token
+from api.errors import APIError, Banned
+from api.common import get_ip_addr
 from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.common.utils import LockStorage
-from api.ratelimit import RatelimitManager
 from api.storage import Storage
 
 import config
@@ -43,6 +43,7 @@ CORS(app, resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"],
      automatic_options=True)
 
 # load blueprints
+app.blueprint(api.bp.ratelimit.bp)
 app.blueprint(api.bp.auth.bp)
 app.blueprint(api.bp.index.bp)
 app.blueprint(api.bp.profile.bp)
@@ -56,81 +57,17 @@ app.blueprint(api.bp.datadump.bp)
 app.blueprint(api.bp.personal_stats.bp)
 app.blueprint(api.bp.d1check.bp)
 app.blueprint(api.bp.misc.bp)
+app.blueprint(api.bp.frontend.bp)
 
 level = getattr(config, 'LOGGING_LEVEL', 'INFO')
 logging.basicConfig(level=level)
 
 log = logging.getLogger(__name__)
 
-# Force IP ratelimiting on those routes, as they
-# don't provide an authentication context hint
-# from the start.
-FORCE_IP_ROUTES = (
-    '/api/login',
-    '/api/apikey',
-    '/api/revoke',
-    '/api/domains',
-    '/api/hello',
-    '/api/hewwo',
-    '/api/science',
-    '/api/boron',
-    '/api/features',
-    '/api/register',
-    '/api/delete_confirm',
-
-    '/api/reset_password',
-    '/api/reset_password_confirm',
-
-    '/api/dump_get',
-    '/api/activate_email',
-    '/api/check',
-
-    '/admin',
-)
-
-# Enforce IP ratelimit on /s/.
-NOT_API_RATELIMIT = (
-    '/s/',
-)
-
-# Enforce special ratelimit settings
-# on /i/ and /t/
-SPECIAL_RATELIMITS = {
-    '/i/': config.SPECIAL_RATELIMITS.get('/i/', config.IP_RATELIMIT),
-    '/t/': config.SPECIAL_RATELIMITS.get('/t/', config.IP_RATELIMIT),
-}
-
 
 async def options_handler(request, *args, **kwargs):
     """Dummy OPTIONS handler for CORS stuff."""
     return response.text('ok')
-
-
-def check_rtl(request, bucket):
-    """Check the ratelimit bucket."""
-    retry_after = bucket.update_rate_limit()
-    if bucket.retries > request.app.econfig.RL_THRESHOLD:
-        raise Banned('Reached retry limit on ratelimiting.')
-
-    if retry_after:
-        raise Ratelimited('You are being ratelimited.', retry_after)
-
-
-async def context_fetch(request, storage, user_name, user_id, token):
-    """Fetch the userid and the username for current user, if any."""
-    if not user_name and token:
-        user_id = await token_check(request)
-
-    if not user_id:
-        user_id = await storage.get_uid(user_name)
-
-    if not user_id:
-        raise FailedAuth('User not found')
-
-    if not user_name and user_id:
-        user_name = await storage.get_username(user_id)
-
-    return user_name, user_id
 
 
 @app.exception(Banned)
@@ -228,117 +165,6 @@ def handle_exception(request, exception):
     }, status=status_code)
 
 
-@app.middleware('request')
-async def global_rl(request):
-    """Global ratelimit handler."""
-    if request.method == 'OPTIONS':
-        return
-
-    # ratelimiters
-    rtl = request.app.rtl
-    ip_rtl = request.app.ip_rtl
-    sp_rtl = request.app.sp_rtl
-
-    force_ip = any(x in request.url for x in FORCE_IP_ROUTES)
-    is_image = any(x in request.url for x in NOT_API_RATELIMIT)
-    ip_addr = get_ip_addr(request)
-
-    # special ratelimit handling (always ip-based)
-    for match, rtl in sp_rtl.items():
-        if match not in request.url:
-            continue
-
-        print(f'SPECIAL RATELIMIT MATCH {match}')
-
-        bucket = rtl.get_bucket(ip_addr)
-        if not bucket:
-            continue
-
-        await check_bans(request, None)
-        return check_rtl(request, bucket)
-
-    # global ip-based ratelimiting
-    if force_ip or is_image:
-        # use the ip as a bucket to the request
-        bucket = ip_rtl.get_bucket(ip_addr)
-
-        if not bucket:
-            return
-
-        await check_bans(request, None)
-        return check_rtl(request, bucket)
-
-    if '/api' not in request.url:
-        return
-
-    # from here onwards, only api ratelimiting (user-based, context, etc)
-    storage = request.app.storage
-
-    # process ratelimiting
-    user_name, user_id, token = None, None, None
-    try:
-        # should raise KeyError
-        token = get_token(request)
-    except (TypeError, KeyError):
-        # no token provided.
-
-        # check if payload makes sense
-        if not isinstance(request.json, dict):
-            raise FailedAuth('Request is not identifable. '
-                             'No Authorization header?')
-
-        user_name = request.json.get('user')
-
-    user_name, user_id = await context_fetch(request, storage, user_name,
-                                             user_id, token)
-    context = (user_name, user_id)
-
-    # ensure both user_name and user_id exist
-    if all(v is None for v in context):
-        raise FailedAuth('Can not identify user')
-
-    # embed request context inside context
-    request['ctx'] = context
-    bucket = rtl.get_bucket(user_name)
-
-    # ignore when rtl isnt properly initialized
-    # with a global cooldown
-    if not bucket:
-        return
-
-    await check_bans(request, user_id)
-    return check_rtl(request, bucket)
-
-
-@app.middleware('response')
-async def rl_header_set(request, response):
-    """Set ratelimit headers when possible!"""
-    if '/api' not in request.url:
-        return
-
-    if request.method == 'OPTIONS':
-        return
-
-    # TODO: use the ip address instead of context
-    # or maybe... we could embed the ip address inside some Context-IP
-    # or something.
-
-    try:
-        username, _ = request['ctx']
-    except KeyError:
-        # No context provided.
-        return
-
-    bucket = None
-    if username:
-        bucket = request.app.rtl.get_bucket(username)
-
-    if bucket:
-        response.headers['X-RateLimit-Limit'] = bucket.requests
-        response.headers['X-RateLimit-Remaining'] = bucket._tokens
-        response.headers['X-RateLimit-Reset'] = bucket._window + bucket.second
-
-
 @app.listener('before_server_start')
 async def setup_db(rapp, loop):
     """Initialize db connection before app start"""
@@ -353,19 +179,6 @@ async def setup_db(rapp, loop):
         minsize=3, maxsize=11,
         loop=loop, encoding='utf-8'
     )
-
-    # custom classes for elixire
-    log.info('loading user ratelimit manager')
-    rapp.rtl = RatelimitManager(app)
-
-    log.info('loading ip ratelimit manager')
-    rapp.ip_rtl = RatelimitManager(app, app.econfig.IP_RATELIMIT)
-
-    # special ratelimit managers
-    rapp.sp_rtl = {}
-    for key, rtl in SPECIAL_RATELIMITS.items():
-        log.info(f'initializing special ratelimit for match: {key}')
-        rapp.sp_rtl[key] = RatelimitManager(app, rtl)
 
     rapp.storage = Storage(app)
     rapp.locks = LockStorage()

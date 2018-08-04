@@ -8,7 +8,7 @@ import logging
 import bcrypt
 
 from .common import SIGNERS, TokenType, check_bans, gen_filename
-from ..errors import BadInput, FailedAuth, NotFound
+from ..errors import FailedAuth, NotFound
 from ..schema import validate, LOGIN_SCHEMA
 
 log = logging.getLogger(__name__)
@@ -191,7 +191,14 @@ async def token_check(request, wanted_type=None) -> int:
     try:
         token = get_token(request)
     except (TypeError, KeyError):
-        raise BadInput('no token provided')
+        raise FailedAuth('no token provided')
+
+    # decrease calls to everything in half by checking context beforehand
+    try:
+        _uname, uid = request['ctx']
+        return uid
+    except KeyError:
+        pass
 
     token_type = token.count('.')
     if wanted_type and wanted_type != token_type:

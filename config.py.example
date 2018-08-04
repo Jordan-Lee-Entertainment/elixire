@@ -71,7 +71,7 @@ INFLUX_PASSWORD = '123'
 # default value is 72 hours = 3 days.
 TIMED_TOKEN_AGE = 259200
 
-# === RATELIMIT SETTINGS ===
+# === RATELIMIT BANNING SETTINGS ===
 
 # change this to your wanted ban period
 # valid: '1 day', '6 hours', '10 seconds', etc.
@@ -154,31 +154,29 @@ EXIF_TOOBIG_WEBHOOK = ""
 USER_REGISTER_WEBHOOK = ""
 
 # === RATELIMIT SETTINGS ===
-
-# By default, all requests fall under a
-# 5 requests every 3 seconds rule.
-RATELIMIT = {
-    'requests': 5,
-    'second': 3,
+#
+RATELIMITS = {
+    # global ratelimit for authenticated connections
+    '/': {
+        'requests': 7,
+        'second': 5
+    },
+    ('ip', '/'): {
+        'filter': 'ip',
+        'requests': 15,
+        'second': 5
+    },
+    '/i/': {
+        'filter': 'ip',
+        'requests': 50,
+        'second': 6
+    },
+    '/t/': {
+        'filter': 'ip',
+        'requests': 80,
+        'second': 10,
+    }
 }
-
-# A bigger ratelimit is set for IPs alone
-# when they're requesting an image, etc.
-IP_RATELIMIT = {
-    'requests': 10,
-    'second': 5,
-}
-
-# Ratelimit settings for special routes.
-#   The only supported special routes are /i/ and /t/.
-#   Also, special ratelimits will be forced to use IP ratelimiting.
-SPECIAL_RATELIMITS = {}
-
-# An example of a valid SPECIAL_RATELIMITS:
-#   SPECIAL_RATELIMITS = {
-#       '/i/': {'requests': 100, 'second': 5},
-#       '/t/': {'requests': 200, 'second': 3},
-#   }
 
 # === THUMBNAIL SETTINGS ===
 

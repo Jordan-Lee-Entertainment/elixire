@@ -8,11 +8,11 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class Ratelimit:
+class RatelimitBucket:
     """Main ratelimit bucket class."""
-    def __init__(self, requests, second):
-        self.requests = int(requests)
-        self.second = second
+    def __init__(self, **kwargs):
+        self.requests = int(kwargs.get('requests'))
+        self.second = kwargs.get('second')
 
         self._window = 0.0
         self._tokens = self.requests
@@ -70,31 +70,30 @@ class Ratelimit:
 
         Used to manage multiple ratelimits to users.
         """
-        return Ratelimit(self.requests, self.second)
+        return RatelimitBucket(requests=self.requests,
+                               second=self.second)
 
     def __repr__(self):
-        return (f'<Ratelimit requests{self.requests} second={self.second} '
+        return (f'<Ratelimit requests={self.requests} second={self.second} '
                 f'window: {self._window} tokens={self._tokens}>')
 
 
 class RatelimitManager:
     """Manages buckets."""
-    def __init__(self, app, ratelimit=None):
+    def __init__(self, scope, ratelimit):
+        self.scope = scope
         self._cache = {}
-        self._cooldown = None
+        self._cooldown = RatelimitBucket(**ratelimit)
 
-        if ratelimit is None and hasattr(app.econfig, 'RATELIMIT'):
-            ratelimit = app.econfig.RATELIMIT
-            log.info(f'Loading config ratelimits: {ratelimit!r}')
-        else:
-            log.info(f'Using given ratelimits: {ratelimit!r}')
-
-        self._cooldown = Ratelimit(**ratelimit)
+    def __repr__(self):
+        return (f'<RatelimitManager scope={self.scope} '
+                f'cooldown={self._cooldown}>')
 
     def _verify_cache(self):
         current = time.time()
         dead_keys = [k for k, v in self._cache.items()
                      if current > v._last + v.second]
+
         for k in dead_keys:
             del self._cache[k]
 
