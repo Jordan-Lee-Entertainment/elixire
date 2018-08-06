@@ -10,6 +10,14 @@ from ..common.auth import token_check, get_token
 bp = Blueprint('ratelimit')
 
 
+FORCE_IP = (
+    '/api/login',
+    '/api/apikey',
+    '/api/revoke',
+    '/api/hello',
+)
+
+
 def check_rtl(request, bucket):
     """Check the ratelimit bucket."""
     retry_after = bucket.update_rate_limit()
@@ -49,6 +57,8 @@ async def ratelimit_handler(request):
         token = get_token(request)
     except KeyError:
         token = False
+
+    token = False if any(r in request.path for r in FORCE_IP) else token
 
     preferred_scope = 'token' if token else 'ip'
 
