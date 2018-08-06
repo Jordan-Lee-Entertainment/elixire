@@ -61,6 +61,7 @@ async def ratelimit_handler(request):
     token = False if any(r in request.path for r in FORCE_IP) else token
 
     preferred_scope = 'token' if token else 'ip'
+    request['_ratelimit_scope'] = preferred_scope
 
     # search through all defined ratelimits in configuration file,
     #  find the *preferred ones*.
@@ -125,6 +126,11 @@ async def rl_header_set(request, resp):
     except KeyError:
         # no ratelimit bucket was made for this request
         return
+
+    try:
+        resp.headers['X-Ratelimit-Scope'] = request['_ratelimit_scope']
+    except KeyError:
+        pass
 
     if bucket:
         resp.headers['X-RateLimit-Limit'] = bucket.requests
