@@ -161,7 +161,7 @@ async def activate_email_send(app, user_id: int):
     VALUES ($1, $2)
     """, token, user_id)
 
-    token_url = fmt_email(app, '{main_url}/api/activate_email?key={token}',
+    token_url = fmt_email(app, '{main_url}/api/activate_email?key={key}',
                           key=token)
 
     body = fmt_email(app, """
