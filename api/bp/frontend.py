@@ -1,4 +1,5 @@
 from sanic import Blueprint, response
+from sanic.router import RouteExists
 
 bp = Blueprint('frontend')
 
@@ -35,6 +36,12 @@ async def add_frontend_routes(app, _loop):
         components = [f'/<path{n}>' for n in range(i)]
         path = ''.join(components)
 
-        app.add_route(main_frontend, path, methods=['GET'])
-        print(f'/admin{path}')
-        app.add_route(main_admin, f'/admin{path}', methods=['GET'])
+        try:
+            app.add_route(main_frontend, path, methods=['GET'])
+        except RouteExists:
+            pass
+
+        try:
+            app.add_route(main_admin, f'/admin{path}', methods=['GET'])
+        except RouteExists:
+            pass
