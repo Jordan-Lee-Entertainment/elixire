@@ -761,14 +761,20 @@ async def _get_domain_info(db, domain_id) -> dict:
     FROM users
     WHERE user_id = $1
     """, owner_id)
-
-    downer = dict(owner_data)
+    
+    if owner_data:
+        downer = {
+            **dict(owner_data),
+            **{
+                'user_id': str(owner_id)
+            }
+        }
+    else:
+        downer = None
 
     return {
         'info': {**dinfo, **{
-            'owner': {**downer, **{
-                'user_id': str(owner_id)
-            }},
+            'owner': downer
         }},
         'stats': stats,
         'public_stats': await _get_domain_public(db, domain_id),
