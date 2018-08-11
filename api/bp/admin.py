@@ -635,8 +635,8 @@ async def email_domain(request, admin_id: int, domain_id: int):
 async def add_owner(request, admin_id: int, domain_id: int):
     """Add an owner to a single domain."""
     try:
-        owner_id = request.json['owner_id']
-    except ValueError:
+        owner_id = int(request.json['owner_id'])
+    except (ValueError, KeyError):
         raise BadInput('Invalid number for owner ID')
 
     exec_out = await request.app.db.execute("""
