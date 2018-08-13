@@ -15,7 +15,7 @@ from ..common import delete_file, delete_shorten
 from ..common.email import fmt_email, send_user_email, activate_email_send, \
     uid_from_email, clean_etoken
 from ..storage import solve_domain
-from .profile import get_limits
+from .profile import get_limits, delete_user
 
 
 log = logging.getLogger(__name__)
@@ -369,6 +369,20 @@ async def modify_user(request, admin_id, user_id):
     return response.json(updated)
 
 
+@bp.delete('/api/admin/user/<user_id:int>')
+@admin_route
+async def del_user(request, admin_id, user_id):
+    """Delete a single user.
+
+    File deletion happens in the background.
+    """
+    await delete_user(request.app, user_id, True)
+
+    return response.json({
+        'success': True
+    })
+
+
 async def generic_namefetch(table, request, shortname):
     """Generic function to fetch a file or shorten
     information based on shortname."""
@@ -627,7 +641,6 @@ async def email_domain(request, admin_id: int, domain_id: int):
         'owner_id': owner_id,
         'owner_email': user_email,
     })
-
 
 
 @bp.put('/api/admin/domains/<domain_id:int>/owner')

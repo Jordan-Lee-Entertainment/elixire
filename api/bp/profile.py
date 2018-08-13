@@ -350,7 +350,20 @@ async def delete_file_task(app, user_id: int, delete=False):
 
 
 async def delete_user(app, user_id: int, delete=False):
-    """Actually delete the user and their files."""
+    """Delete all user files.
+
+    If the delete flag is set, it will delete the user record,
+    else it'll mark the user as deactivated.
+
+    Parameters
+    ----------
+    app: sanic.App
+        Main app holding the database connection
+    user_id: int
+        User ID to delete.
+    delete: bool, optional
+        Delete the user records?
+    """
     await app.db.execute("""
     UPDATE users
     SET active = false
