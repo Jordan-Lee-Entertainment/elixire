@@ -55,6 +55,12 @@ redis = 'redis://localhost'
 # Set as None to keep d1-specific routes disabled.
 SECRET_KEY = None
 
+# How many seconds to keep timed tokens valid?
+# default value is 72 hours = 3 days.
+TIMED_TOKEN_AGE = 259200
+
+# === METRICS ===
+
 # Enable metrics?
 # uses InfluxDB and aioinflux to send data.
 ENABLE_METRICS = False
@@ -67,9 +73,13 @@ INFLUX_SSL = False
 INFLUX_USER = 'admin'
 INFLUX_PASSWORD = '123'
 
-# How many seconds to keep timed tokens valid?
-# default value is 72 hours = 3 days.
-TIMED_TOKEN_AGE = 259200
+# ADVANCED:
+# This defines the limits for the main metrics worker.
+# Instead of sending a datapoint to InfluxDB every time
+# there is one, we schedule a maximum of METRICS_LIMIT[0]
+# datapoints to be sent every METRICS_LIMIT[1] seconds,
+# in order.
+METRICS_LIMIT = (100, 3)
 
 # === RATELIMIT BANNING SETTINGS ===
 

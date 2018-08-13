@@ -32,6 +32,7 @@ from api.common import get_ip_addr
 from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.common.utils import LockStorage
 from api.storage import Storage
+from api.bp.metrics.manager import MetricsManager
 
 import config
 
@@ -182,6 +183,7 @@ async def setup_db(rapp, loop):
 
     rapp.storage = Storage(app)
     rapp.locks = LockStorage()
+    rapp.metrics = MetricsManager(rapp, loop)
 
     # Tasks for datadump API
     rapp.dump_worker = None

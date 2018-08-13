@@ -10,7 +10,6 @@ from ..common import get_domain_info, transform_wildcard, \
     FileNameType
 from ..snowflake import get_snowflake
 from ..permissions import Permissions, domain_permissions
-from .metrics import submit
 
 bp = Blueprint('shorten')
 
@@ -33,6 +32,7 @@ async def shorten_serve_handler(request, filename):
 async def shorten_handler(request):
     """Handles addition of shortened links."""
     user_id = await token_check(request)
+    app = request.app
 
     try:
         url_toredir = str(request.json['url'])
@@ -86,7 +86,7 @@ async def shorten_handler(request):
                                 f' {shorten_limit} shortens')
 
     redir_rname, tries = await gen_shortname(request, user_id)
-    await submit(request.app, 'shortname_gen_tries', tries, True)
+    await app.metrics.submit('shortname_gen_tries', tries)
 
     redir_id = get_snowflake()
     domain_id, subdomain_name, domain = await get_domain_info(request,

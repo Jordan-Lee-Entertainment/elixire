@@ -12,7 +12,7 @@ from api.permissions import Permissions, domain_permissions
 from api.snowflake import get_snowflake
 from .context import UploadContext
 from .file import UploadFile
-from ..metrics import is_consenting, submit
+from ..metrics import is_consenting
 
 bp = Blueprint('upload')
 log = logging.getLogger(__name__)
@@ -61,12 +61,13 @@ async def check_repeat(app, fspath: str, extension: str, ctx: UploadContext) -> 
 async def upload_metrics(app, ctx):
     """Upload total time taken for procesisng to InfluxDB."""
     end = time.monotonic()
+    metrics = app.metrics
     delta = round((end - ctx.start_timestamp) * 1000, 5)
 
-    await submit(app, 'upload_latency', delta, True)
+    await metrics.submit('upload_latency', delta)
 
     if await is_consenting(app, ctx.user_id):
-        await submit(app, 'upload_latency_pub', delta, True)
+        await metrics.submit('upload_latency_pub', delta)
 
 
 def _fetch_domain(request):
@@ -113,7 +114,7 @@ async def upload_handler(request, user_id):
     # generate a filename so we can identify later when removing it
     # because of virus scanning.
     shortname, tries = await gen_shortname(request, user_id)
-    await submit(app, 'shortname_gen_tries', tries, True)
+    await app.metrics.submit('shortname_gen_tries', tries)
 
     # construct an upload context, which holds the file and other data about
     # the current upload
