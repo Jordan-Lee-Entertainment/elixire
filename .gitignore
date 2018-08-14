@@ -132,3 +132,5 @@ config.py
 .idea
 
 data/
+
+elixire.log

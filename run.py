@@ -31,7 +31,6 @@ from api.common import get_ip_addr
 from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.common.utils import LockStorage
 from api.storage import Storage
-from api.bp.metrics.manager import MetricsManager
 
 import config
 
@@ -58,10 +57,16 @@ app.blueprint(api.bp.personal_stats.bp)
 app.blueprint(api.bp.d1check.bp)
 app.blueprint(api.bp.misc.bp)
 app.blueprint(api.bp.frontend.bp)
+app.blueprint(api.bp.metrics.bp)
 
 level = getattr(config, 'LOGGING_LEVEL', 'INFO')
 logging.basicConfig(level=level)
 logging.getLogger('aioinflux').setLevel(logging.INFO)
+
+if level == 'DEBUG':
+    fh = logging.FileHandler('elixire.log')
+    fh.setLevel(logging.DEBUG)
+    logging.getLogger().addHandler(fh)
 
 log = logging.getLogger(__name__)
 
@@ -183,7 +188,6 @@ async def setup_db(rapp, loop):
 
     rapp.storage = Storage(app)
     rapp.locks = LockStorage()
-    rapp.metrics = MetricsManager(rapp, loop)
 
     # Tasks for datadump API
     rapp.dump_worker = None
@@ -214,6 +218,10 @@ async def close_db(rapp, _loop):
     rapp.redis.close()
     await rapp.redis.wait_closed()
 
+    if rapp.dump_worker:
+        rapp.dump_worker.cancel()
+    rapp.janitor_task.cancel()
+
 
 def main():
     """Main application entry point."""
@@ -229,7 +237,6 @@ def main():
 
     # loading the blueprint here should
     # help with middleware order.
-    app.blueprint(api.bp.metrics.bp)
     app.run(host=config.HOST, port=config.PORT)
 
 

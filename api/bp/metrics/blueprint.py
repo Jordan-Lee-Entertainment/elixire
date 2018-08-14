@@ -3,6 +3,7 @@ import time
 
 from sanic import Blueprint
 from .tasks import second_tasks, hourly_tasks, upload_uniq_task
+from .manager import MetricsManager
 
 bp = Blueprint('metrics')
 log = logging.getLogger(__name__)
@@ -25,8 +26,10 @@ async def is_consenting(app, user_id: int) -> bool:
     """, user_id)
 
 
-@bp.listener('after_server_start')
+@bp.listener('before_server_start')
 async def create_db(app, loop):
+    app.metrics = MetricsManager(app, loop)
+
     if not app.econfig.ENABLE_METRICS:
         return
 
@@ -35,10 +38,27 @@ async def create_db(app, loop):
     log.info(f'Creating database {dbname}')
     await app.metrics.influx.create_database(db=dbname)
 
+
+@bp.listener('after_server_start')
+async def start_tasks(app, loop):
     # spawn tasks
     app._sec_tasks = loop.create_task(second_tasks(app))
     app._hour_tasks = loop.create_task(hourly_tasks(app))
     app._uniq_task = loop.create_task(upload_uniq_task(app))
+
+
+@bp.listener('before_server_stop')
+async def close_metrics(app, loop):
+    app._sec_tasks.cancel()
+    app._hour_tasks.cancel()
+    app._uniq_task.cancel()
+
+
+@bp.listener('after_server_stop')
+async def close_worker(app, loop):
+    metrics = app.metrics
+    metrics._worker.cancel()
+    await metrics.finish_all()
 
 
 @bp.middleware('request')

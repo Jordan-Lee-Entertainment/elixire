@@ -16,16 +16,15 @@ aiohttp==3.3.2
 Pillow==5.2.0
 
 # testing stuff
-pytest==3.6.3
+pytest==3.7.1
 pytest-cov==2.5.1
 pyflakes==2.0.0
 
-# pytest-sanic==0.1.12
-git+https://github.com/yunstanford/pytest-sanic@930f2c5e779b84a587aba0193f7e8e424a9e7366
+pytest-sanic==0.1.13
 
-aioinflux==0.3.2
+aioinflux==0.3.3
 
-cryptography==2.2.2
+cryptography==2.3
 
 # You'll need libmagic for this.
 # On linux, use your package manager to install libmagic.

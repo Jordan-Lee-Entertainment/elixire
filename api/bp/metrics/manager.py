@@ -16,6 +16,7 @@ class MetricsManager:
     """
     def __init__(self, app, loop):
         self.app = app
+        self.loop = loop
 
         #: all datapoints to be sent
         self.points = {}
@@ -51,6 +52,7 @@ class MetricsManager:
                 ssl=cfg.INFLUX_SSL,
                 username=cfg.INFLUX_USER,
                 password=cfg.INFLUX_PASSWORD,
+                loop=self.loop,
             )
 
             return
@@ -58,13 +60,28 @@ class MetricsManager:
         # default mode is unauthenticated influx connection
         # at localhost.
         log.info('Unauthenticated InfluxDB connection')
-        self.influx = InfluxDBClient(db=cfg.METRICS_DATABASE)
+        self.influx = InfluxDBClient(db=cfg.METRICS_DATABASE, loop=self.loop)
 
     async def _submit(self, datapoint: dict):
         try:
             await self.influx.write(datapoint)
         except Exception:
             log.exception('failed to submit datapoint')
+
+    def _fetch_points(self) -> list:
+        timestamps = sorted(self.points.keys())[:self._timestamps]
+        log.debug(f'{len(timestamps)} datapoints found...')
+
+        # fetch the respective points, in the order they were put in.
+        points = []
+        for tstamp in timestamps:
+            try:
+                point = self.points.pop(tstamp)
+                points.append(point)
+            except ValueError:
+                pass
+
+        return points
 
     async def _work(self):
         # if there aren't any datapoints to
@@ -73,33 +90,24 @@ class MetricsManager:
             log.debug('no points')
             return
 
-        # fetch lowest timestamps first
-        timestamps = sorted(self.points.keys())[:self._timestamps]
-        log.debug(f'{len(timestamps)} keys found, sending')
-        points = []
-
-        # fetch respective points to send,
-        # deleting them from the queue
-        for tstamp in timestamps:
-            try:
-                point = self.points.pop(tstamp)
-                points.append(point)
-            except ValueError:
-                pass
+        points = self._fetch_points()
 
         tasks = []
         for point in points:
-            tasks.append(self._submit(point))
+            task = self.loop.create_task(self._submit(point))
+            tasks.append(task)
 
         # send the points to the server
-        await asyncio.wait(tasks)
-        log.debug('Waited succesfully!')
+        done, pending = await asyncio.wait(tasks)
+        log.debug(f'{len(done)} done {len(pending)} pending')
 
     async def worker(self):
         try:
             while True:
                 await self._work()
                 await asyncio.sleep(self._period)
+        except asyncio.CancelledError:
+            pass
         except Exception:
             log.exception('metrics worker failed')
 
@@ -111,11 +119,23 @@ class MetricsManager:
         if not self.app.econfig.ENABLE_METRICS:
             return
 
-        timestamp = time.monotonic()
+        timestamp = str(time.monotonic())
+
         self.points[timestamp] = {
-            'time': datetime.datetime.utcnow(),
+            'time': datetime.datetime.utcnow().isoformat(),
             'measurement': title,
             'fields': {
                 'value': value,
             }
         }
+
+    async def finish_all(self):
+        """Finish all remaining datapoints"""
+        if not self.points:
+            log.warning('no points to finish')
+            return
+
+        points = self._fetch_points()
+        log.warning(f'{len(points)} will be missing')
+
+        # await asyncio.sleep(self._period)

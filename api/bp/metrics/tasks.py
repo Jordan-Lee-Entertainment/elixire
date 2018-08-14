@@ -1,5 +1,6 @@
 import logging
 import asyncio
+from asyncio import CancelledError
 
 log = logging.getLogger(__name__)
 
@@ -28,8 +29,10 @@ async def second_tasks(app):
             app.page_hit_counter = 0
 
             await asyncio.sleep(1)
+    except CancelledError:
+        log.info('second task cancel')
     except Exception:
-        log.exception('ratetask err')
+        log.exception('second task err')
 
 
 async def file_upload_counts(app):
@@ -115,6 +118,8 @@ async def hourly_tasks(app):
             await file_size_counts(app)
             await user_counts(app)
             await asyncio.sleep(3600)
+    except CancelledError:
+        log.info('hourly task cancel')
     except Exception:
         log.exception('hourly task err')
 
@@ -143,5 +148,7 @@ async def upload_uniq_task(app):
             await metrics.submit('uniq_uploaders_day_pub', countpub)
 
             await asyncio.sleep(86400)
+    except CancelledError:
+        log.info('uniq task cancel')
     except Exception:
         log.exception('upload uniq task err')
