@@ -3,6 +3,8 @@ import logging
 import asyncio
 import time
 
+from aioinflux import InfluxDBClient
+
 log = logging.getLogger(__name__)
 
 
@@ -18,15 +20,49 @@ class MetricsManager:
         #: all datapoints to be sent
         self.points = {}
 
+        #: InfluxDB connection
+        self.influx = None
+
+        self._start_influx()
+
         metrics_limit = getattr(app.econfig, 'METRICS_LIMIT', (100, 3))
         self._timestamps, self._period = metrics_limit
 
         log.info('starting metrics worker')
         self._worker = loop.create_task(self.worker())
 
+    def _start_influx(self):
+        cfg = self.app.econfig
+
+        if not cfg.ENABLE_METRICS:
+            log.info('Metrics are disabled')
+            return
+
+        database = cfg.METRICS_DATABASE
+
+        if cfg.INFLUXDB_AUTH:
+            host, port = cfg.INFLUX_HOST
+
+            log.info('Authenticated InfluxDB connection')
+
+            # authenticate with given credentials and SSL (if any)
+            self.influx = InfluxDBClient(
+                db=database, host=host, port=port,
+                ssl=cfg.INFLUX_SSL,
+                username=cfg.INFLUX_USER,
+                password=cfg.INFLUX_PASSWORD,
+            )
+
+            return
+
+        # default mode is unauthenticated influx connection
+        # at localhost.
+        log.info('Unauthenticated InfluxDB connection')
+        self.influx = InfluxDBClient(db=cfg.METRICS_DATABASE)
+
     async def _submit(self, datapoint: dict):
         try:
-            await self.app.ifxdb.write(datapoint)
+            await self.influx.write(datapoint)
         except Exception:
             log.exception('failed to submit datapoint')
 

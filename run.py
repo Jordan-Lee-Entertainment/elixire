@@ -8,7 +8,6 @@ from sanic import Sanic
 from sanic.exceptions import NotFound, FileNotFound
 from sanic import response
 from sanic_cors import CORS
-from aioinflux import InfluxDBClient
 
 import api.bp.auth
 import api.bp.profile
@@ -62,6 +61,7 @@ app.blueprint(api.bp.frontend.bp)
 
 level = getattr(config, 'LOGGING_LEVEL', 'INFO')
 logging.basicConfig(level=level)
+logging.getLogger('aioinflux').setLevel(logging.INFO)
 
 log = logging.getLogger(__name__)
 
@@ -202,24 +202,6 @@ async def setup_db(rapp, loop):
     rapp.upload_counter_pub = 0
 
     rapp.page_hit_counter = 0
-
-    # InfluxDB comms
-    if rapp.econfig.ENABLE_METRICS:
-        dbname = rapp.econfig.METRICS_DATABASE
-
-        if rapp.econfig.INFLUXDB_AUTH:
-            host, port = rapp.econfig.INFLUX_HOST
-            rapp.ifxdb = InfluxDBClient(db=dbname,
-                                        host=host, port=port,
-                                        ssl=rapp.econfig.INFLUX_SSL,
-                                        username=rapp.econfig.INFLUX_USER,
-                                        password=rapp.econfig.INFLUX_PASSWORD)
-        else:
-            rapp.ifxdb = InfluxDBClient(db=rapp.econfig.METRICS_DATABASE)
-
-        rapp.ratetask = None
-    else:
-        log.info('Metrics are disabled!')
 
 
 @app.listener('after_server_stop')

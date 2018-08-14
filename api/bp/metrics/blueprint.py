@@ -33,7 +33,7 @@ async def create_db(app, loop):
     dbname = app.econfig.METRICS_DATABASE
 
     log.info(f'Creating database {dbname}')
-    await app.ifxdb.create_database(db=dbname)
+    await app.metrics.influx.create_database(db=dbname)
 
     # spawn tasks
     app._sec_tasks = loop.create_task(second_tasks(app))
