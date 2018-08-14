@@ -67,12 +67,13 @@ async def personal_domain_stats(request, user_id):
         domain_id = row['domain_id']
 
         domain_info = await db.fetchrow("""
-        SELECT domain, cf_enabled, official, admin_only, permissions
+        SELECT domain, official, admin_only, permissions
         FROM domains
         WHERE domain_id = $1
         """, domain_id)
 
         dinfo = dict(domain_info)
+        dinfo['cf_enabled'] = False
 
         public = await _get_domain_public(db, domain_id)
         res[domain_id] = {

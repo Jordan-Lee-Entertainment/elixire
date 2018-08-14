@@ -123,7 +123,6 @@ ADMIN_MODIFY_DOMAIN = {
     'owner_id': {'type': 'snowflake', 'required': False},
     'admin_only': {'type': 'boolean', 'required': False},
     'official': {'type': 'boolean', 'required': False},
-    'cf_enabled': {'type': 'boolean', 'required': False},
     'permissions': {'type': 'integer', 'required': False},
 }
 

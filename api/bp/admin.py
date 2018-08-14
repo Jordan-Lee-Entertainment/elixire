@@ -614,7 +614,7 @@ async def patch_domain(request, admin_id: int, domain_id: int):
     # list, it can be mutaded and it will propagate into this function.
     await _dp_check(db, domain_id, payload, updated_fields, 'admin_only')
     await _dp_check(db, domain_id, payload, updated_fields, 'official')
-    await _dp_check(db, domain_id, payload, updated_fields, 'cf_enabled')
+    # await _dp_check(db, domain_id, payload, updated_fields, 'cf_enabled')
     await _dp_check(db, domain_id, payload, updated_fields, 'permissions')
 
     return response.json({
@@ -742,12 +742,13 @@ async def _get_domain_public(db, domain_id) -> dict:
 
 async def _get_domain_info(db, domain_id) -> dict:
     raw_info = await db.fetchrow("""
-    SELECT domain, official, admin_only, cf_enabled, permissions
+    SELECT domain, official, admin_only, permissions
     FROM domains
     WHERE domain_id = $1
     """, domain_id)
 
     dinfo = dict(raw_info)
+    dinfo['cf_enabled'] = False
 
     stats = {}
 

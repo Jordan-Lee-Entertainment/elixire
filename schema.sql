@@ -24,13 +24,6 @@ CREATE TABLE IF NOT EXISTS domains (
     admin_only boolean DEFAULT false,
     
     official boolean DEFAULT false,
-
-    -- cloudflare credentials
-    cf_enabled boolean DEFAULT false,
-    cf_email text,
-    cf_zoneid text,
-    cf_apikey text,
-
     domain text,
     
     -- permissions' bits:
