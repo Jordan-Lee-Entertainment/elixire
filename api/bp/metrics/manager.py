@@ -1,4 +1,3 @@
-import datetime
 import logging
 import asyncio
 import time
@@ -131,6 +130,11 @@ class MetricsManager:
 
         log.warning('metrics worker stop')
 
+    def _convert_value(self, value):
+        if isinstance(value, int):
+            return f'{value}i'
+        return f'{value}'
+
     async def submit(self, title, value):
         """Submit a new datapoint to be sent
         to InfluxDB."""
@@ -139,13 +143,19 @@ class MetricsManager:
 
         timestamp = str(time.monotonic())
 
-        self.points[timestamp] = {
-            'time': datetime.datetime.utcnow().isoformat(),
-            'measurement': title,
-            'fields': {
-                'value': value,
-            }
-        }
+        # line format uses a nanosecond timestamp, so
+        # we generate one from time.time().
+        current = time.time()
+
+        # extract all precision we can, then convert to int
+        current = int(current * (10 ** 6))
+
+        # then raise it to how many missing orders
+        # of magnitude to get a nanosecond timestamp
+        current = current * (10 ** 3)
+
+        value_converted = self._convert_value(value)
+        self.points[timestamp] = f'{title} value={value_converted} {current}'
 
     async def finish_all(self):
         """Finish all remaining datapoints"""
