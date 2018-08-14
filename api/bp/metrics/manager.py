@@ -8,6 +8,13 @@ from aioinflux import InfluxDBClient
 log = logging.getLogger(__name__)
 
 
+# from https://stackoverflow.com/a/312464
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
 class MetricsManager:
     """Manager class for metric-related functions.
 
@@ -68,8 +75,15 @@ class MetricsManager:
         except Exception:
             log.exception('failed to submit datapoint')
 
-    def _fetch_points(self) -> list:
-        timestamps = sorted(self.points.keys())[:self._timestamps]
+    def _fetch_points(self, limit=None) -> list:
+        if limit is None:
+            limit = self._timestamps
+
+        timestamps = sorted(self.points.keys())
+
+        if limit != 0:
+            timestamps = timestamps[:self._timestamps]
+
         log.debug(f'{len(timestamps)} datapoints found...')
 
         # fetch the respective points, in the order they were put in.
@@ -83,6 +97,14 @@ class MetricsManager:
 
         return points
 
+    def _make_tasks(self, points):
+        tasks = []
+        for point in points:
+            task = self.loop.create_task(self._submit(point))
+            tasks.append(task)
+
+        return tasks
+
     async def _work(self):
         # if there aren't any datapoints to
         # submit, do nothing
@@ -91,11 +113,7 @@ class MetricsManager:
             return
 
         points = self._fetch_points()
-
-        tasks = []
-        for point in points:
-            task = self.loop.create_task(self._submit(point))
-            tasks.append(task)
+        tasks = self._make_tasks(points)
 
         # send the points to the server
         done, pending = await asyncio.wait(tasks)
@@ -135,7 +153,13 @@ class MetricsManager:
             log.warning('no points to finish')
             return
 
-        points = self._fetch_points()
-        log.warning(f'{len(points)} will be missing')
+        points = self._fetch_points(0)
+        for chunk in chunks(points, self._timestamps):
+            log.info(f'finish_all: finishing on {len(chunk)} points')
 
-        # await asyncio.sleep(self._period)
+            tasks = self._make_tasks(points)
+            done, pending = await asyncio.wait(tasks)
+
+            log.info(f'finish_all: {len(done)} done {len(pending)} pending')
+
+            await asyncio.sleep(self._period)
