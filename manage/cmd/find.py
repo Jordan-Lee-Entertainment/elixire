@@ -1,7 +1,7 @@
 from ..utils import account_delta, get_counts
 
 
-async def find_inactive_users(ctx):
+async def find_inactive_users(ctx, args):
     """Find inactive users.
 
     The criteria for inactive users are accounts
@@ -23,7 +23,7 @@ async def find_inactive_users(ctx):
     print(f'{len(uids)} users were found')
 
 
-async def find_unused_accs(ctx):
+async def find_unused_accs(ctx, args):
     """Find unused accounts.
 
     The criteria for unused accounts are users
