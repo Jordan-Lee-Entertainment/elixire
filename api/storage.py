@@ -388,15 +388,15 @@ class Storage:
 
             keys_db = solve_domain(domain_name, False)
 
-            domain_id = await self.db.fetchval("""
-            SELECT domain_id
+            row = await self.db.fetchrow("""
+            SELECT domain, domain_id
             FROM domains
             WHERE domain = $1
                OR domain = $2
                OR domain = $3
             """, *keys_db)
 
-            if domain_id is None:
+            if row is None:
                 await self.set_multi_one(keys, 'false')
 
                 if err_flag:
@@ -405,7 +405,8 @@ class Storage:
 
                 return None
 
-            await self.set_multi_one(keys, domain_id)
+            domain_name, domain_id = row
+            await self.set(f'domain_id:{domain_name}', domain_id)
             return domain_id
 
     async def get_domain_shorten(self, shortname: str) -> int:
