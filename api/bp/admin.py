@@ -65,9 +65,10 @@ async def notify_activate(app, user_id: int):
     body = fmt_email(app, """This is an automated email from {inst_name}
 about your account request.
 
-Your account has been activated and you can now log in at {main_url}/login.html.
+Your account has been activated and you can now log in
+at {main_url}/login.html.
 
-Welcome to {inst_name} family!
+Welcome to {inst_name}!
 
 Send an email to {support} if any questions arise.
 Do not reply to this automated email.
@@ -780,7 +781,7 @@ async def _get_domain_info(db, domain_id) -> dict:
     FROM users
     WHERE user_id = $1
     """, owner_id)
-    
+
     if owner_data:
         downer = {
             **dict(owner_data),
