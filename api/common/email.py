@@ -3,12 +3,14 @@ elixi.re - email functions
 """
 import secrets
 import logging
+from collections import namedtuple
 
 import aiohttp
 
 from ..errors import BadInput
 
 log = logging.getLogger(__name__)
+Error = namedtuple('Error', 'status')
 
 
 async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
@@ -99,6 +101,9 @@ async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
     FROM users
     WHERE user_id = $1
     """, user_id)
+
+    if not user_email:
+        return Error(6969), None
 
     resp = await send_email(app, user_email, subject, body)
 

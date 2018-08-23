@@ -130,3 +130,8 @@ ADMIN_SEND_DOMAIN_EMAIL = {
     'subject': {'type': 'string'},
     'body': {'type': 'string'}
 }
+
+ADMIN_SEND_BROADCAST = {
+    'subject': {'type': 'string'},
+    'body': {'type': 'string'},
+}
