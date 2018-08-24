@@ -20,3 +20,10 @@ update:
 clean:
 	cd frontend; rm -rf node_modules
 	cd admin-panel; rm -rf node_modules
+
+get-legal:
+	git submodule add -f https://gitlab.com/elixire/legal.git
+
+link-legal:
+	PWD=$(pwd)
+	ln -s ${PWD}/legal/privacy_policy.pug ${PWD}/frontend/src/privacy.pug
