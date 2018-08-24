@@ -138,3 +138,6 @@ elixire.log
 # we will keep stuck on this current modules version
 # since there's the legal repository
 .gitmodules
+
+# the legal repository will not be commited
+legal
