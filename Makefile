@@ -26,4 +26,4 @@ get-legal:
 
 link-legal:
 	PWD=$(pwd)
-	ln -s ${PWD}/legal/privacy_policy.pug ${PWD}/frontend/src/privacy.pug
+	ln ${PWD}/legal/privacy_policy.pug ${PWD}/frontend/src/privacy.pug
