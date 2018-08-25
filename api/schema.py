@@ -127,11 +127,15 @@ ADMIN_MODIFY_DOMAIN = {
 }
 
 ADMIN_SEND_DOMAIN_EMAIL = {
-    'subject': {'type': 'string'},
-    'body': {'type': 'string'}
+    'subject': {'type': 'string', 'required': True},
+    'body': {'type': 'string', 'required': True}
 }
 
 ADMIN_SEND_BROADCAST = {
-    'subject': {'type': 'string'},
-    'body': {'type': 'string'},
+    'subject': {'type': 'string', 'required': True},
+    'body': {'type': 'string', 'required': True},
+}
+
+RECOVER_USERNAME = {
+    'email': {'type': 'email', 'required': True},
 }

@@ -1,5 +1,7 @@
 """
 elixi.re backend source code - register route
+
+This also includes routes like recovering username from email.
 """
 
 import bcrypt
@@ -9,7 +11,7 @@ from sanic import Blueprint, response
 
 from ..snowflake import get_snowflake
 from ..errors import BadInput, FeatureDisabled
-from ..schema import validate, REGISTRATION_SCHEMA
+from ..schema import validate, REGISTRATION_SCHEMA, RECOVER_USERNAME
 from ..common.email import send_email, fmt_email
 from ..common.webhook import register_webhook
 
@@ -93,4 +95,45 @@ async def register_user(request):
 
     return response.json({
         'success': succ and succ_wb,
+    })
+
+
+async def send_recover_uname(app, uname: str, email: str):
+    email_body = fmt_email(app, """
+This is an automated email from {inst_name} about
+your username recovery.
+
+Your username is {uname}.
+
+ - {inst_name}, {main_url}
+""", uname=uname)
+
+    resp = await send_email(app, email, f'username recovery',
+                            email_body)
+
+    return resp.status == 200
+
+
+@bp.post('/api/recover_username')
+async def recover_username(request):
+    payload = validate(request.json, RECOVER_USERNAME)
+    app = request.app
+
+    email = payload['email']
+
+    row = await app.db.fetchrow("""
+    SELECT username, email
+    FROM users
+    WHERE email = $1
+    LIMIT 1
+    """, email)
+
+    if row is None:
+        raise BadInput('Email not found')
+
+    # send email
+    succ = await send_recover_uname(app, row['username'], row['email'])
+
+    return response.json({
+        'success': succ,
     })
