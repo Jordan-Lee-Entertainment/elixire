@@ -5,9 +5,10 @@ from sanic import Blueprint
 from sanic import response
 
 from ..common import delete_file, delete_shorten
-from ..common.auth import token_check
+from ..common.auth import token_check, password_check
 from ..decorators import auth_route
 from ..errors import BadInput
+from .profile import delete_file_task
 
 bp = Blueprint('files')
 log = logging.getLogger(__name__)
@@ -114,6 +115,27 @@ async def delete_handler(request):
 
     return response.json({
         'success': True
+    })
+
+
+@bp.post('/api/delete_all')
+@auth_route
+async def delete_all(request, user_id):
+    """Delete all files for the user"""
+    app = request.app
+
+    try:
+        password = request.json['password']
+    except KeyError:
+        raise BadInput('password not provided')
+
+    await password_check(request, user_id, password)
+
+    # create task to delete all files in the background
+    app.loop.create_task(delete_file_task(app, user_id, False))
+
+    return response.json({
+        'success': True,
     })
 
 

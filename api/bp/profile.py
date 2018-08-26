@@ -82,6 +82,9 @@ async def profile_handler(request):
     WHERE user_id = $1
     """, user_id)
 
+    if not user:
+        raise FailedAuth('unknown user')
+
     limits = await get_limits(request.app.db, user_id)
 
     duser = dict(user)
@@ -319,15 +322,24 @@ async def _delete_file_wrapper(app, shortname, user_id):
 
 
 async def delete_file_task(app, user_id: int, delete=False):
-    """Delete all the files from the user."""
+    """Delete all the files from the user.
+
+    Parameters
+    ----------
+    app: sanic.App
+        App instance holding database connection
+    user_id: int
+        User ID to have all files deleted from.
+    delete, optional: bool
+        If delete the user when all files are deleted
+    """
     file_shortnames = await app.db.fetch("""
     SELECT filename
     FROM files
     WHERE uploader = $1
     """, user_id)
 
-    log.info(f'Deleting {len(file_shortnames)} files '
-             'from account deletion.')
+    log.info(f'Deleting ALL {len(file_shortnames)} files')
 
     tasks = []
 
@@ -340,6 +352,9 @@ async def delete_file_task(app, user_id: int, delete=False):
 
     if tasks:
         await asyncio.wait(tasks)
+
+    log.info(f'finished waiting for {len(tasks)} tasks')
+    log.info(f'delete? {delete}')
 
     if delete:
         log.info(f'Deleting user id {user_id}')
@@ -372,6 +387,12 @@ async def delete_user(app, user_id: int, delete=False):
 
     await app.db.execute("""
     UPDATE files
+    SET deleted = true
+    WHERE uploader = $1
+    """, user_id)
+
+    await app.db.execute("""
+    UPDATE shortens
     SET deleted = true
     WHERE uploader = $1
     """, user_id)
