@@ -14,14 +14,14 @@ from ..schema import validate, LOGIN_SCHEMA
 log = logging.getLogger(__name__)
 
 
-async def gen_shortname(request, user_id: int) -> tuple:
+async def gen_shortname(request, user_id: int, table: str = 'files') -> tuple:
     """Generate a shortname for a file.
 
     Checks if the user is in paranoid mode.
     """
     is_paranoid = await check_paranoid(request, user_id)
     shortname_len = 8 if is_paranoid else request.app.econfig.SHORTNAME_LEN
-    return await gen_filename(request, shortname_len)
+    return await gen_filename(request, shortname_len, table)
 
 
 def get_token(request) -> str:
