@@ -50,7 +50,13 @@ app.blueprint(api.bp.upload.bp)
 app.blueprint(api.bp.files.bp)
 app.blueprint(api.bp.shorten.bp)
 app.blueprint(api.bp.fetch.bp)
-app.blueprint(api.bp.admin.bp)
+
+# load admin blueprints
+app.blueprint(api.bp.admin.user_bp)
+app.blueprint(api.bp.admin.object_bp)
+app.blueprint(api.bp.admin.domain_bp)
+app.blueprint(api.bp.admin.misc_bp)
+
 app.blueprint(api.bp.register.bp)
 app.blueprint(api.bp.datadump.bp)
 app.blueprint(api.bp.personal_stats.bp)

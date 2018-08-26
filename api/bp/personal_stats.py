@@ -4,7 +4,7 @@ from sanic import Blueprint
 from sanic import response
 
 from ..decorators import auth_route
-from .admin import _get_domain_public
+from .admin.domain import _get_domain_public
 
 
 bp = Blueprint('personal_stats')

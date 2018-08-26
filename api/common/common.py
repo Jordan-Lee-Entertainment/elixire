@@ -49,7 +49,7 @@ def _gen_fname(length) -> str:
                    for _ in range(length))
 
 
-async def gen_filename(request, length=3, _curc=0) -> str:
+async def gen_filename(request, length=3, table='files', _curc=0) -> str:
     """Generate a unique random filename.
 
     To guarantee that the generated shortnames will
@@ -64,6 +64,10 @@ async def gen_filename(request, length=3, _curc=0) -> str:
     length, optional: int
         Minimal amount of characters to use, default 3.
         Grows with the amount of failed generations.
+
+    table, optional: str
+        The table to generate a unique shortname for,
+        by default being the 'files' table.
 
     Returns
     -------
@@ -81,12 +85,14 @@ async def gen_filename(request, length=3, _curc=0) -> str:
 
     try_count = 0
 
+    field = 'file_id' if table == 'files' else 'shorten_id'
+
     for try_count in range(10):
         random_fname = _gen_fname(length)
 
-        filerow = await request.app.db.fetchrow("""
-        SELECT file_id
-        FROM files
+        filerow = await request.app.db.fetchrow(f"""
+        SELECT {field}
+        FROM {table}
         WHERE filename = $1
         """, random_fname)
 
@@ -97,7 +103,7 @@ async def gen_filename(request, length=3, _curc=0) -> str:
             return random_fname, total
 
     # if 10 tries didnt work, try generating with length+1
-    return await gen_filename(request, length + 1,
+    return await gen_filename(request, length + 1, table,
                               _curc + try_count + 1)
 
 
