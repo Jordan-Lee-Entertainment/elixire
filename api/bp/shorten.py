@@ -85,7 +85,7 @@ async def shorten_handler(request):
             raise QuotaExploded('This shorten blows the weekly limit of'
                                 f' {shorten_limit} shortens')
 
-    redir_rname, tries = await gen_shortname(request, user_id)
+    redir_rname, tries = await gen_shortname(request, user_id, 'shortens')
     await app.metrics.submit('shortname_gen_tries', tries)
 
     redir_id = get_snowflake()
