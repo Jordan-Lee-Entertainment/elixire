@@ -151,9 +151,9 @@ async def data_dump_global_status(request):
 async def get_dump(request):
     """Download the dump file."""
     try:
-        dump_token = str(request.args['token'][0])
+        dump_token = str(request.args['key'][0])
     except (KeyError, TypeError, ValueError):
-        raise BadInput('No valid token provided.')
+        raise BadInput('No valid key provided.')
 
     user_id = await request.app.db.fetchval("""
     SELECT user_id
