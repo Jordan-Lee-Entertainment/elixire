@@ -191,7 +191,7 @@ async def dispatch_dump(app, user_id: int, user_name: str):
     email_body = f"""This is an automated email from {_inst_name}
 about your data dump.
 
-Visit {app.econfig.MAIN_URL}/api/dump_get?token={dump_token} to fetch your
+Visit {app.econfig.MAIN_URL}/api/dump_get?key={dump_token} to fetch your
 data dump.
 
 The URL will be invalid in 6 hours.
