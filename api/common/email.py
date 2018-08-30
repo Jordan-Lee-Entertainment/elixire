@@ -176,6 +176,9 @@ about your account activation.
 An administrator confirmed your account for proper activation
 and you can activate your account at {token_url}
 
+You only need to use this URL once. Other attempts at using
+the URL will give you an error.
+
 Welcome to {inst_name}!
 
 Send an email to {support} if any questions arise.
