@@ -29,6 +29,3 @@ async def test_snowflake(test_cli):
     tstamp2 = snowflake_time(sflake) * 1000
 
     assert tstamp == tstamp2
-
-
-

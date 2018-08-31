@@ -66,9 +66,6 @@ async def upload_metrics(app, ctx):
 
     await metrics.submit('upload_latency', delta)
 
-    if await is_consenting(app, ctx.user_id):
-        await metrics.submit('upload_latency_pub', delta)
-
 
 def _fetch_domain(request):
     """Fetch domain information, if any"""

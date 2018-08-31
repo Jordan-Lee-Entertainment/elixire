@@ -69,14 +69,6 @@ async def on_request(request):
     # increase the counter on every request
     request.app.rate_requests += 1
 
-    try:
-        _, user_id = request['ctx']
-
-        if await is_consenting(request.app, user_id):
-            request.app.rreq_public += 1
-    except KeyError:
-        pass
-
     # so we can measure response latency
     request['start_time'] = time.monotonic()
 
@@ -103,15 +95,5 @@ async def on_response(request, response):
         # submit the metric as milliseconds since it is more tangible in
         # normal scenarios
         await metrics.submit('response_latency', latency * 1000)
-    except KeyError:
-        pass
-
-    try:
-        _, user_id = request['ctx']
-
-        if await is_consenting(request.app, user_id):
-            request.app.rres_public += 1
-
-            await metrics.submit('response_latency_pub', latency * 1000)
     except KeyError:
         pass
