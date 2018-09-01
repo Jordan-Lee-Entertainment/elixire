@@ -1,4 +1,4 @@
-# elixi.re backend
+# Design choices
 
 ## Why Python?
 
