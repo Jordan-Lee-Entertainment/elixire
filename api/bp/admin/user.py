@@ -316,6 +316,8 @@ async def _pu_check(db, db_name,
     # check if field exists
     val = payload.get(field)
     if val is not None:
+
+        # if it does exist, update on database
         await db.execute(f"""
         UPDATE {db_name}
         SET {col} = $1
@@ -341,7 +343,7 @@ async def modify_user(request, admin_id, user_id):
     #     update db with field
     #     updated.append(field)
 
-    await _pu_check(db, 'users', user_id, payload, updated, 'admin')
+    await _pu_check(db, 'users', user_id, payload, updated, 'email')
     await _pu_check(db, 'limits', user_id, payload, updated,
                     'upload_limit', 'blimit')
     await _pu_check(db, 'limits', user_id, payload, updated,
