@@ -1,3 +1,6 @@
-# Backend docs
+# Backend Doumentation
 
-Those are not API documentation for Elixire. Look into https://gitlab.com/elixire/api-docs for that.
+These documents describe the backend of elixi.re. [Click here][api] for API
+documentation.
+
+[api]: https://gitlab.com/elixire/api-docs
