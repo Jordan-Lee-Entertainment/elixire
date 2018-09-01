@@ -1,4 +1,6 @@
-# Authentication internals
+# Authentication
+
+## Hashing
 
 bcrypt is used to hash and salt passwords with a work factor of 14.
 
