@@ -1,29 +1,27 @@
 # Caching
 
-Caching in the service is handled completly by Redis.
+Caching in the service is handled by Redis.
 
+We cache user, file, and domain information for quick access.
 
-No actual route information is cached, but some user information, image information,
-domain information, shortens, etc.
+All caching is done by the storage subsystem located in `api/storage.py`. It is
+an abstraction that works on top of Postgres and Redis to only fetch data from
+the database when necessary.
 
+## Cached information
 
-All caching is one by the storage subsystem, which calls Postgres when the cache doesn't
-give anything, etc. `api/storage.py`.
+A non-comprehensive list of information we cache in Redis:
 
-
-Here follows a non-comprehensive list of information we cache:
- - Username -> UID mappings
- - UID -> Username mappings
-
- - Authentication Context:
-   - Password hash, user active flag.
-
- - File's filesystem paths.
- - Shorten's targets.
- - IP ban information.
- - User ban information.
-
- - The domain ID for a given domain.
-   - This is actually more difficult than it seems, because
-     we need to account for wildcard domains.
-
+- **Users**
+  - Username → User ID
+  - User ID → Username
+  - IP bans
+  - User bans
+- **Authentication**
+  - Password hash
+  - User active
+- **Files**
+  - File paths
+  - Shorten targets
+- **Domains**
+  - Domain → Domain ID
