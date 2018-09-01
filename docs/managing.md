@@ -1,48 +1,67 @@
-Managing your elixi.re instance
---------------------------------
+# Managing your elixi.re instance
 
-## Tooling
+## Tools
 
- - If you built the Elixire Admin Panel (EAD), and you're currently logged in
-    an admin account in your instance, go to the `/admin` path in your website
-    to access it, from there you can find user, domain and file administration.
+### Administration
 
- - `./manage.py` Is a general management script made to superseed the scripts
- on the `utils/` directory. `./manage.py help` and `./manage.py help <operation>` to
- find out how to use it.
-    - Keep in mind `./manage.py` won't integrate functions from the Admin API into it
-      (that might change in the future).
+If you have built the [elixi.re admin panel (EAD)][ead], go to `/admin` to
+manage your elixi.re instance.
 
- - Misc scripts can be found under the `utils/` directory.
-   - `utils/stats.py` runs through your database to process information about your instance.
-      Since elixi.re is GDPR compliant, we show two types of statistics: Public and Private.
-      You should not disclose any Private statistics to anyone other than your development team,
-      as doing so can bring you under GDPR violation. Private statistics still exist to determine
-      the quality of service (e.g too many files, image folder getting big, etc).
+[ead]: https://gitlab.com/elixire/admin-panel
 
-   - `utils/resetpasswd.py` to reset a single user's password *manually.*
+### `manage.py`
 
+`./manage.py` is a management script that supersedes most of the scripts in the
+`utils/` directory. Use `./manage.py help` and `./manage.py help <operation>`
+for help.
 
- - Scripts for old instances to be brought into the current version of elixi.re can be found
- under the `utils/upgrade` directory.
-   - **Do not run those scripts if you don't need them.**
+Keep in mind that `./manage.py` doesn't use the admin API -- it modifies the
+database in-bulk and can be useful for certain operations.
 
-   - `utils/upgrade/folder_sharding.py` is for instances that had the old system of all images
-      in a single image directory. This "shards" the image folder and moves each file into
-      its respective folder (`./images/<first character of filename>/<filename>`, e.g `./images/a/abc.png`).
+### `utils/`
 
-   - `utils/upgrade/storage_filehash.py` is for instances that are on the old system that
-      doesn't include file hashes as part of the folder structure.
+#### `utils/stats.py`
 
+This script runs through your database to process information about your
+elixi.re instance. Since we are GDPR compliant, we show two types of statistics:
+public and private. You should not disclose any private statistics to anyone
+other than your development team, as doing so is a violation of the GDPR .
+Private statistics exist to determine the quality of service (e.g too many
+files, image folder getting big, etc).
+
+#### `utils/resetpasswd.py`
+
+This script can be used to reset a single user's password manually.
+
+### `utils/upgrade/`
+
+Scripts in this directory are used to update the internal directory structure of
+old elixi.re instances. These are needed when bringing an old instance up to
+date.
+
+Only run these scripts if necessary.
+
+#### `utils/upgrade/folder_sharding.py`
+
+This script is used to shard the `images/` directory. Previously, elixi.re kept
+all images in a single directory. This script shards all images by the first
+character of their filename for easier navigation.
+
+#### `utils/upgrade/storage_filehash.py`
+
+This script renames files in the `images/` directory to their respective hashes.
 
 ## d1
 
-[d1](https://gitlab.com/elixire/d1) is a domain checker. More information can be found
-on the project's URL. It is recommended for production enviroments with lots of domains
-to have d1 running. Set `SECRET_KEY` on your config if you want to enable d1.
+[d1] is elixi.re's domain checker. Its job is to check domains to make sure they
+are pointing to the correct elixi.re instance. More information can be found on
+the project page. It is recommended for production enviroments with lots of
+domains. Make sure to set `SECRET_KEY` on your config if you want to use d1.
 
+[d1]: https://gitlab.com/elixire/d1
 
 ## Metrics
 
-elixi.re can send metric information to InfluxDB, from there Grafana can show you the data
-in pretty form so you can visualize instance information better.
+elixi.re can send metric information to InfluxDB. From there, Grafana can show
+you the data using pretty graphs so you can visualize instance information
+better.
