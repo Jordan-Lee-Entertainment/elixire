@@ -25,7 +25,7 @@ database in-bulk and can be useful for certain operations.
 This script runs through your database to process information about your
 elixi.re instance. Since we are GDPR compliant, we show two types of statistics:
 public and private. You should not disclose any private statistics to anyone
-other than your development team, as doing so is a violation of the GDPR .
+other than your development team, as doing so is a violation of the GDPR.
 Private statistics exist to determine the quality of service (e.g too many
 files, image folder getting big, etc).
 
