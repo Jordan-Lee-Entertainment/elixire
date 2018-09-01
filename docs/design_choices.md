@@ -10,8 +10,8 @@ While our service is named after Elixir, we think that Elixir isn't designed for
 for a mostly HTTP-based application.
 
 While Phoenix and Cowboy do a great job, we find Elixir's process model to be
-unnecessary for our use case. (Able to be understood by the majority of
-developers is a big reason.)
+unnecessary for our use case. (Not being able to be understood by the majority
+of developers is a big reason.)
 
 ## Why Sanic and not Flask, aiohttp, etc?
 
