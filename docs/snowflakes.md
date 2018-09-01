@@ -1,9 +1,9 @@
 # Snowflakes
 
-We use the same technique that Discord and Twitter utilize to generate IDs.
-While these IDs are not truly sequential, they are unique and chronologically
-ordered. A snowflake functions as both a unique identifier and a timestamp. We
-find this to be convenient.
+We use the same technique that Discord and Twitter use to generate IDs. While
+these IDs are not truly sequential, they are unique and chronologically ordered.
+A snowflake functions as both a unique identifier and a timestamp. We find this
+to be convenient.
 
 ## Implementation details
 
