@@ -259,7 +259,6 @@ async def test_user_patch(test_cli):
 
     # request 1: change default user to admin, etc
     resp = await test_cli.patch(f'/api/admin/user/{user_id}', json={
-        'admin': True,
         'upload_limit': 1000,
         'shorten_limit': 1000,
     }, headers={
@@ -269,7 +268,6 @@ async def test_user_patch(test_cli):
     assert resp.status == 200
     rjson = await resp.json()
     assert isinstance(rjson, list)
-    assert 'admin' in rjson
     assert 'upload_limit' in rjson
     assert 'shorten_limit' in rjson
 
@@ -281,14 +279,12 @@ async def test_user_patch(test_cli):
     assert resp.status == 200
     rjson = await resp.json()
     assert isinstance(rjson, dict)
-    assert rjson['admin']
     assert isinstance(rjson['limits'], dict)
     assert rjson['limits']['limit'] == 1000
     assert rjson['limits']['shortenlimit'] == 1000
 
     # request 3: changing it back
     resp = await test_cli.patch(f'/api/admin/user/{user_id}', json={
-        'admin': False,
         'upload_limit': 104857600,
         'shorten_limit': 100,
     }, headers={
@@ -298,6 +294,5 @@ async def test_user_patch(test_cli):
     assert resp.status == 200
     rjson = await resp.json()
     assert isinstance(rjson, list)
-    assert 'admin' in rjson
     assert 'upload_limit' in rjson
     assert 'shorten_limit' in rjson
