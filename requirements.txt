@@ -1,11 +1,20 @@
-git+https://github.com/channelcat/sanic@599834b0e1c41d934dce30b6393926635f72b78e
+# git+https://github.com/channelcat/sanic@599834b0e1c41d934dce30b6393926635f72b78e
+
+# sanic finally did a timely update recently, so we can live
+# off the release instead of the commit.
+sanic==0.8.1
+
 git+https://github.com/ashleysommer/sanic-cors@a17067967e0d447c870c48feca9cc53572316c3c
 
 asyncpg==0.17.0
-aioredis==1.1.0
 bcrypt==3.1.4
 itsdangerous==0.24
+
 cerberus==1.2
+
+# locking aioredis because of some 3.7 fixes that aren't on a release.
+# aioredis==1.1.0
+git+https://github.com/aio-libs/aioredis@ea948d0d7047db3315b4fbb9aa66e9ccc7e41522
 
 # The worst idea ever is to add aiohttp to a project.
 # and I did it.
@@ -16,15 +25,15 @@ aiohttp==3.3.2
 Pillow==5.2.0
 
 # testing stuff
-pytest==3.7.1
-pytest-cov==2.5.1
+pytest==3.8.0
+pytest-cov==2.6.0
 pyflakes==2.0.0
 
 pytest-sanic==0.1.13
 
-aioinflux==0.3.3
+aioinflux==0.3.4
 
-cryptography==2.3
+cryptography==2.3.1
 
 # You'll need libmagic for this.
 # On linux, use your package manager to install libmagic.
