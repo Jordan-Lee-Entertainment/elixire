@@ -167,7 +167,8 @@ def handle_exception(request, exception):
                     './admin-panel/build/index.html')
             else:
                 return response.file(
-                    './frontend/output/404.html')
+                    './frontend/output/404.html',
+                    status=404)
     else:
         log.exception(f'Error in request: {exception!r}')
 
