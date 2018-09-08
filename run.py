@@ -38,8 +38,17 @@ app = Sanic()
 app.econfig = config
 
 # enable cors on api, images and shortens
-CORS(app, resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"],
-     automatic_options=True)
+CORS(
+    app,
+    resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"],
+    automatic_options=True,
+    expose_headers=[
+        'X-Ratelimit-Scope',
+        'X-Ratelimit-Limit',
+        'X-Ratelimit-Remaining',
+        'X-Ratelimit-Reset'
+    ]
+)
 
 # load blueprints
 app.blueprint(api.bp.ratelimit.bp)
