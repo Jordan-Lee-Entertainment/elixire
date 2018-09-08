@@ -36,7 +36,7 @@ async def list_handler(request):
     domains = await domain_list(request)
 
     user_files = await request.app.db.fetch("""
-    SELECT file_id, filename, file_size, fspath, domain
+    SELECT file_id, filename, file_size, fspath, domain, mimetype
     FROM files
     WHERE uploader = $1
     AND deleted = false
@@ -63,22 +63,25 @@ async def list_handler(request):
     filenames = {}
     for ufile in user_files:
         filename = ufile['filename']
+        mime = ufile['mimetype']
         domain = domains[ufile['domain']].replace("*.", "wildcard.")
 
         basename = os.path.basename(ufile['fspath'])
         ext = basename.split('.')[-1]
 
         fullname = f'{filename}.{ext}'
-
         file_url = f'{prefix}{domain}/i/{fullname}'
 
         # default thumb size is small
-        file_url_thumb = f'{prefix}{domain}/t/s{fullname}'
+        file_url_thumb = f'{prefix}{domain}/t/s{fullname}' \
+                         if mime.startswith('image/') \
+                         else file_url
 
         filenames[filename] = {
             'snowflake': str(ufile['file_id']),
             'shortname': filename,
             'size': ufile['file_size'],
+            'mimetype': mime,
 
             'url': file_url,
             'thumbnail': file_url_thumb,
