@@ -328,7 +328,19 @@ class Storage:
 
             # set key expiration at same time the banning finishes
             await self.set(key, ban_reason)
-            await self.redis.expireat(key, unix_time(end_timestamp))
+
+            # calculate how much time until key invalidation
+            #  i cant trust Redis.expireat, so i'm doing it
+            #  manually.
+            now = datetime.datetime.now()
+
+            # remaining is a float, describing how many seconds
+            # until key invalidation
+            remaining = (end_timestamp - now).total_seconds()
+
+            # expire() will multiply by 1000, convert to int
+            # then pass it to redis (which consumes milliseconds as ints)
+            await self.redis.expire(key, remaining)
 
         return ban_reason
 
