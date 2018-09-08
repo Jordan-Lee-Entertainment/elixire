@@ -103,7 +103,7 @@ async def _handle_ban(request, reason: str):
         period = rapp.econfig.IP_BAN_PERIOD
         await rapp.db.execute(f"""
         INSERT INTO ip_bans (ip_address, reason, end_timestamp)
-        VALUES ($1, $2, now() + interval '{period}')
+        VALUES ($1, $2, now()::timestamp + interval '{period}')
         """, ip_addr, reason)
 
         await rapp.storage.raw_invalidate(f'ipban:{ip_addr}')
@@ -116,7 +116,7 @@ async def _handle_ban(request, reason: str):
         period = app.econfig.BAN_PERIOD
         await rapp.db.execute(f"""
         INSERT INTO bans (user_id, reason, end_timestamp)
-        VALUES ($1, $2, now() + interval '{period}')
+        VALUES ($1, $2, now()::timestamp + interval '{period}')
         """, user_id, reason)
 
         await rapp.storage.raw_invalidate(f'userban:{user_id}')
