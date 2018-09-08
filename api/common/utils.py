@@ -18,6 +18,7 @@ def _semaphore(num):
 class LockStorage:
     _fields = (
         ('delete_files', _semaphore(10)),
+        ('bans', asyncio.Lock),
     )
 
     def __init__(self):

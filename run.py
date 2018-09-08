@@ -91,14 +91,7 @@ async def options_handler(request, *args, **kwargs):
     return response.text('ok')
 
 
-@app.exception(Banned)
-async def handle_ban(request, exception):
-    """Handle the Banned exception being raised through a request.
-
-    This takes care of inserting a user ban.
-    """
-    scode = exception.status_code
-    reason = exception.args[0]
+async def _handle_ban(request, reason: str):
     rapp = request.app
 
     if 'ctx' not in request:
@@ -129,7 +122,20 @@ async def handle_ban(request, exception):
         await rapp.storage.raw_invalidate(f'userban:{user_id}')
         await ban_webhook(rapp, user_id, reason, period)
 
-    # generate our error message to the client.
+
+@app.exception(Banned)
+async def handle_ban(request, exception):
+    """Handle the Banned exception being raised through a request.
+
+    This takes care of inserting a user ban.
+    """
+    scode = exception.status_code
+    reason = exception.args[0]
+
+    lock_key = request['ctx'][0] if 'ctx' in request else get_ip_addr(request)
+    ban_lock = app.locks['bans'][lock_key]
+
+    # generate error message before anything
     res = {
         'error': True,
         'code': scode,
@@ -137,7 +143,21 @@ async def handle_ban(request, exception):
     }
 
     res.update(exception.get_payload())
-    return response.json(res, status=scode)
+    resp = response.json(res, status=scode)
+
+    if ban_lock.locked():
+        log.warning('Ban lock already acquired.')
+        return resp
+
+    await ban_lock.acquire()
+
+    try:
+        # actual ban code is here
+        await _handle_ban(request, reason)
+    finally:
+        ban_lock.release()
+
+    return resp
 
 
 @app.exception(APIError)
