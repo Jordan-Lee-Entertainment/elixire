@@ -57,6 +57,9 @@ async def list_handler(request):
     OFFSET ($2 * 100)
     """, user_id, page)
 
+    use_https = request.app.econfig.USE_HTTPS
+    prefix = 'https://' if use_https else 'http://'
+
     filenames = {}
     for ufile in user_files:
         filename = ufile['filename']
@@ -67,10 +70,9 @@ async def list_handler(request):
 
         fullname = f'{filename}.{ext}'
 
-        file_url = f'https://{domain}/i/{fullname}'
+        file_url = f'{prefix}{domain}/i/{fullname}'
 
-        use_https = request.app.econfig.USE_HTTPS
-        prefix = 'https://' if use_https else 'http://'
+        # default thumb size is small
         file_url_thumb = f'{prefix}{domain}/t/s{fullname}'
 
         filenames[filename] = {
@@ -87,8 +89,6 @@ async def list_handler(request):
         filename = ushorten['filename']
         domain = domains[ushorten['domain']].replace("*.", "wildcard.")
 
-        use_https = request.app.econfig.USE_HTTPS
-        prefix = 'https://' if use_https else 'http://'
         shorten_url = f'{prefix}{domain}/s/{filename}'
 
         shortens[filename] = {
