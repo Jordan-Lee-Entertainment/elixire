@@ -10,16 +10,21 @@ from .errors import NotFound
 log = logging.getLogger(__name__)
 
 
-def unix_time(dtime: datetime.datetime) -> int:
-    """Convert a datetime object to a UNIX timestamp.
+def calc_ttl(dtime: datetime.datetime) -> float:
+    """Calculate how many seconds remain
+    from now to the given timestamp.
 
-    Returns
+    This was made because redis' expireat() function
+    was inconsistent.
+
+    Retruns
     -------
-    int
-        The UNIX timestamp of the datetime object.
+    float
+        The amount of seconds from now to reach the
+        given timestamp.
     """
-    epoch = datetime.datetime.utcfromtimestamp(0)
-    return (dtime - epoch).total_seconds()
+    now = datetime.datetime.now()
+    return (dtime - now).total_seconds()
 
 
 def check(map_data) -> dict:
@@ -328,19 +333,7 @@ class Storage:
 
             # set key expiration at same time the banning finishes
             await self.set(key, ban_reason)
-
-            # calculate how much time until key invalidation
-            #  i cant trust Redis.expireat, so i'm doing it
-            #  manually.
-            now = datetime.datetime.now()
-
-            # remaining is a float, describing how many seconds
-            # until key invalidation
-            remaining = (end_timestamp - now).total_seconds()
-
-            # expire() will multiply by 1000, convert to int
-            # then pass it to redis (which consumes milliseconds as ints)
-            await self.redis.expire(key, remaining)
+            await self.redis.expire(key, calc_ttl(end_timestamp))
 
         return ban_reason
 
@@ -369,7 +362,7 @@ class Storage:
 
             # set key expiration at same time the banning finishes
             await self.set(key, ban_reason)
-            await self.redis.expireat(key, unix_time(end_timestamp))
+            await self.redis.expire(key, calc_ttl(end_timestamp))
 
         return ban_reason
 
