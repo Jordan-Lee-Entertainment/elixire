@@ -8,6 +8,7 @@ import bcrypt
 import asyncpg
 
 from sanic import Blueprint, response
+from dns import resolver
 
 from ..snowflake import get_snowflake
 from ..errors import BadInput, FeatureDisabled
@@ -48,6 +49,24 @@ Do not reply to this email specifially, it will not work.
     return resp.status == 200
 
 
+async def check_email(loop, email: str):
+    """Check if a given email has an MX record.
+
+    This does not check if the result of the MX record query
+    points to a server that handles actual email.
+    """
+    _, domain = email.split('@')
+
+    # check dns, MX record
+    resolv = resolver.Resolver()
+
+    try:
+        await loop.run_in_executor(None, resolv.query, domain, 'MX')
+    except (resolver.Timeout, resolver.NXDOMAIN, resolver.NoAnswer):
+        raise BadInput('Email domain resolution failed'
+                       '(timeout or does not exist)')
+
+
 @bp.post('/api/register')
 async def register_user(request):
     """Send an 'account registration request' to a certain
@@ -64,6 +83,8 @@ async def register_user(request):
     password = payload['password']
     discord_user = payload['discord_user']
     email = payload['email']
+
+    await check_email(request.app.loop, email)
 
     # borrowed from utils/adduser
     user_id = get_snowflake()
