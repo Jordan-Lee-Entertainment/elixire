@@ -75,6 +75,10 @@ class UploadContext(namedtuple('UploadContext', [
 
         # get all possible file extensions for this type of file
         pot_extensions = mimetypes.guess_all_extensions(mimetype)
+        
+        # ban .bat uploads (at least with extension intact)
+        if ".bat" in pot_extensions:
+            pot_extensions.remove(".bat")
 
         # use the user-provided file extension if it's a valid extension for
         # this mimetype
