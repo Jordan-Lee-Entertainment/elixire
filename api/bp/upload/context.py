@@ -74,7 +74,7 @@ class UploadContext(namedtuple('UploadContext', [
         extension = f".{self.file.mime.split('/')[-1]}"
 
         # get all possible file extensions for this type of file
-        pot_extensions = mimetypes.guess_all_extensions(self.file.mime)
+        pot_extensions = mimetypes.guess_all_extensions(mimetype)
 
         # use the user-provided file extension if it's a valid extension for
         # this mimetype
