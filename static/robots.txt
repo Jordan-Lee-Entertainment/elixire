@@ -1,0 +1,26 @@
+User-agent: *
+Disallow: /i
+Disallow: /i/
+Disallow: /t
+Disallow: /t/
+Disallow: /s
+Disallow: /s/
+Disallow: /account.html
+Disallow: /upload.html
+Disallow: /list.html
+Disallow: /album.html
+Disallow: /admoon.html
+Disallow: /token.html
+Disallow: /password_reset.html
+Disallow: /logout.html
+Disallow: /api
+Disallow: /api/
+
+User-agent: TERF
+Disallow: *
+
+User-agent: human
+Allow: *
+
+User-agent: buttsy
+Allow: *

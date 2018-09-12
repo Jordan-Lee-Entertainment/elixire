@@ -270,9 +270,8 @@ def main():
             pass
 
     app.static('/humans.txt', './static/humans.txt')
+    app.static('/robots.txt', './static/robots.txt')
 
-    # loading the blueprint here should
-    # help with middleware order.
     app.run(host=config.HOST, port=config.PORT)
 
 
