@@ -195,7 +195,7 @@ async def token_check(request, wanted_type=None) -> int:
 
     # decrease calls to everything in half by checking context beforehand
     try:
-        _uname, uid = request['ctx']
+        uname, uid = request['ctx']
         return uid
     except KeyError:
         pass

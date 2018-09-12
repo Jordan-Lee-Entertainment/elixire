@@ -28,16 +28,28 @@ def check_rtl(request, bucket):
         raise Ratelimited('You are being ratelimited.', retry_after)
 
 
-async def finish_ratelimit(request, best_rtl, bucket_key, ban_key):
+async def finish_ratelimit(request, best_rtl, bucket_key,
+                           do_ban_checking: bool = False):
     """Finish the ratelimiting operation.
         - getting the bucket, setting it as _ratelimit_bucket
-        - checking if any bans apply to the request
+        - checking ban info (only when required)
         - checking if the bucket is exploded
             (and giving a 429 when that happens)
     """
     bucket = best_rtl.get_bucket(bucket_key)
     request['_ratelimit_bucket'] = bucket
-    await check_bans(request, ban_key)
+
+    if do_ban_checking:
+        # the only case where ratelimiting code needs
+        # to call check_bans is when we are on an ip-only context.
+
+        # if we are on a user context, we already called token_check,
+        # and token_check, by default, calls check_bans
+
+        # calling check_bans from here without any flags up
+        # would be a waste of redis calls.
+        await check_bans(request, None)
+
     return check_rtl(request, bucket)
 
 
@@ -104,7 +116,7 @@ async def ratelimit_handler(request):
     if preferred_scope == 'ip':
         ip_address = get_ip_addr(request)
         return await finish_ratelimit(
-            request, best_rtl, ip_address, None)
+            request, best_rtl, ip_address, True)
 
     # user-based ratelimiting from now on
     user_id = await token_check(request)
@@ -112,7 +124,7 @@ async def ratelimit_handler(request):
 
     request['ctx'] = (username, user_id)
     return await finish_ratelimit(
-        request, best_rtl, username, user_id)
+        request, best_rtl, username)
 
 
 @bp.middleware('response')
