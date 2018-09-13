@@ -374,45 +374,49 @@ class Storage:
         """
 
         keys = solve_domain(domain_name, True)
-        possible_ids = await self.get_multi(keys, int)
 
-        try:
-            # get the first key that resolves correctly
-            return next(possible for possible in possible_ids
-                        if not isinstance(possible, bool)
-                        and possible is not None)
-        except StopIteration:
-            # if no keys solve to any domain, id
-            # query from db and set those keys
-            # to the found id
+        for key in keys:
+            possible_id = await self.get(key, int)
 
-            # This causes some problems since we might
-            # set *.re (in the case of domain_name = 'elixi.re') to
-            # an actual domain id, but since we use domain_name
-            # first, it shouldn't become a problem.
+            # as soon as we get a key that is valid,
+            # return it
+            if not isinstance(possible_id, bool) and \
+                    possible_id is not None:
+                return possible_id
 
-            keys_db = solve_domain(domain_name, False)
+        # if no keys solve to any domain,
+        # query from db and set those keys
+        # to the found id
 
-            row = await self.db.fetchrow("""
-            SELECT domain, domain_id
-            FROM domains
-            WHERE domain = $1
-               OR domain = $2
-               OR domain = $3
-            """, *keys_db)
+        # This causes some problems since we might
+        # set *.re (in the case of domain_name = 'elixi.re') to
+        # an actual domain id, but since we use domain_name
+        # first, it shouldn't become a problem.
 
-            if row is None:
-                await self.set_multi_one(keys, 'false')
+        keys_db = solve_domain(domain_name, False)
 
-                if err_flag:
-                    raise NotFound('This domain does not exist in '
-                                   'this elixire instance.')
+        row = await self.db.fetchrow("""
+        SELECT domain, domain_id
+        FROM domains
+        WHERE domain = $1
+            OR domain = $2
+            OR domain = $3
+        """, *keys_db)
 
-                return None
+        if row is None:
+            # maybe we set only f'domain_id:{domain_name}' to false
+            # instead of all 3 keys? dunno
+            await self.set_multi_one(keys, 'false')
 
-            domain_name, domain_id = row
-            await self.set(f'domain_id:{domain_name}', domain_id)
-            return domain_id
+            if err_flag:
+                raise NotFound('This domain does not exist in '
+                               'this elixire instance.')
+
+            return None
+
+        domain_name, domain_id = row
+        await self.set(f'domain_id:{domain_name}', domain_id)
+        return domain_id
 
     async def get_domain_shorten(self, shortname: str) -> int:
         """Get a domain ID for a shorten."""
