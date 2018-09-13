@@ -159,12 +159,12 @@ async def check_domain_id(request, domain_id: int, error_on_nodomain=True):
 
 async def login_user(request):
     """
-    Login one user, given its username and password.
+    Log in a user, given their username and password.
 
     Returns a partial user row.
     """
     payload = validate(request.json, LOGIN_SCHEMA)
-    username = payload['user']
+    username = payload['user'].lower()
     password = payload['password']
 
     user = await request.app.storage.actx_username(username)
