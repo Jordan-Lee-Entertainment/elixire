@@ -41,11 +41,13 @@ async def filecheck(request, filename):
 async def file_handler(request, filename):
     """Handles file serves."""
     filepath = await filecheck(request, filename)
+    is_text = filepath.endswith('.txt')
     return await response.file_stream(
         filepath,
         headers={
             'Content-Security-Policy': "sandbox; frame-src 'none'"
-        })
+        },
+        mime_type='text/plain; charset=utf-8' if is_text else None)
 
 
 @bp.get('/t/<filename>')
