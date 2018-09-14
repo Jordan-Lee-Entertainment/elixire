@@ -9,8 +9,8 @@ frontend:
 
 panel:
 	echo "Building Admin Panel"
-	cd admin-panel; npm install
-	cd admin-panel; npm run build
+	cd admin-panel; yarn
+	cd admin-panel; yarn build
 
 update:
 	echo "Pulling and updating submodules"
