@@ -114,7 +114,7 @@ ADMIN_MODIFY_FILE = {
 }
 
 ADMIN_MODIFY_USER = {
-    'admin': {'type': 'boolean', 'required': False},
+    'email': {'type': 'string', 'required': False},
     'upload_limit': {'type': 'integer', 'required': False},
     'shorten_limit': {'type': 'integer', 'required': False}
 }
