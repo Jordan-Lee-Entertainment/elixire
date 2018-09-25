@@ -19,6 +19,11 @@ async def hello_route(request):
         'name': request.app.econfig.INSTANCE_NAME,
         'version': VERSION,
         'api': API_VERSION,
+        'support_email': request.app.econfig.SUPPORT_EMAIL,
+        'ban_period': request.app.econfig.BAN_PERIOD,
+        'ip_ban_period': request.app.econfig.IP_BAN_PERIOD,
+        'rl_threshold': request.app.econfig.RL_THRESHOLD,
+        'accepted_mimes': request.app.econfig.ACCEPTED_MIMES,
     })
 
 
