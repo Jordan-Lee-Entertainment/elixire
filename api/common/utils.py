@@ -2,9 +2,9 @@ import asyncio
 from collections import defaultdict
 
 
-def int_(val):
+def int_(val, default=None):
     if val is None:
-        return None
+        return None or default
 
     return int(val)
 

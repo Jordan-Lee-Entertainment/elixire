@@ -64,7 +64,7 @@ async def get_limits(db, user_id) -> dict:
 
     return {
         'limit': limits["blimit"],
-        'used': int_(bytes_used),
+        'used': int_(bytes_used, 0),
         'shortenlimit': limits["shlimit"],
         'shortenused': shortens_used
     }
