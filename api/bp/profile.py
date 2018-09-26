@@ -379,6 +379,14 @@ async def delete_user(app, user_id: int, delete=False):
     delete: bool, optional
         Delete the user records?
     """
+    # ignore deletion of the dummy user via any admin-facing
+    # administration util (manage.py will also be unable
+    # to delete the dummy user).
+    #  instance admins should proceed to deleting via the psql shell.
+    if user_id == 0:
+        log.warning('Not deleting dummy user')
+        return
+
     await app.db.execute("""
     UPDATE users
     SET active = false
