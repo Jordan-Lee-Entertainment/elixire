@@ -95,7 +95,20 @@ async def activate_user(request, admin_id, user_id: int):
 async def activation_email(request, admin_id, user_id):
     """Send an email to the user so they become able
     to activate their account manually."""
-    await request.app.storage.invalidate(user_id, 'active')
+    active = await request.app.db.fetchval("""
+    SELECT active
+    FROM users
+    WHERE user_id = $1
+    """, user_id)
+
+    if active is None:
+        raise BadInput('Provided user_id does not reference any user')
+
+    if active:
+        raise BadInput('User is already active')
+
+    # there was an invalidate() call which is unecessary
+    # because its already invalidated on activate_user_from_email
 
     resp, _email = await activate_email_send(request.app, user_id)
     return response.json({
@@ -359,6 +372,15 @@ async def del_user(request, admin_id, user_id):
 
     File deletion happens in the background.
     """
+    active = await request.app.db.fetchval("""
+    SELECT active
+    FROM users
+    WHERE user_id = $1
+    """, user_id)
+
+    if active is None:
+        raise BadInput('user not found')
+
     await delete_user(request.app, user_id, True)
 
     return response.json({
