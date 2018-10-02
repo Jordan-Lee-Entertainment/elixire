@@ -139,7 +139,8 @@ class Storage:
 
             # the string false tells that whatever
             # query the db did returned None.
-            await conn.set(key, value or 'false', **kwargs)
+            value = 'false' if value is None else value
+            await conn.set(key, value, **kwargs)
 
     async def set_multi_one(self, keys: list, value):
         """Set multiple keys to one given value.
