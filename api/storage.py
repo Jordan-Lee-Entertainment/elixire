@@ -233,6 +233,18 @@ class Storage:
         """Fetch authentication context important stuff
         given an username.
 
+        The authentication context (actx) is important
+        information of the user, only related to authentication
+        purposes.
+
+        With that set, actx only contains:
+         - username
+         - user id
+         - password hash
+
+        But doesn't contain anything else in regards to e.g
+        user settings.
+
         Returns
         -------
         dict
@@ -253,6 +265,9 @@ class Storage:
     async def actx_userid(self, user_id: str) -> dict:
         """Fetch authentication-related information
         given an user ID.
+
+        More information about the authentication context
+        is in Storage.actx_username.
 
         Returns
         -------

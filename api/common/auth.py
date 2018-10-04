@@ -2,12 +2,12 @@
 elixi.re - common auth
     Common authentication-related functions.
 """
-import itsdangerous
 import logging
 
 import bcrypt
+import itsdangerous
 
-from .common import SIGNERS, TokenType, check_bans, gen_filename
+from .common import TokenType, check_bans, gen_filename
 from ..errors import FailedAuth, NotFound
 from ..schema import validate, LOGIN_SCHEMA
 
@@ -164,9 +164,12 @@ async def login_user(request):
     Returns a partial user row.
     """
     payload = validate(request.json, LOGIN_SCHEMA)
+
+    # always treat usernames as all-lowercase
     username = payload['user'].lower()
     password = payload['password']
 
+    # know more about actx over Storage.actx_username (api/storage.py)
     user = await request.app.storage.actx_username(username)
 
     if not user:
@@ -174,7 +177,7 @@ async def login_user(request):
         raise FailedAuth('User or password invalid')
 
     if not user['active']:
-        log.info(f'login: {username!r} is not active')
+        log.warning(f'login: {username!r} is not active')
         raise FailedAuth('User is deactivated')
 
     await check_bans(request, user['user_id'])
@@ -183,32 +186,69 @@ async def login_user(request):
     return user
 
 
-async def token_check(request, wanted_type=None) -> int:
+def _try_int(value: str):
+    """Try converting a given string to an int."""
+    try:
+        print(value)
+        return int(value)
+    except (TypeError, ValueError):
+        raise FailedAuth('invalid token format')
+
+
+def _try_unsign(signer, token, token_age=None):
+    """Try to unsign a token given the signer,
+    token, and token_age if possible.
+
+    This will convert the specific itsdangerous
+    exception in regards to tokens into our FailedAuth
+    exception.
     """
-    Check if a token is valid.
-    By default does not care about the token type.
+    try:
+        if token_age is not None:
+            signer.unsign(token, max_age=token_age)
+        else:
+            signer.unsign(token)
+    except (itsdangerous.SignatureExpired, itsdangerous.BadSignature):
+        raise FailedAuth('invalid or expired token')
+
+
+async def token_check(request) -> int:
+    """Check if a token is valid.
+
+    This will check if the token given in the request
+    is an API token or not, and giving proper validation
+    depending on its type.
     """
     try:
         token = get_token(request)
-    except (TypeError, KeyError):
+
+        # make sure we get something that isn't empty
+        assert token
+    except (TypeError, KeyError, AssertionError):
         raise FailedAuth('no token provided')
 
-    # decrease calls to everything in half by checking context beforehand
+    # decrease calls to storage in half by checking context beforehand
+    # (request['ctx'] is set by the ratelimiter on api/bp/ratelimit.py)
     try:
-        uname, uid = request['ctx']
+        _, uid = request['ctx']
         return uid
     except KeyError:
         pass
 
-    token_type = token.count('.')
-    if wanted_type and wanted_type != token_type:
-        raise FailedAuth('invalid token type')
-
     data = token.split('.')
-    try:
-        user_id = int(data[0])
-    except (TypeError, ValueError):
-        raise FailedAuth('invalid token format')
+    dotcount = token.count('.')
+
+    block_1 = data[0]
+    is_apitoken = block_1[0] == 'u'
+
+    if is_apitoken:
+        # take out the 'u' prefix
+        # and extract the id
+        print(block_1)
+        print(block_1[1:])
+        user_id = _try_int(block_1[1:])
+    else:
+        user_id = _try_int(block_1)
 
     user = await request.app.storage.actx_userid(user_id)
 
@@ -222,24 +262,53 @@ async def token_check(request, wanted_type=None) -> int:
 
     pwdhash = user['password_hash']
 
-    signer = SIGNERS[token_type](pwdhash)
-    token = token.encode('utf-8')
-    try:
-        if token_type == TokenType.NONTIMED:
-            signer.unsign(token)
-        elif token_type == TokenType.TIMED:
-            signer.unsign(token,
-                          max_age=request.app.econfig.TIMED_TOKEN_AGE)
-        else:
-            raise FailedAuth('invalid token type')
-    except (itsdangerous.SignatureExpired, itsdangerous.BadSignature):
-        raise FailedAuth('invalid or expired token')
+    # now comes the tricky part, since we need to keep
+    # at least some level of backwards compatibility with the
+    # old token format (at least for some time).
 
+    if dotcount == TokenType.NONTIMED:
+        # NOTE: when removing old-format tokens,
+        # replace this unsigning with a
+        # FailedAuth exception
+
+        signer = itsdangerous.Signer(pwdhash)
+
+        # itsdangerous.Signer does not like
+        # strings, only bytes.
+        token = token.encode('utf-8')
+
+        # do the checking
+        _try_unsign(signer, token)
+
+        return user_id
+
+    # at this point in code the token is:
+    #  - a new-format uploader token
+    #  - a timed token (not uploader)
+    # and we know if it is or not via is_apitoken
+
+    # one thing we know is that both tokens are timed, so
+    # we create TimestampSigner instead of Signer, always.
+
+    signer = itsdangerous.TimestampSigner(pwdhash)
+
+    # api tokens don't have checks in regards to their age.
+    token_age = None if is_apitoken else \
+        request.app.econfig.TIMED_TOKEN_AGE
+
+    _try_unsign(signer, token, token_age)
     return user_id
 
 
-def gen_token(user, token_type=TokenType.TIMED) -> str:
+def gen_token(user: dict, token_type=TokenType.TIMED) -> str:
     """Generate one token."""
-    signer = SIGNERS[token_type](user['password_hash'])
-    uid = bytes(str(user['user_id']), 'utf-8')
+    signer = itsdangerous.TimestampSigner(user['password_hash'])
+    uid = str(user['user_id'])
+
+    if token_type == TokenType.NONTIMED:
+        # prefix "u" to the token
+        # so that we know that the token is to be
+        # treated as an API token
+        uid = f'u{uid}'
+
     return signer.sign(uid)
