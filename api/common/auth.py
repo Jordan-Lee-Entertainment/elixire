@@ -307,9 +307,16 @@ async def token_check(request) -> int:
     return user_id
 
 
-def gen_token(user: dict, token_type=TokenType.TIMED) -> str:
+def gen_token(app, user: dict, token_type=TokenType.TIMED) -> str:
     """Generate one token."""
-    signer = itsdangerous.TimestampSigner(user['password_hash'])
+    cfg = app.econfig
+    key = user['password_hash']
+
+    # explanation for this code is over token_check
+    if cfg.TOKEN_SECRET:
+        key = key.encode() + cfg.TOKEN_SECRET
+
+    signer = itsdangerous.TimestampSigner(key)
     uid = str(user['user_id'])
 
     if token_type == TokenType.NONTIMED:
