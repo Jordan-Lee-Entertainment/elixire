@@ -189,7 +189,6 @@ async def login_user(request):
 def _try_int(value: str):
     """Try converting a given string to an int."""
     try:
-        print(value)
         return int(value)
     except (TypeError, ValueError):
         raise FailedAuth('invalid token format')
@@ -261,13 +260,7 @@ async def token_check(request) -> int:
     await check_bans(request, user_id)
 
     key = user['password_hash']
-
-    if cfg.TOKEN_SECRET:
-        # keys in bytes are different from keys in strings
-        # so instead of doing key += cfg.TOKEN_SECRET
-        # without that if, we keep the if to maintain
-        # the type of the key intact
-        key = key.encode() + cfg.TOKEN_SECRET
+    salt = cfg.TOKEN_SECRET or 'itsdangerous.Signer'
 
     # now comes the tricky part, since we need to keep
     # at least some level of backwards compatibility with the
@@ -297,7 +290,7 @@ async def token_check(request) -> int:
     # one thing we know is that both tokens are timed, so
     # we create TimestampSigner instead of Signer, always.
 
-    signer = itsdangerous.TimestampSigner(key)
+    signer = itsdangerous.TimestampSigner(salt, salt=key)
 
     # api tokens don't have checks in regards to their age.
     token_age = None if is_apitoken else \
@@ -310,13 +303,11 @@ async def token_check(request) -> int:
 def gen_token(app, user: dict, token_type=TokenType.TIMED) -> str:
     """Generate one token."""
     cfg = app.econfig
+
     key = user['password_hash']
+    salt = cfg.TOKEN_SECRET or 'itsdangerous.Signer'
 
-    # explanation for this code is over token_check
-    if cfg.TOKEN_SECRET:
-        key = key.encode() + cfg.TOKEN_SECRET
-
-    signer = itsdangerous.TimestampSigner(key)
+    signer = itsdangerous.TimestampSigner(salt, salt=key)
     uid = str(user['user_id'])
 
     if token_type == TokenType.NONTIMED:
