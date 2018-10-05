@@ -311,10 +311,15 @@ def gen_token(app, user: dict, token_type=TokenType.TIMED) -> str:
     """Generate one token."""
     cfg = app.econfig
 
-    key = user['password_hash']
-    salt = cfg.TOKEN_SECRET or 'itsdangerous.Signer'
+    salt = user['password_hash']
 
-    signer = itsdangerous.TimestampSigner(salt, salt=key)
+    if not cfg.TOKEN_SECRET:
+        raise FailedAuth('TOKEN_SECRET is not set. Please ask '
+                         'the instance administrator.')
+
+    key = cfg.TOKEN_SECRET
+
+    signer = itsdangerous.TimestampSigner(key, salt=salt)
     uid = str(user['user_id'])
 
     if token_type == TokenType.NONTIMED:
