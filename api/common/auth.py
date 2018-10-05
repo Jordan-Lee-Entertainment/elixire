@@ -260,7 +260,12 @@ async def token_check(request) -> int:
     await check_bans(request, user_id)
 
     salt = user['password_hash']
-    key = cfg.TOKEN_SECRET or 'itsdangerous.Signer'
+
+    if not cfg.TOKEN_SECRET:
+        raise FailedAuth('TOKEN_SECRET is not set. Please ask '
+                         'the instance administrator.')
+
+    key = cfg.TOKEN_SECRET
 
     # now comes the tricky part, since we need to keep
     # at least some level of backwards compatibility with the

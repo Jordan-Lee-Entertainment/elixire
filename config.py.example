@@ -61,6 +61,8 @@ SECRET_KEY = None
 # this is used to keep more security
 # around api tokens.
 #
+# **DO NOT LET ANYONE KNOW THIS SECRET.**
+#
 # to generate a valid key, spawn python and then:
 #  >>> from os import urandom
 #  >>> urandom(48)
