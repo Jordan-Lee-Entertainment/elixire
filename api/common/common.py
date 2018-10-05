@@ -6,7 +6,6 @@ import time
 from pathlib import Path
 
 import asyncpg
-import itsdangerous
 
 from ..errors import FailedAuth, NotFound
 
@@ -24,12 +23,6 @@ class FileNameType:
     """Represents a type of a filename."""
     FILE = 0
     SHORTEN = 1
-
-
-SIGNERS = {
-    TokenType.TIMED: itsdangerous.TimestampSigner,
-    TokenType.NONTIMED: itsdangerous.Signer,
-}
 
 
 def get_ip_addr(request) -> str:

@@ -19,7 +19,7 @@ async def login_handler(request):
     user = await login_user(request)
 
     return response.json({
-        'token': gen_token(user, TokenType.TIMED),
+        'token': gen_token(request.app, user, TokenType.TIMED),
     })
 
 
@@ -33,7 +33,7 @@ async def apikey_handler(request):
     user = await login_user(request)
 
     return response.json({
-        'api_key': gen_token(user, TokenType.NONTIMED),
+        'api_key': gen_token(request.app, user, TokenType.NONTIMED),
     })
 
 

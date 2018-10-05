@@ -1,5 +1,7 @@
 # elixire instance configuration file
 # Please read over all the available options.
+# There are a lot of configuration options. Please
+# take your time going through each one of them
 
 # === BASIC SETTINGS ===
 HOST = 'localhost'
@@ -54,6 +56,18 @@ redis = 'redis://localhost'
 # Use the same generated key on d1.
 # Set as None to keep d1-specific routes disabled.
 SECRET_KEY = None
+
+# Token shared secret.
+# this is used to keep more security
+# around api tokens.
+#
+# **DO NOT LET ANYONE KNOW THIS SECRET.**
+#
+# to generate a valid key, spawn python and then:
+#  >>> from os import urandom
+#  >>> urandom(48)
+#  b'<some random results here>'
+TOKEN_SECRET = b''
 
 # How many seconds to keep timed tokens valid?
 # default value is 72 hours = 3 days.
