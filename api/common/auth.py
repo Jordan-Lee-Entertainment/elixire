@@ -219,6 +219,8 @@ async def token_check(request) -> int:
     is an API token or not, and giving proper validation
     depending on its type.
     """
+    cfg = request.app.econfig
+
     try:
         token = get_token(request)
 
@@ -244,8 +246,6 @@ async def token_check(request) -> int:
     if is_apitoken:
         # take out the 'u' prefix
         # and extract the id
-        print(block_1)
-        print(block_1[1:])
         user_id = _try_int(block_1[1:])
     else:
         user_id = _try_int(block_1)
@@ -260,7 +260,14 @@ async def token_check(request) -> int:
 
     await check_bans(request, user_id)
 
-    pwdhash = user['password_hash']
+    key = user['password_hash']
+
+    if cfg.TOKEN_SECRET:
+        # keys in bytes are different from keys in strings
+        # so instead of doing key += cfg.TOKEN_SECRET
+        # without that if, we keep the if to maintain
+        # the type of the key intact
+        key = key.encode() + cfg.TOKEN_SECRET
 
     # now comes the tricky part, since we need to keep
     # at least some level of backwards compatibility with the
@@ -271,7 +278,7 @@ async def token_check(request) -> int:
         # replace this unsigning with a
         # FailedAuth exception
 
-        signer = itsdangerous.Signer(pwdhash)
+        signer = itsdangerous.Signer(key)
 
         # itsdangerous.Signer does not like
         # strings, only bytes.
@@ -290,11 +297,11 @@ async def token_check(request) -> int:
     # one thing we know is that both tokens are timed, so
     # we create TimestampSigner instead of Signer, always.
 
-    signer = itsdangerous.TimestampSigner(pwdhash)
+    signer = itsdangerous.TimestampSigner(key)
 
     # api tokens don't have checks in regards to their age.
     token_age = None if is_apitoken else \
-        request.app.econfig.TIMED_TOKEN_AGE
+        cfg.TIMED_TOKEN_AGE
 
     _try_unsign(signer, token, token_age)
     return user_id
