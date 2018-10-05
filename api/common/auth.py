@@ -259,8 +259,8 @@ async def token_check(request) -> int:
 
     await check_bans(request, user_id)
 
-    key = user['password_hash']
-    salt = cfg.TOKEN_SECRET or 'itsdangerous.Signer'
+    salt = user['password_hash']
+    key = cfg.TOKEN_SECRET or 'itsdangerous.Signer'
 
     # now comes the tricky part, since we need to keep
     # at least some level of backwards compatibility with the
@@ -271,7 +271,9 @@ async def token_check(request) -> int:
         # replace this unsigning with a
         # FailedAuth exception
 
-        signer = itsdangerous.Signer(key)
+        # salt here is password_hash, which is the key
+        # for every old non-timed token.
+        signer = itsdangerous.Signer(salt)
 
         # itsdangerous.Signer does not like
         # strings, only bytes.
@@ -290,7 +292,7 @@ async def token_check(request) -> int:
     # one thing we know is that both tokens are timed, so
     # we create TimestampSigner instead of Signer, always.
 
-    signer = itsdangerous.TimestampSigner(salt, salt=key)
+    signer = itsdangerous.TimestampSigner(key, salt=salt)
 
     # api tokens don't have checks in regards to their age.
     token_age = None if is_apitoken else \
