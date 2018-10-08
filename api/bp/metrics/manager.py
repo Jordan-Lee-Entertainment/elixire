@@ -32,6 +32,7 @@ class MetricsManager:
 
         self._start_influx()
 
+        # make sure we default to a sane ratelimit
         metrics_limit = getattr(app.econfig, 'METRICS_LIMIT', (100, 3))
         self._timestamps, self._period = metrics_limit
 
@@ -65,19 +66,21 @@ class MetricsManager:
 
         # default mode is unauthenticated influx connection
         # at localhost.
-        log.info('Unauthenticated InfluxDB connection')
+        log.warning('Unauthenticated InfluxDB connection')
         self.influx = InfluxDBClient(db=cfg.METRICS_DATABASE, loop=self.loop)
 
     async def _submit(self, datapoint: dict):
         try:
             await self.influx.write(datapoint)
-        except Exception:
-            log.exception('failed to submit datapoint')
+        except Exception as err:
+            log.warning(f'failed to submit datapoint: {err!r}')
 
     def _fetch_points(self, limit=None) -> list:
+        """Fetch datapoints to properly send to InfluxDB."""
         if limit is None:
             limit = self._timestamps
 
+        # sort timestamps from oldest to youngest
         timestamps = sorted(self.points.keys())
 
         if limit != 0:
@@ -96,13 +99,14 @@ class MetricsManager:
 
         return points
 
-    def _make_tasks(self, points):
-        tasks = []
-        for point in points:
-            task = self.loop.create_task(self._submit(point))
-            tasks.append(task)
-
-        return tasks
+    def _make_tasks(self, points: list):
+        """Make the proper _submit tasks, given a set of datapoints."""
+        # for each datapoint, spawn a _submit coroutine and its
+        # respective task wrapping it.
+        return list(map(
+            lambda x: self.loop.create_task(self._submit(x)),
+            points
+        ))
 
     async def _work(self):
         # if there aren't any datapoints to
@@ -119,6 +123,11 @@ class MetricsManager:
         log.debug(f'{len(done)} done {len(pending)} pending')
 
     async def worker(self):
+        """Main metrics worker.
+
+        This keeps itself in a loop to submit
+        any remaining metrics datapoints.
+        """
         try:
             while True:
                 await self._work()
@@ -173,3 +182,7 @@ class MetricsManager:
             log.info(f'finish_all: {len(done)} done {len(pending)} pending')
 
             await asyncio.sleep(self._period)
+
+        if self.influx:
+            log.info('closing influxdb conn')
+            await self.influx.close()
