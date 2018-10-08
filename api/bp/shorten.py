@@ -89,12 +89,14 @@ async def shorten_handler(request):
     await app.metrics.submit('shortname_gen_tries', tries)
 
     redir_id = get_snowflake()
-    domain_id, subdomain_name, domain = await get_domain_info(request,
-                                                              user_id,
-                                                              FileNameType.SHORTEN)
+    domain_id, subdomain_name, domain = await get_domain_info(
+        request, user_id, FileNameType.SHORTEN)
 
     await domain_permissions(request.app, domain_id, Permissions.SHORTEN)
     domain = transform_wildcard(domain, subdomain_name)
+
+    # make sure cache doesn't fuck up
+    await app.storage.raw_invalidate(f'redir:{domain_id}:{redir_rname}')
 
     await request.app.db.execute("""
     INSERT INTO shortens (shorten_id, filename,

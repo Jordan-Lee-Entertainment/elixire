@@ -201,6 +201,9 @@ async def upload_handler(request, user_id):
     # if necessary
     file_size = ctx.file.calculate_size(app.econfig.DUPE_DECREASE_FACTOR)
 
+    # invalidating any existing file before
+    await app.storage.raw_invalidate(f'fspath:{domain_id}:{shortname}')
+
     # insert into database
     await app.db.execute(
         """
