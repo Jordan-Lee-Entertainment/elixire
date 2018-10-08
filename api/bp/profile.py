@@ -119,10 +119,8 @@ async def change_profile(request):
 
     if password:
         await password_check(request, user_id, password)
-    else:
-        raise FailedAuth('no password provided')
 
-    if new_username is not None:
+    if password and new_username is not None:
         # query from db instead of cache
         old_username = await request.app.db.fetchval("""
         SELECT username
@@ -142,6 +140,9 @@ async def change_profile(request):
         # if this worked, we should invalidate the old keys
         await request.app.storage.raw_invalidate(f'uid:{old_username}',
                                                  f'uname:{user_id}')
+
+        # also invalidate the new one representing the future username
+        await request.app.storage.raw_invalidate(f'uid:{new_username}')
 
         updated.append('username')
 
@@ -196,7 +197,7 @@ async def change_profile(request):
 
         updated.append('shorten_subdomain')
 
-    if new_email is not None:
+    if password and new_email is not None:
         await request.app.db.execute("""
             UPDATE users
             SET email = $1
@@ -227,7 +228,7 @@ async def change_profile(request):
     except KeyError:
         pass
 
-    if new_pwd and new_pwd != password:
+    if password and new_pwd and new_pwd != password:
         # we are already good from password_check call
         await _update_password(request, user_id, new_pwd)
         updated.append('password')
