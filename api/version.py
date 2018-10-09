@@ -16,5 +16,5 @@ Notes to keep:
  - YEAR changes do not apply to semver's MAJOR.
 """
 
-VERSION = '2018.2.9.3'
-API_VERSION = '2018.2.4.4'
+VERSION = '2018.2.9.4'
+API_VERSION = '2018.2.4.5'
