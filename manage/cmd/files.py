@@ -1,4 +1,19 @@
+from os.path import splitext
 from pathlib import Path
+from decimal import Decimal
+
+
+def byte_to_mibstring(bytecount: int) -> str:
+    """Convert an integer representing the
+    total amount of bytes to a string
+    representing the total amount of
+    megabytes."""
+    if not bytecount:
+        return 'N/A'
+
+    bytecount = Decimal(bytecount)
+    mib = Decimal(bytecount / 1024 / 1024)
+    return f'{round(mib, 2)}MiB'
 
 
 async def deletefiles(ctx, _args):
@@ -64,6 +79,151 @@ async def rename_file(ctx, args):
     print(f'SQL out: {exec_out}')
 
 
+async def show_stats(ctx, _args):
+    db = ctx.db
+
+    # those are used to get counts on people who have consented
+    files_user_join = 'JOIN users ON files.uploader = users.user_id'
+    shorten_user_join = 'JOIN users ON shortens.uploader = users.user_id'
+    user_c_criteria = 'AND users.consented = true'
+
+    # Total non-deleted file count
+    nd_file_count = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM files
+    WHERE deleted = false
+    """)
+
+    # Total deleted file count
+    d_file_count = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM files
+    WHERE deleted = true
+    """)
+
+    # Total non-deleted shortens
+    nd_shorten_count = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM shortens
+    WHERE deleted = false
+    """)
+
+    # Total deleted shortens
+    d_shorten_count = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM shortens
+    WHERE deleted = true
+    """)
+
+    # Total non-deleted file size
+    total_nd_file_size = await db.fetchval("""
+    SELECT SUM(file_size)
+    FROM files
+    WHERE deleted = false
+    """)
+
+    # Total deleted file size
+    total_d_file_size = await db.fetchval("""
+    SELECT SUM(file_size)
+    FROM files
+    WHERE deleted = true
+    """)
+
+    # Total non-deleted file uploads in last week
+    nd_file_count_week = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM files
+    WHERE file_id > time_snowflake(now() - interval '7 days')
+    AND deleted = false
+    """)
+
+    # Total deleted file uploads in last week
+    d_file_count_week = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM files
+    WHERE file_id > time_snowflake(now() - interval '7 days')
+    AND deleted = true
+    """)
+
+    # Total size of non-deleted file uploads in last week
+    total_nd_file_size_week = await db.fetchval("""
+    SELECT SUM(file_size)
+    FROM files
+    WHERE file_id > time_snowflake(now() - interval '7 days')
+    AND deleted = false
+    """)
+
+    # Total size of deleted file uploads in last week
+    total_d_file_size_week = await db.fetchval("""
+    SELECT SUM(file_size)
+    FROM files
+    WHERE file_id > time_snowflake(now() - interval '7 days')
+    AND deleted = true
+    """)
+
+    # Total non-deleted shortens in last week
+    nd_shorten_count_week = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM shortens
+    WHERE shorten_id > time_snowflake(now() - interval '7 days')
+    AND deleted = false
+    """)
+
+    # Total deleted shortens in last week
+    d_shorten_count_week = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM shortens
+    WHERE shorten_id > time_snowflake(now() - interval '7 days')
+    AND deleted = true
+    """)
+
+    # Total active user count
+    total_active_user_count = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM users
+    WHERE active = true
+    """)
+
+    # Total inactive user count
+    total_inactive_user_count = await db.fetchval("""
+    SELECT COUNT(*)
+    FROM users
+    WHERE active = false
+    """)
+
+    # Biggest file
+    biggest_file = await db.fetchrow("""
+    SELECT filename, file_size, fspath
+    FROM files
+    ORDER BY file_size DESC
+    """)
+    biggest_ext = splitext(biggest_file["fspath"])[-1]
+
+    print(f"""Users
+=====
+{total_active_user_count} active, {total_inactive_user_count} inactive
+
+Files
+=====
+Global Counts, ND: {nd_file_count}, D: {d_file_count}
+Weekly Counts, ND: {nd_file_count_week}, D: {d_file_count_week}
+
+Global sizes, ND: {byte_to_mibstring(total_nd_file_size)}, \
+D: {byte_to_mibstring(total_d_file_size)}
+Weekly sizes, ND: {byte_to_mibstring(total_nd_file_size_week)}, \
+D: {byte_to_mibstring(total_d_file_size_week)}
+
+Biggest file: '{biggest_file['filename']}{biggest_ext}' \
+at {byte_to_mibstring(biggest_file['file_size'])}
+
+Shortens
+========
+Global Counts, ND: {nd_shorten_count}, D: {d_shorten_count}
+Weekly Counts, ND: {nd_shorten_count_week}, D: {d_shorten_count_week}
+    """)
+
+
+
 def setup(subparsers):
     parser_cleanup = subparsers.add_parser(
         'cleanup_files',
@@ -84,3 +244,10 @@ to a version of the backend that deletes files.
     parser_rename.add_argument('shortname', help='old shortname for the file')
     parser_rename.add_argument('renamed', help='new shortname for the file')
     parser_rename.set_defaults(func=rename_file)
+
+    parser_stats = subparsers.add_parser(
+        'stats',
+        help='Statistics about the instance'
+    )
+
+    parser_stats.set_defaults(func=show_stats)
