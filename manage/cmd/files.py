@@ -82,11 +82,6 @@ async def rename_file(ctx, args):
 async def show_stats(ctx, _args):
     db = ctx.db
 
-    # those are used to get counts on people who have consented
-    files_user_join = 'JOIN users ON files.uploader = users.user_id'
-    shorten_user_join = 'JOIN users ON shortens.uploader = users.user_id'
-    user_c_criteria = 'AND users.consented = true'
-
     # Total non-deleted file count
     nd_file_count = await db.fetchval("""
     SELECT COUNT(*)
