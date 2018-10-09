@@ -121,7 +121,10 @@ async def change_profile(request):
         await password_check(request, user_id, password)
 
     if password and new_username is not None:
-        # query from db instead of cache
+        new_username = new_username.lower()
+
+        # query the old username from database
+        # instead of relying in Storage
         old_username = await request.app.db.fetchval("""
         SELECT username
         FROM users
