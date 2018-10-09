@@ -142,6 +142,15 @@ class Storage:
             value = 'false' if value is None else value
             await conn.set(key, value, **kwargs)
 
+    async def set_with_ttl(self, key, value, ttl):
+        """Set a key and set its TTL afterwards.
+
+        This works better than the expire and pexpire
+        keyword arguments in the set() call
+        """
+        await self.set(key, value)
+        await self.redis.expire(key, ttl)
+
     async def set_multi_one(self, keys: list, value):
         """Set multiple keys to one given value.
 
@@ -174,7 +183,7 @@ class Storage:
         keys = (f'{ukey}:{field}' for field in fields)
         await self.raw_invalidate(*keys)
 
-    async def _generic_1(self, key: str, key_type,
+    async def _generic_1(self, key: str, key_type, ttl: int,
                          query: str, *query_args: tuple):
         """Generic storage function for Storage.get_uid
         and Storage.get_username.
@@ -185,6 +194,8 @@ class Storage:
             The key to fetch from Redis.
         key_type: any
             The key type.
+        ttl: int
+            The TTL value of the key after setting.
         query: str
             The Postgres query to run if Redis
             does not have the key.
@@ -206,14 +217,13 @@ class Storage:
 
         if val is None:
             val = await self.db.fetchval(query, *query_args)
-
-            await self.set(key, val or 'false')
+            await self.set_with_ttl(key, val or 'false', ttl)
 
         return val
 
     async def get_uid(self, username: str) -> int:
         """Get an user ID given a username."""
-        return await self._generic_1(f'uid:{username}', int, """
+        return await self._generic_1(f'uid:{username}', int, 600, """
             SELECT user_id
             FROM users
             WHERE username = $1
@@ -222,7 +232,7 @@ class Storage:
 
     async def get_username(self, user_id: int) -> str:
         """Get a username given user ID."""
-        return await self._generic_1(f'uname:{user_id}', str, """
+        return await self._generic_1(f'uname:{user_id}', str, 600, """
             SELECT username
             FROM users
             WHERE user_id = $1
@@ -285,7 +295,10 @@ class Storage:
             WHERE user_id = $1
             """, user_id)
 
-            await self.set(f'{ukey}:password_hash', password_hash or 'false')
+            # keep this cached for 10 minutes
+            await self.set_with_ttl(f'{ukey}:password_hash',
+                                    password_hash,
+                                    600)
 
         if active is None:
             active = await self.db.fetchval("""
@@ -294,7 +307,8 @@ class Storage:
             WHERE user_id = $1
             """, user_id)
 
-            await self.set(f'{ukey}:active', active or 'false')
+            # keep this cached as well
+            await self.set_with_ttl(f'{ukey}:active', active, 600)
 
         return check({
             'password_hash': password_hash,
@@ -304,7 +318,7 @@ class Storage:
     async def get_fspath(self, shortname: str, domain_id: int) -> str:
         """Get the filesystem path of an image."""
         key = f'fspath:{domain_id}:{shortname}'
-        return await self._generic_1(key, str, """
+        return await self._generic_1(key, str, 600, """
             SELECT fspath
             FROM files
             WHERE filename = $1
@@ -316,7 +330,7 @@ class Storage:
     async def get_urlredir(self, filename: str, domain_id: int) -> str:
         """Get a redirection of an URL."""
         key = f'redir:{domain_id}:{filename}'
-        return await self._generic_1(key, str, """
+        return await self._generic_1(key, str, 600, """
             SELECT redirto
             FROM shortens
             WHERE filename = $1
