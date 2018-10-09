@@ -99,7 +99,7 @@ class Storage:
         with await self.redis as conn:
             val = await conn.get(key)
 
-        log.info(f'get {key!r}, type {typ!r}, value {val!r}')
+        log.debug(f'get {key!r}, type {typ!r}, value {val!r}')
         if typ == bool:
             if val == 'True':
                 return True
@@ -135,7 +135,7 @@ class Storage:
             if isinstance(value, bool):
                 value = str(value)
 
-            log.info(f'Setting key {key!r} to {value!r}')
+            log.debug(f'set key {key!r} to {value!r}')
 
             # the string false tells that whatever
             # query the db did returned None.
@@ -251,12 +251,12 @@ class Storage:
         """
         user_id = await self.get_uid(username)
         if not user_id:
-            log.info('user not found')
+            log.warning('user not found')
             return
 
         actx = await self.actx_userid(user_id)
         if not actx:
-            log.info('actx failed')
+            log.warning('actx failed')
             return
 
         actx.update({'user_id': user_id})
