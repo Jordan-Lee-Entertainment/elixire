@@ -427,7 +427,7 @@ async def deactivate_user_from_email(request):
     app = request.app
     user_id = await uid_from_email(app, cli_hash, 'email_deletion_tokens')
 
-    await delete_user(app, user_id)
+    await delete_user(app, user_id, True)
     await clean_etoken(app, cli_hash, 'email_deletion_tokens')
 
     log.warning(f'Deactivated user ID {user_id} by request.')
