@@ -34,20 +34,29 @@ async def filecheck(request, filename):
     if db_ext != ext:
         raise NotFound('No files with this name on this domain.')
 
-    return filepath
+    return filepath, shortname
 
 
 @bp.get('/i/<filename>')
 async def file_handler(request, filename):
     """Handles file serves."""
-    filepath = await filecheck(request, filename)
-    is_text = filepath.endswith('.txt')
+    app = request.app
+    filepath, shortname = await filecheck(request, filename)
+
+    # fetch the file's mimetype from the database
+    # which should be way more reliable than sanic
+    # taking a guess at it.
+    mimetype = await app.storage.get_file_mime(shortname)
+
+    if mimetype == 'text/plain':
+        mimetype = 'text/plain; charset=utf-8'
+
     return await response.file_stream(
         filepath,
         headers={
             'Content-Security-Policy': "sandbox; frame-src 'none'"
         },
-        mime_type='text/plain; charset=utf-8' if is_text else None)
+        mime_type=mimetype)
 
 
 @bp.get('/t/<filename>')
@@ -55,7 +64,7 @@ async def thumbnail_handler(request, filename):
     """Handles thumbnail serves."""
     appcfg = request.app.econfig
     thumbtype, filename = filename[0], filename[1:]
-    fspath = await filecheck(request, filename)
+    fspath, _shortname = await filecheck(request, filename)
 
     # if thumbnails are disabled, just return
     # the same file

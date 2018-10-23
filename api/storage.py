@@ -465,3 +465,15 @@ class Storage:
         FROM files
         WHERE filename = $1
         """, shortname)
+
+    async def get_file_mime(self, shortname: str) -> str:
+        """Get the File's mimetype stored on the database."""
+
+        key = f'mime:{shortname}'
+        return await self._generic_1(key, str, 600, """
+            SELECT mimetype
+            FROM files
+            WHERE filename = $1
+              AND deleted = false
+            LIMIT 1
+        """, shortname)
