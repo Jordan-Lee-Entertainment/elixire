@@ -111,6 +111,12 @@ async def ratelimit_handler(request):
     else:
         return
 
+    rtl_path_scope = best_rtl.scope
+    if isinstance(rtl_path_scope, tuple):
+        request['_ratelimit_path'] = rtl_path_scope[1]
+    else:
+        request['_ratelimit_path'] = rtl_path_scope
+
     # from the best ratelimiter, acquire the bucket
     # (which is based on IP or user ID)
     if preferred_scope == 'ip':
@@ -141,6 +147,11 @@ async def rl_header_set(request, resp):
 
     try:
         resp.headers['X-Ratelimit-Scope'] = request['_ratelimit_scope']
+    except KeyError:
+        pass
+
+    try:
+        resp.headers['X-Ratelimit-Path'] = request['_ratelimit_path']
     except KeyError:
         pass
 
