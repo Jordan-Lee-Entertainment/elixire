@@ -9,7 +9,7 @@ frontend:
 
 panel:
 	echo "Building Admin Panel"
-	cd admin-panel; npm ci
+	cd admin-panel; npm install
 	cd admin-panel; npm run build
 
 update:
