@@ -70,14 +70,14 @@ async def file_size_counts(app):
     total_size = await app.db.fetchval("""
     SELECT SUM(file_size) / 1048576
     FROM files
-    """)
+    """) or 0
 
     total_size_public = await app.db.fetchval("""
     SELECT SUM(file_size) / 1048576
     FROM files
     JOIN users ON files.uploader = users.user_id
     WHERE users.consented = true
-    """)
+    """) or 0
 
     metrics = app.metrics
     await metrics.submit('total_size', total_size)
