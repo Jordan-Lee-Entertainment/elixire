@@ -31,6 +31,7 @@ from api.common import get_ip_addr
 from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.common.utils import LockStorage
 from api.storage import Storage
+from api.jobs import JobManager
 
 import config
 
@@ -225,6 +226,9 @@ async def setup_db(rapp, loop):
     rapp.storage = Storage(app)
     rapp.locks = LockStorage()
 
+    # general job manager
+    rapp.sched = JobManager(rapp.loop)
+
     # Tasks for datadump API
     rapp.dump_worker = None
     rapp.janitor_task = None
@@ -253,6 +257,8 @@ async def close_db(rapp, _loop):
     log.info('closing redis')
     rapp.redis.close()
     await rapp.redis.wait_closed()
+
+    rapp.sched.stop()
 
     if rapp.dump_worker:
         rapp.dump_worker.cancel()
