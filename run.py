@@ -229,10 +229,6 @@ async def setup_db(rapp, loop):
     # general job manager
     rapp.sched = JobManager(rapp.loop)
 
-    # Tasks for datadump API
-    rapp.dump_worker = None
-    rapp.janitor_task = None
-
     # metrics stuff
     rapp.rate_requests = 0
     rapp.rate_response = 0

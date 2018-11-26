@@ -9,7 +9,7 @@ class JobManager:
     def __init__(self, loop=None):
         log.debug('job manager start')
         self.loop = loop or asyncio.get_event_loop()
-        self.jobs = []
+        self.jobs = {}
 
     async def _wrapper(self, coro):
         job_name = coro.__name__
@@ -17,6 +17,7 @@ class JobManager:
         try:
             log.debug('running job: %r', job_name)
             await coro
+            log.debug('job finish: %r', job_name)
         except Exception:
             log.exception('Error while running job %r', job_name)
         except asyncio.CancelledError:
@@ -44,7 +45,7 @@ class JobManager:
             self._wrapper(coro)
         )
 
-        self.jobs.append(task)
+        self.jobs[coro.__name__] = task
 
     def spawn_periodic(self, func, args, period: int):
         """Spawn a background task that will
@@ -53,12 +54,23 @@ class JobManager:
             self._wrapper_bg(func, args, period)
         )
 
-        self.jobs.append(task)
+        self.jobs[func.__name__] = task
+
+    def exists(self, job_name: str):
+        """Return if a given job name exists
+        in the job manager."""
+        return job_name in self.jobs
+
+    def stop_job(self, job_name: str):
+        """Stop a single job."""
+        log.debug('stopping job %r', job_name)
+        job = self.jobs.pop(job_name)
+        job.cancel()
 
     def stop(self):
         """Stop the job manager by
         cancelling all jobs."""
         log.debug('cancelling %d jobs', len(self.jobs))
 
-        for job in self.jobs:
-            job.cancel()
+        for job_name in list(self.jobs.keys()):
+            self.stop_job(job_name)

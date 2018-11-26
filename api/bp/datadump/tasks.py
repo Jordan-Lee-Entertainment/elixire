@@ -312,8 +312,6 @@ async def dump_worker(app):
 
     Works dump resuming, manages the next user on the queue, etc.
     """
-    log.info('dump worker start')
-
     # fetch state, if there is, resume
     user_id = await app.db.fetchval("""
     SELECT user_id
@@ -348,9 +346,6 @@ async def dump_worker(app):
         # will stop.
         return await dump_worker(app)
 
-    log.info('dump worker stop')
-    app.dump_worker = None
-
 
 async def dump_worker_wrapper(app):
     """Wrap the dump_worker inside a try/except block for logging."""
@@ -362,11 +357,11 @@ async def dump_worker_wrapper(app):
 
 def start_worker(app):
     """Start the dump worker, but not start more than 1 of them."""
-    if app.dump_worker:
+    if app.sched.exists('dump_worker_wrapper'):
+        log.info('worker wrapper exists, skipping')
         return
 
-    log.info('Starting dump worker')
-    app.dump_worker = app.loop.create_task(dump_worker_wrapper(app))
+    app.sched.spawn(dump_worker_wrapper(app))
 
 
 async def dump_janitor(app):
