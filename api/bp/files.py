@@ -135,7 +135,10 @@ async def delete_all(request, user_id):
     await password_check(request, user_id, password)
 
     # create task to delete all files in the background
-    app.loop.create_task(delete_file_task(app, user_id, False))
+    app.sched.spawn(
+        delete_file_task(app, user_id, False),
+        f'delete_files_{user_id}'
+    )
 
     return response.json({
         'success': True,

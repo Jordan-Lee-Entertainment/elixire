@@ -403,4 +403,3 @@ def start_janitor(app):
         [app],
         app.econfig.DUMP_JANITOR_PERIOD
     )
-    # app.janitor_task = app.loop.create_task(dump_janitor(app))

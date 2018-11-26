@@ -50,6 +50,7 @@ class JobManager:
         )
 
         self.jobs[name] = task
+        return task
 
     def spawn_periodic(self, func, args, period: int, name: str = None):
         """Spawn a background task that will be run
@@ -61,6 +62,7 @@ class JobManager:
         )
 
         self.jobs[name] = task
+        return task
 
     def exists(self, job_name: str):
         """Return if a given job name exists
