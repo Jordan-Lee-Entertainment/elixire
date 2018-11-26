@@ -79,6 +79,8 @@ class MigrationContext:
 
 
 async def _ensure_changelog(ctx, mctx) -> int:
+    """Ensure a migration log exists
+    in the database."""
     try:
         await ctx.db.execute("""
         CREATE TABLE migration_log (
@@ -100,6 +102,8 @@ async def _ensure_changelog(ctx, mctx) -> int:
         VALUES
             ($1, $2)
         """, mctx.latest, 'migration table setup')
+
+        log.debug('migration table created')
     except asyncpg.DuplicateTableError:
         log.debug('existing migration log')
 
@@ -143,6 +147,8 @@ async def apply_migration(ctx, migration: Migration):
 
         print('applied', migration.mid, migration.name)
     except Exception:
+        # do not let the error make this an applied migration
+        # in the logs.
         log.exception('error while applying migration')
 
 
@@ -161,6 +167,8 @@ async def migrate_cmd(ctx, _args):
     # latest change id, so we can compare
     # this value against MigrationContext.latest.
     local_latest = await _ensure_changelog(ctx, mctx)
+
+    log.debug('%d migrations loaded', len(mctx.scripts))
 
     print('local', local_latest, 'latest', mctx.latest)
 
