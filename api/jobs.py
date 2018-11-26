@@ -39,22 +39,26 @@ class JobManager:
         except asyncio.CancelledError:
             log.warning('cancelled job: %r', job_name)
 
-    def spawn(self, coro):
+    def spawn(self, coro, name: str = None):
         """Spawn a backgrund task once."""
+        name = name or coro.__name__
+
         task = self.loop.create_task(
             self._wrapper(coro)
         )
 
-        self.jobs[coro.__name__] = task
+        self.jobs[name] = task
 
-    def spawn_periodic(self, func, args, period: int):
+    def spawn_periodic(self, func, args, period: int, name: str = None):
         """Spawn a background task that will
         be run every ``period`` seconds."""
+        name = name or func.__name__
+
         task = self.loop.create_task(
             self._wrapper_bg(func, args, period)
         )
 
-        self.jobs[func.__name__] = task
+        self.jobs[name] = task
 
     def exists(self, job_name: str):
         """Return if a given job name exists

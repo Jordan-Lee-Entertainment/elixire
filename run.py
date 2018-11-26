@@ -211,6 +211,8 @@ def handle_exception(request, exception):
 @app.listener('before_server_start')
 async def setup_db(rapp, loop):
     """Initialize db connection before app start"""
+    rapp.sched = JobManager()
+
     rapp.session = aiohttp.ClientSession(loop=loop)
 
     log.info('connecting to db')
@@ -225,9 +227,6 @@ async def setup_db(rapp, loop):
 
     rapp.storage = Storage(app)
     rapp.locks = LockStorage()
-
-    # general job manager
-    rapp.sched = JobManager(rapp.loop)
 
     # metrics stuff
     rapp.rate_requests = 0

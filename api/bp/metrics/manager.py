@@ -37,7 +37,11 @@ class MetricsManager:
         self._timestamps, self._period = metrics_limit
 
         log.info('starting metrics worker')
-        self._worker = loop.create_task(self.worker())
+
+        self.app.sched.spawn_periodic(
+            self._work, [], self._period,
+            'metrics_worker'
+        )
 
     def _start_influx(self):
         cfg = self.app.econfig
@@ -122,26 +126,10 @@ class MetricsManager:
         done, pending = await asyncio.wait(tasks)
         log.debug(f'{len(done)} done {len(pending)} pending')
 
-    async def worker(self):
-        """Main metrics worker.
-
-        This keeps itself in a loop to submit
-        any remaining metrics datapoints.
-        """
-        try:
-            while True:
-                await self._work()
-                await asyncio.sleep(self._period)
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            log.exception('metrics worker failed')
-
-        log.warning('metrics worker stop')
-
     def _convert_value(self, value):
         if isinstance(value, int):
             return f'{value}i'
+
         return f'{value}'
 
     async def submit(self, title, value):
@@ -150,6 +138,8 @@ class MetricsManager:
         if not self.app.econfig.ENABLE_METRICS:
             return
 
+        #: this is relative to the app, NOT
+        #  to be dispatched to InfluxDB.
         timestamp = str(time.monotonic())
 
         # line format uses a nanosecond timestamp, so
@@ -191,5 +181,5 @@ class MetricsManager:
         """Stop the manager by cancelling
         its worker task and finishing any
         remaining datapoints."""
-        self._worker.cancel()
+        self.app.sched.stop_job('metrics_worker')
         await self.finish_all()
