@@ -73,7 +73,7 @@ async def test_user_fetch(test_cli):
     assert isinstance(rjson['admin'], bool)
     assert isinstance(rjson['domain'], int)
     assert isinstance(rjson['subdomain'], str)
-    assert isinstance(rjson['consented'], bool)
+    assert isinstance(rjson['consented'], bool) or rjson['consented'] is None
     assert isinstance(rjson['email'], str)
     assert isinstance(rjson['paranoid'], bool)
     assert isinstance(rjson['limits'], dict)
