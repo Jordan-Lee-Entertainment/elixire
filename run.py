@@ -259,6 +259,11 @@ async def close_db(rapp, _loop):
     rapp.sched.stop()
 
 
+# we set blueprints globally
+# and after every listener is declared.
+set_blueprints(app)
+
+
 def main():
     """Main application entry point."""
     # "fix" CORS.
@@ -271,8 +276,6 @@ def main():
 
     app.static('/humans.txt', './static/humans.txt')
     app.static('/robots.txt', './static/robots.txt')
-
-    set_blueprints(app)
 
     app.run(host=config.HOST, port=config.PORT)
 

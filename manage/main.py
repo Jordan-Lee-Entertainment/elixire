@@ -14,6 +14,7 @@ import aioredis
 # more info on Context @ manage/utils.py
 from api.storage import Storage
 from api.common.utils import LockStorage
+from api.jobs import JobManager
 
 from .errors import PrintException, ArgError
 from .utils import Context
@@ -71,6 +72,8 @@ def main(config):
     # this needs an actual connection to the database and redis
     # so we first instantiate Context, then set the attribute
     ctx.storage = Storage(ctx)
+
+    ctx.sched = JobManager(loop)
 
     # aiohttp warns us when making ClientSession out of
     # a coroutine, so yeah.

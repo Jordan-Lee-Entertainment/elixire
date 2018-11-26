@@ -1,6 +1,5 @@
 import logging
 import asyncio
-from asyncio import CancelledError
 
 log = logging.getLogger(__name__)
 

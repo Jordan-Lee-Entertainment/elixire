@@ -27,6 +27,7 @@ class Context:
         self.args = None
         self.session = None
         self.storage = None
+        self.sched = None
 
 
 async def get_user(ctx, username: str) -> int:

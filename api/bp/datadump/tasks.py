@@ -5,7 +5,6 @@ elixire - datadump API
 import json
 import time
 import logging
-import asyncio
 import zipfile
 import pathlib
 import os.path
