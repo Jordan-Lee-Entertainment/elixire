@@ -51,30 +51,6 @@ CORS(
     ]
 )
 
-# load blueprints
-app.blueprint(api.bp.ratelimit.bp)
-app.blueprint(api.bp.auth.bp)
-app.blueprint(api.bp.index.bp)
-app.blueprint(api.bp.profile.bp)
-app.blueprint(api.bp.upload.bp)
-app.blueprint(api.bp.files.bp)
-app.blueprint(api.bp.shorten.bp)
-app.blueprint(api.bp.fetch.bp)
-
-# load admin blueprints
-app.blueprint(api.bp.admin.user_bp)
-app.blueprint(api.bp.admin.object_bp)
-app.blueprint(api.bp.admin.domain_bp)
-app.blueprint(api.bp.admin.misc_bp)
-
-app.blueprint(api.bp.register.bp)
-app.blueprint(api.bp.datadump.bp)
-app.blueprint(api.bp.personal_stats.bp)
-app.blueprint(api.bp.d1check.bp)
-app.blueprint(api.bp.misc.bp)
-app.blueprint(api.bp.frontend.bp)
-app.blueprint(api.bp.metrics.bp)
-
 level = getattr(config, 'LOGGING_LEVEL', 'INFO')
 logging.basicConfig(level=level)
 logging.getLogger('aioinflux').setLevel(logging.INFO)
@@ -85,6 +61,33 @@ if level == 'DEBUG':
     logging.getLogger().addHandler(fh)
 
 log = logging.getLogger(__name__)
+
+
+def set_blueprints(app_):
+    # load blueprints
+    app_.blueprint(api.bp.ratelimit.bp)
+    app_.blueprint(api.bp.auth.bp)
+    app_.blueprint(api.bp.index.bp)
+    app_.blueprint(api.bp.profile.bp)
+    app_.blueprint(api.bp.upload.bp)
+    app_.blueprint(api.bp.files.bp)
+    app_.blueprint(api.bp.shorten.bp)
+    app_.blueprint(api.bp.fetch.bp)
+
+    # load admin blueprints
+    app_.blueprint(api.bp.admin.user_bp)
+    app_.blueprint(api.bp.admin.object_bp)
+    app_.blueprint(api.bp.admin.domain_bp)
+    app_.blueprint(api.bp.admin.misc_bp)
+
+    app_.blueprint(api.bp.register.bp)
+    app_.blueprint(api.bp.datadump.bp)
+    app_.blueprint(api.bp.personal_stats.bp)
+    app_.blueprint(api.bp.d1check.bp)
+    app_.blueprint(api.bp.misc.bp)
+    app_.blueprint(api.bp.frontend.bp)
+    app_.blueprint(api.bp.metrics.bp)
+
 
 
 async def options_handler(request, *args, **kwargs):
@@ -268,6 +271,8 @@ def main():
 
     app.static('/humans.txt', './static/humans.txt')
     app.static('/robots.txt', './static/robots.txt')
+
+    set_blueprints(app)
 
     app.run(host=config.HOST, port=config.PORT)
 
