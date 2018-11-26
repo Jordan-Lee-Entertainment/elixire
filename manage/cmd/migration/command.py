@@ -4,13 +4,18 @@ elixire db migration script.
 import logging
 from pathlib import Path
 from inspect import stack
+from collections import namedtuple
 
 import asyncpg
 
 log = logging.getLogger(__name__)
 
+Migration = namedtuple('Migration', 'mid name path')
+
 
 def _get_mig_folder() -> Path:
+    """Fetch a Path instance for the
+    folder holding the migration SQL scripts."""
     # first, we need this file's path
     # via inspect.stack()
     cmd_path = stack()[0][1]
@@ -22,14 +27,6 @@ def _get_mig_folder() -> Path:
 
     # then we'll have the migration folder
     return cmd_folder / 'scripts'
-
-
-class Migration:
-    """Hold a single migration's information."""
-    def __init__(self, mig_id: int, name: str, path: Path):
-        self.mid = mig_id
-        self.name = name
-        self.path = path
 
 
 class MigrationContext:
