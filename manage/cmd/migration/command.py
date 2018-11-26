@@ -207,4 +207,3 @@ def setup(subparsers):
     )
 
     parser_migrate.set_defaults(func=migrate_cmd)
-
