@@ -262,7 +262,6 @@ async def close_db(rapp, _loop):
 
     if rapp.dump_worker:
         rapp.dump_worker.cancel()
-    rapp.janitor_task.cancel()
 
 
 def main():

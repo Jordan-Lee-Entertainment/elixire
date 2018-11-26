@@ -378,33 +378,34 @@ async def dump_janitor(app):
     If there is a file that is more than 6 hours old, it gets deleted.
     """
     dumps = pathlib.Path(app.econfig.DUMP_FOLDER)
-    while True:
-        # iterate over all ((ZIP)) files inside the dump folder
-        for fpath in dumps.glob('*.zip'):
-            fstat = fpath.stat()
-            now = time.time()
 
-            # if the current time - the last time of modification
-            # is more than 6 hours, we delete.
-            file_life = now - fstat.st_mtime
-            if file_life > 21600:
-                log.info(f'janitor: cleaning {fpath} since it is more than 6h '
-                         f'(life: {file_life}s)')
-                fpath.unlink()
-            else:
-                log.info(f'Ignoring {fpath}, life {file_life}s < 21600')
+    # iterate over all zip files inside the dump folder
+    for fpath in dumps.glob('*.zip'):
+        fstat = fpath.stat()
+        now = time.time()
 
-        await asyncio.sleep(app.econfig.DUMP_JANITOR_PERIOD)
+        # if the current time - the last time of modification
+        # is more than 6 hours, we delete.
+        file_life = now - fstat.st_mtime
 
+        if file_life > 21600:
+            log.info(
+                f'janitor: cleaning {fpath} since it is more than 6h '
+                f'(life: {file_life}s)')
 
-async def dump_janitor_wrapper(app):
-    """Spawn a janitor task inside a try/except."""
-    try:
-        await dump_janitor(app)
-    except Exception:
-        log.exception('error in dump janitor task')
+            fpath.unlink()
+        else:
+            log.info(f'Ignoring {fpath}, life {file_life}s < 21600')
 
 
 def start_janitor(app):
     """Start dump janitor."""
-    app.janitor_task = app.loop.create_task(dump_janitor(app))
+
+    # call dump_janitor every DUMP_JANITOR_PERIOD
+    # seconds.
+    app.sched.spawn_periodic(
+        dump_janitor,
+        [app],
+        app.econfig.DUMP_JANITOR_PERIOD
+    )
+    # app.janitor_task = app.loop.create_task(dump_janitor(app))
