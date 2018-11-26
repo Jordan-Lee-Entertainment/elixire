@@ -256,9 +256,6 @@ async def close_db(rapp, _loop):
 
     rapp.sched.stop()
 
-    if rapp.dump_worker:
-        rapp.dump_worker.cancel()
-
 
 def main():
     """Main application entry point."""
