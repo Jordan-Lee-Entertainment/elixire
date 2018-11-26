@@ -186,3 +186,10 @@ class MetricsManager:
         if self.influx:
             log.info('closing influxdb conn')
             await self.influx.close()
+
+    async def stop(self):
+        """Stop the manager by cancelling
+        its worker task and finishing any
+        remaining datapoints."""
+        self._worker.cancel()
+        await self.finish_all()
