@@ -18,7 +18,7 @@ from api.common.utils import LockStorage
 from .errors import PrintException, ArgError
 from .utils import Context
 
-from manage.cmd import ban, files, find, user
+from manage.cmd import ban, files, find, user, migration
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +53,7 @@ def set_parser():
     files(subparsers)
     find(subparsers)
     ban(subparsers)
+    migration(subparsers)
 
     return parser
 
