@@ -107,6 +107,14 @@ IP_BAN_PERIOD = '5 minutes'
 RL_THRESHOLD = 10
 
 # === UPLOAD SETTINGS ===
+# Configurations here are mixed for images/shortens.
+
+# Sets the minimum shortname length (for both image uploads
+# and shortens)
+SHORTNAME_LEN = 3
+
+# Maximum length of the URL that's going to be shortened
+MAX_SHORTEN_URL_LEN = 250
 
 # run clamdscan on every upload.
 # this will use the multicore option,
@@ -222,12 +230,6 @@ THUMBNAIL_SIZES = {
     # tiny (250x250)
     't': (250, 250),
 }
-
-# Sets the minimum shortname length
-SHORTNAME_LEN = 3
-
-# Maximum length of the URL that's going to be shortened
-MAX_SHORTEN_URL_LEN = 250
 
 # === FEATURE SETTINGS ===
 # Disabled features will raise a 503 to

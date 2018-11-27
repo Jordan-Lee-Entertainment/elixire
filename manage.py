@@ -6,7 +6,10 @@ from manage.main import main
 
 import config
 
-logging.basicConfig(level=logging.INFO)
+def _setup_logging():
+    level = getattr(config, 'LOGGING_LEVEL', 'INFO')
+    logging.basicConfig(level=level)
 
 if __name__ == '__main__':
+    _setup_logging()
     sys.exit(main(config))
