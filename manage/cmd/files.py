@@ -246,3 +246,22 @@ to a version of the backend that deletes files.
     )
 
     parser_stats.set_defaults(func=show_stats)
+
+    parser_del = subparsers.add_parser(
+        'delete',
+        help='mark a file as deleted'
+    )
+
+    parser_del.add_argument(
+        'shortname', help='shortname for the file to be deleted')
+    parser_del.set_defaults(func=delete_file)
+
+    parser_nuke = subparsers.add_parser(
+        'nuke',
+        help='delete a file, including filesystem'
+    )
+
+    parser_nuke.add_argument(
+        'shortname', help='shortname for the file to be nuked')
+    parser_nuke.set_defaults(func=nuke_file)
+
