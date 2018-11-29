@@ -2,6 +2,9 @@ from os.path import splitext
 from pathlib import Path
 from decimal import Decimal
 
+from api.common import delete_file
+from manage.errors import PrintException
+
 
 def byte_to_mibstring(bytecount: int) -> str:
     """Convert an integer representing the
@@ -218,6 +221,65 @@ Weekly Counts, ND: {nd_shorten_count_week}, D: {d_shorten_count_week}
     """)
 
 
+async def _extract_file_info(ctx, shortname) -> int:
+    """Extract the domain ID for a file.
+
+    Does checking against dummy user.
+    """
+    row = await ctx.db.fetchrow("""
+    SELECT uploader, domain
+    FROM files
+    WHERE filename = $1
+    """, shortname)
+
+    if row is None:
+        raise PrintException('file not found in db')
+
+    uploader_id, domain_id = row['uploader'], row['domain']
+
+    if uploader_id == 0:
+        raise PrintException('file is from dummy user')
+
+    return domain_id
+
+
+async def delete_file_cmd(ctx, args):
+    shortname = args.shortname
+    domain_id = await _extract_file_info(ctx, shortname)
+
+    await ctx.db.execute("""
+    UPDATE files
+    SET deleted = true
+    WHERE filename = $1
+    """, shortname)
+
+    await ctx.storage.raw_invalidate(f'fspath:{domain_id}:{shortname}')
+
+    print('OK', shortname)
+
+
+async def undelete_file_cmd(ctx, args):
+    shortname = args.shortname
+    domain_id = await _extract_file_info(ctx, shortname)
+
+    await ctx.db.execute("""
+    UPDATE files
+    SET deleted = false
+    WHERE filename = $1
+    """, shortname)
+
+    await ctx.storage.raw_invalidate(f'fspath:{domain_id}:{shortname}')
+
+    print('OK', shortname)
+
+
+
+async def nuke_file_cmd(ctx, args):
+    shortname = args.shortname
+    domain_id = await _extract_file_info(ctx, shortname)
+    await delete_file(ctx, shortname, None, False)
+    print('OK', shortname, 'DOMAIN', domain_id)
+
 
 def setup(subparsers):
     parser_cleanup = subparsers.add_parser(
@@ -254,7 +316,16 @@ to a version of the backend that deletes files.
 
     parser_del.add_argument(
         'shortname', help='shortname for the file to be deleted')
-    parser_del.set_defaults(func=delete_file)
+    parser_del.set_defaults(func=delete_file_cmd)
+
+    parser_undel = subparsers.add_parser(
+        'undelete',
+        help='mark a file as not deleted'
+    )
+
+    parser_undel.add_argument(
+        'shortname', help='shortname for the file to be undeleted')
+    parser_undel.set_defaults(func=undelete_file_cmd)
 
     parser_nuke = subparsers.add_parser(
         'nuke',
@@ -263,5 +334,4 @@ to a version of the backend that deletes files.
 
     parser_nuke.add_argument(
         'shortname', help='shortname for the file to be nuked')
-    parser_nuke.set_defaults(func=nuke_file)
-
+    parser_nuke.set_defaults(func=nuke_file_cmd)
