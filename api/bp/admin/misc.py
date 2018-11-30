@@ -58,7 +58,10 @@ async def email_broadcast(request, admin_id):
     subject, body = fmt_email(app, subject), fmt_email(app, body)
 
     # we do it in the background for webscale
-    app.loop.create_task(_do_broadcast(app, subject, body))
+    app.sched.spawn(
+        _do_broadcast(app, subject, body),
+        'admin_broadcast'
+    )
 
     return response.json({
         'success': True

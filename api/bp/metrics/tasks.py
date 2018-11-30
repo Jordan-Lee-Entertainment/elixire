@@ -1,38 +1,30 @@
 import logging
 import asyncio
-from asyncio import CancelledError
 
 log = logging.getLogger(__name__)
 
 
 async def second_tasks(app):
-    try:
-        while True:
-            # submit and reset what we have on each second
-            metrics = app.metrics
-            await metrics.submit('request', app.rate_requests)
-            app.rate_requests = 0
+    """Quick submission of per-second metrics."""
+    metrics = app.metrics
 
-            await metrics.submit('response', app.rate_response)
-            app.rate_response = 0
+    await metrics.submit('request', app.rate_requests)
+    app.rate_requests = 0
 
-            await metrics.submit('request_pub', app.rreq_public)
-            app.rreq_public = 0
+    await metrics.submit('response', app.rate_response)
+    app.rate_response = 0
 
-            await metrics.submit('response_pub', app.rres_public)
-            app.rres_public = 0
+    await metrics.submit('request_pub', app.rreq_public)
+    app.rreq_public = 0
 
-            await metrics.submit('error', app.rerr_counter)
-            app.rerr_counter = 0
+    await metrics.submit('response_pub', app.rres_public)
+    app.rres_public = 0
 
-            await metrics.submit('page_hit', app.page_hit_counter)
-            app.page_hit_counter = 0
+    await metrics.submit('error', app.rerr_counter)
+    app.rerr_counter = 0
 
-            await asyncio.sleep(1)
-    except CancelledError:
-        log.info('second task cancel')
-    except Exception:
-        log.exception('second task err')
+    await metrics.submit('page_hit', app.page_hit_counter)
+    app.page_hit_counter = 0
 
 
 async def file_upload_counts(app):
@@ -47,7 +39,7 @@ async def file_upload_counts(app):
 
 
 async def file_total_counts(app):
-    # total amount of files
+    """Submit total file count."""
     total_files = await app.db.fetchval("""
     SELECT COUNT(*)
     FROM files
@@ -66,7 +58,7 @@ async def file_total_counts(app):
 
 
 async def file_size_counts(app):
-    # submitted in megabytes
+    """Submit file sizes in megabytes."""
     total_size = await app.db.fetchval("""
     SELECT SUM(file_size) / 1048576
     FROM files
@@ -111,44 +103,34 @@ async def user_counts(app):
 
 
 async def hourly_tasks(app):
-    try:
-        while True:
-            await file_upload_counts(app)
-            await file_total_counts(app)
-            await file_size_counts(app)
-            await user_counts(app)
-            await asyncio.sleep(3600)
-    except CancelledError:
-        log.info('hourly task cancel')
-    except Exception:
-        log.exception('hourly task err')
+    """Functions to be run hourly."""
+    await file_upload_counts(app)
+    await file_total_counts(app)
+    await file_size_counts(app)
+    await user_counts(app)
 
 
 async def upload_uniq_task(app):
-    try:
-        metrics = app.metrics
+    """Count the amount of unique uploads and uploaders
+    in the past 24 hours."""
+    metrics = app.metrics
 
-        while True:
-            count = await app.db.fetchval("""
-            SELECT COUNT(DISTINCT uploader)
-            FROM files
-            WHERE file_id > time_snowflake(now() - interval '24 hours')
-            """)
+    count = await app.db.fetchval("""
+    SELECT COUNT(DISTINCT uploader)
+    FROM files
+    WHERE file_id > time_snowflake(now() - interval '24 hours')
+    """)
 
-            await metrics.submit('uniq_uploaders_day', count)
+    await metrics.submit('uniq_uploaders_day', count)
 
-            countpub = await app.db.fetchval("""
-            SELECT COUNT(DISTINCT uploader)
-            FROM files
-            JOIN users ON users.user_id = files.uploader
-            WHERE file_id > time_snowflake(now() - interval '24 hours')
-              AND users.consented = true
-            """)
+    countpub = await app.db.fetchval("""
+    SELECT COUNT(DISTINCT uploader)
+    FROM files
+    JOIN users ON users.user_id = files.uploader
+    WHERE file_id > time_snowflake(now() - interval '24 hours')
+        AND users.consented = true
+    """)
 
-            await metrics.submit('uniq_uploaders_day_pub', countpub)
+    await metrics.submit('uniq_uploaders_day_pub', countpub)
 
-            await asyncio.sleep(86400)
-    except CancelledError:
-        log.info('uniq task cancel')
-    except Exception:
-        log.exception('upload uniq task err')
+    await asyncio.sleep(86400)

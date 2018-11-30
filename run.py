@@ -31,6 +31,7 @@ from api.common import get_ip_addr
 from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.common.utils import LockStorage
 from api.storage import Storage
+from api.jobs import JobManager
 
 import config
 
@@ -50,30 +51,6 @@ CORS(
     ]
 )
 
-# load blueprints
-app.blueprint(api.bp.ratelimit.bp)
-app.blueprint(api.bp.auth.bp)
-app.blueprint(api.bp.index.bp)
-app.blueprint(api.bp.profile.bp)
-app.blueprint(api.bp.upload.bp)
-app.blueprint(api.bp.files.bp)
-app.blueprint(api.bp.shorten.bp)
-app.blueprint(api.bp.fetch.bp)
-
-# load admin blueprints
-app.blueprint(api.bp.admin.user_bp)
-app.blueprint(api.bp.admin.object_bp)
-app.blueprint(api.bp.admin.domain_bp)
-app.blueprint(api.bp.admin.misc_bp)
-
-app.blueprint(api.bp.register.bp)
-app.blueprint(api.bp.datadump.bp)
-app.blueprint(api.bp.personal_stats.bp)
-app.blueprint(api.bp.d1check.bp)
-app.blueprint(api.bp.misc.bp)
-app.blueprint(api.bp.frontend.bp)
-app.blueprint(api.bp.metrics.bp)
-
 level = getattr(config, 'LOGGING_LEVEL', 'INFO')
 logging.basicConfig(level=level)
 logging.getLogger('aioinflux').setLevel(logging.INFO)
@@ -84,6 +61,33 @@ if level == 'DEBUG':
     logging.getLogger().addHandler(fh)
 
 log = logging.getLogger(__name__)
+
+
+def set_blueprints(app_):
+    # load blueprints
+    app_.blueprint(api.bp.ratelimit.bp)
+    app_.blueprint(api.bp.auth.bp)
+    app_.blueprint(api.bp.index.bp)
+    app_.blueprint(api.bp.profile.bp)
+    app_.blueprint(api.bp.upload.bp)
+    app_.blueprint(api.bp.files.bp)
+    app_.blueprint(api.bp.shorten.bp)
+    app_.blueprint(api.bp.fetch.bp)
+
+    # load admin blueprints
+    app_.blueprint(api.bp.admin.user_bp)
+    app_.blueprint(api.bp.admin.object_bp)
+    app_.blueprint(api.bp.admin.domain_bp)
+    app_.blueprint(api.bp.admin.misc_bp)
+
+    app_.blueprint(api.bp.register.bp)
+    app_.blueprint(api.bp.datadump.bp)
+    app_.blueprint(api.bp.personal_stats.bp)
+    app_.blueprint(api.bp.d1check.bp)
+    app_.blueprint(api.bp.misc.bp)
+    app_.blueprint(api.bp.frontend.bp)
+    app_.blueprint(api.bp.metrics.bp)
+
 
 
 async def options_handler(request, *args, **kwargs):
@@ -210,6 +214,8 @@ def handle_exception(request, exception):
 @app.listener('before_server_start')
 async def setup_db(rapp, loop):
     """Initialize db connection before app start"""
+    rapp.sched = JobManager()
+
     rapp.session = aiohttp.ClientSession(loop=loop)
 
     log.info('connecting to db')
@@ -224,10 +230,6 @@ async def setup_db(rapp, loop):
 
     rapp.storage = Storage(app)
     rapp.locks = LockStorage()
-
-    # Tasks for datadump API
-    rapp.dump_worker = None
-    rapp.janitor_task = None
 
     # metrics stuff
     rapp.rate_requests = 0
@@ -254,9 +256,12 @@ async def close_db(rapp, _loop):
     rapp.redis.close()
     await rapp.redis.wait_closed()
 
-    if rapp.dump_worker:
-        rapp.dump_worker.cancel()
-    rapp.janitor_task.cancel()
+    rapp.sched.stop()
+
+
+# we set blueprints globally
+# and after every listener is declared.
+set_blueprints(app)
 
 
 def main():

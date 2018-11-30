@@ -413,7 +413,10 @@ async def delete_user(app, user_id: int, delete=False):
 
     # since there is a lot of db load
     # when calling delete_file, we create a task that deletes them.
-    return app.loop.create_task(delete_file_task(app, user_id, delete))
+    return app.sched.spawn(
+        delete_file_task(app, user_id, delete),
+        f'delete_files_{user_id}'
+    )
 
 
 @bp.post('/api/delete_confirm')

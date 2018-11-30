@@ -28,6 +28,7 @@ async def is_consenting(app, user_id: int) -> bool:
 
 @bp.listener('before_server_start')
 async def create_db(app, loop):
+    """Create InfluxDB database"""
     app.metrics = MetricsManager(app, loop)
 
     if not app.econfig.ENABLE_METRICS:
@@ -40,25 +41,30 @@ async def create_db(app, loop):
 
 
 @bp.listener('after_server_start')
-async def start_tasks(app, loop):
-    # spawn tasks
-    app._sec_tasks = loop.create_task(second_tasks(app))
-    app._hour_tasks = loop.create_task(hourly_tasks(app))
-    app._uniq_task = loop.create_task(upload_uniq_task(app))
+async def start_tasks(app, _loop):
+    """Spawn various metric-related tasks."""
+    if not app.econfig.ENABLE_METRICS:
+        return
 
+    app.sched.spawn_periodic(
+        second_tasks, [app],
+        1
+    )
 
-@bp.listener('before_server_stop')
-async def close_metrics(app, loop):
-    app._sec_tasks.cancel()
-    app._hour_tasks.cancel()
-    app._uniq_task.cancel()
+    app.sched.spawn_periodic(
+        hourly_tasks, [app],
+        3600
+    )
+
+    app.sched.spawn_periodic(
+        upload_uniq_task, [app],
+        86400
+    )
 
 
 @bp.listener('after_server_stop')
 async def close_worker(app, loop):
-    metrics = app.metrics
-    metrics._worker.cancel()
-    await metrics.finish_all()
+    await app.metrics.stop()
 
 
 @bp.middleware('request')

@@ -39,7 +39,7 @@ async def personal_stats_handler(request, user_id):
     SELECT SUM(file_size)
     FROM files
     WHERE uploader = $1
-    """, user_id)
+    """, user_id) or 0
 
     return response.json({
         'total_files': total_files,
