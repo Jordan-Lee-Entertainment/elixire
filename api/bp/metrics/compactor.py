@@ -251,28 +251,21 @@ async def main_process(influx, source: str, target: str,
     """Process through the datapoints, submitting each
     chunk to the target.
     """
-    print('MAIN PROCESS')
-    print('STOP TS', stop_ts)
     chunk_start = start_ts
 
     while True:
-        print('processing chunk at start', start_ts)
         chunk_end = await submit_chunk(
             influx, source, target,
             chunk_start, generalize_sec
         )
-        print('chunk end', chunk_end)
 
         # if stop_ts is in this chunk, we should stop
         # the loop
-        print(chunk_start, stop_ts, chunk_end)
         if chunk_start <= stop_ts <= chunk_end:
-            print('STOPp')
             return
 
         # new chunk_start is chunk_end, then go for
         # the next chunk.
-        print('going for next', chunk_end)
         chunk_start = chunk_end
 
 
