@@ -152,13 +152,15 @@ async def get_chunk_slice(app, meas, start_ts: int,
     """
     influx = app.metrics.influx
 
-    end_slice = start_ts + generalize_sec * SEC_NANOSEC
+    start_before_slice = start_ts - (generalize_sec * SEC_NANOSEC)
+    end_after_slice = start_ts + (generalize_sec * SEC_NANOSEC)
 
     before = await influx.query(f"""
     select *
     from {meas}
     where
         time < {start_ts} - 3600s
+    and time > {start_before_slice}
     """)
 
     after = await influx.query(f"""
@@ -166,7 +168,7 @@ async def get_chunk_slice(app, meas, start_ts: int,
     from {meas}
     where
         time > {start_ts}
-    and time < {end_slice}
+    and time < {end_after_slice}
     """)
 
     return maybe(before['results'][0]), maybe(after['results'][0])
@@ -194,11 +196,14 @@ async def pre_process(influx, before: list,
     existing_sum_res = await influx.query(f"""
     select time, value
     from {target}
-    where time = {start_ts}
+    where time >= {start_ts}
+    limit 1
     """)
 
-    print(existing_sum_res)
     existing_sum_val = extract_row(existing_sum_res, 1)
+
+    log.debug('existing target at ts=%d, res=%r',
+              start_ts, existing_sum_val)
 
     # merge the existing value in the target
     # with the values that didn't make to the target.
@@ -231,6 +236,7 @@ async def submit_chunk(influx, source: str, target: str,
               chunk_start, chunk_end, len(chunk), chunk_sum)
 
     # insert it into target
+
     await influx.write(
         f'{target} value={chunk_sum}i {chunk_start}'
     )
@@ -261,6 +267,7 @@ async def main_process(influx, source: str, target: str,
         # the loop
         print(chunk_start, stop_ts, chunk_end)
         if chunk_start <= stop_ts <= chunk_end:
+            print('STOPp')
             return
 
         # new chunk_start is chunk_end, then go for
@@ -295,11 +302,14 @@ async def compact_single(app, meas: str, target: str):
     """)
 
     last_target = extract_row(last_in_target_res, 0)
-
+    
     # check values for pre-process
     start_ts = (first
                 if last_target is None
                 else last_target + generalize_sec)
+
+    log.debug('starting [%s]: f=%d l=%d last_target=%r start_ts=%d',
+              meas, first, last, last_target, start_ts)
 
     # get Bs and As based on Lt
     before, after = await get_chunk_slice(
