@@ -2,8 +2,11 @@ import logging
 import time
 
 from sanic import Blueprint
-from .tasks import second_tasks, hourly_tasks, upload_uniq_task
-from .manager import MetricsManager
+from api.bp.metrics.tasks import (
+    second_tasks, hourly_tasks, upload_uniq_task,
+)
+from api.bp.metrics.compactor import compact_task
+from api.bp.metrics.manager import MetricsManager
 
 bp = Blueprint('metrics')
 log = logging.getLogger(__name__)
@@ -59,6 +62,11 @@ async def start_tasks(app, _loop):
     app.sched.spawn_periodic(
         upload_uniq_task, [app],
         86400
+    )
+
+    app.sched.spawn_periodic(
+        compact_task, [app],
+        app.econfig.METRICS_COMPACT_GENERALIZE
     )
 
 
