@@ -91,6 +91,21 @@ MEASUREMENTS = {
 }
 
 
+class CompactorContext:
+    """Holds data for a single compactor pass
+    in a measurement."""
+    def __init__(self, influx, source: str, target: str,
+                 generalize_sec: int):
+        self.influx = influx
+        self.source = source
+        self.target = target
+        self.generalize_sec = generalize_sec
+
+    @property
+    def generalize_nsec(self):
+        return self.generalize_sec * SEC_NANOSEC
+
+
 def extract_row(res: dict, index: int):
     """Extract a single value from a single row.
 
@@ -109,33 +124,31 @@ def maybe(result: dict) -> list:
     return result['series'][0]['values'] if 'series' in result else []
 
 
-async def _fetch_context(app, meas: str, generalize_sec: int):
+async def _fetch_init_ctx(ctx: CompactorContext):
     """Fetch the initial context in the compactor.
 
     This does the first part in the 'Gather' step.
     """
-    influx = app.metrics.influx
-
     query_clauses = f"""
-    from {meas}
-    where time < now() - {generalize_sec}s
+    from {ctx.source}
+    where time < now() - {ctx.generalize_sec}s
     order by time desc
     """
 
     # they must be in separate queries.
-    first_res = await influx.query(f"""
+    first_res = await ctx.influx.query(f"""
     select
         first(value)
     {query_clauses}
     """)
 
-    last_res = await influx.query(f"""
+    last_res = await ctx.influx.query(f"""
     select
         last(value)
     {query_clauses}
     """)
 
-    count_res = await influx.query(f"""
+    count_res = await ctx.influx.query(f"""
     select
         count(*)
     {query_clauses}
@@ -143,8 +156,8 @@ async def _fetch_context(app, meas: str, generalize_sec: int):
 
     count = extract_row(count_res, 1)
 
-    log.info('working %d datapoints for %s',
-             count, meas)
+    log.info('working %d datapoints for %r',
+             count, ctx.source)
 
     first = extract_row(first_res, 0)
     last = extract_row(last_res, 0)
@@ -152,8 +165,8 @@ async def _fetch_context(app, meas: str, generalize_sec: int):
     return first, last
 
 
-async def get_chunk_slice(app, meas, start_ts: int,
-                          generalize_sec: int) -> tuple:
+async def get_chunk_slice(ctx: CompactorContext,
+                          start_ts: int) -> tuple:
     """Split a chunk between before/after counterparts.
 
     Example:
@@ -170,22 +183,20 @@ async def get_chunk_slice(app, meas, start_ts: int,
      - [T - 3600, T] (the "before" points, Bs)
      - [T, T + 3600] (the "after" points, As)
     """
-    influx = app.metrics.influx
+    start_before_slice = start_ts - (ctx.generalize_sec * SEC_NANOSEC)
+    end_after_slice = start_ts + (ctx.generalize_sec * SEC_NANOSEC)
 
-    start_before_slice = start_ts - (generalize_sec * SEC_NANOSEC)
-    end_after_slice = start_ts + (generalize_sec * SEC_NANOSEC)
-
-    before = await influx.query(f"""
+    before = await ctx.influx.query(f"""
     select *
-    from {meas}
+    from {ctx.source}
     where
         time < {start_ts} - 3600s
     and time > {start_before_slice}
     """)
 
-    after = await influx.query(f"""
+    after = await ctx.influx.query(f"""
     select *
-    from {meas}
+    from {ctx.source}
     where
         time > {start_ts}
     and time < {end_after_slice}
@@ -194,33 +205,36 @@ async def get_chunk_slice(app, meas, start_ts: int,
     return maybe(before['results'][0]), maybe(after['results'][0])
 
 
-async def _update_point(influx, meas: str, timestamp: int, new_val: int):
+async def _update_point(ctx, meas: str,
+                        timestamp: int, new_val: int):
     """Rewrite a single datapoint in a measurement.
 
     InfluxDB doesn't provide an 'UPDATE' statement, so I'm rolling out
     with my own.
+
+    This only works with integer updates.
     """
-    await influx.query(f"""
+    await ctx.influx.query(f"""
     delete from {meas}
     where time = {timestamp}
     """)
 
-    await influx.write(
+    await ctx.influx.write(
         f'{meas} value={new_val}i {timestamp}'
     )
 
 
-async def pre_process(influx, before: list,
-                      target: str, start_ts: int):
+async def pre_process(ctx: CompactorContext,
+                      before: list, start_ts: int):
     """Pre-process datapoints that should already be in the target."""
 
     # assert it isn't empty.
     assert bool(before)
 
     # fetch the existing target
-    existing_sum_res = await influx.query(f"""
+    existing_sum_res = await ctx.influx.query(f"""
     select time, value
-    from {target}
+    from {ctx.target}
     where time >= {start_ts}
     limit 1
     """)
@@ -235,11 +249,11 @@ async def pre_process(influx, before: list,
     final_sum = existing_sum_val + sum(point[1] for point in before)
 
     # update it
-    await _update_point(influx, target, start_ts, final_sum)
+    await _update_point(
+        ctx, ctx.target, start_ts, final_sum)
 
 
-async def submit_chunk(influx, source: str, target: str,
-                       chunk_start: int, generalize_sec):
+async def submit_chunk(ctx: CompactorContext, chunk_start: int):
     """Submit a single chunk into target.
 
     This will fetch all datapoints in the chunk start timestamp,
@@ -248,12 +262,12 @@ async def submit_chunk(influx, source: str, target: str,
     of the source).
     """
     # last timestamp of this chunk
-    chunk_end = chunk_start + (generalize_sec * SEC_NANOSEC)
+    chunk_end = chunk_start + ctx.generalize_nsec
 
     # fetch the chunk in the source
-    res = await influx.query(f"""
+    res = await ctx.influx.query(f"""
     select time, value
-    from {source}
+    from {ctx.source}
     where
         time > {chunk_start}
     and time < {chunk_end}
@@ -268,17 +282,16 @@ async def submit_chunk(influx, source: str, target: str,
 
     # insert it into target
 
-    await influx.write(
-        f'{target} value={chunk_sum}i {chunk_start}'
+    await ctx.influx.write(
+        f'{ctx.target} value={chunk_sum}i {chunk_start}'
     )
 
     return chunk_end
 
 
 
-async def main_process(influx, source: str, target: str,
-                       start_ts: int, stop_ts: int,
-                       generalize_sec: int):
+async def main_process(ctx: CompactorContext,
+                       start_ts: int, stop_ts: int):
     """Process through the datapoints, submitting each
     chunk to the target.
     """
@@ -286,8 +299,7 @@ async def main_process(influx, source: str, target: str,
 
     while True:
         chunk_end = await submit_chunk(
-            influx, source, target,
-            chunk_start, generalize_sec
+            ctx, chunk_start
         )
 
         # if stop_ts is in this chunk, we should stop
@@ -300,29 +312,20 @@ async def main_process(influx, source: str, target: str,
         chunk_start = chunk_end
 
 
-async def compact_single(app, meas: str, target: str):
-    """Compact a single measurement.
-
-    Parameters
-    ----------
-    meas: str
-        Source measurement.
-    target: str
-        Target measurement.
-    """
-    influx = app.metrics.influx
-    generalize_sec = app.econfig.METRICS_COMPACT_GENERALIZE
+async def compact_single(ctx: CompactorContext):
+    """Compact a single measurement."""
 
     # get the first and last timestamps
     # in the datapoints that still exist
     # (Fs and Ts)
-    first, last = await _fetch_context(app, meas, generalize_sec)
-    log.debug('meas: %s, first: %d, last: %d', meas, first, last)
+    first, last = await _fetch_init_ctx(ctx)
+    log.debug('source: %r, first: %d, last: %d',
+              ctx.source, first, last)
 
     # fetch Lt
-    last_in_target_res = await influx.query(f"""
+    last_in_target_res = await ctx.influx.query(f"""
     select last(value)
-    from {target}
+    from {ctx.target}
     """)
 
     last_target = extract_row(last_in_target_res, 0)
@@ -330,32 +333,29 @@ async def compact_single(app, meas: str, target: str):
     # check values for pre-process
     start_ts = (first
                 if last_target is None
-                else last_target + generalize_sec)
+                else last_target + ctx.generalize_sec)
 
     log.debug('starting [%s]: f=%d l=%d last_target=%r start_ts=%d',
-              meas, first, last, last_target, start_ts)
+              ctx.source, first, last, last_target, start_ts)
 
     # get Bs and As based on Lt
-    before, after = await get_chunk_slice(
-        app, meas, start_ts, generalize_sec)
+    before, after = await get_chunk_slice(ctx, start_ts)
 
     log.debug('there are %d points in Bs', len(before))
     log.debug('there are %d points in As', len(after))
 
     if before:
-        await pre_process(influx, before, target, start_ts)
+        await pre_process(ctx, before, start_ts)
 
     # iterative process where we submit chunks to target
     await main_process(
-        influx, meas, target,
+        ctx,
 
-        # get Las
+        # give the start_ts, Las
         min(r[0] for r in after),
 
         # give it Ts, which is its stop condition
-        last,
-
-        generalize_sec
+        last
     )
 
 
@@ -367,4 +367,11 @@ async def compact_task(app):
     """
     for meas, target in MEASUREMENTS.items():
         log.debug('compacting %s -> %s', meas, target)
-        await compact_single(app, meas, target)
+
+        ctx = CompactorContext(
+            app.metrics.influx,
+            meas, target,
+            app.econfig.METRICS_COMPACT_GENERALIZE
+        )
+
+        await compact_single(ctx)
