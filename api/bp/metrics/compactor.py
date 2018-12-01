@@ -92,7 +92,10 @@ MEASUREMENTS = {
 
 
 def extract_row(res: dict, index: int):
-    """Extract a single value from a single row."""
+    """Extract a single value from a single row.
+
+    This is a helper function for InfluxDB results.
+    """
     result = res['results'][0]
 
     if 'series' not in result:
@@ -102,11 +105,15 @@ def extract_row(res: dict, index: int):
 
 
 def maybe(result: dict) -> list:
-    """Maybe results are there?"""
+    """Get a series of results if they actually are in the influxdb result."""
     return result['series'][0]['values'] if 'series' in result else []
 
 
 async def _fetch_context(app, meas: str, generalize_sec: int):
+    """Fetch the initial context in the compactor.
+
+    This does the first part in the 'Gather' step.
+    """
     influx = app.metrics.influx
 
     query_clauses = f"""
@@ -147,8 +154,21 @@ async def _fetch_context(app, meas: str, generalize_sec: int):
 
 async def get_chunk_slice(app, meas, start_ts: int,
                           generalize_sec: int) -> tuple:
-    """
-    Split a chunk between before/after counterparts
+    """Split a chunk between before/after counterparts.
+
+    Example:
+
+    (Spacing is 3600 seconds, 1 hour)
+    [     |      |     |     ]
+                 ^
+                 |
+                 T
+
+    calling get_chunk_slice with T as the parameter will
+    fetch points in the ranges
+
+     - [T - 3600, T] (the "before" points, Bs)
+     - [T, T + 3600] (the "after" points, As)
     """
     influx = app.metrics.influx
 
@@ -175,6 +195,11 @@ async def get_chunk_slice(app, meas, start_ts: int,
 
 
 async def _update_point(influx, meas: str, timestamp: int, new_val: int):
+    """Rewrite a single datapoint in a measurement.
+
+    InfluxDB doesn't provide an 'UPDATE' statement, so I'm rolling out
+    with my own.
+    """
     await influx.query(f"""
     delete from {meas}
     where time = {timestamp}
@@ -187,12 +212,12 @@ async def _update_point(influx, meas: str, timestamp: int, new_val: int):
 
 async def pre_process(influx, before: list,
                       target: str, start_ts: int):
-    """Pre-process datapoints that should
-    already be in the target measurement."""
+    """Pre-process datapoints that should already be in the target."""
 
     # assert it isn't empty.
     assert bool(before)
 
+    # fetch the existing target
     existing_sum_res = await influx.query(f"""
     select time, value
     from {target}
@@ -215,7 +240,13 @@ async def pre_process(influx, before: list,
 
 async def submit_chunk(influx, source: str, target: str,
                        chunk_start: int, generalize_sec):
-    """Submit a single chunk into target."""
+    """Submit a single chunk into target.
+
+    This will fetch all datapoints in the chunk start timestamp,
+    sum their values, then insert the newly created datapoint
+    in the chunk start timestamp (but on the target measurement, instead
+    of the source).
+    """
     # last timestamp of this chunk
     chunk_end = chunk_start + (generalize_sec * SEC_NANOSEC)
 
@@ -295,7 +326,7 @@ async def compact_single(app, meas: str, target: str):
     """)
 
     last_target = extract_row(last_in_target_res, 0)
-    
+
     # check values for pre-process
     start_ts = (first
                 if last_target is None
