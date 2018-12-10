@@ -2,38 +2,39 @@
 
 # sanic finally did a timely update recently, so we can live
 # off the release instead of the commit.
-sanic==0.8.1
+sanic==0.8.3
 
-git+https://github.com/ashleysommer/sanic-cors@a17067967e0d447c870c48feca9cc53572316c3c
+# git+https://github.com/ashleysommer/sanic-cors@a17067967e0d447c870c48feca9cc53572316c3c
+sanic-cors==0.9.7
 
-asyncpg==0.17.0
+asyncpg==0.18.2
 bcrypt==3.1.4
-itsdangerous==0.24
+itsdangerous==1.1.0
 
 cerberus==1.2
 
-# locking aioredis because of some 3.7 fixes that aren't on a release.
-# aioredis==1.1.0
-git+https://github.com/aio-libs/aioredis@ea948d0d7047db3315b4fbb9aa66e9ccc7e41522
+# going back to non-git version since
+# the py3.7 fixes went to 1.2
+aioredis==1.2
 
 # The worst idea ever is to add aiohttp to a project.
 # and I did it.
 # fuck aiohttp.
-aiohttp==3.3.2
+aiohttp==3.4.4
 
 # May god have mercy on my soul
-Pillow==5.2.0
+Pillow==5.3.0
 
 # testing stuff
-pytest==3.8.0
+pytest==4.0.1
 pytest-cov==2.6.0
 pyflakes==2.0.0
 
-pytest-sanic==0.1.13
+pytest-sanic==0.1.15
 
-aioinflux==0.3.4
+aioinflux==0.4.1
 
-cryptography==2.3.1
+cryptography==2.4.2
 
 # You'll need libmagic for this.
 # On linux, use your package manager to install libmagic.
@@ -44,4 +45,4 @@ python-magic==0.4.15
 parsedatetime==2.4
 
 # for email checking
-dnspython==1.15.0
+dnspython==1.16.0
