@@ -1,3 +1,7 @@
+# elixire: Image Host software
+# Copyright 2018, elixi.re Team and the elixire contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
 def test_the_sanity_of_observable_universe():
     """This test guarantees the most common truth defined by maths,
     without considering other axioms that break the current test: that

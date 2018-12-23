@@ -1,3 +1,7 @@
+# elixire: Image Host software
+# Copyright 2018, elixi.re Team and the elixire contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
 async def ban_webhook(app, user_id: int, reason: str, period: str):
     """Send a webhook containing banning information."""
     wh_url = getattr(app.econfig, 'USER_BAN_WEBHOOK', None)
