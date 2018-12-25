@@ -112,6 +112,33 @@ INFLUX_PASSWORD = '123'
 # in order.
 METRICS_LIMIT = (100, 3)
 
+# === METRICS COMPACTION ===
+# Do not change those unless you know
+# what you're doing.
+#
+# Metrics compaction is defined in issue 78,
+# where i'm talking about a task that
+# compacts large amounts of datapoints
+# for historical purposes.
+
+# METRICS_COMPACT_GENERALIZE sets the amount of
+# time, in seconds, that the compactor task
+# will split datapoints into.
+#
+# It is set to 1 hour, so all things such as
+# per-second `request` / `response` will become
+# `request_hour` and `response_hour`
+METRICS_COMPACT_GENERALIZE = 3600
+
+# METRICS_COMPACT_KEEP_POINTS sets the maximum
+# amount of time pre-compacted datapoints
+# can still lay around before getting cleaned.
+#
+# By default it is set to 10 days, but it can
+# be changed if your grafana instance is starting to
+# have problems with the amount of data
+METRICS_COMPACT_KEEP_POINTS = 10 * 86400
+
 # === RATELIMIT BANNING SETTINGS ===
 
 # change this to your wanted ban period
