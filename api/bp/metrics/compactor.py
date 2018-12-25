@@ -73,7 +73,6 @@ Steps:
          (Y, for the example config file, is 10 days.)
 
 """
-import pprint
 import logging
 
 log = logging.getLogger(__name__)
