@@ -347,6 +347,12 @@ async def compact_single(ctx: CompactorContext):
         await pre_process(ctx, before, start_ts)
 
     # iterative process where we submit chunks to target
+
+    # we can't really work without any datapoints
+    if not after:
+        log.warning('no points in As, skipping %s', ctx.source)
+        return
+
     await main_process(
         ctx,
 
