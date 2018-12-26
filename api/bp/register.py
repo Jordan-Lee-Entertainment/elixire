@@ -53,7 +53,7 @@ Do not reply to this email specifially, it will not work.
     return resp.status == 200
 
 
-async def check_email(loop, email: str):
+async def check_email(app, loop, email: str):
     """Check if a given email has an MX record.
 
     This does not check if the result of the MX record query
@@ -61,11 +61,9 @@ async def check_email(loop, email: str):
     """
     _, domain = email.split('@')
 
-    # check dns, MX record
-    resolv = resolver.Resolver()
-
     try:
-        await loop.run_in_executor(None, resolv.query, domain, 'MX')
+        # check dns, MX record
+        await loop.run_in_executor(None, app.resolv.query, domain, 'MX')
     except (resolver.Timeout, resolver.NXDOMAIN, resolver.NoAnswer):
         raise BadInput('Email domain resolution failed'
                        '(timeout or does not exist)')
@@ -88,7 +86,7 @@ async def register_user(request):
     discord_user = payload['discord_user']
     email = payload['email']
 
-    await check_email(request.app.loop, email)
+    await check_email(request.app, request.app.loop, email)
 
     # borrowed from utils/adduser
     user_id = get_snowflake()

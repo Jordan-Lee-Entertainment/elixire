@@ -12,6 +12,7 @@ from sanic import Sanic
 from sanic.exceptions import NotFound, FileNotFound
 from sanic import response
 from sanic_cors import CORS
+from dns import resolver
 
 import api.bp.auth
 import api.bp.profile
@@ -235,6 +236,10 @@ async def setup_db(rapp, loop):
     rapp.storage = Storage(app)
     rapp.locks = LockStorage()
 
+    # keep an app-level resolver instead of instantiate
+    # on every check_email call
+    rapp.resolv = resolver.Resolver()
+
     # metrics stuff
     rapp.rate_requests = 0
     rapp.rate_response = 0
@@ -277,6 +282,8 @@ def main():
             app.add_route(options_handler, uri, methods=['OPTIONS'])
         except Exception:
             pass
+
+    del routelist
 
     app.static('/humans.txt', './static/humans.txt')
     app.static('/robots.txt', './static/robots.txt')
