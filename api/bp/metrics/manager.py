@@ -160,10 +160,16 @@ class MetricsManager:
         value_converted = self._convert_value(value)
         self.points[timestamp] = f'{title} value={value_converted} {current}'
 
+    async def _close(self):
+        if self.influx:
+            log.info('closing influxdb conn')
+            await self.influx.close()
+
     async def finish_all(self):
         """Finish all remaining datapoints"""
         if not self.points:
             log.warning('no points to finish')
+            await self._close()
             return
 
         points = self._fetch_points(0)
@@ -177,9 +183,7 @@ class MetricsManager:
 
             await asyncio.sleep(self._period)
 
-        if self.influx:
-            log.info('closing influxdb conn')
-            await self.influx.close()
+        await self._close()
 
     async def stop(self):
         """Stop the manager by cancelling

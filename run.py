@@ -266,6 +266,7 @@ async def close_db(rapp, _loop):
     await rapp.redis.wait_closed()
 
     rapp.sched.stop()
+    await rapp.session.close()
 
 
 # we set blueprints globally
