@@ -41,7 +41,7 @@ Please do not re-register the account. It will just decrease your chances
 of actually getting an account activated.
 
 Reply to {support} if you have any questions.
-Do not reply to this email specifially, it will not work.
+Do not reply to this email specifically, it will not work.
 
  - {inst_name}, {main_url}
 """)
