@@ -195,6 +195,11 @@ def handle_exception(request, exception):
     request.app.rerr_counter += 1
     url = request.path
 
+    try:
+        status_code = exception.status_code
+    except AttributeError:
+        pass
+
     if isinstance(exception, (NotFound, FileNotFound, FileNotFoundError)):
         status_code = 404
         log.warning(f'File not found: {exception!r}')
