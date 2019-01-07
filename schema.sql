@@ -58,6 +58,14 @@ CREATE TABLE IF NOT EXISTS users (
     shorten_domain bigint REFERENCES domains (domain_id) DEFAULT NULL
 );
 
+CREATE TABLE IF NOT EXISTS admin_user_settings (
+    user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
+
+    email_flags bigint,
+
+    PRIMARY KEY (user_id)
+);
+
 -- This is a new table
 -- since we can't afford to make circular depedencies.
 
