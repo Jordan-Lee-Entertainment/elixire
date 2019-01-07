@@ -176,7 +176,7 @@ def handle_api_error(request, exception):
     log.warning(f'API error: {exception!r}')
 
     # api errors count as errors as well
-    request.app.rerr_counter += 1
+    request.app.counters.inc('error')
 
     scode = exception.status_code
     res = {
@@ -193,7 +193,6 @@ def handle_api_error(request, exception):
 def handle_exception(request, exception):
     """Handle any kind of exception."""
     status_code = 500
-    request.app.rerr_counter += 1
     url = request.path
 
     try:
@@ -206,15 +205,21 @@ def handle_exception(request, exception):
         log.warning(f'File not found: {exception!r}')
 
         if request.app.econfig.ENABLE_FRONTEND:
+            # admin panel routes all 404's back to index.
             if url.startswith('/admin'):
                 return response.file(
                     './admin-panel/build/index.html')
-            else:
-                return response.file(
-                    './frontend/output/404.html',
-                    status=404)
+
+            return response.file(
+                './frontend/output/404.html',
+                status=404)
     else:
         log.exception(f'Error in request: {exception!r}')
+
+    request.app.inc('error')
+
+    if status_code == 500:
+        request.app.inc('error_ise')
 
     return response.json({
         'error': True,
