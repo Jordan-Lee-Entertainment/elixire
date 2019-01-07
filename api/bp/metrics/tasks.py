@@ -12,35 +12,24 @@ log = logging.getLogger(__name__)
 async def second_tasks(app):
     """Quick submission of per-second metrics."""
     metrics = app.metrics
+    counters = app.counters
 
-    await metrics.submit('request', app.rate_requests)
-    app.rate_requests = 0
+    for counter, counter_val in counters.items():
+        # ignore those specific counters, as they're on their own task
+        if counter in ('file_upload_hour', 'file_upload_hour_pub'):
+            continue
 
-    await metrics.submit('response', app.rate_response)
-    app.rate_response = 0
-
-    await metrics.submit('request_pub', app.rreq_public)
-    app.rreq_public = 0
-
-    await metrics.submit('response_pub', app.rres_public)
-    app.rres_public = 0
-
-    await metrics.submit('error', app.rerr_counter)
-    app.rerr_counter = 0
-
-    await metrics.submit('page_hit', app.page_hit_counter)
-    app.page_hit_counter = 0
+        await metrics.submit(counter, counter_val)
+        counters.reset_single(counter)
 
 
 async def file_upload_counts(app):
     """Submit the counters for total amount of uploads."""
     metrics = app.metrics
+    counters = app.counters
 
-    await metrics.submit('file_upload_hour', app.file_upload_counter)
-    app.file_upload_counter = 0
-
-    await metrics.submit('file_upload_hour_pub', app.upload_counter_pub)
-    app.upload_counter_pub = 0
+    await counters.auto_submit(metrics, 'file_upload_hour')
+    await counters.auto_submit(metrics, 'file_upload_hour_pub')
 
 
 async def file_total_counts(app):

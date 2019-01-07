@@ -16,14 +16,6 @@ bp = Blueprint('metrics')
 log = logging.getLogger(__name__)
 
 
-NOT_PAGE_HIT = (
-    '/api/',
-    '/i/',
-    '/t/',
-    '/s/',
-)
-
-
 async def is_consenting(app, user_id: int) -> bool:
     """Return if a user consented to data processing."""
     return await app.db.fetchval("""
@@ -81,29 +73,27 @@ async def close_worker(app, loop):
 
 @bp.middleware('request')
 async def on_request(request):
-    if not request.app.econfig.ENABLE_METRICS:
+    app = request.app
+
+    if not app.econfig.ENABLE_METRICS:
         return
 
     # increase the counter on every request
-    request.app.rate_requests += 1
+    app.counters.inc('request')
 
     # so we can measure response latency
     request['start_time'] = time.monotonic()
 
-    # page hits are non-api requests
-    if not any(pat in request.url for pat in NOT_PAGE_HIT):
-        request.app.page_hit_counter += 1
-
 
 @bp.middleware('response')
 async def on_response(request, response):
-    if not request.app.econfig.ENABLE_METRICS:
+    app = request.app
+
+    if not app.econfig.ENABLE_METRICS:
         return
 
-    metrics = request.app.metrics
-
     # increase the counter on every response from server
-    request.app.rate_response += 1
+    app.counters.inc('response')
 
     try:
         # calculate latency to get a response, and submit that to influx
@@ -112,6 +102,6 @@ async def on_response(request, response):
 
         # submit the metric as milliseconds since it is more tangible in
         # normal scenarios
-        await metrics.submit('response_latency', latency * 1000)
+        await app.metrics.submit('response_latency', latency * 1000)
     except KeyError:
         pass

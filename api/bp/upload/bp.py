@@ -197,9 +197,9 @@ async def upload_handler(request, user_id):
     domain = transform_wildcard(domain, subdomain_name)
 
     # upload counter
-    app.file_upload_counter += 1
+    app.counters.inc('file_upload_hour')
     if await is_consenting(app, user_id):
-        app.upload_counter_pub += 1
+        app.counters.inc('file_upload_hour_pub')
 
     # calculate the new file size, with the dupe decrease factor multiplied in
     # if necessary

@@ -37,6 +37,7 @@ from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.common.utils import LockStorage
 from api.storage import Storage
 from api.jobs import JobManager
+from api.bp.metrics.counters import MetricsCounters
 
 import config
 
@@ -246,18 +247,7 @@ async def setup_db(rapp, loop):
     rapp.resolv = resolver.Resolver()
 
     # metrics stuff
-    rapp.rate_requests = 0
-    rapp.rate_response = 0
-
-    rapp.rreq_public = 0
-    rapp.rres_public = 0
-
-    rapp.rerr_counter = 0
-
-    rapp.file_upload_counter = 0
-    rapp.upload_counter_pub = 0
-
-    rapp.page_hit_counter = 0
+    rapp.counters = MetricsCounters()
 
 
 @app.listener('after_server_stop')
