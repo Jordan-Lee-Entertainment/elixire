@@ -41,9 +41,7 @@ async def filecheck(request, filename):
     return filepath, shortname
 
 
-@bp.get('/i/<filename>')
-async def file_handler(request, filename):
-    """Handles file serves."""
+async def _get_file_ctx(request, filename):
     app = request.app
     filepath, shortname = await filecheck(request, filename)
 
@@ -52,8 +50,17 @@ async def file_handler(request, filename):
     # taking a guess at it.
     mimetype = await app.storage.get_file_mime(shortname)
 
+    # force utf-8 for text/plain
     if mimetype == 'text/plain':
         mimetype = 'text/plain; charset=utf-8'
+
+    return filepath, mimetype
+
+
+@bp.get('/i/<filename>')
+async def file_handler(request, filename):
+    """Handles file serves."""
+    filepath, mimetype = await _get_file_ctx(request, filename)
 
     return await response.file_stream(
         filepath,
@@ -61,6 +68,22 @@ async def file_handler(request, filename):
             'Content-Security-Policy': "sandbox; frame-src 'none'"
         },
         mime_type=mimetype)
+
+
+@bp.head('/i/<filename>')
+async def file_head_handler(request, filename):
+    """Handle HEAD requests for /i/."""
+    _filepath, mimetype = await _get_file_ctx(request, filename)
+
+    # HEAD responses don't have bodies.
+    return response.raw(
+        b'',
+        headers={
+            'Content-Security-Policy': "sandbox; frame-src 'none'",
+            'Content-Type': mimetype
+        })
+
+
 
 
 @bp.get('/t/<filename>')
