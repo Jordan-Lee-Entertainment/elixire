@@ -14,7 +14,7 @@ async def second_tasks(app):
     metrics = app.metrics
     counters = app.counters
 
-    for counter, counter_val in counters.items():
+    for counter, counter_val in counters.data.items():
         # ignore those specific counters, as they're on their own task
         if counter in ('file_upload_hour', 'file_upload_hour_pub'):
             continue
