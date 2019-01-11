@@ -86,6 +86,7 @@ def set_blueprints(app_):
     app_.blueprint(api.bp.admin.object_bp)
     app_.blueprint(api.bp.admin.domain_bp)
     app_.blueprint(api.bp.admin.misc_bp)
+    app_.blueprint(api.bp.admin.settings_bp)
 
     app_.blueprint(api.bp.register.bp)
     app_.blueprint(api.bp.datadump.bp)
