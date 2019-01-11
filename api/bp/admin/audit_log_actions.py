@@ -31,6 +31,11 @@ class Action:
             f'\naction: {self}',
         ]
 
+        # get admin via request ctx
+        admin_id = self.admin_id
+        admin_uname = await self.app.storage.get_username(admin_id)
+        lines.append(f'admin that made the action: {admin_uname} ({admin_id})')
+
         return '\n'.join(lines)
 
     async def _notify(self):
