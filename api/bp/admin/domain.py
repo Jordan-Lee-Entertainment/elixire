@@ -10,6 +10,8 @@ from api.common.email import send_user_email
 from api.storage import solve_domain
 from api.errors import BadInput
 
+from api.bp.admin.audit_log_actions import DomainAddCtx
+
 bp = Blueprint(__name__)
 
 
@@ -39,11 +41,17 @@ async def add_domain(request, admin_id: int):
     WHERE domain = $1
     """, domain_name)
 
-    if 'owner_id' in request.json:
-        await db.execute("""
-        INSERT INTO domain_owners (domain_id, user_id)
-        VALUES ($1, $2)
-        """, domain_id, int(request.json['owner_id']))
+    async with DomainAddCtx(request) as ctx:
+        ctx.insert(domain_id=domain_id)
+
+        if 'owner_id' in request.json:
+            owner_id = int(request.json['owner_id'])
+            ctx.insert(owner_id=owner_id)
+
+            await db.execute("""
+            INSERT INTO domain_owners (domain_id, user_id)
+            VALUES ($1, $2)
+            """, domain_id, int(request.json['owner_id']))
 
     keys = solve_domain(domain_name)
     await request.app.storage.raw_invalidate(*keys)

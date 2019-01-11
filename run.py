@@ -38,6 +38,7 @@ from api.common.utils import LockStorage
 from api.storage import Storage
 from api.jobs import JobManager
 from api.bp.metrics.counters import MetricsCounters
+from api.bp.admin.audit_log import AuditLog
 
 import config
 
@@ -253,6 +254,8 @@ async def setup_db(rapp, loop):
 
     # metrics stuff
     rapp.counters = MetricsCounters()
+
+    rapp.audit_log = AuditLog(rapp)
 
 
 @app.listener('after_server_stop')
