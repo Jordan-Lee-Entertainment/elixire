@@ -9,7 +9,7 @@ class Action:
         self.admin_id = request['_ctx_admin_id']
         self.context = {}
 
-    async def insert(self, **kwargs):
+    def insert(self, **kwargs):
         """Insert values to an action's context"""
         for key, value in kwargs.items():
             self.context[key] = value
