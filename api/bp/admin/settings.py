@@ -19,9 +19,13 @@ async def change_admin_settings(request, admin_id):
     audit_emails = bool(request.json['audit_log_emails'])
 
     await request.app.db.execute("""
-    UPDATE admin_user_settings
-    SET audit_log_emails = $1
-    WHERE user_id = $2
-    """, audit_emails, admin_id)
+    INSERT INTO admin_user_settings (user_id, audit_log_emails)
+    VALUES ($1, $2)
 
-    return '', 204
+    ON CONFLICT ON CONSTRAINT admin_user_settings_pkey
+    DO UPDATE SET
+        audit_log_emails = $2
+    WHERE admin_user_settings.user_id = $1
+    """, admin_id, audit_emails)
+
+    return response.text('', status=204)
