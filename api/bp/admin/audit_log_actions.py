@@ -1,6 +1,9 @@
 # elixire: Image Host software
 # Copyright 2018, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+import logging
+
+log = logging.getLogger(__name__)
 
 class Action:
     """Represents a generic action."""
@@ -50,11 +53,13 @@ class Action:
         await audit_log.send_email(subject, full_text)
 
     async def __aenter__(self):
+        log.debug('entering context, action %s', self)
         return self
 
     async def __aexit__(self, typ, value, traceback):
         # only notify when there are no errors happening inside
         # the context
+        log.debug('exiting context, action %s, exc=%s', self, value)
         if typ is None and value is None and traceback is None:
             return await self._notify()
 

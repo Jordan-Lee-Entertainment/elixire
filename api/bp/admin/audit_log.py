@@ -1,9 +1,12 @@
 # elixire: Image Host software
 # Copyright 2018, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+import logging
 
 from api.bp.admin.audit_log_actions import Action
-# from api.common.email import send_email
+from api.common.email import send_user_email
+
+log = logging.getLogger(__name__)
 
 class AuditLog:
     """Audit log manager class"""
@@ -24,6 +27,8 @@ class AuditLog:
         """)
 
         admins = [r['user_id'] for r in admins]
+
+        log.info('sending audit log event to %d admins', len(admins))
 
         for admin_id in admins:
             await send_user_email(
