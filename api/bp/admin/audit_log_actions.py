@@ -82,7 +82,7 @@ class DomainAddCtx(Action):
         lines = [
             'Domain data:',
             f'\tid: {domain_id}',
-            f'\tname: {domain["name"]}',
+            f'\tname: {domain["domain"]}',
             f'\tis admin only? {domain["admin_only"]}',
             f'\tofficial? {domain["official"]}',
             f'\tpermissions number: {domain["permissions"]}\n',

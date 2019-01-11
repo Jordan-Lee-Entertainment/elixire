@@ -13,13 +13,13 @@ class AuditLog:
     async def send_email(self, subject, full_text):
         """Send an email to all admins."""
         admins = await self.app.db.fetch("""
-        SELECT user_id
+        SELECT users.user_id
         FROM users
         JOIN admin_user_settings
           ON admin_user_settings.user_id = users.user_id
         WHERE (
             users.admin = true AND
-            audit_log_emails = true
+            admin_user_settings.audit_log_emails = true
         )
         """)
 
