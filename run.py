@@ -218,10 +218,10 @@ def handle_exception(request, exception):
     else:
         log.exception(f'Error in request: {exception!r}')
 
-    request.app.inc('error')
+    request.app.counters.inc('error')
 
     if status_code == 500:
-        request.app.inc('error_ise')
+        request.app.counters.inc('error_ise')
 
     return response.json({
         'error': True,
