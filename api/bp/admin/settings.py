@@ -12,6 +12,20 @@ from api.common.email import fmt_email, send_user_email
 
 bp = Blueprint('admin_settings')
 
+@bp.get('/api/admin/settings')
+@admin_route
+async def get_admin_settings(request, admin_id):
+    """Get own admin settings."""
+    row = await request.app.db.fetchrow("""
+    SELECT audit_log_emails
+    FROM admin_user_settings
+    WHERE user_id = $1
+    """, admin_id)
+
+    drow = None if row is None else dict(row)
+    return response.json(drow)
+
+
 @bp.patch('/api/admin/settings')
 @admin_route
 async def change_admin_settings(request, admin_id):
