@@ -118,7 +118,7 @@ class DomainEditCtx(Action):
         WHERE domain_id = $1
         """, domain_id)
 
-        domain = domain or {}
+        domain = dict(domain) if domain is not None else {}
 
         domain_owner = await self.app.db.fetchval("""
         SELECT user_id
@@ -127,6 +127,8 @@ class DomainEditCtx(Action):
         """, domain_id)
 
         domain['owner_id'] = domain_owner
+
+        return domain
 
     async def __aenter__(self):
         self._domain_before = await self._get_domain(self.domain_id)
