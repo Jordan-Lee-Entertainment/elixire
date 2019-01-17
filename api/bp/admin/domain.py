@@ -86,7 +86,7 @@ async def patch_domain(request, admin_id: int, domain_id: int):
     updated_fields = []
     db = request.app.db
 
-    async with DomainEditCtx(request, domain_id) as ctx:
+    async with DomainEditCtx(request, domain_id):
         if 'owner_id' in payload:
             exec_out = await db.execute("""
             UPDATE domain_owners
@@ -138,10 +138,11 @@ async def add_owner(request, admin_id: int, domain_id: int):
     except (ValueError, KeyError):
         raise BadInput('Invalid number for owner ID')
 
-    exec_out = await request.app.db.execute("""
-    INSERT INTO domain_owners (domain_id, user_id)
-    VALUES ($1, $2)
-    """, domain_id, owner_id)
+    async with DomainEditCtx(request, domain_id):
+        exec_out = await request.app.db.execute("""
+        INSERT INTO domain_owners (domain_id, user_id)
+        VALUES ($1, $2)
+        """, domain_id, owner_id)
 
     return response.json({
         'success': True,
