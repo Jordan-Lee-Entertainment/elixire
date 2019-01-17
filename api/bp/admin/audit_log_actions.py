@@ -100,3 +100,35 @@ class DomainAddCtx(Action):
         ]
 
         return '\n'.join(lines)
+
+class DomainEditCtx(Action):
+    """Context for domain edits"""
+    def __init__(self, request, domain_id):
+        super().__init__(request)
+        self.domain_id = domain_id
+        self._domain_before, self._domain_after = None, None
+
+    async def _get_domain(self, domain_id) -> dict:
+        """Get domain information as a dictionary"""
+        domain = await self.app.db.fetchrow("""
+        SELECT admin_only, official, domain, permissions
+        FROM domains
+        WHERE domain_id = $1
+        """, domain_id)
+
+        domain = domain or {}
+
+        domain_owner = await self.app.db.fetchval("""
+        SELECT user_id
+        FROM domain_owners
+        WHERE domain_id = $1
+        """, domain_id)
+
+        domain['owner_id'] = domain_owner
+
+    async def __aenter__(self):
+        self._domain_before = await self._get_domain(self.domain_id)
+
+    async def __aexit__(self, typ, value, traceback):
+        self._domain_after = await self._get_domain(self.domain_id)
+        super().__aexit__(typ, value, traceback)

@@ -10,7 +10,7 @@ from api.common.email import send_user_email
 from api.storage import solve_domain
 from api.errors import BadInput
 
-from api.bp.admin.audit_log_actions import DomainAddCtx
+from api.bp.admin.audit_log_actions import DomainAddCtx, DomainEditCtx
 
 bp = Blueprint(__name__)
 
@@ -86,22 +86,22 @@ async def patch_domain(request, admin_id: int, domain_id: int):
     updated_fields = []
     db = request.app.db
 
-    if 'owner_id' in payload:
-        exec_out = await db.execute("""
-        UPDATE domain_owners
-        SET user_id = $1
-        WHERE domain_id = $2
-        """, int(payload['owner_id']), domain_id)
+    async with DomainEditCtx(request, domain_id) as ctx:
+        if 'owner_id' in payload:
+            exec_out = await db.execute("""
+            UPDATE domain_owners
+            SET user_id = $1
+            WHERE domain_id = $2
+            """, int(payload['owner_id']), domain_id)
 
-        if exec_out != 'UPDATE 0':
-            updated_fields.append('owner_id')
+            if exec_out != 'UPDATE 0':
+                updated_fields.append('owner_id')
 
-    # since we're passing updated_fields which is a reference to the
-    # list, it can be mutaded and it will propagate into this function.
-    await _dp_check(db, domain_id, payload, updated_fields, 'admin_only')
-    await _dp_check(db, domain_id, payload, updated_fields, 'official')
-    # await _dp_check(db, domain_id, payload, updated_fields, 'cf_enabled')
-    await _dp_check(db, domain_id, payload, updated_fields, 'permissions')
+        # since we're passing updated_fields which is a reference to the
+        # list, it can be mutaded and it will propagate into this function.
+        await _dp_check(db, domain_id, payload, updated_fields, 'admin_only')
+        await _dp_check(db, domain_id, payload, updated_fields, 'official')
+        await _dp_check(db, domain_id, payload, updated_fields, 'permissions')
 
     return response.json({
         'updated': updated_fields,

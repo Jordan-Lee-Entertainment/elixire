@@ -33,3 +33,14 @@ class LockStorage:
 
     def __getitem__(self, key):
         return self._locks[key]
+
+
+def find_different_keys(dict1: dict, dict2: dict) -> list:
+    """Find the keys that point to different values in two dicts."""
+    keys = []
+
+    for key in dict1:
+        if dict1[key] != dict2.get(key):
+            keys.append(key)
+
+    return keys
