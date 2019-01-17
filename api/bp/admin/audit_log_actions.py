@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
 
+from api.common.utils import find_different_keys
+
 log = logging.getLogger(__name__)
 
 class Action:
@@ -132,3 +134,30 @@ class DomainEditCtx(Action):
     async def __aexit__(self, typ, value, traceback):
         self._domain_after = await self._get_domain(self.domain_id)
         super().__aexit__(typ, value, traceback)
+
+    async def _text(self):
+        keys = find_different_keys(self._domain_before, self._domain_after)
+
+        domain = self._domain_after['domain']
+
+        lines = [
+            f'Domain {domain} ({self.domain_id}) was edited.'
+        ]
+
+        for key in keys:
+            # get the old and new value from before and after the edit
+            # respectively
+            old, new = self._domain_before[key], self._domain_after[key]
+
+            if key == 'owner_id':
+                old_uname = await self.app.storage.get_username(old)
+                old = f'{old} {old_uname}'
+
+                new_uname = await self.app.storage.get_username(new)
+                new = f'{new} {new_uname}'
+
+            lines.append(
+                f'\t - {key}: {old} => {new}'
+            )
+
+        return lines
