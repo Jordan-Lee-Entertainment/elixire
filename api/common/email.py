@@ -127,7 +127,7 @@ def fmt_email(app, string, **kwargs):
     }
 
     base.update(kwargs)
-    return string.format(**base)
+    return string.replace('{}', '{{}}').format(**base)
 
 
 async def uid_from_email(app, token: str, table: str,

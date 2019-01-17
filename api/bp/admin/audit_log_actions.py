@@ -56,7 +56,11 @@ class Action:
         except AttributeError:
             action_text = '<No text set for action>'
 
+        if isinstance(action_text, list):
+            action_text = '\n'.join(action_text)
+
         full_text = await self._make_full_text(action_text)
+        log.debug('full text: %r', full_text)
         await audit_log.send_email(subject, full_text)
 
     async def __aenter__(self):
@@ -135,7 +139,7 @@ class DomainEditCtx(Action):
 
     async def __aexit__(self, typ, value, traceback):
         self._domain_after = await self._get_domain(self.domain_id)
-        super().__aexit__(typ, value, traceback)
+        await super().__aexit__(typ, value, traceback)
 
     async def _text(self):
         keys = find_different_keys(self._domain_before, self._domain_after)
@@ -162,4 +166,4 @@ class DomainEditCtx(Action):
                 f'\t - {key}: {old} => {new}'
             )
 
-        return lines
+        return '\n'.join(lines)
