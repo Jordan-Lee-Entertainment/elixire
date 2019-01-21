@@ -3,9 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
 
-from api.common.utils import find_different_keys
-from api.common.domain import get_domain_info
-
 log = logging.getLogger(__name__)
 
 from api.bp.admin.audit_log import Action, EditAction

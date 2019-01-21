@@ -43,7 +43,7 @@ class DomainAddCtx(Action):
 
 class DomainEditCtx(EditAction):
     """Context for domain edits"""
-    async def _get_domain(self, domain_id) -> dict:
+    async def _get_object(self, domain_id) -> dict:
         """Get domain information as a dictionary"""
         domain = await self.app.db.fetchrow("""
         SELECT admin_only, official, domain, permissions
