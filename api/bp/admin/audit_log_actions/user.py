@@ -38,6 +38,11 @@ class UserEditCtx(EditAction):
         return {**duser, **dlimits}
 
     async def _text(self):
+        # if no keys were actually edited, don't make it
+        # an action.
+        if not self.diff_keys:
+            return False
+
         username = self._after['username']
 
         lines = [

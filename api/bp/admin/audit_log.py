@@ -61,8 +61,18 @@ class Action:
         if isinstance(action_text, list):
             action_text = '\n'.join(action_text)
 
+        # actions can tell that they aren't worthy of
+        # having an email by returning False as their
+        # action text
+        if action_text is False:
+            return
+
         full_text = await self._make_full_text(action_text)
         log.debug('full text: %r', full_text)
+
+        # TODO: make AuditLog a queue of actions that will
+        # be dispatched as an email later on, instead of
+        # one email per action.
         await audit_log.send_email(subject, full_text)
 
     async def __aenter__(self):

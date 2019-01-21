@@ -64,6 +64,11 @@ class DomainEditCtx(EditAction):
         return domain
 
     async def _text(self):
+        # if no keys were actually edited, don't make it
+        # an action.
+        if not self.diff_keys:
+            return False
+
         domain = self._after['domain']
 
         lines = [
