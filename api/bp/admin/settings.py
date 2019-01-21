@@ -2,13 +2,9 @@
 # Copyright 2018, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import logging
-
 from sanic import Blueprint, response
 
 from api.decorators import admin_route
-from api.schema import validate, ADMIN_SEND_BROADCAST
-from api.common.email import fmt_email, send_user_email
 
 bp = Blueprint('admin_settings')
 

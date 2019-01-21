@@ -10,11 +10,11 @@ from api.common.email import send_user_email
 from api.storage import solve_domain
 from api.errors import BadInput
 
-from api.bp.admin.audit_log_actions import (
+from api.bp.admin.audit_log_actions.domain import (
     DomainAddCtx, DomainEditCtx, DomainRemoveCtx
 )
 
-from api.common.domain import get_domain_info, get_domain_public
+from api.common.domain import get_domain_info
 
 bp = Blueprint(__name__)
 
