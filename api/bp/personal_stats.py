@@ -7,8 +7,8 @@ import logging
 from sanic import Blueprint
 from sanic import response
 
-from ..decorators import auth_route
-from .admin.domain import _get_domain_public
+from api.decorators import auth_route
+from api.common.domain import get_domain_public
 
 
 bp = Blueprint('personal_stats')
@@ -79,7 +79,7 @@ async def personal_domain_stats(request, user_id):
         dinfo = dict(domain_info)
         dinfo['cf_enabled'] = False
 
-        public = await _get_domain_public(db, domain_id)
+        public = await get_domain_public(db, domain_id)
         res[domain_id] = {
             'info': dinfo,
             'stats': public,

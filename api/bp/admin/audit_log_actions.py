@@ -4,6 +4,7 @@
 import logging
 
 from api.common.utils import find_different_keys
+from api.common.domain import get_domain_info
 
 log = logging.getLogger(__name__)
 
@@ -167,3 +168,40 @@ class DomainEditCtx(Action):
             )
 
         return '\n'.join(lines)
+
+class DomainRemoveCtx(Action):
+    """Domain removal context."""
+    def __init__(self, request, domain_id):
+        super().__init__(request)
+        self.domain_id = domain_id
+        self.domain = None
+
+    async def __aenter__(self):
+        self.domain = await get_domain_info(self.app.db, self.domain_id)
+
+    async def __aexit__(self, typ, value, traceback):
+        await super().__aexit__(typ, value, traceback)
+
+    async def _text(self) -> list:
+        lines = [
+            f'Domain ID {self.domain_id} was deleted.',
+            'Domain information:'
+        ]
+
+        for key, val in self.domain['info'].items():
+
+            # special case for owner since its another dict
+            if key == 'owner':
+                uid = val['user_id']
+                lines.append(f'\tinfo.{key}: {uid!r}')
+                continue
+
+            lines.append(f'\tinfo.{key}: {val!r}')
+
+        for key, val in self.domain['stats'].items():
+            lines.append(f'\tstats.{key}: {val!r}')
+
+        for key, val in self.domain['public_stats'].items():
+            lines.append(f'\tpublic_stats.{key}: {val!r}')
+
+        return lines

@@ -10,7 +10,11 @@ from api.common.email import send_user_email
 from api.storage import solve_domain
 from api.errors import BadInput
 
-from api.bp.admin.audit_log_actions import DomainAddCtx, DomainEditCtx
+from api.bp.admin.audit_log_actions import (
+    DomainAddCtx, DomainEditCtx, DomainRemoveCtx
+)
+
+from api.common.domain import get_domain_info, get_domain_public
 
 bp = Blueprint(__name__)
 
@@ -176,15 +180,16 @@ async def remove_domain(request, admin_id: int, domain_id: int):
     UPDATE users set shorten_domain = 0 WHERE shorten_domain = $1
     """, domain_id)
 
-    await request.app.db.execute("""
-    DELETE FROM domain_owners
-    WHERE domain_id = $1
-    """, domain_id)
+    async with DomainRemoveCtx(request, domain_id):
+        await request.app.db.execute("""
+        DELETE FROM domain_owners
+        WHERE domain_id = $1
+        """, domain_id)
 
-    result = await request.app.db.execute("""
-    DELETE FROM domains
-    WHERE domain_id = $1
-    """, domain_id)
+        result = await request.app.db.execute("""
+        DELETE FROM domains
+        WHERE domain_id = $1
+        """, domain_id)
 
     keys = solve_domain(domain_name)
     await request.app.storage.raw_invalidate(*keys)
@@ -199,100 +204,12 @@ async def remove_domain(request, admin_id: int, domain_id: int):
     })
 
 
-async def _get_domain_public(db, domain_id) -> dict:
-    public_stats = {}
-
-    public_stats['users'] = await db.fetchval("""
-    SELECT COUNT(*)
-    FROM users
-    WHERE domain = $1 AND consented = true
-    """, domain_id)
-
-    public_stats['files'] = await db.fetchval("""
-    SELECT COUNT(*)
-    FROM files
-    JOIN users
-      ON users.user_id = files.uploader
-    WHERE files.domain = $1 AND users.consented = true
-    """, domain_id)
-
-    public_stats['shortens'] = await db.fetchval("""
-    SELECT COUNT(*)
-    FROM shortens
-    JOIN users
-      ON users.user_id = shortens.uploader
-    WHERE shortens.domain = $1 AND users.consented = true
-    """, domain_id)
-
-    return public_stats
-
-
-async def _get_domain_info(db, domain_id) -> dict:
-    raw_info = await db.fetchrow("""
-    SELECT domain, official, admin_only, permissions
-    FROM domains
-    WHERE domain_id = $1
-    """, domain_id)
-
-    dinfo = dict(raw_info)
-    dinfo['cf_enabled'] = False
-
-    stats = {}
-
-    stats['users'] = await db.fetchval("""
-    SELECT COUNT(*)
-    FROM users
-    WHERE domain = $1
-    """, domain_id)
-
-    stats['files'] = await db.fetchval("""
-    SELECT COUNT(*)
-    FROM files
-    WHERE domain = $1
-    """, domain_id)
-
-    stats['shortens'] = await db.fetchval("""
-    SELECT COUNT(*)
-    FROM shortens
-    WHERE domain = $1
-    """, domain_id)
-    owner_id = await db.fetchval("""
-    SELECT user_id
-    FROM domain_owners
-    WHERE domain_id = $1
-    """, domain_id)
-
-    owner_data = await db.fetchrow("""
-    SELECT username, active, consented, admin
-    FROM users
-    WHERE user_id = $1
-    """, owner_id)
-
-    if owner_data:
-        downer = {
-            **dict(owner_data),
-            **{
-                'user_id': str(owner_id)
-            }
-        }
-    else:
-        downer = None
-
-    return {
-        'info': {**dinfo, **{
-            'owner': downer
-        }},
-        'stats': stats,
-        'public_stats': await _get_domain_public(db, domain_id),
-    }
-
-
 @bp.get('/api/admin/domains/<domain_id:int>')
 @admin_route
 async def get_domain_stats(request, admin_id, domain_id):
     """Get information about a domain."""
     return response.json(
-        await _get_domain_info(request.app.db, domain_id)
+        await get_domain_info(request.app.db, domain_id)
     )
 
 
@@ -311,7 +228,7 @@ async def get_domain_stats_all(request, admin_id):
     res = {}
 
     for domain_id in domain_ids:
-        info = await _get_domain_info(request.app.db, domain_id)
+        info = await get_domain_info(request.app.db, domain_id)
         res[domain_id] = info
 
     return response.json(res)
