@@ -100,9 +100,6 @@ class DomainRemoveCtx(Action):
     async def __aenter__(self):
         self.domain = await get_domain_info(self.app.db, self.domain_id)
 
-    async def __aexit__(self, typ, value, traceback):
-        await super().__aexit__(typ, value, traceback)
-
     async def _text(self) -> list:
         lines = [
             f'Domain ID {self.domain_id} was deleted.',

@@ -25,32 +25,35 @@ async def _get_counts(conn, table: str, user_id: int, extra: str = '') -> int:
 
     return res or 0
 
+async def get_counts(conn, user_id: int) -> dict:
+    """Get count information about a user."""
+    total_files = await _get_counts(conn, 'files', user_id)
+    total_shortens = await _get_counts(conn, 'shortens', user_id)
+    total_deleted = await _get_counts(
+        conn, 'files', user_id, 'AND deleted = true')
 
-@bp.get('/api/stats')
-@auth_route
-async def personal_stats_handler(request, user_id):
-    """Personal statistics for users.
-    """
-
-    db = request.app.db
-
-    total_files = await _get_counts(db, 'files', user_id)
-    total_shortens = await _get_counts(db, 'shortens', user_id)
-    total_deleted = await _get_counts(db, 'files', user_id,
-                                      'AND deleted = true')
-
-    total_bytes = await db.fetchval("""
+    total_bytes = await conn.fetchval("""
     SELECT SUM(file_size)
     FROM files
     WHERE uploader = $1
     """, user_id) or 0
 
-    return response.json({
+    return {
         'total_files': total_files,
         'total_deleted_files': total_deleted,
         'total_bytes': total_bytes,
         'total_shortens': total_shortens,
-    })
+    }
+
+
+@bp.get('/api/stats')
+@auth_route
+async def personal_stats_handler(request, user_id):
+    """Personal statistics for users."""
+
+    return response.json(await get_counts(
+        request.app.db, user_id
+    ))
 
 
 @bp.get('/api/stats/my_domains')
