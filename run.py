@@ -256,7 +256,15 @@ async def setup_db(rapp, loop):
     # metrics stuff
     rapp.counters = MetricsCounters()
 
-    rapp.audit_log = AuditLog(rapp)
+    # only give real AuditLog when we are on production
+    # a MockAuditLog instance will be in that attribute
+    # when running tests. look at tests/conftest.py
+
+    # TODO: maybe we can make a MockMetricsManager so that we
+    # don't stress InfluxDB out while running the tests.
+
+    if not getattr(rapp, 'test', False):
+        rapp.audit_log = AuditLog(rapp)
 
 
 @app.listener('after_server_stop')
