@@ -10,9 +10,17 @@ from sanic import Blueprint, response
 from api.decorators import admin_route
 from api.errors import NotFound, BadInput
 from api.schema import validate, ADMIN_MODIFY_USER
-from api.common.email import fmt_email, send_user_email, activate_email_send, \
+
+from api.common.email import (
+    fmt_email, send_user_email, activate_email_send,
     uid_from_email, clean_etoken
-from ..profile import get_limits, delete_user
+)
+
+from api.bp.profile import get_limits, delete_user
+
+from api.bp.admin.audit_log_actions.user import (
+    UserEditCtx, UserDeleteCtx
+)
 
 log = logging.getLogger(__name__)
 bp = Blueprint(__name__)
@@ -360,11 +368,12 @@ async def modify_user(request, admin_id, user_id):
     #     update db with field
     #     updated.append(field)
 
-    await _pu_check(db, 'users', user_id, payload, updated, 'email')
-    await _pu_check(db, 'limits', user_id, payload, updated,
-                    'upload_limit', 'blimit')
-    await _pu_check(db, 'limits', user_id, payload, updated,
-                    'shorten_limit', 'shlimit')
+    async with UserEditCtx(request, user_id):
+        await _pu_check(db, 'users', user_id, payload, updated, 'email')
+        await _pu_check(db, 'limits', user_id, payload, updated,
+                        'upload_limit', 'blimit')
+        await _pu_check(db, 'limits', user_id, payload, updated,
+                        'shorten_limit', 'shlimit')
 
     return response.json(updated)
 
@@ -385,7 +394,8 @@ async def del_user(request, admin_id, user_id):
     if active is None:
         raise BadInput('user not found')
 
-    await delete_user(request.app, user_id, True)
+    async with UserDeleteCtx(request, user_id):
+        await delete_user(request.app, user_id, True)
 
     return response.json({
         'success': True

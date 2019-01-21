@@ -3,12 +3,11 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
 
-from api.common.utils import find_different_keys
 from api.common.domain import get_domain_info
 
 log = logging.getLogger(__name__)
 
-from api.bp.admin.audit_log import Action
+from api.bp.admin.audit_log import Action, EditAction
 
 
 class DomainAddCtx(Action):
@@ -42,13 +41,8 @@ class DomainAddCtx(Action):
 
         return '\n'.join(lines)
 
-class DomainEditCtx(Action):
+class DomainEditCtx(EditAction):
     """Context for domain edits"""
-    def __init__(self, request, domain_id):
-        super().__init__(request)
-        self.domain_id = domain_id
-        self._domain_before, self._domain_after = None, None
-
     async def _get_domain(self, domain_id) -> dict:
         """Get domain information as a dictionary"""
         domain = await self.app.db.fetchrow("""
@@ -69,27 +63,14 @@ class DomainEditCtx(Action):
 
         return domain
 
-    async def __aenter__(self):
-        self._domain_before = await self._get_domain(self.domain_id)
-
-    async def __aexit__(self, typ, value, traceback):
-        self._domain_after = await self._get_domain(self.domain_id)
-        await super().__aexit__(typ, value, traceback)
-
     async def _text(self):
-        keys = find_different_keys(self._domain_before, self._domain_after)
-
-        domain = self._domain_after['domain']
+        domain = self._after['domain']
 
         lines = [
-            f'Domain {domain} ({self.domain_id}) was edited.'
+            f'Domain {domain} ({self._id}) was edited.'
         ]
 
-        for key in keys:
-            # get the old and new value from before and after the edit
-            # respectively
-            old, new = self._domain_before[key], self._domain_after[key]
-
+        for key, old, new in self.iter_diff_keys:
             if key == 'owner_id':
                 old_uname = await self.app.storage.get_username(old)
                 old = f'{old} {old_uname}'

@@ -4,6 +4,7 @@
 import logging
 
 from api.common.email import send_user_email
+from api.common.utils import find_different_keys
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +77,40 @@ class Action:
             return await self._notify()
 
         return False
+
+
+class EditAction(Action):
+    """Specifies an action where a certain object
+    has been edited."""
+    def __init__(self, request, identifier):
+        super().__init__(request)
+        self._id = identifier
+        self._before, self._after = None, None
+
+    async def _get_object(self, _identifier) -> dict:
+        raise NotImplementedError()
+
+    async def __aenter__(self):
+        self._before = await self._get_object(self._id)
+
+    async def __aexit__(self, typ, value, traceback):
+        self._after = await self._get_object(self._id)
+        await super().__aexit__(typ, value, traceback)
+
+    @property
+    def diff_keys(self) -> list:
+        """Find the different keys between
+        the before and after objects."""
+        return find_different_keys(
+            self._before, self._after
+        )
+
+    @property
+    def iter_diff_keys(self):
+        """Iterate old/new item pairs based on
+        the diff_keys property."""
+        for key in self.diff_keys:
+            yield key, self._before.get(key), self._after.get(key)
 
 
 class AuditLog:
