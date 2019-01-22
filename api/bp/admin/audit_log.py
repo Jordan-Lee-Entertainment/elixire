@@ -2,6 +2,7 @@
 # Copyright 2018, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
+import asyncio
 
 from api.common.email import send_user_email
 from api.common.utils import find_different_keys
@@ -29,8 +30,6 @@ class Action:
 
     async def _make_full_text(self, action_text):
         lines = [
-            'This is an automated email by the audit log subsystem.\n',
-            'This is the full text given by the action object:',
             action_text,
             f'\naction: {self}',
         ]
@@ -42,17 +41,7 @@ class Action:
 
         return '\n'.join(lines)
 
-    async def _notify(self):
-        """Dispatch this action to Admin users that are supposed to receive
-        the action, as an email."""
-        audit_log = self.app.audit_log
-
-        # generate the email subject and text
-        try:
-            subject = self._subject
-        except AttributeError:
-            subject = 'Audit log action'
-
+    async def _get_text(self):
         try:
             action_text = await self._text()
         except AttributeError:
@@ -61,19 +50,19 @@ class Action:
         if isinstance(action_text, list):
             action_text = '\n'.join(action_text)
 
+        return action_text
+
+    async def full_text(self) -> str:
+        """Get full text"""
+        action_text = await self._get_text()
+
         # actions can tell that they aren't worthy of
         # having an email by returning False as their
         # action text
         if action_text is False:
             return
 
-        full_text = await self._make_full_text(action_text)
-        log.debug('full text: %r', full_text)
-
-        # TODO: make AuditLog a queue of actions that will
-        # be dispatched as an email later on, instead of
-        # one email per action.
-        await audit_log.send_email(subject, full_text)
+        return await self._make_full_text(action_text)
 
     async def __aenter__(self):
         log.debug('entering context, action %s', self)
@@ -84,7 +73,7 @@ class Action:
         # the context
         log.debug('exiting context, action %s, exc=%s', self, value)
         if typ is None and value is None and traceback is None:
-            return await self._notify()
+            return await self.app.audit_log.push(self)
 
         return False
 
@@ -124,9 +113,69 @@ class EditAction(Action):
 
 
 class AuditLog:
-    """Audit log manager class"""
+    """Audit log manager class.
+
+    This manages a queue of actions. The Log will only be actually sent
+    out to admins after a minute of queue inactivity.
+    """
     def __init__(self, app):
         self.app = app
+        self.actions = []
+        self._send_task = None
+
+    def _reset(self):
+        """Resets the send task"""
+        if self._send_task:
+            self._send_task.cancel()
+
+        self._send_task = self.app.loop.create_task(self._send_task_func())
+
+    async def push(self, action: Action):
+        """Push an action to the queue."""
+        self.actions.append(action)
+        self._reset()
+
+    async def _actual_send(self):
+        # copy and wipe the current action queue
+        actions = list(self.actions)
+        self.actions = []
+
+        if not actions:
+            return
+
+        action_count = len(actions)
+
+        subject = ('Audit Log'
+                   if action_count == 1 else
+                   f'Audit Log - {action_count} actions')
+
+        texts = []
+
+        # for each action, generate its full text for the email.
+        for action in actions:
+            text = await action.full_text()
+
+            if text is None:
+                continue
+
+            texts.append(text)
+
+        if not texts:
+            return
+
+        # construct full text
+        full = '\n'.join(texts)
+        await self.send_email(subject, full)
+
+
+    async def _send_task_func(self):
+        try:
+            await asyncio.sleep(60)
+            await self._actual_send()
+        except asyncio.CancelledError:
+            log.warning('send task func err')
+        except Exception:
+            log.exception('error while sending')
 
     async def send_email(self, subject, full_text):
         """Send an email to all admins."""
