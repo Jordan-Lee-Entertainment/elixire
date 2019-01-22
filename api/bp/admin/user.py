@@ -83,17 +83,17 @@ Do not reply to this automated email.
 @admin_route
 async def activate_user(request, admin_id, user_id: int):
     """Activate one user, given its ID."""
-    result = await request.app.db.execute("""
-    UPDATE users
-    SET active = true
-    WHERE user_id = $1
-    """, user_id)
+    async with UserEditCtx(request, user_id):
+        result = await request.app.db.execute("""
+        UPDATE users
+        SET active = true
+        WHERE user_id = $1
+        """, user_id)
+
+        if result == "UPDATE 0":
+            raise BadInput('Provided user ID does not reference any user.')
 
     await request.app.storage.invalidate(user_id, 'active')
-
-    if result == "UPDATE 0":
-        raise BadInput('Provided user ID does not reference any user.')
-
     await notify_activate(request.app, user_id)
 
     return response.json({
@@ -158,16 +158,17 @@ async def activate_user_from_email(request):
 @admin_route
 async def deactivate_user(request, admin_id: int, user_id: int):
     """Deactivate one user, given its ID."""
-    result = await request.app.db.execute("""
-    UPDATE users
-    SET active = false
-    WHERE user_id = $1
-    """, user_id)
+    async with UserEditCtx(request, user_id):
+        result = await request.app.db.execute("""
+        UPDATE users
+        SET active = false
+        WHERE user_id = $1
+        """, user_id)
+
+        if result == "UPDATE 0":
+            raise BadInput('Provided user ID does not reference any user.')
 
     await request.app.storage.invalidate(user_id, 'active')
-
-    if result == "UPDATE 0":
-        raise BadInput('Provided user ID does not reference any user.')
 
     return response.json({
         'success': True,
