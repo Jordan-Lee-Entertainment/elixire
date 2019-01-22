@@ -159,6 +159,7 @@ class AuditLog:
                 continue
 
             texts.append(text)
+            texts.append('\n')
 
         if not texts:
             return
@@ -166,7 +167,6 @@ class AuditLog:
         # construct full text
         full = '\n'.join(texts)
         await self.send_email(subject, full)
-
 
     async def _send_task_func(self):
         try:
