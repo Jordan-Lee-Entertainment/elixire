@@ -123,6 +123,9 @@ async def email_domain(request, admin_id: int, domain_id: int):
     WHERE domain_id = $1
     """, domain_id)
 
+    if owner_id is None:
+        raise BadInput('Domain Owner not found')
+
     # TODO: write DomainBroadcastAction
     resp_tup, user_email = await send_user_email(
         request.app, owner_id,
