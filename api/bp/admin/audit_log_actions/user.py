@@ -5,7 +5,7 @@ import logging
 
 from api.bp.personal_stats import get_counts
 from api.bp.admin.audit_log import (
-    Action, EditAction, DeleteAction
+    EditAction, DeleteAction
 )
 
 log = logging.getLogger(__name__)
