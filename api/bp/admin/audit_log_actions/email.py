@@ -18,3 +18,24 @@ class BroadcastAction(Action):
         ]
 
         return lines
+
+
+class DomainBroadcastCtx(Action):
+    async def _text(self):
+        domain_id = self._ctx('domain_id')
+        domain = await self.app.db.fetchval("""
+        SELECT domain FROM domains WHERE domain_id = $1
+        """, domain_id)
+
+        user_id = self._ctx('user_id')
+        user = await self.app.storage.get_username(user_id)
+
+        lines = [
+            'An admin made a broadcast to a domain.',
+            f'Domain was ID {domain_id}, {domain!r}',
+            f'Owner was {user_id} {user}'
+            f'The broadcast had a subject of {self._ctx("subject")!r}.',
+            f'It had {len(self._ctx("body"))} bytes in size.',
+        ]
+
+        return lines

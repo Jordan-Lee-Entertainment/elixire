@@ -14,6 +14,8 @@ from api.bp.admin.audit_log_actions.domain import (
     DomainAddCtx, DomainEditCtx, DomainRemoveCtx
 )
 
+from api.bp.admin.audit_log_actions.email import DomainBroadcastCtx
+
 from api.common.domain import get_domain_info
 
 bp = Blueprint(__name__)
@@ -116,6 +118,7 @@ async def patch_domain(request, admin_id: int, domain_id: int):
 @admin_route
 async def email_domain(request, admin_id: int, domain_id: int):
     payload = validate(request.json, ADMIN_SEND_DOMAIN_EMAIL)
+    subject, body = payload['subject'], payload['body']
 
     owner_id = await request.app.db.fetchval("""
     SELECT user_id
@@ -126,10 +129,15 @@ async def email_domain(request, admin_id: int, domain_id: int):
     if owner_id is None:
         raise BadInput('Domain Owner not found')
 
-    # TODO: write DomainBroadcastAction
-    resp_tup, user_email = await send_user_email(
-        request.app, owner_id,
-        payload['subject'], payload['body'])
+    async with DomainBroadcastCtx(request) as ctx:
+        ctx.insert(domain_id=domain_id)
+        ctx.insert(owner_id=owner_id)
+        ctx.insert(subject=subject)
+        ctx.insert(body=body)
+
+        resp_tup, user_email = await send_user_email(
+            request.app, owner_id,
+            subject, body)
 
     resp, _ = resp_tup
 
