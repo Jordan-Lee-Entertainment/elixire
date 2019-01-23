@@ -3,27 +3,31 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
 
+from api.bp.admin.audit_log import EditAction, DeleteAction
+from api.common.fetch import OBJ_MAPPING
+
 log = logging.getLogger(__name__)
 
-from api.bp.admin.audit_log import Action, EditAction
 
-from api.common.fetch import OBJ_MAPPING
+async def _generic_get(ctx, object_id: int) -> dict:
+    try:
+        _, getter = OBJ_MAPPING[ctx.type]
+        return await getter(ctx.app.db, object_id)
+    except KeyError:
+        raise RuntimeError('Object type is invalid')
+
 
 class ObjectEditCtx(EditAction):
     def __init__(self, request, object_id, object_type):
         super().__init__(request, object_id)
-        self._type = object_type
+        self.type = object_type
 
     async def _get_object(self, object_id):
-        try:
-            getter, _ = OBJ_MAPPING[self._type]
-            return await getter(self.app.db, object_id)
-        except KeyError:
-            raise RuntimeError('Object type is invalid')
+        return await _generic_get(self, object_id)
 
     async def _text(self):
         lines = [
-            f'{self._type.capitalize()} ID {self._id} was edited.'
+            f'{self.type.capitalize()} ID {self._id} was edited.'
         ]
 
         for key, old, new in self.iter_diff_keys:
@@ -31,13 +35,23 @@ class ObjectEditCtx(EditAction):
 
         return lines
 
-# TODO: make this a DeleteAction
-class ObjectDeleteCtx(Action):
+
+class ObjectDeleteCtx(DeleteAction):
     def __init__(self, request, object_id, object_type):
-        super().__init__(request)
-        self._id = object_id
-        self._type = object_type
+        super().__init__(request, object_id)
+        self.type = object_type
 
     async def _get_object(self, object_id):
-        # TODO
-        pass
+        return await _generic_get(self, object_id)
+
+    async def _text(self):
+        otype = self.type.capitalize()
+        lines = [
+            f'{otype} ID {self._id} was deleted.',
+            f'{otype} information:'
+        ]
+
+        for key, val in self._obj.values():
+            lines.append(f'\t{key}: {val!r}')
+
+        return lines

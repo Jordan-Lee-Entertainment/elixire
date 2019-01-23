@@ -112,6 +112,20 @@ class EditAction(Action):
             yield key, self._before.get(key), self._after.get(key)
 
 
+class DeleteAction(Action):
+    """Represents the removal of an object."""
+    def __init__(self, request, identifier):
+        super().__init__(request)
+        self._id = identifier
+        self._obj = None
+
+    async def _get_object(self, _identifier) -> dict:
+        raise NotImplementedError()
+
+    async def __aenter__(self):
+        self._obj = await self._get_object(self._id)
+
+
 class AuditLog:
     """Audit log manager class.
 

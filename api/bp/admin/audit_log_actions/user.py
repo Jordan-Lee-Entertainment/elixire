@@ -3,11 +3,12 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
 
-log = logging.getLogger(__name__)
-
-from api.bp.admin.audit_log import Action, EditAction
 from api.bp.personal_stats import get_counts
+from api.bp.admin.audit_log import (
+    Action, EditAction, DeleteAction
+)
 
+log = logging.getLogger(__name__)
 
 async def get_user(conn, user_id) -> dict:
     """Get a user dictionary"""
@@ -60,16 +61,19 @@ class UserEditCtx(EditAction):
         return lines
 
 
-class UserDeleteCtx(Action):
+class UserDeleteCtx(DeleteAction):
     """Context for a user delete."""
     def __init__(self, request, user_id):
         super().__init__(request)
         self.user_id = user_id
-        self.user = None
 
-    async def __aenter__(self):
-        self.user = await get_user(self.app.db, self.user_id)
-        self.user.update(await get_counts(self.app.db, self.user_id))
+    async def _get_object(self, user_id):
+        user = await get_user(self.app.db, user_id)
+        user.update(
+            await get_counts(self.app.db, user_id)
+        )
+
+        return user
 
     async def _text(self) -> list:
         lines = [
@@ -77,7 +81,7 @@ class UserDeleteCtx(Action):
             'Domain information:'
         ]
 
-        for key, val in self.user.items():
+        for key, val in self._obj.items():
             lines.append(f'\t{key}: {val!r}')
 
         return lines

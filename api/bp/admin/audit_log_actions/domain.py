@@ -4,11 +4,11 @@
 import logging
 
 from api.common.domain import get_domain_info
+from api.bp.admin.audit_log import (
+    Action, EditAction, DeleteAction
+)
 
 log = logging.getLogger(__name__)
-
-from api.bp.admin.audit_log import Action, EditAction
-
 
 class DomainAddCtx(Action):
     """Context for a domain add."""
@@ -90,23 +90,19 @@ class DomainEditCtx(EditAction):
         return '\n'.join(lines)
 
 
-class DomainRemoveCtx(Action):
+class DomainRemoveCtx(DeleteAction):
     """Domain removal context."""
-    def __init__(self, request, domain_id):
-        super().__init__(request)
-        self.domain_id = domain_id
-        self.domain = None
 
-    async def __aenter__(self):
-        self.domain = await get_domain_info(self.app.db, self.domain_id)
+    async def _get_object(self, domain_id):
+        return get_domain_info(self.app.db, domain_id)
 
     async def _text(self) -> list:
         lines = [
-            f'Domain ID {self.domain_id} was deleted.',
+            f'Domain ID {self._id} was deleted.',
             'Domain information:'
         ]
 
-        for key, val in self.domain['info'].items():
+        for key, val in self._obj['info'].items():
 
             # special case for owner since its another dict
             if key == 'owner':
@@ -116,10 +112,10 @@ class DomainRemoveCtx(Action):
 
             lines.append(f'\tinfo.{key}: {val!r}')
 
-        for key, val in self.domain['stats'].items():
+        for key, val in self._obj['stats'].items():
             lines.append(f'\tstats.{key}: {val!r}')
 
-        for key, val in self.domain['public_stats'].items():
+        for key, val in self._obj['public_stats'].items():
             lines.append(f'\tpublic_stats.{key}: {val!r}')
 
         return lines

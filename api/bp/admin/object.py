@@ -22,8 +22,8 @@ from api.common.fetch import (
 bp = Blueprint(__name__)
 
 
-async def _handler_object(request, obj_fname: str,
-                          obj_type: str) -> response:
+async def _handler_object(request, obj_type: str,
+                          obj_fname: str) -> response:
     """Handler for fetching files/shortens."""
     id_handler, obj_handler = OBJ_MAPPING[obj_type]
 
