@@ -69,9 +69,10 @@ Do not reply to this automated email.
     """)
 
     subject = fmt_email(app, "{inst_name} - Your account is now active")
-    resp, user_email = await send_user_email(app, user_id,
-                                             subject,
-                                             body)
+    resp_tup, user_email = await send_user_email(
+        app, user_id, subject, body)
+
+    resp, _ = resp_tup
 
     if resp.status == 200:
         log.info(f'Sent email to {user_id} {user_email}')
@@ -122,7 +123,9 @@ async def activation_email(request, admin_id, user_id):
     # there was an invalidate() call which is unecessary
     # because its already invalidated on activate_user_from_email
 
-    resp, _email = await activate_email_send(request.app, user_id)
+    resp_tup, _email = await activate_email_send(request.app, user_id)
+    resp, _ = resp_tup
+
     return response.json({
         'success': resp.status == 200,
     })

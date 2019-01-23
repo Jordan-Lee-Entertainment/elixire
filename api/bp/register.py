@@ -46,9 +46,11 @@ Do not reply to this email specifically, it will not work.
  - {inst_name}, {main_url}
 """)
 
-    resp = await send_email(app, email,
-                            f'{_inst_name} - signup confirmation',
-                            email_body)
+    resp, _ = await send_email(
+        app, email,
+        f'{_inst_name} - signup confirmation',
+        email_body
+    )
 
     return resp.status == 200
 
@@ -131,8 +133,8 @@ Your username is {uname}.
  - {inst_name}, {main_url}
 """, uname=uname)
 
-    resp = await send_email(app, email, f'username recovery',
-                            email_body)
+    resp, _ = await send_email(
+        app, email, f'username recovery', email_body)
 
     return resp.status == 200
 

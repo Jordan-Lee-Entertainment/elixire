@@ -123,8 +123,12 @@ async def email_domain(request, admin_id: int, domain_id: int):
     WHERE domain_id = $1
     """, domain_id)
 
-    resp, user_email = await send_user_email(
-        request.app, owner_id, payload['subject'], payload['body'])
+    # TODO: write DomainBroadcastAction
+    resp_tup, user_email = await send_user_email(
+        request.app, owner_id,
+        payload['subject'], payload['body'])
+
+    resp, _ = resp_tup
 
     return response.json({
         'success': resp.status == 200,
