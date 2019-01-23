@@ -51,7 +51,7 @@ class ObjectDeleteCtx(DeleteAction):
             f'{otype} information:'
         ]
 
-        for key, val in self._obj.values():
+        for key, val in self._obj.items():
             lines.append(f'\t{key}: {val!r}')
 
         return lines
