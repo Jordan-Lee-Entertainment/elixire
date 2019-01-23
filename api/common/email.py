@@ -95,7 +95,7 @@ async def send_email(app, user_email: str, subject: str, email_body: str):
 
     async with app.session.post(mailgun_url,
                                 auth=auth, data=data) as resp:
-        return resp
+        return resp, await resp.text()
 
 
 async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
@@ -127,6 +127,7 @@ def fmt_email(app, string, **kwargs):
     }
 
     base.update(kwargs)
+    log.debug('formatting %r', string)
     return string.replace('{}', '{{}}').format(**base)
 
 

@@ -12,7 +12,7 @@ from sanic import Blueprint, response
 from api.decorators import admin_route
 from api.schema import validate, ADMIN_SEND_BROADCAST
 from api.common.email import fmt_email, send_user_email
-
+from api.bp.admin.audit_log_actions.email import BroadcastAction
 
 log = logging.getLogger(__name__)
 bp = Blueprint('admin')
@@ -30,19 +30,34 @@ async def test_admin(request, admin_id):
     })
 
 
-async def _do_broadcast(app, subject, body):
+async def _do_broadcast(request, subject, body):
+    app = request.app
+
     uids = await app.db.fetch("""
     SELECT user_id
     FROM users
     WHERE active = true
     """)
 
+    async with BroadcastAction(request) as ctx:
+        ctx.insert(subject=subject)
+        ctx.insert(body=body)
+        ctx.insert(usercount=len(uids))
+
     for row in uids:
         user_id = row['user_id']
-        resp, user_email = await send_user_email(app, user_id, subject, body)
+
+        resp_tup, user_email = await send_user_email(
+            app, user_id, subject, body)
+
+        resp, resp_text = resp_tup
 
         if resp.status != 200:
-            log.warn(f'warning, could not send to {user_id} {user_email}')
+            log.warning(
+                'warning, could not send to %d %r: %d %r',
+                user_id, user_email, resp.status, resp_text
+            )
+
             continue
 
         log.info(f'sent broadcast to {user_id} {user_email}')
@@ -63,7 +78,7 @@ async def email_broadcast(request, admin_id):
 
     # we do it in the background for webscale
     app.sched.spawn(
-        _do_broadcast(app, subject, body),
+        _do_broadcast(request, subject, body),
         'admin_broadcast'
     )
 

@@ -26,13 +26,16 @@ class Action:
         return self.context.get(key)
 
     def __repr__(self):
-        return f'<Action context={self.context}>'
+        return f'<Action>'
 
     async def _make_full_text(self, action_text):
         lines = [
             action_text,
-            f'\naction: {self}',
+            f'\naction context (debug purposes):'
         ]
+
+        for key, val in self.context.items():
+            lines.append(f'\t{key!r}: {val!r}')
 
         # get admin via request ctx
         admin_id = self.admin_id
