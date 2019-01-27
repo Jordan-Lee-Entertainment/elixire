@@ -2,8 +2,6 @@
 # Copyright 2018, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import elixire.tests.creds
-
 
 async def test_api(test_cli):
     response = await test_cli.get('/api/hello')

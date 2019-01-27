@@ -13,7 +13,7 @@ import zipfile
 import pathlib
 import os.path
 
-from api.common.email import gen_email_token, send_email
+from api.common.email import gen_email_token, send_user_email
 
 log = logging.getLogger(__name__)
 
@@ -206,15 +206,13 @@ Do not reply to this automated email.
 - {_inst_name}, {app.econfig.MAIN_URL}
     """
 
-    user_email = await app.db.fetchval("""
-    SELECT email
-    FROM users
-    WHERE user_id = $1
-    """, user_id)
+    resp_tup, user_email = await send_user_email(
+        app, user_id,
+        f'{_inst_name} - Your data dump is here!',
+        email_body
+    )
 
-    resp = await send_email(app, user_email,
-                            f'{_inst_name} - Your data dump is here!',
-                            email_body)
+    resp, _ = resp_tup
 
     if resp.status == 200:
         log.info(f'Sent email to {user_id} {user_email}')

@@ -74,7 +74,8 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
     return possible
 
 
-async def send_email(app, user_email: str, subject: str, email_body: str):
+async def send_email(app, user_email: str,
+                     subject: str, email_body: str) -> tuple:
     """Send an email to a user using the Mailgun API."""
     econfig = app.econfig
     mailgun_url = (f'https://api.mailgun.net/v3/{econfig.MAILGUN_DOMAIN}'
@@ -95,7 +96,7 @@ async def send_email(app, user_email: str, subject: str, email_body: str):
 
     async with app.session.post(mailgun_url,
                                 auth=auth, data=data) as resp:
-        return resp
+        return resp, await resp.text()
 
 
 async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
@@ -107,7 +108,7 @@ async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
     """, user_id)
 
     if not user_email:
-        return Error(6969), None
+        return (Error(6969), None), None
 
     resp = await send_email(app, user_email, subject, body)
 
@@ -127,7 +128,8 @@ def fmt_email(app, string, **kwargs):
     }
 
     base.update(kwargs)
-    return string.format(**base)
+    log.debug('formatting %r', string)
+    return string.replace('{}', '{{}}').format(**base)
 
 
 async def uid_from_email(app, token: str, table: str,

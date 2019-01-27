@@ -27,6 +27,7 @@ def admin_route(handler):
         await check_admin(request, admin_id, True)
 
         # if it is all good, call the old handler
+        request['_ctx_admin_id'] = admin_id
         return await handler(request, admin_id, *args, **kwargs)
 
     return _handler

@@ -37,6 +37,8 @@ from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.common.utils import LockStorage
 from api.storage import Storage
 from api.jobs import JobManager
+from api.bp.metrics.counters import MetricsCounters
+from api.bp.admin.audit_log import AuditLog
 
 import config
 
@@ -84,6 +86,7 @@ def set_blueprints(app_):
     app_.blueprint(api.bp.admin.object_bp)
     app_.blueprint(api.bp.admin.domain_bp)
     app_.blueprint(api.bp.admin.misc_bp)
+    app_.blueprint(api.bp.admin.settings_bp)
 
     app_.blueprint(api.bp.register.bp)
     app_.blueprint(api.bp.datadump.bp)
@@ -175,7 +178,7 @@ def handle_api_error(request, exception):
     log.warning(f'API error: {exception!r}')
 
     # api errors count as errors as well
-    request.app.rerr_counter += 1
+    request.app.counters.inc('error')
 
     scode = exception.status_code
     res = {
@@ -192,7 +195,6 @@ def handle_api_error(request, exception):
 def handle_exception(request, exception):
     """Handle any kind of exception."""
     status_code = 500
-    request.app.rerr_counter += 1
     url = request.path
 
     try:
@@ -205,15 +207,21 @@ def handle_exception(request, exception):
         log.warning(f'File not found: {exception!r}')
 
         if request.app.econfig.ENABLE_FRONTEND:
+            # admin panel routes all 404's back to index.
             if url.startswith('/admin'):
                 return response.file(
                     './admin-panel/build/index.html')
-            else:
-                return response.file(
-                    './frontend/output/404.html',
-                    status=404)
+
+            return response.file(
+                './frontend/output/404.html',
+                status=404)
     else:
         log.exception(f'Error in request: {exception!r}')
+
+    request.app.counters.inc('error')
+
+    if status_code == 500:
+        request.app.counters.inc('error_ise')
 
     return response.json({
         'error': True,
@@ -246,18 +254,17 @@ async def setup_db(rapp, loop):
     rapp.resolv = resolver.Resolver()
 
     # metrics stuff
-    rapp.rate_requests = 0
-    rapp.rate_response = 0
+    rapp.counters = MetricsCounters()
 
-    rapp.rreq_public = 0
-    rapp.rres_public = 0
+    # only give real AuditLog when we are on production
+    # a MockAuditLog instance will be in that attribute
+    # when running tests. look at tests/conftest.py
 
-    rapp.rerr_counter = 0
+    # TODO: maybe we can make a MockMetricsManager so that we
+    # don't stress InfluxDB out while running the tests.
 
-    rapp.file_upload_counter = 0
-    rapp.upload_counter_pub = 0
-
-    rapp.page_hit_counter = 0
+    if not getattr(rapp, 'test', False):
+        rapp.audit_log = AuditLog(rapp)
 
 
 @app.listener('after_server_stop')

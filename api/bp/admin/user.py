@@ -10,9 +10,17 @@ from sanic import Blueprint, response
 from api.decorators import admin_route
 from api.errors import NotFound, BadInput
 from api.schema import validate, ADMIN_MODIFY_USER
-from api.common.email import fmt_email, send_user_email, activate_email_send, \
+
+from api.common.email import (
+    fmt_email, send_user_email, activate_email_send,
     uid_from_email, clean_etoken
-from ..profile import get_limits, delete_user
+)
+
+from api.bp.profile import get_limits, delete_user
+
+from api.bp.admin.audit_log_actions.user import (
+    UserEditCtx, UserDeleteCtx
+)
 
 log = logging.getLogger(__name__)
 bp = Blueprint(__name__)
@@ -61,9 +69,10 @@ Do not reply to this automated email.
     """)
 
     subject = fmt_email(app, "{inst_name} - Your account is now active")
-    resp, user_email = await send_user_email(app, user_id,
-                                             subject,
-                                             body)
+    resp_tup, user_email = await send_user_email(
+        app, user_id, subject, body)
+
+    resp, _ = resp_tup
 
     if resp.status == 200:
         log.info(f'Sent email to {user_id} {user_email}')
@@ -75,17 +84,17 @@ Do not reply to this automated email.
 @admin_route
 async def activate_user(request, admin_id, user_id: int):
     """Activate one user, given its ID."""
-    result = await request.app.db.execute("""
-    UPDATE users
-    SET active = true
-    WHERE user_id = $1
-    """, user_id)
+    async with UserEditCtx(request, user_id):
+        result = await request.app.db.execute("""
+        UPDATE users
+        SET active = true
+        WHERE user_id = $1
+        """, user_id)
+
+        if result == "UPDATE 0":
+            raise BadInput('Provided user ID does not reference any user.')
 
     await request.app.storage.invalidate(user_id, 'active')
-
-    if result == "UPDATE 0":
-        raise BadInput('Provided user ID does not reference any user.')
-
     await notify_activate(request.app, user_id)
 
     return response.json({
@@ -114,7 +123,9 @@ async def activation_email(request, admin_id, user_id):
     # there was an invalidate() call which is unecessary
     # because its already invalidated on activate_user_from_email
 
-    resp, _email = await activate_email_send(request.app, user_id)
+    resp_tup, _email = await activate_email_send(request.app, user_id)
+    resp, _ = resp_tup
+
     return response.json({
         'success': resp.status == 200,
     })
@@ -150,16 +161,17 @@ async def activate_user_from_email(request):
 @admin_route
 async def deactivate_user(request, admin_id: int, user_id: int):
     """Deactivate one user, given its ID."""
-    result = await request.app.db.execute("""
-    UPDATE users
-    SET active = false
-    WHERE user_id = $1
-    """, user_id)
+    async with UserEditCtx(request, user_id):
+        result = await request.app.db.execute("""
+        UPDATE users
+        SET active = false
+        WHERE user_id = $1
+        """, user_id)
+
+        if result == "UPDATE 0":
+            raise BadInput('Provided user ID does not reference any user.')
 
     await request.app.storage.invalidate(user_id, 'active')
-
-    if result == "UPDATE 0":
-        raise BadInput('Provided user ID does not reference any user.')
 
     return response.json({
         'success': True,
@@ -360,11 +372,12 @@ async def modify_user(request, admin_id, user_id):
     #     update db with field
     #     updated.append(field)
 
-    await _pu_check(db, 'users', user_id, payload, updated, 'email')
-    await _pu_check(db, 'limits', user_id, payload, updated,
-                    'upload_limit', 'blimit')
-    await _pu_check(db, 'limits', user_id, payload, updated,
-                    'shorten_limit', 'shlimit')
+    async with UserEditCtx(request, user_id):
+        await _pu_check(db, 'users', user_id, payload, updated, 'email')
+        await _pu_check(db, 'limits', user_id, payload, updated,
+                        'upload_limit', 'blimit')
+        await _pu_check(db, 'limits', user_id, payload, updated,
+                        'shorten_limit', 'shlimit')
 
     return response.json(updated)
 
@@ -385,7 +398,8 @@ async def del_user(request, admin_id, user_id):
     if active is None:
         raise BadInput('user not found')
 
-    await delete_user(request.app, user_id, True)
+    async with UserDeleteCtx(request, user_id):
+        await delete_user(request.app, user_id, True)
 
     return response.json({
         'success': True

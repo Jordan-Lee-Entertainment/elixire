@@ -308,9 +308,11 @@ Do not reply to this email specifically, it will not work.
 """
 
     # TODO: change this to send user email?
-    resp = await send_email(request.app, user_email,
-                            f'{_inst_name} - account deactivation request',
-                            email_body)
+    resp, _ = await send_email(
+        request.app, user_email,
+        f'{_inst_name} - account deactivation request',
+        email_body
+    )
 
     return response.json({
         'success': resp.status == 200
@@ -489,9 +491,12 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {request.app.econfig.MAIN_URL}
 """
 
-    resp = await send_email(request.app, user_email,
-                            f'{_inst_name} - password reset request',
-                            email_body)
+    resp, _ = await send_email(
+        request.app, user_email,
+        f'{_inst_name} - password reset request',
+        email_body
+    )
+
 
     return response.json({
         'success': resp.status == 200

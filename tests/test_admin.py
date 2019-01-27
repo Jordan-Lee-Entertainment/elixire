@@ -2,7 +2,7 @@
 # Copyright 2018, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from elixire.tests.common import login_normal, login_admin
+from .common import login_normal, login_admin
 
 def _extract_uid(token) -> str:
     split = token.split('.')
