@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import aiohttp
-import elixire.tests.creds
-from elixire.tests.common import token, username, email, login_normal
+from .creds import USERNAME, PASSWORD
+from .common import token, username, email, login_normal
 
 
 async def test_profile_work(test_cli):
@@ -80,7 +80,7 @@ async def test_patch_profile(test_cli):
         # change that too. the more we change,
         # the better
         'paranoid': True,
-        'password': elixire.tests.creds.PASSWORD,
+        'password': PASSWORD,
     })
 
     assert resp.status == 200
@@ -98,10 +98,10 @@ async def test_patch_profile(test_cli):
     resp = await test_cli.patch('/api/profile', headers={
         'Authorization': utoken
     }, json={
-        'username': elixire.tests.creds.USERNAME,
+        'username': USERNAME,
         'email': profile['email'],
         'paranoid': False,
-        'password': elixire.tests.creds.PASSWORD,
+        'password': PASSWORD,
     })
 
     assert resp.status == 200

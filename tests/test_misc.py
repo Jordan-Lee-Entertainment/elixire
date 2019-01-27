@@ -6,8 +6,7 @@
 
 import time
 
-import elixire.tests.creds
-from elixire.api.snowflake import _snowflake as time_snowflake, \
+from api.snowflake import _snowflake as time_snowflake, \
     get_snowflake, snowflake_time
 
 async def test_snowflake():

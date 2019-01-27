@@ -5,8 +5,7 @@
 import secrets
 import random
 
-import elixire.tests.creds
-from elixire.tests.common import token, username, login_normal
+from .common import token, username, login_normal
 
 
 async def test_invalid_path(test_cli):

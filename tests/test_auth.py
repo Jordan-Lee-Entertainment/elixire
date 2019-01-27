@@ -2,14 +2,14 @@
 # Copyright 2018, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import elixire.tests.creds
-from elixire.tests.common import token, username, login_normal
+from .creds import USERNAME, PASSWORD
+from .common import token, username, login_normal
 
 
 async def test_login(test_cli):
     response = await test_cli.post('/api/login', json={
-        'user': elixire.tests.creds.USERNAME,
-        'password': elixire.tests.creds.PASSWORD,
+        'user': USERNAME,
+        'password': PASSWORD,
     })
 
     assert response.status == 200
@@ -20,7 +20,7 @@ async def test_login(test_cli):
 
 async def test_login_badinput(test_cli):
     response = await test_cli.post('/api/login', json={
-        'user': elixire.tests.creds.USERNAME,
+        'user': USERNAME,
     })
 
     assert response.status == 400
@@ -28,7 +28,7 @@ async def test_login_badinput(test_cli):
 
 async def test_login_badpwd(test_cli):
     response = await test_cli.post('/api/login', json={
-        'user': elixire.tests.creds.USERNAME,
+        'user': USERNAME,
         'password': token(),
     })
 
@@ -38,7 +38,7 @@ async def test_login_badpwd(test_cli):
 async def test_login_baduser(test_cli):
     response = await test_cli.post('/api/login', json={
         'user': username(),
-        'password': elixire.tests.creds.PASSWORD,
+        'password': PASSWORD,
     })
 
     assert response.status == 403
@@ -77,8 +77,8 @@ async def test_revoke(test_cli):
     assert response_valid.status == 200
 
     revoke_call = await test_cli.post('/api/revoke', json={
-        'user': elixire.tests.creds.USERNAME,
-        'password': elixire.tests.creds.PASSWORD
+        'user': USERNAME,
+        'password': PASSWORD
     })
 
     assert revoke_call.status == 200

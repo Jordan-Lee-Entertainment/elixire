@@ -2,7 +2,7 @@
 # Copyright 2018, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from elixire.tests.common import token, username, login_normal
+from .common import token, username, login_normal
 
 async def test_invalid_shorten(test_cli):
     invalid_shit = [f'{username()}' for _ in range(100)]

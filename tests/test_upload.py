@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import aiohttp
-from elixire.tests.common import login_normal, png_data
+from .common import login_normal, png_data
 
 
 async def check_exists(test_cli, shortname, utoken, not_exists=False):
