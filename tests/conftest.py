@@ -8,11 +8,9 @@ import os
 
 sys.path.append(os.getcwd())
 
-from elixire.run import app as mainapp
-from elixire.tests.common import token, username, \
-        login_normal, login_admin
+from run import app as mainapp
 
-from elixire.tests.mock import MockAuditLog
+from .mock import MockAuditLog
 
 
 @pytest.yield_fixture
