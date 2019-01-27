@@ -34,10 +34,14 @@ run_backend:
     - sh -c "! [ -d env ] && virtualenv env"
     - source env/bin/activate
     - python -m pip install -Ur requirements.txt
+    - mkdir -p images
+    - mkdir -p dumps
+    - mkdir -p thumbnails
+    - cat config.py.example config.py.ci > config.py
+    - python ./utils/upgrade/folder_sharding.py
   script:
     - mkdir frontend/output admin-panel/dist -p
     - touch frontend/output/index.html admin-panel/dist/index.html
-    - cat config.py.example config.py.ci > config.py
     - ls -la
     - pwd
     - psql -h postgres -U postgres -f schema.sql
