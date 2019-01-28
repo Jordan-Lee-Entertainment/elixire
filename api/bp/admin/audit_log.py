@@ -190,7 +190,7 @@ class AuditLog:
             await asyncio.sleep(60)
             await self._actual_send()
         except asyncio.CancelledError:
-            log.warning('send task func err')
+            log.debug('cancelled send task')
         except Exception:
             log.exception('error while sending')
 
