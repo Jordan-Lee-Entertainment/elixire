@@ -63,10 +63,6 @@ class UserEditCtx(EditAction):
 
 class UserDeleteCtx(DeleteAction):
     """Context for a user delete."""
-    def __init__(self, request, user_id):
-        super().__init__(request)
-        self.user_id = user_id
-
     async def _get_object(self, user_id):
         user = await get_user(self.app.db, user_id)
         user.update(

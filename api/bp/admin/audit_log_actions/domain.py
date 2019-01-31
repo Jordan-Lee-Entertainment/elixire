@@ -94,7 +94,7 @@ class DomainRemoveCtx(DeleteAction):
     """Domain removal context."""
 
     async def _get_object(self, domain_id):
-        return get_domain_info(self.app.db, domain_id)
+        return await get_domain_info(self.app.db, domain_id)
 
     async def _text(self) -> list:
         lines = [
