@@ -40,9 +40,7 @@ async def _do_broadcast(request, subject, body):
     """)
 
     async with BroadcastAction(request) as ctx:
-        ctx.insert(subject=subject)
-        ctx.insert(body=body)
-        ctx.insert(usercount=len(uids))
+        ctx.update(subject=subject, body=body, usercount=len(uids))
 
     for row in uids:
         user_id = row['user_id']
