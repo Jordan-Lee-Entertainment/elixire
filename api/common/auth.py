@@ -216,11 +216,10 @@ def _try_unsign(signer, token, token_age=None):
 
 
 async def token_check(request) -> int:
-    """Check if a token is valid.
+    """Check if a token is valid. Returns user ID upon success.
 
-    This will check if the token given in the request
-    is an API token or not, and giving proper validation
-    depending on its type.
+    This will check if the token given in the request is an API token or not,
+    performing proper validation depending on its type.
     """
     cfg = request.app.econfig
 
