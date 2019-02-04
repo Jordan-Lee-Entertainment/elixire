@@ -49,42 +49,27 @@ def _snowflake(timestamp: int) -> Snowflake:
          with millisecond precision.
     """
     # Yes, using global variables aren't the best idea
-    # Maybe we could distribute the work of snowflake generation
-    # to actually separated servers? :thinking:
     global _generated_ids
-
-    # bits 0-12 encode _generated_ids (size 12)
-    # we need to modulo _generated_ids by 4096
-    # to prevent overflows.
-    genid_b = '{0:012b}'.format(_generated_ids % 4096)
-
-    # bits 12-17 encode PROCESS_ID (size 5)
-    procid_b = '{0:05b}'.format(PROCESS_ID)
-
-    # bits 17-22 encode WORKER_ID (size 5)
-    workid_b = '{0:05b}'.format(WORKER_ID)
-
-    # bits 22-64 encode (timestamp - EPOCH) (size 42)
     epochized = timestamp - EPOCH
-    epoch_b = '{0:042b}'.format(epochized)
 
-    snowflake_b = f'{epoch_b}{workid_b}{procid_b}{genid_b}'
+    # 22 bits to insert the other variables
+    sflake = epochized << 22
+
+    sflake |= (WORKER_ID % 32) << 17
+    sflake |= (PROCESS_ID % 32) << 12
+    sflake |= (_generated_ids % 4096)
+
     _generated_ids += 1
 
-    return int(snowflake_b, 2)
+    return sflake
 
 
 def snowflake_time(snowflake: Snowflake) -> float:
     """Get the UNIX timestamp(with millisecond precision, as a float)
     from a specific snowflake.
     """
-
-    # the total size for a snowflake is 64 bits,
-    # considering it is a string, position 0 to 42 will give us
-    # the `epochized` variable
-    snowflake_b = '{0:064b}'.format(snowflake)
-    epochized_b = snowflake_b[:42]
-    epochized = int(epochized_b, 2)
+    # bits 22 and onward encode epochized
+    epochized = snowflake >> 22
 
     # since epochized is the time *since* the EPOCH
     # the unix timestamp will be the time *plus* the EPOCH
