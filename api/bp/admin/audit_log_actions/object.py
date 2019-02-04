@@ -26,7 +26,7 @@ class ObjectEditAction(EditAction):
     async def get_object(self, object_id):
         return await _generic_get(self, object_id)
 
-    async def _text(self):
+    async def render(self):
         lines = [f'{self.type.capitalize()} ID {self.id} was edited.']
 
         for key, old, new in self.different_keys_items():
