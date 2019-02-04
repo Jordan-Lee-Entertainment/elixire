@@ -97,7 +97,6 @@ def set_blueprints(app_):
     app_.blueprint(api.bp.metrics.bp)
 
 
-
 async def options_handler(request, *args, **kwargs):
     """Dummy OPTIONS handler for CORS stuff."""
     return response.text('ok')
