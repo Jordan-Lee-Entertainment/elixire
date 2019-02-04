@@ -105,7 +105,7 @@ class DomainRemoveCtx(DeleteAction):
         for key, val in self._obj['info'].items():
 
             # special case for owner since its another dict
-            if key == 'owner':
+            if key == 'owner' and val is not None:
                 uid = val['user_id']
                 lines.append(f'\tinfo.{key}: {uid!r}')
                 continue
