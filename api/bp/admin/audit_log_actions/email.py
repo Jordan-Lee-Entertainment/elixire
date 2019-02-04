@@ -12,7 +12,7 @@ class BroadcastAction(Action):
     async def details(self) -> list:
         return [
             'An admin made a global broadcast.',
-            f'The broadcast had a subject of {self["subject"])!r}.',
+            f'The broadcast had a subject of {self["subject"]!r}.',
             f'It had {len(self["body"])} bytes in size.',
             f'It was broadcasted to {self["usercount"]} users.',
         ]
