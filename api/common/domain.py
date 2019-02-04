@@ -18,7 +18,7 @@ async def _domain_file_stats(db, domain_id, *,
       {consented_clause}
     """, domain_id)
 
-    return row['count'], int(row['sum'])
+    return row['count'], int(row['sum'] or 0)
 
 async def get_domain_info(db, domain_id) -> dict:
     """Get domain information."""
