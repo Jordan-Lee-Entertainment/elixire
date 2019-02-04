@@ -38,7 +38,7 @@ async def get_user(conn, user_id) -> dict:
 
 
 class UserEditAction(EditAction):
-    async def get_action(self, user_id):
+    async def get_object(self, user_id):
         return await get_user(self.app.db, user_id)
 
     async def details(self):
