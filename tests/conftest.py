@@ -17,6 +17,25 @@ from .mock import MockAuditLog
 def app():
     app_ = mainapp
     app_.test = True
+    app_.econfig.RATELIMITS = {
+        '/': {
+            'requests': 10000,
+            'second': 1
+        },
+        ('ip', '/'): {
+            'requests': 10000,
+            'second': 1
+        },
+        ('ip', '/i/'): {
+            'requests': 1000,
+            'second': 1
+        },
+        ('ip', '/t/'): {
+            'requests': 1000,
+            'second': 1,
+        }
+    }
+
 
     # use mock instances of some external services.
     app_.audit_log = MockAuditLog()
