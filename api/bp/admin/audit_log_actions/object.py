@@ -27,7 +27,7 @@ class ObjectEditAction(EditAction):
         return await _generic_get(self, object_id)
 
     async def _text(self):
-        lines = [f'{self.type.capitalize()} ID {self._id} was edited.']
+        lines = [f'{self.type.capitalize()} ID {self.id} was edited.']
 
         for key, old, new in self.different_keys_items():
             lines.append(f'\t{key}: {old!r} => {new!r}')
@@ -47,7 +47,7 @@ class ObjectDeleteAction(DeleteAction):
         object_type = self.type.capitalize()
 
         lines = [
-            f'{object_type} with ID {self._id} was deleted.',
+            f'{object_type} with ID {self.id} was deleted.',
             f'{object_type} information:',
         ]
 

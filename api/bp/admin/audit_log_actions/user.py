@@ -45,7 +45,7 @@ class UserEditAction(EditAction):
         if not self.different_keys():
             return False
 
-        lines = [f'User {self.after["username"]} ({self._id}) was edited.']
+        lines = [f'User {self.after["username"]} ({self.id}) was edited.']
 
         for key, old, new in self.different_keys_items():
             lines.append(f'\t - {key}: {old} => {new}')
@@ -61,7 +61,7 @@ class UserDeleteAction(DeleteAction):
 
     async def details(self) -> list:
         lines = [
-            f'User ID {self._id} was deleted',
+            f'User ID {self.id} was deleted',
             'Domain information:',
         ]
 

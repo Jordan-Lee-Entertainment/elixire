@@ -66,7 +66,7 @@ class DomainEditAction(EditAction):
 
         domain = self.after['domain']
 
-        lines = [f'Domain {domain} ({self._id}) was edited.']
+        lines = [f'Domain {domain} ({self.id}) was edited.']
 
         for key, old, new in self.different_keys_items():
             if key == 'owner_id':
