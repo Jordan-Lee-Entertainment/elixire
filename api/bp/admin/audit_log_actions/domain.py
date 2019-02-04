@@ -87,7 +87,7 @@ class DomainRemoveAction(DeleteAction):
 
     async def details(self) -> list:
         lines = [
-            f'Domain ID {self._id} was deleted.',
+            f'Domain ID {self.id} was deleted.',
             'Domain information:',
         ]
 
