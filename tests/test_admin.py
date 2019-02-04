@@ -116,6 +116,7 @@ async def test_user_activate_cycle(test_cli):
 
 
 async def test_user_search(test_cli):
+    """Test seaching of users."""
     # there isnt much other testing than calling the route
     # and checking for the data types...
 
@@ -132,6 +133,7 @@ async def test_user_search(test_cli):
 
     assert isinstance(rjson, dict)
     assert isinstance(rjson['results'], list)
+
     pag = rjson['pagination']
     assert isinstance(pag, dict)
     assert isinstance(pag['total'], int)
@@ -139,6 +141,7 @@ async def test_user_search(test_cli):
 
 
 async def test_domain_stats(test_cli):
+    """Get instance-wide domain stats."""
     atoken = await login_admin(test_cli)
 
     resp = await test_cli.get('/api/admin/domains', headers={
@@ -153,6 +156,7 @@ async def test_domain_stats(test_cli):
 
 
 async def test_domain_patch(test_cli):
+    """Test editing of a single domain."""
     atoken = await login_admin(test_cli)
     utoken = await login_normal(test_cli)
 
@@ -279,3 +283,31 @@ async def test_user_patch(test_cli):
     assert isinstance(rjson, list)
     assert 'upload_limit' in rjson
     assert 'shorten_limit' in rjson
+
+async def test_my_stats_as_admin(test_cli):
+    """Test the personal domain stats route but as an admin."""
+    utoken = await login_admin(test_cli)
+
+    resp = await test_cli.get('/api/stats/my_domains', headers={
+        'Authorization': utoken,
+    })
+
+    assert resp.status == 200
+
+    rjson = await resp.json()
+    assert isinstance(rjson, dict)
+
+    domain_id = next(iter(rjson.keys()))
+    dom = rjson[domain_id]
+
+    info = dom['info']
+    assert isinstance(info['domain'], str)
+    assert isinstance(info['official'], bool)
+    assert isinstance(info['admin_only'], bool)
+    assert isinstance(info['permissions'], int)
+
+    stats = dom['stats']
+    assert isinstance(stats['users'], int)
+    assert isinstance(stats['files'], int)
+    assert isinstance(stats['size'], int)
+    assert isinstance(stats['shortens'], int)
