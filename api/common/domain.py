@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 async def _domain_file_stats(db, domain_id, *,
-                             ignore_consented: bool = True) -> tuple:
+                             ignore_consented: bool = False) -> tuple:
     """Get domain file stats (count and sum of all bytes)."""
 
     consented_clause = '' if ignore_consented else 'AND users.consented = true'
@@ -17,7 +17,7 @@ async def _domain_file_stats(db, domain_id, *,
       AND files.deleted = false
       {consented_clause}
     """, domain_id)
-    
+
     return row['count'], row['sum']
 
 async def get_domain_info(db, domain_id) -> dict:
