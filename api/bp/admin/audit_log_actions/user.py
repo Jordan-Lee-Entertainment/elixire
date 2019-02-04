@@ -10,8 +10,9 @@ from api.bp.admin.audit_log import (
 
 log = logging.getLogger(__name__)
 
+
 async def get_user(conn, user_id) -> dict:
-    """Get a user dictionary"""
+    """Get a user as a dictionary."""
     user = await conn.fetchrow("""
     SELECT username, active, email, consented, admin, paranoid,
         subdomain, domain,
@@ -36,48 +37,35 @@ async def get_user(conn, user_id) -> dict:
     return {**duser, **dlimits}
 
 
-class UserEditCtx(EditAction):
-    """Context for user edits."""
-    async def _get_object(self, user_id):
+class UserEditAction(EditAction):
+    async def get_object(self, user_id):
         return await get_user(self.app.db, user_id)
 
-    async def _text(self):
-        # if no keys were actually edited, don't make it
-        # an action.
-        if not self.diff_keys:
+    async def details(self):
+        if not self.different_keys():
             return False
 
-        username = self._after['username']
+        lines = [f'User {self.after["username"]} ({self.id}) was edited.']
 
-        lines = [
-            f'User {username} ({self._id}) was edited.'
-        ]
-
-        for key, old, new in self.iter_diff_keys:
-            lines.append(
-                f'\t - {key}: {old} => {new}'
-            )
+        for key, old, new in self.different_keys_items():
+            lines.append(f'\t - {key}: {old} => {new}')
 
         return lines
 
 
-class UserDeleteCtx(DeleteAction):
-    """Context for a user delete."""
-    async def _get_object(self, user_id):
+class UserDeleteAction(DeleteAction):
+    async def get_object(self, user_id):
         user = await get_user(self.app.db, user_id)
-        user.update(
-            await get_counts(self.app.db, user_id)
-        )
-
+        user.update(await get_counts(self.app.db, user_id))
         return user
 
-    async def _text(self) -> list:
+    async def details(self) -> list:
         lines = [
-            f'User ID {self._id} was deleted',
-            'Domain information:'
+            f'User ID {self.id} was deleted',
+            'Domain information:',
         ]
 
-        for key, val in self._obj.items():
+        for key, val in self.object.items():
             lines.append(f'\t{key}: {val!r}')
 
         return lines

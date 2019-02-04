@@ -11,10 +11,10 @@ from api.storage import solve_domain
 from api.errors import BadInput
 
 from api.bp.admin.audit_log_actions.domain import (
-    DomainAddCtx, DomainEditCtx, DomainRemoveCtx
+    DomainAddAction, DomainEditAction, DomainRemoveAction
 )
 
-from api.bp.admin.audit_log_actions.email import DomainBroadcastCtx
+from api.bp.admin.audit_log_actions.email import DomainOwnerNotifyAction
 
 from api.common.domain import get_domain_info
 
@@ -47,12 +47,12 @@ async def add_domain(request, admin_id: int):
     WHERE domain = $1
     """, domain_name)
 
-    async with DomainAddCtx(request) as ctx:
-        ctx.insert(domain_id=domain_id)
+    async with DomainAddAction(request) as action:
+        action.update(domain_id=domain_id)
 
         if 'owner_id' in request.json:
             owner_id = int(request.json['owner_id'])
-            ctx.insert(owner_id=owner_id)
+            action.update(owner_id=owner_id)
 
             await db.execute("""
             INSERT INTO domain_owners (domain_id, user_id)
@@ -92,7 +92,7 @@ async def patch_domain(request, admin_id: int, domain_id: int):
     updated_fields = []
     db = request.app.db
 
-    async with DomainEditCtx(request, domain_id):
+    async with DomainEditAction(request, domain_id):
         if 'owner_id' in payload:
             exec_out = await db.execute("""
             UPDATE domain_owners
@@ -129,11 +129,8 @@ async def email_domain(request, admin_id: int, domain_id: int):
     if owner_id is None:
         raise BadInput('Domain Owner not found')
 
-    async with DomainBroadcastCtx(request) as ctx:
-        ctx.insert(domain_id=domain_id)
-        ctx.insert(owner_id=owner_id)
-        ctx.insert(subject=subject)
-        ctx.insert(body=body)
+    async with DomainOwnerNotifyAction(request) as action:
+        action.update(domain_id=domain_id, owner_id=owner_id, subject=subject, body=body)
 
         resp_tup, user_email = await send_user_email(
             request.app, owner_id,
@@ -157,7 +154,7 @@ async def add_owner(request, admin_id: int, domain_id: int):
     except (ValueError, KeyError):
         raise BadInput('Invalid number for owner ID')
 
-    async with DomainEditCtx(request, domain_id):
+    async with DomainEditAction(request, domain_id):
         exec_out = await request.app.db.execute("""
         INSERT INTO domain_owners (domain_id, user_id)
         VALUES ($1, $2)
@@ -195,7 +192,7 @@ async def remove_domain(request, admin_id: int, domain_id: int):
     UPDATE users set shorten_domain = 0 WHERE shorten_domain = $1
     """, domain_id)
 
-    async with DomainRemoveCtx(request, domain_id):
+    async with DomainRemoveAction(request, domain_id):
         await request.app.db.execute("""
         DELETE FROM domain_owners
         WHERE domain_id = $1

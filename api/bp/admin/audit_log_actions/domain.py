@@ -10,18 +10,12 @@ from api.bp.admin.audit_log import (
 
 log = logging.getLogger(__name__)
 
-class DomainAddCtx(Action):
-    """Context for a domain add."""
-    def __repr__(self):
-        return (f'<DomainAddAction '
-                f'domain_id={self._ctx("domain_id")} '
-                f'owner_id={self._ctx("owner_id")}>')
 
-    async def _text(self):
-        owner_id = self._ctx('owner_id')
+class DomainAddAction(Action):
+    async def details(self) -> list:
+        owner_id = self['owner_id']
+        domain_id = self['domain_id']
         owner_name = await self.app.storage.get_username(owner_id)
-
-        domain_id = self._ctx('domain_id')
 
         domain = await self.app.db.fetchrow("""
         SELECT domain, admin_only, official, permissions
@@ -41,10 +35,12 @@ class DomainAddCtx(Action):
 
         return '\n'.join(lines)
 
-class DomainEditCtx(EditAction):
-    """Context for domain edits"""
-    async def _get_object(self, domain_id) -> dict:
-        """Get domain information as a dictionary"""
+    def __repr__(self):
+        return f'<DomainAddAction domain_id={self["domain_id"]} owner_id={self["owner_id"]}'
+
+
+class DomainEditAction(EditAction):
+    async def get_object(self, domain_id) -> dict:
         domain = await self.app.db.fetchrow("""
         SELECT admin_only, official, domain, permissions
         FROM domains
@@ -63,19 +59,16 @@ class DomainEditCtx(EditAction):
 
         return domain
 
-    async def _text(self):
-        # if no keys were actually edited, don't make it
-        # an action.
-        if not self.diff_keys:
+    async def details(self) -> list:
+        # if no keys were actually edited, don't make it an action.
+        if not self.different_keys():
             return False
 
-        domain = self._after['domain']
+        domain = self.after['domain']
 
-        lines = [
-            f'Domain {domain} ({self._id}) was edited.'
-        ]
+        lines = [f'Domain {domain} ({self.id}) was edited.']
 
-        for key, old, new in self.iter_diff_keys:
+        for key, old, new in self.different_keys_items():
             if key == 'owner_id':
                 old_uname = await self.app.storage.get_username(old)
                 old = f'{old} {old_uname}'
@@ -83,23 +76,19 @@ class DomainEditCtx(EditAction):
                 new_uname = await self.app.storage.get_username(new)
                 new = f'{new} {new_uname}'
 
-            lines.append(
-                f'\t - {key}: {old} => {new}'
-            )
+            lines.append(f'\t - {key}: {old} => {new}')
 
-        return '\n'.join(lines)
+        return lines
 
 
-class DomainRemoveCtx(DeleteAction):
-    """Domain removal context."""
-
-    async def _get_object(self, domain_id):
+class DomainRemoveAction(DeleteAction):
+    async def get_object(self, domain_id):
         return await get_domain_info(self.app.db, domain_id)
 
-    async def _text(self) -> list:
+    async def details(self) -> list:
         lines = [
-            f'Domain ID {self._id} was deleted.',
-            'Domain information:'
+            f'Domain ID {self.id} was deleted.',
+            'Domain information:',
         ]
 
         for key, val in self._obj['info'].items():

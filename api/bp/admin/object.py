@@ -12,7 +12,7 @@ from api.errors import BadInput
 from api.decorators import admin_route
 
 from api.bp.admin.audit_log_actions.object import (
-    ObjectEditCtx, ObjectDeleteCtx
+    ObjectEditAction, ObjectDeleteAction
 )
 
 from api.common.fetch import (
@@ -119,7 +119,7 @@ async def handle_modify(obj_type: str, request,
 async def modify_file(request, _admin_id, file_id):
     """Modify file information."""
 
-    async with ObjectEditCtx(request, file_id, 'file'):
+    async with ObjectEditAction(request, file_id, 'file'):
         return await handle_modify('file', request, file_id)
 
 
@@ -128,7 +128,7 @@ async def modify_file(request, _admin_id, file_id):
 async def modify_shorten(request, _admin_id, shorten_id):
     """Modify file information."""
 
-    async with ObjectEditCtx(request, shorten_id, 'shorten'):
+    async with ObjectEditAction(request, shorten_id, 'shorten'):
         return await handle_modify('shorten', request, shorten_id)
 
 
@@ -145,7 +145,7 @@ async def delete_file_handler(request, _admin_id, file_id):
     if row is None:
         raise BadInput('File not found')
 
-    async with ObjectDeleteCtx(request, file_id, 'file'):
+    async with ObjectDeleteAction(request, file_id, 'file'):
         await delete_file(request.app, row['filename'], row['uploader'])
 
     return response.json({
@@ -168,7 +168,7 @@ async def delete_shorten_handler(request, _admin_id, shorten_id: int):
     if row is None:
         raise BadInput('Shorten not found')
 
-    async with ObjectDeleteCtx(request, shorten_id, 'shorten'):
+    async with ObjectDeleteAction(request, shorten_id, 'shorten'):
         await delete_shorten(request.app,
                              row['filename'],
                              row['uploader'])

@@ -1,6 +1,7 @@
 # elixire: Image Host software
 # Copyright 2018, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+import copy
 import logging
 import asyncio
 
@@ -11,27 +12,40 @@ log = logging.getLogger(__name__)
 
 
 class Action:
-    """Represents a generic action."""
+    """Represents a generic action taken by an admin."""
+
     def __init__(self, request):
         self.app = request.app
-        self.admin_id = request['_ctx_admin_id']
+        self.admin_id = request['ctx'][1]
         self.context = {}
 
-    def insert(self, **kwargs):
-        """Insert values to an action's context"""
-        for key, value in kwargs.items():
-            self.context[key] = value
+    async def details(self):
+        """Return the details of this action."""
+        raise NotImplementedError()
 
-    def _ctx(self, key):
-        return self.context.get(key)
+    def update(self, **kwargs):
+        """Update values of the context of this action."""
+        self.context.update(kwargs)
 
-    def __repr__(self):
-        return f'<Action>'
+    async def render(self) -> str:
+        """Return the full textual representation of this action."""
 
-    async def _make_full_text(self, action_text):
+        try:
+            action_text = await self.details()
+        except NotImplementedError:
+            action_text = '<no text set for action>'
+
+        # actions can decide to "cancel themselves" if they return False
+        # (this allows actions to only count as actions under certain conditions)
+        if action_text is False:
+            return
+
+        if isinstance(action_text, list):
+            action_text = '\n'.join(action_text)
+
         lines = [
             action_text,
-            f'\naction context (debug purposes):'
+            f'\naction context (for debugging purposes):',
         ]
 
         for key, val in self.context.items():
@@ -39,156 +53,149 @@ class Action:
 
         # get admin via request ctx
         admin_id = self.admin_id
-        admin_uname = await self.app.storage.get_username(admin_id)
-        lines.append(f'admin that made the action: {admin_uname} ({admin_id})')
+        admin_username = await self.app.storage.get_username(admin_id)
+        lines.append(f'admin that performed the action: {admin_username} ({admin_id})')
 
         return '\n'.join(lines)
-
-    async def _get_text(self):
-        try:
-            action_text = await self._text()
-        except AttributeError:
-            action_text = '<No text set for action>'
-
-        if isinstance(action_text, list):
-            action_text = '\n'.join(action_text)
-
-        return action_text
-
-    async def full_text(self) -> str:
-        """Get full text"""
-        action_text = await self._get_text()
-
-        # actions can tell that they aren't worthy of
-        # having an email by returning False as their
-        # action text
-        if action_text is False:
-            return
-
-        return await self._make_full_text(action_text)
 
     async def __aenter__(self):
         log.debug('entering context, action %s', self)
         return self
 
-    async def __aexit__(self, typ, value, traceback):
-        # only notify when there are no errors happening inside
-        # the context
+    async def __aexit__(self, type, value, traceback):
+        # only notify when there are no errors happening inside the context
         log.debug('exiting context, action %s, exc=%s', self, value)
-        if typ is None and value is None and traceback is None:
+        if type is None and value is None and traceback is None:
             return await self.app.audit_log.push(self)
 
         return False
 
+    def __contains__(self, item):
+        return item in self.context
+
+    def __getitem__(self, key):
+        return self.context.get(key)
+
+    def __repr__(self):
+        return f'<Action admin_id={self.admin_id}>'
+
 
 class EditAction(Action):
-    """Specifies an action where a certain object
-    has been edited."""
-    def __init__(self, request, identifier):
-        super().__init__(request)
-        self._id = identifier
-        self._before, self._after = None, None
+    """An action which describes an object is edited."""
 
-    async def _get_object(self, _identifier) -> dict:
+    def __init__(self, request, id):
+        super().__init__(request)
+        self.id = id
+        self.before = None
+        self.after = None
+
+    async def get_object(self, id) -> dict:
+        """Return the "associated object" with this action.
+
+        It should be a plain dict.
+        """
         raise NotImplementedError()
 
     async def __aenter__(self):
-        self._before = await self._get_object(self._id)
+        self.before = await self.get_object(self.id)
 
     async def __aexit__(self, typ, value, traceback):
-        self._after = await self._get_object(self._id)
+        self.after = await self.get_object(self.id)
         await super().__aexit__(typ, value, traceback)
 
-    @property
-    def diff_keys(self) -> list:
-        """Find the different keys between
-        the before and after objects."""
-        return find_different_keys(
-            self._before, self._after
-        )
+    def different_keys(self) -> list:
+        """Find the different keys between the before and after objects."""
+        return find_different_keys(self.before, self.after)
 
-    @property
-    def iter_diff_keys(self):
-        """Iterate old/new item pairs based on
-        the diff_keys property."""
-        for key in self.diff_keys:
-            yield key, self._before.get(key), self._after.get(key)
+    def different_keys_items(self):
+        """Iterate old/new item pairs based on the diff_keys property."""
+        for key in self.different_keys():
+            yield key, self.before.get(key), self.after.get(key)
 
 
 class DeleteAction(Action):
-    """Represents the removal of an object."""
-    def __init__(self, request, identifier):
-        super().__init__(request)
-        self._id = identifier
-        self._obj = None
+    """An action which describes the removal of an object."""
 
-    async def _get_object(self, _identifier) -> dict:
+    def __init__(self, request, id):
+        super().__init__(request)
+        self.id = id
+        self.object = None
+
+    async def get_object(self, id) -> dict:
+        """Return the "associated object" with this action.
+
+        It should be a plain dict.
+        """
         raise NotImplementedError()
 
     async def __aenter__(self):
-        self._obj = await self._get_object(self._id)
+        self.object = await self.get_object(self.id)
 
 
 class AuditLog:
     """Audit log manager class.
 
-    This manages a queue of actions. The Log will only be actually sent
-    out to admins after a minute of queue inactivity.
+    This class manages a queue of actions. The log will only be sent to admins
+    after a minute of queue inactivity.
     """
+
     def __init__(self, app):
         self.app = app
         self.actions = []
-        self._send_task = None
+        self._sender_task = None
 
     def _reset(self):
-        """Resets the send task"""
-        if self._send_task:
-            self._send_task.cancel()
+        """Reset the sender task, causing the queue to be consumed in a minute."""
+        if self._sender_task:
+            self._sender_task.cancel()
 
-        self._send_task = self.app.loop.create_task(self._send_task_func())
+        self._sender_task = self.app.loop.create_task(self._sender())
 
     async def push(self, action: Action):
         """Push an action to the queue."""
+        log.debug('[OwO] pushing action to queue: %s', action)
         self.actions.append(action)
         self._reset()
 
-    async def _actual_send(self):
-        # copy and wipe the current action queue
-        actions = list(self.actions)
-        self.actions = []
-
-        if not actions:
+    async def _consume_and_process_queue(self):
+        """Consume the queue, rendering all actions and sending the email."""
+        if not self.actions:
             return
+
+        # copy and wipe the current action queue
+        actions = copy.copy(self.actions)
+        self.actions = []
 
         action_count = len(actions)
 
-        subject = ('Audit Log'
-                   if action_count == 1 else
-                   f'Audit Log - {action_count} actions')
+        if action_count == 1:
+            subject = 'Audit Log'
+        else:
+            subject = f'Audit Log - {action_count} actions'
 
-        texts = []
+        rendered_actions = []
 
         # for each action, generate its full text for the email.
         for action in actions:
-            text = await action.full_text()
+            text = await action.render()
 
             if text is None:
                 continue
 
-            texts.append(text)
-            texts.append('\n')
+            rendered_actions.append(text)
+            rendered_actions.append('\n')
 
-        if not texts:
+        if not rendered_actions:
             return
 
-        # construct full text
-        full = '\n'.join(texts)
+        # construct full text from all of the rendered actions
+        full = '\n'.join(rendered_actions)
         await self.send_email(subject, full)
 
-    async def _send_task_func(self):
+    async def _sender(self):
         try:
             await asyncio.sleep(60)
-            await self._actual_send()
+            await self._consume_and_process_queue()
         except asyncio.CancelledError:
             log.debug('cancelled send task')
         except Exception:
@@ -212,7 +219,4 @@ class AuditLog:
         log.info('sending audit log event to %d admins', len(admins))
 
         for admin_id in admins:
-            await send_user_email(
-                self.app, admin_id,
-                subject, full_text
-            )
+            await send_user_email(self.app, admin_id, subject, full_text)
