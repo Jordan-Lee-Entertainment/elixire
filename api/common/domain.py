@@ -2,6 +2,24 @@
 # Copyright 2018, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+async def _domain_file_stats(db, domain_id, *,
+                             ignore_consented: bool = True) -> tuple:
+    """Get domain file stats (count and sum of all bytes)."""
+
+    consented_clause = '' if ignore_consented else 'AND users.consented = true'
+
+    row = await db.fetchrow(f"""
+    SELECT COUNT(*), SUM(file_size)
+    FROM files
+    JOIN users
+      ON users.user_id = files.uploader
+    WHERE files.domain = $1
+      AND files.deleted = false
+      {consented_clause}
+    """, domain_id)
+    
+    return row['count'], row['sum']
+
 async def get_domain_info(db, domain_id) -> dict:
     """Get domain information."""
     raw_info = await db.fetchrow("""
@@ -26,6 +44,9 @@ async def get_domain_info(db, domain_id) -> dict:
     FROM files
     WHERE domain = $1
     """, domain_id)
+
+    filestats = await _domain_file_stats(db, domain_id, ignore_consented=True)
+    stats['files'], stats['size'] = filestats
 
     stats['shortens'] = await db.fetchval("""
     SELECT COUNT(*)
@@ -74,13 +95,8 @@ async def get_domain_public(db, domain_id) -> dict:
     WHERE domain = $1 AND consented = true
     """, domain_id)
 
-    public_stats['files'] = await db.fetchval("""
-    SELECT COUNT(*)
-    FROM files
-    JOIN users
-      ON users.user_id = files.uploader
-    WHERE files.domain = $1 AND users.consented = true
-    """, domain_id)
+    filestats = await _domain_file_stats(db, domain_id)
+    public_stats['files'], public_stats['size'] = filestats
 
     public_stats['shortens'] = await db.fetchval("""
     SELECT COUNT(*)
