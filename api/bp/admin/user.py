@@ -18,9 +18,7 @@ from api.common.email import (
 
 from api.bp.profile import get_limits, delete_user
 
-from api.bp.admin.audit_log_actions.user import (
-    UserEditCtx, UserDeleteCtx
-)
+from api.bp.admin.audit_log_actions.user import UserEditAction, UserDeleteAction
 
 log = logging.getLogger(__name__)
 bp = Blueprint(__name__)
@@ -84,7 +82,7 @@ Do not reply to this automated email.
 @admin_route
 async def activate_user(request, admin_id, user_id: int):
     """Activate one user, given its ID."""
-    async with UserEditCtx(request, user_id):
+    async with UserEditAction(request, user_id):
         result = await request.app.db.execute("""
         UPDATE users
         SET active = true
@@ -161,7 +159,7 @@ async def activate_user_from_email(request):
 @admin_route
 async def deactivate_user(request, admin_id: int, user_id: int):
     """Deactivate one user, given its ID."""
-    async with UserEditCtx(request, user_id):
+    async with UserEditAction(request, user_id):
         result = await request.app.db.execute("""
         UPDATE users
         SET active = false
@@ -372,7 +370,7 @@ async def modify_user(request, admin_id, user_id):
     #     update db with field
     #     updated.append(field)
 
-    async with UserEditCtx(request, user_id):
+    async with UserEditAction(request, user_id):
         await _pu_check(db, 'users', user_id, payload, updated, 'email')
         await _pu_check(db, 'limits', user_id, payload, updated,
                         'upload_limit', 'blimit')
@@ -398,7 +396,7 @@ async def del_user(request, admin_id, user_id):
     if active is None:
         raise BadInput('user not found')
 
-    async with UserDeleteCtx(request, user_id):
+    async with UserDeleteAction(request, user_id):
         await delete_user(request.app, user_id, True)
 
     return response.json({
