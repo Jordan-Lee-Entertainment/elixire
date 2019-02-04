@@ -64,7 +64,7 @@ class DomainEditAction(EditAction):
         if not self.different_keys():
             return False
 
-        domain = self._after['domain']
+        domain = self.after['domain']
 
         lines = [f'Domain {domain} ({self._id}) was edited.']
 
