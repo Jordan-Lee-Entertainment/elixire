@@ -3,11 +3,13 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 """
-snowflake.py - snowflake helper functions
+snowflake.py - minimal snowflake library
 
-    These functions generate discord-like snowflakes.
-    File brought in from
-        litecord-reference(https://github.com/lnmds/litecord-reference)
+the original snowflake.py came from
+litecord-reference (https://gitlab.com/luna/litecord-reference)
+
+edits were done to make it faster via bitwise operators. 3x faster now. the
+API is still the same, so nothing breaks
 """
 import time
 import hashlib
