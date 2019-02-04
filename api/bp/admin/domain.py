@@ -47,12 +47,12 @@ async def add_domain(request, admin_id: int):
     WHERE domain = $1
     """, domain_name)
 
-    async with DomainAddAction(request) as ctx:
-        ctx.update(domain_id=domain_id)
+    async with DomainAddAction(request) as action:
+        action.update(domain_id=domain_id)
 
         if 'owner_id' in request.json:
             owner_id = int(request.json['owner_id'])
-            ctx.update(owner_id=owner_id)
+            action.update(owner_id=owner_id)
 
             await db.execute("""
             INSERT INTO domain_owners (domain_id, user_id)
@@ -129,8 +129,8 @@ async def email_domain(request, admin_id: int, domain_id: int):
     if owner_id is None:
         raise BadInput('Domain Owner not found')
 
-    async with DomainOwnerNotifyAction(request) as ctx:
-        ctx.update(domain_id=domain_id, owner_id=owner_id, subject=subject, body=body)
+    async with DomainOwnerNotifyAction(request) as action:
+        action.update(domain_id=domain_id, owner_id=owner_id, subject=subject, body=body)
 
         resp_tup, user_email = await send_user_email(
             request.app, owner_id,
