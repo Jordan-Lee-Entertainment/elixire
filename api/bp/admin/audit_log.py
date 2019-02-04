@@ -19,7 +19,7 @@ class Action:
         self.admin_id = request['ctx'][1]
         self.context = {}
 
-    async def details():
+    async def details(self):
         """Return the details of this action."""
         raise NotImplementedError()
 
@@ -105,11 +105,11 @@ class EditAction(Action):
 
     def different_keys(self) -> list:
         """Find the different keys between the before and after objects."""
-        return find_different_keys(self._before, self._after)
+        return find_different_keys(self.before, self.after)
 
     def different_keys_items(self):
         """Iterate old/new item pairs based on the diff_keys property."""
-        for key in self.diff_keys:
+        for key in self.different_keys:
             yield key, self.before.get(key), self.after.get(key)
 
 
