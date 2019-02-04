@@ -109,7 +109,7 @@ class EditAction(Action):
 
     def different_keys_items(self):
         """Iterate old/new item pairs based on the diff_keys property."""
-        for key in self.different_keys:
+        for key in self.different_keys():
             yield key, self.before.get(key), self.after.get(key)
 
 
