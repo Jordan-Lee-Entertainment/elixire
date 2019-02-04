@@ -265,7 +265,7 @@ async def token_check(request) -> int:
     salt = user['password_hash']
 
     if not cfg.TOKEN_SECRET:
-        raise FailedAuth('TOKEN_SECRET is not set. Please ask '
+        raise FailedAuth('TOKEN_SECRET is not set. Please contact '
                          'the instance administrator.')
 
     key = cfg.TOKEN_SECRET
@@ -317,7 +317,7 @@ def gen_token(app, user: dict, token_type=TokenType.TIMED) -> str:
     salt = user['password_hash']
 
     if not cfg.TOKEN_SECRET:
-        raise FailedAuth('TOKEN_SECRET is not set. Please ask '
+        raise FailedAuth('TOKEN_SECRET is not set. Please contact '
                          'the instance administrator.')
 
     key = cfg.TOKEN_SECRET
