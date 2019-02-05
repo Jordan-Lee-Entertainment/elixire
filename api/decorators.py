@@ -26,9 +26,6 @@ def admin_route(handler):
         # raise exception on non-admins
         await check_admin(request, admin_id, True)
 
-        # inject admin id into the request to be used later
-        request['_ctx_admin_id'] = admin_id
-
         # if it is all good, call the old handler
         return await handler(request, admin_id, *args, **kwargs)
 
