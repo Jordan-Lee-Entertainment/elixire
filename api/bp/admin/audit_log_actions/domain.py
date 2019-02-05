@@ -91,7 +91,7 @@ class DomainRemoveAction(DeleteAction):
             'Domain information:',
         ]
 
-        for key, val in self._obj['info'].items():
+        for key, val in self.object['info'].items():
 
             # special case for owner since its another dict
             if key == 'owner' and val is not None:
@@ -101,10 +101,10 @@ class DomainRemoveAction(DeleteAction):
 
             lines.append(f'\tinfo.{key}: {val!r}')
 
-        for key, val in self._obj['stats'].items():
+        for key, val in self.object['stats'].items():
             lines.append(f'\tstats.{key}: {val!r}')
 
-        for key, val in self._obj['public_stats'].items():
+        for key, val in self.object['public_stats'].items():
             lines.append(f'\tpublic_stats.{key}: {val!r}')
 
         return lines
