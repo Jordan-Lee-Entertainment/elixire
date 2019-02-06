@@ -20,7 +20,7 @@ async def get_admin_settings(conn, admin_id: int) -> dict:
 
     if row is None:
         await conn.execute("""
-        INSERT INTO admin_user_settings (admin_id)
+        INSERT INTO admin_user_settings (user_id)
         VALUES ($1)
         """, admin_id)
 
