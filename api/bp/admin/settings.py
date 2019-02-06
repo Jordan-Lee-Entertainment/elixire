@@ -8,18 +8,33 @@ from api.decorators import admin_route
 
 bp = Blueprint('admin_settings')
 
-@bp.get('/api/admin/settings')
-@admin_route
-async def get_admin_settings(request, admin_id):
-    """Get own admin settings."""
-    row = await request.app.db.fetchrow("""
+
+async def get_admin_settings(conn, admin_id: int) -> dict:
+    """Get admin settings for a user"""
+    row = await conn.fetchrow("""
     SELECT audit_log_emails
     FROM admin_user_settings
     WHERE user_id = $1
     """, admin_id)
 
-    drow = None if row is None else dict(row)
-    return response.json(drow)
+    if row is None:
+        await conn.execute("""
+        INSERT INTO admin_user_settings (admin_id)
+        VALUES ($1)
+        """, admin_id)
+
+        return await get_admin_settings(conn, admin_id)
+
+    return dict(row)
+
+
+@bp.get('/api/admin/settings')
+@admin_route
+async def _admin_settings(request, admin_id):
+    """Get own admin settings."""
+    return response.json(
+        await get_admin_settings(request.app.db, admin_id)
+    )
 
 
 @bp.patch('/api/admin/settings')
