@@ -5,6 +5,7 @@
 from sanic import Blueprint, response
 
 from api.decorators import admin_route
+from api.errors import BadInput
 
 bp = Blueprint('admin_settings')
 
@@ -41,7 +42,10 @@ async def _admin_settings(request, admin_id):
 @admin_route
 async def change_admin_settings(request, admin_id):
     """Change own admin settings."""
-    audit_emails = bool(request.json['audit_log_emails'])
+    try:
+        audit_emails = bool(request.json['audit_log_emails'])
+    except (KeyError, ValueError, TypeError):
+        raise BadInput('bad/nonexistant value for audit_log_emails')
 
     await request.app.db.execute("""
     INSERT INTO admin_user_settings (user_id, audit_log_emails)
