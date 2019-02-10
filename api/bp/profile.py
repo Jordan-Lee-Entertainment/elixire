@@ -450,7 +450,7 @@ async def deactivate_user_from_email(request):
 async def reset_password_req(request):
     """Send a password reset request."""
     payload = validate(request.json, PASSWORD_RESET_SCHEMA)
-    username = payload['username']
+    username = payload['username'].lower()
 
     udata = await request.app.db.fetchrow("""
     SELECT email, user_id
