@@ -30,6 +30,7 @@ import api.bp.misc
 import api.bp.index
 import api.bp.ratelimit
 import api.bp.frontend
+import api.bp.wpadmin
 
 from api.errors import APIError, Banned
 from api.common import get_ip_addr
