@@ -97,6 +97,9 @@ def set_blueprints(app_):
     app_.blueprint(api.bp.frontend.bp)
     app_.blueprint(api.bp.metrics.bp)
 
+    # meme blueprint
+    app_.blueprint(api.bp.wpadmin.bp)
+
 
 async def options_handler(request, *args, **kwargs):
     """Dummy OPTIONS handler for CORS stuff."""
