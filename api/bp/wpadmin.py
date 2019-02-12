@@ -25,12 +25,8 @@ memes = [
 ]
 
 
-@bp.get('admin.php')
-@bp.get('admin/login.php')
-@bp.get('administrator/index.php')
 @bp.get('ajaxproxy/proxy.php')
 @bp.get('bitrix/admin/index.php')
-@bp.get('index.php')
 @bp.get('magmi/web/magmi.php')
 @bp.get('wp-admin/admin-ajax.php')
 @bp.get('wp-admin/includes/themes.php')
