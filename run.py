@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018, elixi.re Team and the elixire contributors
+# Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
@@ -26,6 +26,7 @@ import api.bp.datadump
 import api.bp.metrics
 import api.bp.personal_stats
 import api.bp.d1check
+import api.bp.wpadmin
 import api.bp.misc
 import api.bp.index
 import api.bp.ratelimit
@@ -95,6 +96,9 @@ def set_blueprints(app_):
     app_.blueprint(api.bp.misc.bp)
     app_.blueprint(api.bp.frontend.bp)
     app_.blueprint(api.bp.metrics.bp)
+
+    # meme blueprint
+    app_.blueprint(api.bp.wpadmin.bp)
 
 
 async def options_handler(request, *args, **kwargs):
