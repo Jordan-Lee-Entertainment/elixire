@@ -146,14 +146,9 @@ async def delete_single(request, user_id, shortname):
     return resp_empty()
 
 
-@bp.delete('/api/shortendelete')
-async def shortendelete_handler(request):
+@bp.delete('/api/shortens/<shorten_name>')
+@auth_route
+async def shortendelete_handler(request, user_id, shorten_name):
     """Invalidate a shorten."""
-    user_id = await token_check(request)
-    file_name = str(request.json['filename'])
-
-    await delete_shorten(request.app, file_name, user_id)
-
-    return response.json({
-        'success': True
-    })
+    await delete_shorten(request.app, shorten_name, user_id)
+    return resp_empty()
