@@ -2,12 +2,10 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-"""
-elixire - misc routes
-"""
 import datetime
+
 from sanic import Blueprint, response
-from ..version import VERSION, API_VERSION
+from api.version import VERSION, API_VERSION
 
 bp = Blueprint('misc')
 
