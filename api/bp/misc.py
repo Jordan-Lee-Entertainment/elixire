@@ -16,18 +16,36 @@ def _owo(string: str) -> str:
     return string.replace('0', '0w0').replace('r', 'w')
 
 
+def make_feature_list(cfg):
+    res = []
+
+    if cfg.UPLOADS_ENABLED:
+        res.append('uploads')
+    elif cfg.SHORTENS_ENABLED:
+        res.append('shortens')
+    elif cfg.REGISTRATIONS_ENABLED:
+        res.append('registrations')
+    elif cfg.PATCH_API_PROFILE_ENABLED:
+        res.append('pfupdate')
+
+    return res
+
+
 @bp.get('/api/hello')
 async def hello_route(request):
     """Give basic information about the instance."""
+    cfg = request.app.econfig
+
     return response.json({
-        'name': request.app.econfig.INSTANCE_NAME,
+        'name': cfg.INSTANCE_NAME,
         'version': VERSION,
         'api': API_VERSION,
-        'support_email': request.app.econfig.SUPPORT_EMAIL,
-        'ban_period': request.app.econfig.BAN_PERIOD,
-        'ip_ban_period': request.app.econfig.IP_BAN_PERIOD,
-        'rl_threshold': request.app.econfig.RL_THRESHOLD,
-        'accepted_mimes': request.app.econfig.ACCEPTED_MIMES,
+        'support_email': cfg.SUPPORT_EMAIL,
+        'ban_period': cfg.BAN_PERIOD,
+        'ip_ban_period': cfg.IP_BAN_PERIOD,
+        'rl_threshold': cfg.RL_THRESHOLD,
+        'accepted_mimes': cfg.ACCEPTED_MIMES,
+        'features': make_feature_list(cfg)
     })
 
 

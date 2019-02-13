@@ -3,21 +3,19 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 
-async def test_api(test_cli):
+async def test_hello(test_cli):
+    """Test basic route"""
     response = await test_cli.get('/api/hello')
     assert response.status == 200
-    resp_json = await response.json()
-    assert isinstance(resp_json['name'], str)
-    assert isinstance(resp_json['version'], str)
+    rjson = await response.json()
 
+    assert isinstance(rjson['name'], str)
+    assert isinstance(rjson['version'], str)
+    assert isinstance(rjson['api'], str)
+    assert isinstance(rjson['support_email'], str)
+    assert isinstance(rjson['ban_period'], str)
+    assert isinstance(rjson['ip_ban_period'], str)
+    assert isinstance(rjson['rl_threshold'], int)
 
-async def test_api_features(test_cli):
-    resp = await test_cli.get('/api/features')
-
-    assert resp.status == 200
-    rjson = await resp.json()
-
-    assert isinstance(rjson['uploads'], bool)
-    assert isinstance(rjson['shortens'], bool)
-    assert isinstance(rjson['registrations'], bool)
-    assert isinstance(rjson['pfupdate'], bool)
+    assert isinstance(rjson['accepted_mimes'], list)
+    assert isinstance(rjson['features'], list)
