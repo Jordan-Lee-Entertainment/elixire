@@ -13,6 +13,7 @@ from ..common.auth import token_check, password_check
 from ..decorators import auth_route
 from ..errors import BadInput
 from .profile import delete_file_task
+from api.response import resp_empty
 
 bp = Blueprint('files')
 log = logging.getLogger(__name__)
@@ -112,19 +113,6 @@ async def list_handler(request):
     })
 
 
-@bp.delete('/api/delete')
-async def delete_handler(request):
-    """Invalidate a file."""
-    user_id = await token_check(request)
-    file_name = str(request.json['filename'])
-
-    await delete_file(request.app, file_name, user_id)
-
-    return response.json({
-        'success': True
-    })
-
-
 @bp.post('/api/delete_all')
 @auth_route
 async def delete_all(request, user_id):
@@ -149,13 +137,13 @@ async def delete_all(request, user_id):
     })
 
 
-@bp.route('/api/delete/<shortname>', methods=['GET', 'DELETE'])
+@bp.delete('/api/files/<shortname>')
+@bp.get('/api/files/<shortname>/delete')
 @auth_route
 async def delete_single(request, user_id, shortname):
+    """Delete a single file."""
     await delete_file(request.app, shortname, user_id)
-    return response.json({
-        'success': True
-    })
+    return resp_empty()
 
 
 @bp.delete('/api/shortendelete')
