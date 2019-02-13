@@ -31,6 +31,9 @@ async def test_profile_work(test_cli):
     # dict checking is over the test_limits_work function
     assert isinstance(rjson['limits'], dict)
 
+    # test_stats already checks data
+    assert isinstance(rjson['stats'], dict)
+
 
 async def test_limits_work(test_cli):
     utoken = await login_normal(test_cli)
