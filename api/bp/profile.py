@@ -18,7 +18,9 @@ from ..schema import validate, PROFILE_SCHEMA, DEACTIVATE_USER_SCHEMA, \
     PASSWORD_RESET_SCHEMA, PASSWORD_RESET_CONFIRM_SCHEMA
 from ..common import delete_file
 from ..common.utils import int_
+
 from api.bp.personal_stats import get_counts
+from api.bp.datadump.bp import get_dump_status
 
 bp = Blueprint('profile')
 log = logging.getLogger(__name__)
@@ -98,6 +100,9 @@ async def profile_handler(request):
 
     counts = await get_counts(request.app.db, user_id)
     duser['stats'] = counts
+
+    dump_status = await get_dump_status(request.app.db, user_id)
+    duser['dump_status'] = dump_status
 
     return response.json(duser)
 
