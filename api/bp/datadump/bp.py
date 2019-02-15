@@ -86,14 +86,15 @@ async def request_data_dump(request):
 
 
 async def get_dump_status(db, user_id: int):
-    row = await request.app.db.fetchrow("""
+    """Get datadump status."""
+    row = await db.fetchrow("""
     SELECT user_id, start_timestamp, current_id, total_files, files_done
     FROM current_dump_state
     WHERE user_id = $1
     """, user_id)
 
     if not row:
-        queue = await request.app.db.fetch("""
+        queue = await db.fetch("""
         SELECT user_id
         FROM dump_queue
         ORDER BY request_timestamp ASC
