@@ -19,16 +19,16 @@ def _owo(string: str) -> str:
 @bp.middleware('request')
 async def bodyparser(request):
     """Make body available at request.body"""
-    if request.headers.get('content-type', None) != None:
-        if request.headers['content-type'] == 'application/json':
-            setattr(request, 'body', request.json)
-        elif request.headers['content-type'] == 'application/x-www-form-urlencoded':
+    if request.body:
+        if request.headers.get('content-type', None) == 'application/x-www-form-urlencoded':
             form = request.form
             # Cerberus doesn't like the old dict
             new_form = dict()
             for key in form.keys():
                 new_form[key] = str(urllib.parse.unquote(form[key][0]))
-            setattr(request, 'body', new_form)
+            request.body = new_form
+        else:
+            request.body = request.json
     return
 
 @bp.get('/api/hello')
