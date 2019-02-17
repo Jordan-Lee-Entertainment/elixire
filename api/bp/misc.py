@@ -27,7 +27,7 @@ async def bodyparser(request):
             for key in form.keys():
                 new_form[key] = str(urllib.parse.unquote(form[key][0]))
             request.body = new_form
-        else:
+        elif request.headers.get('content-type', None) != 'multipart/form-data':
             request.body = request.json
     return
 
