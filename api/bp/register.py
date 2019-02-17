@@ -81,7 +81,7 @@ async def register_user(request):
     if not request.app.econfig.REGISTRATIONS_ENABLED:
         raise FeatureDisabled('Registrations are currently disabled')
 
-    payload = validate(request.json, REGISTRATION_SCHEMA)
+    payload = validate(request.body, REGISTRATION_SCHEMA)
 
     username = payload['username'].lower()
     password = payload['password']
@@ -141,7 +141,7 @@ Your username is {uname}.
 
 @bp.post('/api/recover_username')
 async def recover_username(request):
-    payload = validate(request.json, RECOVER_USERNAME)
+    payload = validate(request.body, RECOVER_USERNAME)
     app = request.app
 
     email = payload['email']

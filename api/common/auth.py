@@ -167,7 +167,7 @@ async def login_user(request):
 
     Returns a partial user row.
     """
-    payload = validate(request.json, LOGIN_SCHEMA)
+    payload = validate(request.body, LOGIN_SCHEMA)
 
     # always treat usernames as all-lowercase
     username = payload['user'].lower()

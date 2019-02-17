@@ -21,7 +21,7 @@ async def d1_check(request):
     is a part of it.
     """
     try:
-        ciphertext = request.json['data']
+        ciphertext = request.body['data']
     except (TypeError, KeyError):
         raise BadInput('Invalid json')
 

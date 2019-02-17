@@ -43,7 +43,7 @@ async def _admin_settings(request, admin_id):
 async def change_admin_settings(request, admin_id):
     """Change own admin settings."""
     try:
-        audit_emails = bool(request.json['audit_log_emails'])
+        audit_emails = bool(request.body['audit_log_emails'])
     except (KeyError, ValueError, TypeError):
         raise BadInput('bad/nonexistant value for audit_log_emails')
 

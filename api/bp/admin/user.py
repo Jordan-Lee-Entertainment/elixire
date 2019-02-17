@@ -277,7 +277,7 @@ async def inactive_users_handler(request, admin_id, page: int):
 async def search_user(request, user_id: int, page: int):
     """Search a user by pattern matching the username."""
     try:
-        pattern = str(request.json['search_term'])
+        pattern = str(request.body['search_term'])
     except (KeyError, TypeError, ValueError):
         raise BadInput('Invalid search_term')
 
@@ -358,7 +358,7 @@ async def _pu_check(db, db_name,
 @admin_route
 async def modify_user(request, admin_id, user_id):
     """Modify a user's information."""
-    payload = validate(request.json, ADMIN_MODIFY_USER)
+    payload = validate(request.body, ADMIN_MODIFY_USER)
 
     updated = []
 

@@ -25,12 +25,12 @@ bp = Blueprint(__name__)
 @admin_route
 async def add_domain(request, admin_id: int):
     """Add a domain."""
-    domain_name = str(request.json['domain'])
-    is_adminonly = bool(request.json['admin_only'])
-    is_official = bool(request.json['official'])
+    domain_name = str(request.body['domain'])
+    is_adminonly = bool(request.body['admin_only'])
+    is_official = bool(request.body['official'])
 
     # default 3
-    permissions = int(request.json.get('permissions', 3))
+    permissions = int(request.body.get('permissions', 3))
 
     db = request.app.db
 
@@ -50,14 +50,14 @@ async def add_domain(request, admin_id: int):
     async with DomainAddAction(request) as action:
         action.update(domain_id=domain_id)
 
-        if 'owner_id' in request.json:
-            owner_id = int(request.json['owner_id'])
+        if 'owner_id' in request.body:
+            owner_id = int(request.body['owner_id'])
             action.update(owner_id=owner_id)
 
             await db.execute("""
             INSERT INTO domain_owners (domain_id, user_id)
             VALUES ($1, $2)
-            """, domain_id, int(request.json['owner_id']))
+            """, domain_id, int(request.body['owner_id']))
 
     keys = solve_domain(domain_name)
     await request.app.storage.raw_invalidate(*keys)
@@ -87,7 +87,7 @@ async def _dp_check(db, domain_id: int, payload: dict,
 @admin_route
 async def patch_domain(request, admin_id: int, domain_id: int):
     """Patch a domain's information"""
-    payload = validate(request.json, ADMIN_MODIFY_DOMAIN)
+    payload = validate(request.body, ADMIN_MODIFY_DOMAIN)
 
     updated_fields = []
     db = request.app.db
@@ -117,7 +117,7 @@ async def patch_domain(request, admin_id: int, domain_id: int):
 @bp.post('/api/admin/email_domain/<domain_id:int>')
 @admin_route
 async def email_domain(request, admin_id: int, domain_id: int):
-    payload = validate(request.json, ADMIN_SEND_DOMAIN_EMAIL)
+    payload = validate(request.body, ADMIN_SEND_DOMAIN_EMAIL)
     subject, body = payload['subject'], payload['body']
 
     owner_id = await request.app.db.fetchval("""
@@ -150,7 +150,7 @@ async def email_domain(request, admin_id: int, domain_id: int):
 async def add_owner(request, admin_id: int, domain_id: int):
     """Add an owner to a single domain."""
     try:
-        owner_id = int(request.json['owner_id'])
+        owner_id = int(request.body['owner_id'])
     except (ValueError, KeyError):
         raise BadInput('Invalid number for owner ID')
 

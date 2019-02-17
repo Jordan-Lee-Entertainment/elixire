@@ -39,7 +39,7 @@ async def shorten_handler(request):
     app = request.app
 
     try:
-        url_toredir = str(request.json['url'])
+        url_toredir = str(request.body['url'])
         url_parsed = urllib.parse.urlparse(url_toredir)
     except (TypeError, ValueError):
         raise BadInput('Invalid URL')

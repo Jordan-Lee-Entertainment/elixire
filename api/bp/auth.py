@@ -48,7 +48,7 @@ async def revoke_handler(request):
 
     This applies to timed and non-timed tokens.
     """
-    payload = validate(request.json, REVOKE_SCHEMA)
+    payload = validate(request.body, REVOKE_SCHEMA)
     user = await login_user(request)
 
     # by rehashing the password we change the

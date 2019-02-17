@@ -105,7 +105,7 @@ async def change_profile(request):
         raise FeatureDisabled('changes on profile are currently disabled')
 
     user_id = await token_check(request)
-    payload = validate(request.json, PROFILE_SCHEMA)
+    payload = validate(request.body, PROFILE_SCHEMA)
 
     updated = []
 
@@ -264,7 +264,7 @@ async def deactive_own_user(request):
     Sends an email to them asking for actual confirmation.
     """
     user_id = await token_check(request)
-    payload = validate(request.json, DEACTIVATE_USER_SCHEMA)
+    payload = validate(request.body, DEACTIVATE_USER_SCHEMA)
     await password_check(request, user_id, payload['password'])
 
     user_email = await request.app.db.fetchval("""
@@ -449,7 +449,7 @@ async def deactivate_user_from_email(request):
 @bp.post('/api/reset_password')
 async def reset_password_req(request):
     """Send a password reset request."""
-    payload = validate(request.json, PASSWORD_RESET_SCHEMA)
+    payload = validate(request.body, PASSWORD_RESET_SCHEMA)
     username = payload['username'].lower()
 
     udata = await request.app.db.fetchrow("""
@@ -506,7 +506,7 @@ Do not reply to this email specifically, it will not work.
 @bp.post('/api/reset_password_confirm')
 async def password_reset_confirmation(request):
     """Handle the confirmation of a password reset."""
-    payload = validate(request.json, PASSWORD_RESET_CONFIRM_SCHEMA)
+    payload = validate(request.body, PASSWORD_RESET_CONFIRM_SCHEMA)
     token = payload['token']
     new_pwd = payload['new_password']
 

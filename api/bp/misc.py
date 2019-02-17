@@ -8,6 +8,7 @@ elixire - misc routes
 import datetime
 from sanic import Blueprint, response
 from ..version import VERSION, API_VERSION
+import urllib.parse
 
 bp = Blueprint('misc')
 
@@ -15,6 +16,20 @@ bp = Blueprint('misc')
 def _owo(string: str) -> str:
     return string.replace('0', '0w0').replace('r', 'w')
 
+@bp.middleware('request')
+async def bodyparser(request):
+    """Make body available at request.body"""
+    if request.headers.get('content-type', None) != None:
+        if request.headers['content-type'] == 'application/json':
+            setattr(request, 'body', request.json)
+        elif request.headers['content-type'] == 'application/x-www-form-urlencoded':
+            form = request.form
+            # Cerberus doesn't like the old dict
+            new_form = dict()
+            for key in form.keys():
+                new_form[key] = str(urllib.parse.unquote(form[key][0]))
+            setattr(request, 'body', new_form)
+    return
 
 @bp.get('/api/hello')
 async def hello_route(request):

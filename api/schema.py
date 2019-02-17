@@ -64,22 +64,21 @@ def validate(document, schema):
     if not validator.validate(document):
         raise BadInput('Bad payload', validator.errors)
 
-    return document
-
+    return validator.document
 
 PROFILE_SCHEMA = {
     'username': {'type': 'string', 'required': False},
     'password': {'type': 'password', 'required': False},
-    'domain': {'type': 'integer', 'nullable': True},
+    'domain': {'type': 'integer', 'nullable': True, 'coerce': int},
     'subdomain': {'type': 'subdomain', 'nullable': True},
 
-    'shorten_domain': {'type': 'integer', 'nullable': True},
+    'shorten_domain': {'type': 'integer', 'nullable': True, 'coerce': int},
     'shorten_subdomain': {'type': 'subdomain', 'nullable': True},
 
     'new_password': {'type': 'password', 'nullable': True},
     'email': {'type': 'email', 'nullable': True},
-    'consented': {'type': 'boolean', 'nullable': True, 'required': False},
-    'paranoid': {'type': 'boolean', 'nullable': True},
+    'consented': {'type': 'boolean', 'nullable': True, 'required': False, 'coerce': bool},
+    'paranoid': {'type': 'boolean', 'nullable': True, 'coerce': bool},
 }
 
 REGISTRATION_SCHEMA = {

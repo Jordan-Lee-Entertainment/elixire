@@ -67,7 +67,7 @@ async def _do_broadcast(request, subject, body):
 @admin_route
 async def email_broadcast(request, admin_id):
     app = request.app
-    payload = validate(request.json, ADMIN_SEND_BROADCAST)
+    payload = validate(request.body, ADMIN_SEND_BROADCAST)
 
     subject, body = payload['subject'], payload['body']
 

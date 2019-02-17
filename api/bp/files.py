@@ -116,7 +116,7 @@ async def list_handler(request):
 async def delete_handler(request):
     """Invalidate a file."""
     user_id = await token_check(request)
-    file_name = str(request.json['filename'])
+    file_name = str(request.body['filename'])
 
     await delete_file(request.app, file_name, user_id)
 
@@ -132,7 +132,7 @@ async def delete_all(request, user_id):
     app = request.app
 
     try:
-        password = request.json['password']
+        password = request.body['password']
     except KeyError:
         raise BadInput('password not provided')
 
@@ -162,7 +162,7 @@ async def delete_single(request, user_id, shortname):
 async def shortendelete_handler(request):
     """Invalidate a shorten."""
     user_id = await token_check(request)
-    file_name = str(request.json['filename'])
+    file_name = str(request.body['filename'])
 
     await delete_shorten(request.app, file_name, user_id)
 

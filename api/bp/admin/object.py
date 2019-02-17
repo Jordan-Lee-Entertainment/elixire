@@ -59,7 +59,7 @@ async def handle_modify(obj_type: str, request,
     table = 'files' if obj_type == 'file' else 'shortens'
     field = 'file_id' if obj_type == 'file' else 'shorten_id'
 
-    payload = validate(request.json, ADMIN_MODIFY_FILE)
+    payload = validate(request.body, ADMIN_MODIFY_FILE)
 
     new_domain = payload.get('domain_id')
     new_shortname = payload.get('shortname')
