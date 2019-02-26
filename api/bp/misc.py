@@ -20,14 +20,22 @@ def _owo(string: str) -> str:
 async def bodyparser(request):
     """Make body available at request.body"""
     if request.body:
-        if request.headers.get('content-type', None) == 'application/x-www-form-urlencoded':
+        # This _probably_ won't become an issue but no sense in tempting fate
+        try:
+            curly = bytes('{', request.headers.get('content-encoding', 'utf8'))
+        except(LookupError):
+            curly = bytes('{', 'utf8')
+
+        if request.headers.get('content-type', 'application/json').startswith('application/x-www-form-urlencoded'):
             form = request.form
             # Cerberus doesn't like the old dict
             new_form = dict()
             for key in form.keys():
                 new_form[key] = str(urllib.parse.unquote(form[key][0]))
             request.body = new_form
-        elif request.headers.get('content-type', None) != 'multipart/form-data':
+        elif request.headers.get('content-type', '').startswith('application/json') or (request.headers.get('content-type', None) != None and request.body.startswith(curly)):
+            # Shaky, but it should be alright since we
+            # need to support people who for whatever reason can't set it or something
             request.body = request.json
     return
 
