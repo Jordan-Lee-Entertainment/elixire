@@ -17,7 +17,7 @@ def _owo(string: str) -> str:
     return string.replace('0', '0w0').replace('r', 'w')
 
 @bp.middleware('request')
-async def bodyparser(request):
+def bodyparser(request):
     """Make body available at request.body"""
     if request.body:
         # This _probably_ won't become an issue but no sense in tempting fate
@@ -33,7 +33,7 @@ async def bodyparser(request):
             for key in form.keys():
                 new_form[key] = str(urllib.parse.unquote(form[key][0]))
             request.body = new_form
-        elif request.headers.get('content-type', '').startswith('application/json') or (request.headers.get('content-type', None) != None and request.body.startswith(curly)):
+        elif request.headers.get('content-type', '').startswith('application/json') or (request.headers.get('content-type', None) == None and request.body.startswith(curly)):
             # Shaky, but it should be alright since we
             # need to support people who for whatever reason can't set it or something
             request.body = request.json
