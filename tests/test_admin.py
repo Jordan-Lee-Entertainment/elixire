@@ -153,6 +153,11 @@ async def test_domain_stats(test_cli):
 
     # not the best data validation...
     assert isinstance(rjson, dict)
+    for domain in rjson.values():
+        assert isinstance(domain, dict)
+        assert isinstance(domain['info'], dict)
+        assert isinstance(domain['stats'], dict)
+        assert isinstance(domain['public_stats'], dict)
 
 
 async def test_domain_patch(test_cli):
