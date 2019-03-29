@@ -19,15 +19,18 @@ def _owo(string: str) -> str:
 @bp.get('/api/hello')
 async def hello_route(request):
     """Give basic information about the instance."""
+    cfg = request.app.econfig
+
     return response.json({
-        'name': request.app.econfig.INSTANCE_NAME,
+        'name': cfg.INSTANCE_NAME,
         'version': VERSION,
         'api': API_VERSION,
-        'support_email': request.app.econfig.SUPPORT_EMAIL,
-        'ban_period': request.app.econfig.BAN_PERIOD,
-        'ip_ban_period': request.app.econfig.IP_BAN_PERIOD,
-        'rl_threshold': request.app.econfig.RL_THRESHOLD,
-        'accepted_mimes': request.app.econfig.ACCEPTED_MIMES,
+        'invite': cfg.MAIN_INVITE,
+        'support_email': cfg.SUPPORT_EMAIL,
+        'ban_period': cfg.BAN_PERIOD,
+        'ip_ban_period': cfg.IP_BAN_PERIOD,
+        'rl_threshold': cfg.RL_THRESHOLD,
+        'accepted_mimes': cfg.ACCEPTED_MIMES,
     })
 
 
