@@ -34,6 +34,7 @@ async def hello_route(request):
         'name': cfg.INSTANCE_NAME,
         'version': VERSION,
         'api': API_VERSION,
+        'invite': cfg.MAIN_INVITE,
         'support_email': cfg.SUPPORT_EMAIL,
         'ban_period': cfg.BAN_PERIOD,
         'ip_ban_period': cfg.IP_BAN_PERIOD,
