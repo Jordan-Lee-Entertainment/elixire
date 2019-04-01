@@ -8,12 +8,12 @@ import logging
 from sanic import Blueprint
 from sanic import response
 
+from api.response import resp_empty
 from ..common import delete_file, delete_shorten
 from ..common.auth import token_check, password_check
 from ..decorators import auth_route
 from ..errors import BadInput
 from .profile import delete_file_task
-from api.response import resp_empty
 
 bp = Blueprint('files')
 log = logging.getLogger(__name__)
@@ -132,9 +132,7 @@ async def delete_all(request, user_id):
         f'delete_files_{user_id}'
     )
 
-    return response.json({
-        'success': True,
-    })
+    return resp_empty()
 
 
 @bp.delete('/api/files/<shortname>')

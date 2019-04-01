@@ -9,6 +9,7 @@ import asyncpg
 
 from sanic import Blueprint, response
 
+from api.response import resp_empty
 from ..errors import FailedAuth, FeatureDisabled, BadInput
 from ..common.auth import token_check, password_check, pwd_hash,\
     check_admin, check_domain_id
@@ -441,9 +442,7 @@ async def deactivate_user_from_email(request):
 
     log.warning(f'Deactivated user ID {user_id} by request.')
 
-    return response.json({
-        'success': True
-    })
+    return resp_empty()
 
 
 @bp.post('/api/reset_password')
@@ -517,6 +516,4 @@ async def password_reset_confirmation(request):
     await _update_password(request, user_id, new_pwd)
     await clean_etoken(app, token, 'email_pwd_reset_tokens')
 
-    return response.json({
-        'success': True
-    })
+    return resp_empty()

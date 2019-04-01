@@ -19,6 +19,7 @@ from api.common.email import (
 from api.bp.profile import get_limits, delete_user
 
 from api.bp.admin.audit_log_actions.user import UserEditAction, UserDeleteAction
+from api.response import resp_empty
 
 log = logging.getLogger(__name__)
 bp = Blueprint(__name__)
@@ -95,10 +96,8 @@ async def activate_user(request, admin_id, user_id: int):
     await request.app.storage.invalidate(user_id, 'active')
     await notify_activate(request.app, user_id)
 
-    return response.json({
-        'success': True,
-        'result': result,
-    })
+    # returning resp_empty instead of the result as it's practically useless.
+    return resp_empty()
 
 
 @bp.post('/api/admin/activate_email/<user_id:int>')
@@ -171,10 +170,7 @@ async def deactivate_user(request, admin_id: int, user_id: int):
 
     await request.app.storage.invalidate(user_id, 'active')
 
-    return response.json({
-        'success': True,
-        'result': result
-    })
+    return resp_empty()
 
 
 @bp.get('/api/admin/users/search')
@@ -316,6 +312,4 @@ async def del_user(request, admin_id, user_id):
     async with UserDeleteAction(request, user_id):
         await delete_user(request.app, user_id, True)
 
-    return response.json({
-        'success': True
-    })
+    return resp_empty()
