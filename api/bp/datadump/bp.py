@@ -85,20 +85,16 @@ async def request_data_dump(request):
     })
 
 
-@bp.get('/api/dump/status')
-async def data_dump_user_status(request):
-    """Give information about the current dump for the user,
-    if one exists."""
-    user_id = await token_check(request)
-
-    row = await request.app.db.fetchrow("""
+async def get_dump_status(db, user_id: int):
+    """Get datadump status."""
+    row = await db.fetchrow("""
     SELECT user_id, start_timestamp, current_id, total_files, files_done
     FROM current_dump_state
     WHERE user_id = $1
     """, user_id)
 
     if not row:
-        queue = await request.app.db.fetch("""
+        queue = await db.fetch("""
         SELECT user_id
         FROM dump_queue
         ORDER BY request_timestamp ASC
@@ -108,22 +104,33 @@ async def data_dump_user_status(request):
 
         try:
             pos = queue.index(user_id)
-            return response.json({
+            return {
                 'state': 'in_queue',
                 'position': pos + 1,
-            })
+            }
         except ValueError:
-            return response.json({
+            return {
                 'state': 'not_in_queue'
-            })
+            }
 
-    return response.json({
+    return {
         'state': 'processing',
         'start_timestamp': row['start_timestamp'].isoformat(),
         'current_id': str(row['current_id']),
         'total_files': row['total_files'],
         'files_done': row['files_done']
-    })
+    }
+
+
+@bp.get('/api/dump/status')
+async def data_dump_user_status(request):
+    """Give information about the current dump for the user,
+    if one exists."""
+    user_id = await token_check(request)
+
+    return response.json(
+        await get_dump_status(request.app.db, user_id)
+    )
 
 
 @bp.get('/api/admin/dump_status')
