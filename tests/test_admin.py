@@ -73,7 +73,7 @@ async def test_user_fetch(test_cli):
 
     # just checking the id should work, as the response of
     # /by-username/ is the same as doing it by ID.
-    assert isinstance(rjson['id'], str)
+    assert isinstance(rjson['user_id'], str)
 
 
 async def test_user_activate_cycle(test_cli):
