@@ -61,6 +61,20 @@ async def test_user_fetch(test_cli):
     assert isinstance(rjson['paranoid'], bool)
     assert isinstance(rjson['limits'], dict)
 
+    # trying to fetch the user from the username we got
+    # should also work
+    resp = await test_cli.get(
+        f'/api/admin/users/by-username/{rjson["username"]}', headers={
+            'Authorization': atoken
+        })
+
+    assert resp.status == 200
+    rjson = await resp.json()
+
+    # just checking the id should work, as the response of
+    # /by-username/ is the same as doing it by ID.
+    assert isinstance(rjson['id'], str)
+
 
 async def test_user_activate_cycle(test_cli):
     # logic here is to:
