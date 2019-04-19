@@ -210,14 +210,16 @@ def handle_exception(request, exception):
         log.warning(f'File not found: {exception!r}')
 
         if request.app.econfig.ENABLE_FRONTEND:
-            # admin panel routes all 404's back to index.
+            # admin panel routes all 404's back to index (without a 404).
             if url.startswith('/admin'):
                 return response.file(
                     './admin-panel/build/index.html')
 
-            return response.file(
-                './frontend/output/404.html',
-                status=404)
+            # if we aren't on /api/, return elixire-fe's 404 page
+            if not url.startswith('/api'):
+                return response.file(
+                    './frontend/output/404.html',
+                    status=404)
     else:
         log.exception(f'Error in request: {exception!r}')
 
