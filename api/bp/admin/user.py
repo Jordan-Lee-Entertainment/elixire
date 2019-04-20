@@ -177,21 +177,6 @@ async def deactivate_user(request, admin_id: int, user_id: int):
     })
 
 
-def _extract_active(args: dict) -> tuple:
-    """Extract the wanted active-ness values for our search query."""
-    active = args.get('active')
-
-    # if active is None, we return True, False, that means the query
-    # will search users that are either active OR inactive. by returning
-    # the same value on the elements of the tuple, we can do a whole search
-    # on active/inactive users separately, instead of both
-    if active is None:
-        return True, False
-
-    is_active = active.lower() != 'false'
-    return is_active, is_active
-
-
 @bp.get('/api/admin/users/search')
 @admin_route
 async def users_search(request, admin_id):
@@ -207,21 +192,31 @@ async def users_search(request, admin_id):
     if per_page < 1:
         raise BadInput('Invalid per_page number')
 
-    active, active_reverse = _extract_active(args)
+    # default to TRUE so the query parses correctly, instead of giving empty
+    # string
+    active_query = 'TRUE'
+    active = args.get('active')
+    query_args = []
+
+    if active is not None:
+        active_query = 'active = $3'
+        active = active != 'false'
+        query_args = [active]
 
     users = await request.app.db.fetch(f"""
     SELECT user_id, username, active, admin, consented,
            COUNT(*) OVER() as total_count
     FROM users
-    WHERE active = $1 OR active = $2
+    WHERE
+    {active_query}
     AND (
-            $4 = ''
-            OR (username LIKE '%'||$4||'%' OR user_id::text LIKE '%'||$4||'%')
+            $2 = ''
+            OR (username LIKE '%'||$2||'%' OR user_id::text LIKE '%'||$2||'%')
         )
     ORDER BY user_id ASC
     LIMIT {per_page}
-    OFFSET ($3 * {per_page})
-    """, active, active_reverse, page, query or '')
+    OFFSET ($1 * {per_page})
+    """, page, query or '', *query_args)
 
     def map_user(record):
         row = dict(record)
