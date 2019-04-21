@@ -182,7 +182,6 @@ async def deactivate_user(request, admin_id: int, user_id: int):
 async def users_search(request, admin_id):
     """New, revamped search endpoint."""
     args = request.raw_args
-    active = args.get('active', True) != 'false'
     query = request.raw_args.get('query')
     page = int(args.get('page', 0))
     per_page = int(args.get('per_page', 20))
@@ -193,19 +192,31 @@ async def users_search(request, admin_id):
     if per_page < 1:
         raise BadInput('Invalid per_page number')
 
+    # default to TRUE so the query parses correctly, instead of giving empty
+    # string
+    active_query = 'TRUE'
+    active = args.get('active')
+    query_args = []
+
+    if active is not None:
+        active_query = 'active = $3'
+        active = active != 'false'
+        query_args = [active]
+
     users = await request.app.db.fetch(f"""
     SELECT user_id, username, active, admin, consented,
            COUNT(*) OVER() as total_count
     FROM users
-    WHERE active = $1
+    WHERE
+    {active_query}
     AND (
-            $3 = ''
-            OR (username LIKE '%'||$3||'%' OR user_id::text LIKE '%'||$3||'%')
+            $2 = ''
+            OR (username LIKE '%'||$2||'%' OR user_id::text LIKE '%'||$2||'%')
         )
     ORDER BY user_id ASC
     LIMIT {per_page}
-    OFFSET ($2 * {per_page})
-    """, active, page, query or '')
+    OFFSET ($1 * {per_page})
+    """, page, query or '', *query_args)
 
     def map_user(record):
         row = dict(record)
