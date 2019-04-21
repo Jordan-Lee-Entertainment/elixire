@@ -45,6 +45,19 @@ async def get_user_handler(request, admin_id, user_id: int):
     return response.json(dudata)
 
 
+@bp.get('/api/admin/users/by-username/<username>')
+@admin_route
+async def get_user_by_username(request, _admin_id: int, username: str):
+    """Get a user object via their username instead of user ID."""
+    user_id = await request.app.db.fetchval("""
+    SELECT user_id
+    FROM users
+    WHERE username = $1
+    """, username)
+
+    return await get_user_handler(request, user_id)
+
+
 async def notify_activate(app, user_id: int):
     """Inform user that they got an account."""
     if not app.econfig.NOTIFY_ACTIVATION_EMAILS:
