@@ -8,6 +8,7 @@ import logging
 from sanic import Blueprint
 from sanic import response
 
+from api.response import resp_empty
 from ..common import delete_file, delete_shorten
 from ..common.auth import token_check, password_check
 from ..decorators import auth_route
@@ -112,19 +113,6 @@ async def list_handler(request):
     })
 
 
-@bp.delete('/api/delete')
-async def delete_handler(request):
-    """Invalidate a file."""
-    user_id = await token_check(request)
-    file_name = str(request.json['filename'])
-
-    await delete_file(request.app, file_name, user_id)
-
-    return response.json({
-        'success': True
-    })
-
-
 @bp.post('/api/delete_all')
 @auth_route
 async def delete_all(request, user_id):
@@ -144,28 +132,21 @@ async def delete_all(request, user_id):
         f'delete_files_{user_id}'
     )
 
-    return response.json({
-        'success': True,
-    })
+    return resp_empty()
 
 
-@bp.route('/api/delete/<shortname>', methods=['GET', 'DELETE'])
+@bp.delete('/api/files/<shortname>')
+@bp.get('/api/files/<shortname>/delete')
 @auth_route
 async def delete_single(request, user_id, shortname):
+    """Delete a single file."""
     await delete_file(request.app, shortname, user_id)
-    return response.json({
-        'success': True
-    })
+    return resp_empty()
 
 
-@bp.delete('/api/shortendelete')
-async def shortendelete_handler(request):
+@bp.delete('/api/shortens/<shorten_name>')
+@auth_route
+async def shortendelete_handler(request, user_id, shorten_name):
     """Invalidate a shorten."""
-    user_id = await token_check(request)
-    file_name = str(request.json['filename'])
-
-    await delete_shorten(request.app, file_name, user_id)
-
-    return response.json({
-        'success': True
-    })
+    await delete_shorten(request.app, shorten_name, user_id)
+    return resp_empty()

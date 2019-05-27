@@ -5,6 +5,7 @@
 from sanic import Blueprint
 from sanic import response
 
+from api.response import resp_empty
 from ..common import TokenType
 from ..common.auth import login_user, gen_token, pwd_hash
 from ..schema import validate, REVOKE_SCHEMA
@@ -66,6 +67,4 @@ async def revoke_handler(request):
 
     await request.app.storage.invalidate(user['user_id'], 'password_hash')
 
-    return response.json({
-        'success': True
-    })
+    return resp_empty()

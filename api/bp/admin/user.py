@@ -19,6 +19,7 @@ from api.common.email import (
 from api.bp.profile import get_limits, delete_user
 
 from api.bp.admin.audit_log_actions.user import UserEditAction, UserDeleteAction
+from api.response import resp_empty
 
 log = logging.getLogger(__name__)
 bp = Blueprint(__name__)
@@ -108,10 +109,8 @@ async def activate_user(request, admin_id, user_id: int):
     await request.app.storage.invalidate(user_id, 'active')
     await notify_activate(request.app, user_id)
 
-    return response.json({
-        'success': True,
-        'result': result,
-    })
+    # returning resp_empty instead of the result as it's practically useless.
+    return resp_empty()
 
 
 @bp.post('/api/admin/activate_email/<user_id:int>')
@@ -184,10 +183,7 @@ async def deactivate_user(request, admin_id: int, user_id: int):
 
     await request.app.storage.invalidate(user_id, 'active')
 
-    return response.json({
-        'success': True,
-        'result': result
-    })
+    return resp_empty()
 
 
 @bp.get('/api/admin/users/search')
@@ -247,89 +243,6 @@ async def users_search(request, admin_id):
             'current': page
         }
     })
-
-
-# === DEPRECATED ===
-#  read https://gitlab.com/elixire/elixire/issues/61#note_91039503
-# These routes are here to maintain compatibility with some of our
-# utility software (admin panels)
-
-
-@bp.get('/api/admin/listusers/<page:int>')
-@admin_route
-async def list_users_handler(request, admin_id, page: int):
-    """List users in the service"""
-    data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain,
-      subdomain, email, paranoid, consented
-    FROM users
-    ORDER BY user_id ASC
-    LIMIT 20
-    OFFSET ($1 * 20)
-    """, page)
-
-    def _cnv(row):
-        drow = dict(row)
-        drow['user_id'] = str(row['user_id'])
-        return drow
-
-    return response.json(list(map(_cnv, data)))
-
-
-@bp.get('/api/admin/list_inactive/<page:int>')
-@admin_route
-async def inactive_users_handler(request, admin_id, page: int):
-    data = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, domain, subdomain,
-      email, paranoid, consented
-    FROM users
-    WHERE active=false
-    ORDER BY user_id ASC
-    LIMIT 20
-    OFFSET ($1 * 20)
-    """, page)
-
-    def _cnv(row):
-        drow = dict(row)
-        drow['user_id'] = str(row['user_id'])
-        return drow
-
-    return response.json(list(map(_cnv, data)))
-
-
-@bp.post('/api/admin/search/user/<page:int>')
-async def search_user(request, user_id: int, page: int):
-    """Search a user by pattern matching the username."""
-    try:
-        pattern = str(request.json['search_term'])
-    except (KeyError, TypeError, ValueError):
-        raise BadInput('Invalid search_term')
-
-    if not pattern:
-        raise BadInput('Insert a pattern.')
-
-    pattern = f'%{pattern}%'
-
-    rows = await request.app.db.fetch("""
-    SELECT user_id, username, active, admin, consented
-    FROM users
-    WHERE username LIKE $1 OR user_id::text LIKE $1
-    ORDER BY user_id ASC
-    LIMIT 20
-    OFFSET ($2 * 20)
-    """, pattern, page)
-
-    res = []
-
-    for row in rows:
-        drow = dict(row)
-        drow['user_id'] = str(drow['user_id'])
-        res.append(drow)
-
-    return response.json(res)
-
-
-# === END DEPRECATED ===
 
 
 async def _pu_check(db, db_name,
@@ -423,6 +336,4 @@ async def del_user(request, admin_id, user_id):
     async with UserDeleteAction(request, user_id):
         await delete_user(request.app, user_id, True)
 
-    return response.json({
-        'success': True
-    })
+    return resp_empty()

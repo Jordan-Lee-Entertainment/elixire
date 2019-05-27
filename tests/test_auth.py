@@ -70,21 +70,21 @@ async def test_valid_token(test_cli):
 async def test_revoke(test_cli):
     token = await login_normal(test_cli)
 
-    response_valid = await test_cli.get('/api/profile', headers={
+    resp = await test_cli.get('/api/profile', headers={
         'Authorization': token,
     })
 
-    assert response_valid.status == 200
+    assert resp.status == 200
 
-    revoke_call = await test_cli.post('/api/revoke', json={
+    resp = await test_cli.post('/api/revoke', json={
         'user': USERNAME,
         'password': PASSWORD
     })
 
-    assert revoke_call.status == 200
+    assert resp.status == 204
 
-    response_invalid = await test_cli.get('/api/profile', headers={
+    resp = await test_cli.get('/api/profile', headers={
         'Authorization': token,
     })
 
-    assert response_invalid.status == 403
+    assert resp.status == 403

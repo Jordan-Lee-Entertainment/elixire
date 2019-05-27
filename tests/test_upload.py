@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import aiohttp
+import secrets
 from .common import login_normal, png_data
 
 
@@ -63,26 +64,31 @@ async def test_delete_file(test_cli):
     await check_exists(test_cli, respjson['shortname'], utoken)
 
     # test delete
-    resp_del = await test_cli.delete('/api/delete', headers={
+    short = respjson['shortname']
+
+    resp_del = await test_cli.delete(f'/api/files/{short}', headers={
         'Authorization': utoken
-    }, json={
-        'filename': respjson['shortname']
     })
 
-    assert resp_del.status == 200
-    rdel_json = await resp_del.json()
-    assert isinstance(rdel_json, dict)
-    assert rdel_json['success']
+    assert resp_del.status == 204
 
     await check_exists(test_cli, respjson['shortname'], utoken, True)
 
 
 async def test_delete_nonexist(test_cli):
+    """Test deletions of files that don't exist."""
     utoken = await login_normal(test_cli)
-    resp_del = await test_cli.delete('/api/delete', headers={
+    rand_file = secrets.token_urlsafe(20)
+
+    resp_del = await test_cli.delete(f'/api/files/{rand_file}', headers={
         'Authorization': utoken
-    }, json={
-        'filename': 'lkdjklfjkgkghkkhsfklhjslkdfjglakdfjl'
+    })
+
+    assert resp_del.status == 404
+
+    # ensure sharex compatibility endpoint works too
+    resp_del = await test_cli.get(f'/api/files/{rand_file}/delete', headers={
+        'Authorization': utoken
     })
 
     assert resp_del.status == 404

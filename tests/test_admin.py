@@ -94,11 +94,7 @@ async def test_user_activate_cycle(test_cli):
         'Authorization': atoken
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
-
-    assert isinstance(rjson, dict)
-    assert rjson['success']
+    assert resp.status == 204
 
     # check profile for deactivation
     resp = await test_cli.get(f'/api/admin/users/{uid}', headers={
@@ -114,11 +110,7 @@ async def test_user_activate_cycle(test_cli):
     resp = await test_cli.post(f'/api/admin/activate/{uid}', headers={
         'Authorization': atoken
     })
-    assert resp.status == 200
-    rjson = await resp.json()
-
-    assert isinstance(rjson, dict)
-    assert rjson['success']
+    assert resp.status == 204
 
     # check profile
     resp = await test_cli.get(f'/api/admin/users/{uid}', headers={
