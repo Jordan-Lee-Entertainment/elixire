@@ -273,19 +273,23 @@ async def submit_chunk(ctx: CompactorContext, chunk_start: int):
     """)
 
     rowlist = maybe(res['results'][0])
-    _time, chunk_sum, chunk_count = rowlist[0]
 
-    log.debug('chunk process, start: %d, end: %d, '
-              'total: %d, sum: %d',
-              chunk_start, chunk_end, chunk_count, chunk_sum)
+    # only process the chunk if we actually got results to start with.
+    # we most probably *have* results (even if they're 0s), but i don't want
+    # to risk type errors (oh, crystal, why have you tainted my soul)
+    if rowlist:
+        _time, chunk_sum, chunk_count = rowlist[0]
 
-    # insert it into target
-    await ctx.influx.write(
-        f'{ctx.target} value={chunk_sum}i {chunk_start}'
-    )
+        log.debug(
+            'chunk process, start: %d, end: %d, total: %d, sum: %d',
+            chunk_start, chunk_end, chunk_count, chunk_sum)
+
+        # insert it into target
+        await ctx.influx.write(
+            f'{ctx.target} value={chunk_sum}i {chunk_start}'
+        )
 
     return chunk_end
-
 
 
 async def main_process(ctx: CompactorContext,
