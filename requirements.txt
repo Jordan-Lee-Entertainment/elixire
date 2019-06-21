@@ -32,9 +32,9 @@ pyflakes==2.0.0
 
 pytest-sanic==0.1.15
 
-aioinflux==0.4.1
+aioinflux==0.8.0
 
-cryptography==2.4.2
+cryptography==2.7
 
 # You'll need libmagic for this.
 # On linux, use your package manager to install libmagic.
