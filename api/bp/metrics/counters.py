@@ -10,19 +10,19 @@ class MetricsCounters:
     """Simple class to hold counters related to various things of the app."""
 
     def __init__(self):
-        self._counters = [
-            'request', 'response',
-            'error', 'error_ise',
-            'file_upload_hour', 'file_upload_hour_pub'
-        ]
-
-        self.data = {}
-        self.reset_all()
+        self.data = {
+            'request' : 0,
+            'response': 0,
+            'error': 0,
+            'error_ise': 0,
+            'file_upload_hour': 0,
+            'file_upload_hour_pub': 0,
+        }
 
     def reset_all(self):
         """Initialize/reset all counters."""
-        for counter in self._counters:
-            self.data[counter] = 0
+        for key in self.data:
+            self.data[key] = 0
 
     def reset_single(self, counter):
         """Reset a single counter."""
