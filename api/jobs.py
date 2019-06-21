@@ -41,7 +41,10 @@ class JobManager:
         except Exception:
             log.exception('Error while running job %r', job_name)
         finally:
-            self.jobs.pop(job_name)
+            try:
+                self.jobs.pop(job_name)
+            except KeyError:
+                pass
 
     def spawn(self, coro, name: str = None):
         """Spawn a backgrund task once.
@@ -78,10 +81,18 @@ class JobManager:
         """Stop a single job."""
         log.debug('stopping job %r', job_name)
         try:
-            job = self.jobs.pop(job_name)
+            job = self.jobs[job_name]
             job.cancel()
         except KeyError:
             log.warning('unknown job to cancel: %r', job_name)
+        finally:
+            # as a last measure, try to pop() the job
+            # post-cancel. if that fails, the job probably
+            # already cleaned itself.
+            try:
+                self.jobs.pop(job_name)
+            except KeyError:
+                pass
 
     def stop(self):
         """Stop the job manager by
