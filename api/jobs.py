@@ -20,13 +20,12 @@ class JobManager:
             log.debug('running job: %r', job_name)
             await coro
             log.debug('job finish: %r', job_name)
-
-            #: remove itself from the job scheduler
-            self.jobs.pop(job_name)
         except asyncio.CancelledError:
             log.warning('cancelled job: %r', job_name)
         except Exception:
             log.exception('Error while running job %r', job_name)
+        finally:
+            self.jobs.pop(job_name)
 
     async def _wrapper_bg(self, job_name, func, args, period: int):
         log.debug('wrapped %r in periodic %dsec',
@@ -37,12 +36,12 @@ class JobManager:
                 log.debug('background tick for %r', job_name)
                 await func(*args)
                 await asyncio.sleep(period)
-
-            self.jobs.pop(job_name)
         except asyncio.CancelledError:
             log.warning('cancelled job: %r', job_name)
         except Exception:
             log.exception('Error while running job %r', job_name)
+        finally:
+            self.jobs.pop(job_name)
 
     def spawn(self, coro, name: str = None):
         """Spawn a backgrund task once.
