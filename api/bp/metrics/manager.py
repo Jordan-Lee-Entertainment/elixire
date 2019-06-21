@@ -128,8 +128,13 @@ class MetricsManager:
         tasks = self._make_tasks(points)
 
         # send the points to the server
-        done, pending = await asyncio.wait(tasks)
+        done, pending = await asyncio.wait(tasks, timeout=1)
         log.debug(f'{len(done)} done {len(pending)} pending')
+
+        del points
+        del tasks
+        del done
+        del pending
 
     def _convert_value(self, value):
         if isinstance(value, int):
