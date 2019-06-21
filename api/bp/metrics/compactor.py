@@ -265,22 +265,21 @@ async def submit_chunk(ctx: CompactorContext, chunk_start: int):
 
     # fetch the chunk in the source
     res = await ctx.influx.query(f"""
-    select time, value
+    select sum(value), count(value)
     from {ctx.source}
     where
         time > {chunk_start}
     and time < {chunk_end}
     """)
 
-    chunk = maybe(res['results'][0])
-    chunk_sum = sum(point[1] for point in chunk)
+    rowlist = maybe(res['results'][0])
+    _time, chunk_sum, chunk_count = rowlist[0]
 
     log.debug('chunk process, start: %d, end: %d, '
               'total: %d, sum: %d',
-              chunk_start, chunk_end, len(chunk), chunk_sum)
+              chunk_start, chunk_end, chunk_count, chunk_sum)
 
     # insert it into target
-
     await ctx.influx.write(
         f'{ctx.target} value={chunk_sum}i {chunk_start}'
     )
