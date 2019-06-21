@@ -37,6 +37,8 @@ class JobManager:
                 log.debug('background tick for %r', job_name)
                 await func(*args)
                 await asyncio.sleep(period)
+
+            self.jobs.pop(job_name)
         except asyncio.CancelledError:
             log.warning('cancelled job: %r', job_name)
         except Exception:

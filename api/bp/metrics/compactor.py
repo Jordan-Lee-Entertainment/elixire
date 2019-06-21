@@ -346,13 +346,15 @@ async def compact_single(ctx: CompactorContext):
     if before:
         await pre_process(ctx, before, start_ts)
 
-    # iterative process where we submit chunks to target
-
     # we can't really work without any datapoints
     if not after:
         log.warning('no points in As, skipping %s', ctx.source)
+
+        del before
+        del after
         return
 
+    # iterative process where we submit chunks to target
     await main_process(
         ctx,
 
@@ -362,6 +364,9 @@ async def compact_single(ctx: CompactorContext):
         # give it Ts, which is its stop condition
         last
     )
+
+    del before
+    del after
 
 
 async def compact_task(app):
@@ -380,3 +385,4 @@ async def compact_task(app):
         )
 
         await compact_single(ctx)
+        del ctx
