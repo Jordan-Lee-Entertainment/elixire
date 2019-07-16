@@ -8,7 +8,7 @@ from sanic import Blueprint, response
 
 from api.common import delete_file, delete_shorten
 from api.schema import validate, ADMIN_MODIFY_FILE
-from api.errors import BadInput
+from api.errors import BadInput, NotFound
 from api.decorators import admin_route
 
 from api.bp.admin.audit_log_actions.object import (
@@ -32,7 +32,7 @@ async def _handler_object(request, obj_type: str,
     obj_id = await id_handler(conn, obj_fname)
 
     if obj_id is None:
-        raise BadInput('Object not found')
+        raise NotFound('Object not found')
 
     return response.json(
         await obj_handler(conn, obj_id)
