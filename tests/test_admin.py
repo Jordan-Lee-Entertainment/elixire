@@ -140,6 +140,41 @@ async def test_user_search(test_cli):
     assert isinstance(pag['current'], int)
 
 
+async def test_domain_search(test_cli):
+    token = await login_admin(test_cli)
+
+    def assert_standard_response(json):
+        assert isinstance(json, dict)
+        assert isinstance(json['results'], dict)
+
+        pag = json['pagination']
+        assert isinstance(pag, dict)
+        assert isinstance(pag['total'], int)
+        assert isinstance(pag['current'], int)
+
+    # no query -- returns all users, paginated
+    resp = await test_cli.get('/api/admin/domains/search', headers={
+        'Authorization': token,
+    })
+
+    assert resp.status == 200
+
+    json = await resp.json()
+    assert_standard_response(json)
+
+    # sample query
+    resp = await test_cli.get('/api/admin/domains/search', headers={
+        'Authorization': token,
+    }, params={'query': 'elix'})
+
+    assert resp.status == 200
+
+    json = await resp.json()
+    assert_standard_response(json)
+
+    assert all('elix' in domain['info']['domain'] for domain in json['results'].values())
+
+
 async def test_domain_stats(test_cli):
     """Get instance-wide domain stats."""
     atoken = await login_admin(test_cli)
