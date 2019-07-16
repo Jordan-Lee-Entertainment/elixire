@@ -9,6 +9,7 @@ from sanic import Blueprint, response
 from api.schema import validate, ADMIN_MODIFY_DOMAIN, ADMIN_SEND_DOMAIN_EMAIL
 from api.decorators import admin_route
 from api.common.email import send_user_email
+from api.common.pagination import Pagination
 from api.storage import solve_domain
 from api.errors import BadInput
 
@@ -277,3 +278,31 @@ async def get_domain_stats_all(request, _admin_id):
     }
 
     return response.json({**res, **extra})
+
+
+@bp.get('/api/admin/domains/search')
+@admin_route
+async def domains_search(request, admin_id):
+    """Search for domains"""
+    args = request.raw_args
+    pagination = Pagination(request)
+
+    query = args.get('query')
+
+    domain_ids = await request.app.db.fetch("""
+    SELECT domain_id, COUNT(*) OVER () AS total_count
+    FROM domains
+    WHERE $3 = '' OR domain LIKE '%'||$3||'%'
+    ORDER BY domain_id ASC
+    LIMIT $2::integer
+    OFFSET ($1::integer * $2::integer)
+    """, pagination.page, pagination.per_page, query or '')
+
+    results = {}
+
+    for row in domain_ids:
+        domain_id = row['domain_id']
+        results[domain_id] = await get_domain_info(request.app.db, domain_id)
+
+    total_count = 0 if not domain_ids else domain_ids[0]['total_count']
+    return response.json(pagination.response(results, total_count=total_count))
