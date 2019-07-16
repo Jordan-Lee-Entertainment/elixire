@@ -187,7 +187,7 @@ async def users_search(request, admin_id):
     active = args.get('active', True) != 'false'
     query = request.raw_args.get('query')
 
-    users = await request.app.db.fetch(f"""
+    users = await request.app.db.fetch("""
     SELECT user_id, username, active, admin, consented,
            COUNT(*) OVER() as total_count
     FROM users
