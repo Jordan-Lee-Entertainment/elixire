@@ -102,10 +102,10 @@ Install `tox` manually (the python package, not the messenger).
 ```bash
 cd utils
 
-./adduser.py h@h.co hi hihihihi
-./adduser.py a@a.co admin adminadmin
-./adduser.py n@n.co nousage nousagenousage
-./adduser.py q@q.co quotareached quotareached
+./manage.py adduser h@h.co hi hihihihi
+./manage.py adduser a@a.co admin adminadmin
+./manage.py adduser n@n.co nousage nousagenousage
+./manage.py adduser q@q.co quotareached quotareached
 
 cd ..
 ```
