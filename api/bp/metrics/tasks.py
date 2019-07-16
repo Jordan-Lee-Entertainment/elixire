@@ -3,11 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
-import asyncio
-
 
 log = logging.getLogger(__name__)
-
 
 async def second_tasks(app):
     """Quick submission of per-second metrics."""
