@@ -3,6 +3,8 @@
 
 .DS_Store
 
+.vscode
+
 # Tern leaves these all over the place, ignore them
 **/.tern-port
 # Turds
