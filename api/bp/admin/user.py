@@ -184,8 +184,9 @@ async def users_search(request, admin_id):
     """New, revamped search endpoint."""
     args = request.raw_args
     pagination = Pagination(request)
+
     active = args.get('active', True) != 'false'
-    query = request.raw_args.get('query')
+    query = args.get('query')
 
     users = await request.app.db.fetch("""
     SELECT user_id, username, active, admin, consented,
