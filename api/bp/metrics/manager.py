@@ -42,10 +42,11 @@ class MetricsManager:
 
         log.info('starting metrics worker')
 
-        self.app.sched.spawn_periodic(
-            self._work, [], self._period,
-            'metrics_worker'
-        )
+        if app.econfig.ENABLE_METRICS:
+            self.app.sched.spawn_periodic(
+                self._work, [], self._period,
+                'metrics_worker'
+            )
 
     def _start_influx(self):
         cfg = self.app.econfig
@@ -77,12 +78,6 @@ class MetricsManager:
         log.warning('Unauthenticated InfluxDB connection')
         self.influx = InfluxDBClient(db=cfg.METRICS_DATABASE, loop=self.loop)
 
-    async def _submit(self, datapoint: dict):
-        try:
-            await self.influx.write(datapoint)
-        except Exception as err:
-            log.warning(f'failed to submit datapoint: {err!r}')
-
     def _fetch_points(self, limit=None) -> list:
         """Fetch datapoints to properly send to InfluxDB."""
         if limit is None:
@@ -107,15 +102,6 @@ class MetricsManager:
 
         return points
 
-    def _make_tasks(self, points: list):
-        """Make the proper _submit tasks, given a set of datapoints."""
-        # for each datapoint, spawn a _submit coroutine and its
-        # respective task wrapping it.
-        return list(map(
-            lambda x: self.loop.create_task(self._submit(x)),
-            points
-        ))
-
     async def _work(self):
         # if there aren't any datapoints to
         # submit, do nothing
@@ -124,11 +110,14 @@ class MetricsManager:
             return
 
         points = self._fetch_points()
-        tasks = self._make_tasks(points)
+        all_points = '\n'.join(points)
+        try:
+            await self.influx.write(all_points)
+        except Exception as err:
+            log.warning(f'failed to submit datapoint: {err!r}')
 
-        # send the points to the server
-        done, pending = await asyncio.wait(tasks)
-        log.debug(f'{len(done)} done {len(pending)} pending')
+        del points
+        del all_points
 
     def _convert_value(self, value):
         if isinstance(value, int):
@@ -173,15 +162,11 @@ class MetricsManager:
             return
 
         points = self._fetch_points(0)
-        for chunk in chunks(points, self._timestamps):
-            log.info(f'finish_all: finishing on {len(chunk)} points')
-
-            tasks = self._make_tasks(points)
-            done, pending = await asyncio.wait(tasks)
-
-            log.info(f'finish_all: {len(done)} done {len(pending)} pending')
-
-            await asyncio.sleep(self._period)
+        full_str = '\n'.join(points)
+        try:
+            await self.influx.write(full_str)
+        except Exception as err:
+            log.warning(f'failed to submit datapoint: {err!r}')
 
         await self._close()
 

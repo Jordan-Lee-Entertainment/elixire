@@ -14,13 +14,12 @@ async def second_tasks(app):
     metrics = app.metrics
     counters = app.counters
 
-    for counter, counter_val in counters.data.items():
+    for counter in counters.data:
         # ignore those specific counters, as they're on their own task
         if counter in ('file_upload_hour', 'file_upload_hour_pub'):
             continue
 
-        await metrics.submit(counter, counter_val)
-        counters.reset_single(counter)
+        await counters.auto_submit(metrics, counter)
 
 
 async def file_upload_counts(app):
@@ -126,5 +125,3 @@ async def upload_uniq_task(app):
     """)
 
     await metrics.submit('uniq_uploaders_day_pub', countpub)
-
-    await asyncio.sleep(86400)

@@ -265,28 +265,31 @@ async def submit_chunk(ctx: CompactorContext, chunk_start: int):
 
     # fetch the chunk in the source
     res = await ctx.influx.query(f"""
-    select time, value
+    select sum(value), count(value)
     from {ctx.source}
     where
         time > {chunk_start}
     and time < {chunk_end}
     """)
 
-    chunk = maybe(res['results'][0])
-    chunk_sum = sum(point[1] for point in chunk)
+    rowlist = maybe(res['results'][0])
 
-    log.debug('chunk process, start: %d, end: %d, '
-              'total: %d, sum: %d',
-              chunk_start, chunk_end, len(chunk), chunk_sum)
+    # only process the chunk if we actually got results to start with.
+    # we most probably *have* results (even if they're 0s), but i don't want
+    # to risk type errors (oh, crystal, why have you tainted my soul)
+    if rowlist:
+        _time, chunk_sum, chunk_count = rowlist[0]
 
-    # insert it into target
+        log.debug(
+            'chunk process, start: %d, end: %d, total: %d, sum: %d',
+            chunk_start, chunk_end, chunk_count, chunk_sum)
 
-    await ctx.influx.write(
-        f'{ctx.target} value={chunk_sum}i {chunk_start}'
-    )
+        # insert it into target
+        await ctx.influx.write(
+            f'{ctx.target} value={chunk_sum}i {chunk_start}'
+        )
 
     return chunk_end
-
 
 
 async def main_process(ctx: CompactorContext,
@@ -346,13 +349,15 @@ async def compact_single(ctx: CompactorContext):
     if before:
         await pre_process(ctx, before, start_ts)
 
-    # iterative process where we submit chunks to target
-
     # we can't really work without any datapoints
     if not after:
         log.warning('no points in As, skipping %s', ctx.source)
+
+        del before
+        del after
         return
 
+    # iterative process where we submit chunks to target
     await main_process(
         ctx,
 
@@ -362,6 +367,9 @@ async def compact_single(ctx: CompactorContext):
         # give it Ts, which is its stop condition
         last
     )
+
+    del before
+    del after
 
 
 async def compact_task(app):
@@ -380,3 +388,4 @@ async def compact_task(app):
         )
 
         await compact_single(ctx)
+        del ctx
