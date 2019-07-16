@@ -15,6 +15,7 @@ from api.common.email import (
     fmt_email, send_user_email, activate_email_send,
     uid_from_email, clean_etoken
 )
+from api.common.pagination import Pagination
 
 from api.bp.profile import get_limits, delete_user
 
@@ -182,16 +183,9 @@ async def deactivate_user(request, admin_id: int, user_id: int):
 async def users_search(request, admin_id):
     """New, revamped search endpoint."""
     args = request.raw_args
+    pagination = Pagination(request)
     active = args.get('active', True) != 'false'
     query = request.raw_args.get('query')
-    page = int(args.get('page', 0))
-    per_page = int(args.get('per_page', 20))
-
-    if page < 0:
-        raise BadInput('Invalid page number')
-
-    if per_page < 1:
-        raise BadInput('Invalid per_page number')
 
     users = await request.app.db.fetch(f"""
     SELECT user_id, username, active, admin, consented,
@@ -203,9 +197,9 @@ async def users_search(request, admin_id):
             OR (username LIKE '%'||$3||'%' OR user_id::text LIKE '%'||$3||'%')
         )
     ORDER BY user_id ASC
-    LIMIT {per_page}
-    OFFSET ($2 * {per_page})
-    """, active, page, query or '')
+    LIMIT $4
+    OFFSET ($2::integer * $4::integer)
+    """, active, pagination.page, query or '', pagination.per_page)
 
     def map_user(record):
         row = dict(record)
@@ -216,13 +210,7 @@ async def users_search(request, admin_id):
     results = map(map_user, users)
     total_count = 0 if not users else users[0]['total_count']
 
-    return response.json({
-        'results': results,
-        'pagination': {
-            'total': ceil(total_count / per_page),
-            'current': page
-        }
-    })
+    return response.json(pagination.response(results, total_count=total_count))
 
 
 # === DEPRECATED ===
