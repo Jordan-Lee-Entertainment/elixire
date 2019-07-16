@@ -2,6 +2,8 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+from math import ceil
+
 from sanic import Blueprint, response
 
 from api.schema import validate, ADMIN_MODIFY_DOMAIN, ADMIN_SEND_DOMAIN_EMAIL
@@ -227,20 +229,51 @@ async def get_domain_stats(request, admin_id, domain_id):
 
 @bp.get('/api/admin/domains')
 @admin_route
-async def get_domain_stats_all(request, admin_id):
+async def get_domain_stats_all(request, _admin_id):
     """Request information about all domains"""
-    domain_ids = await request.app.db.fetch("""
-    SELECT domain_id
-    FROM domains
-    ORDER BY domain_id ASC
-    """)
+    args = request.raw_args
+    per_page = int(args.get('per_page', 20))
 
-    domain_ids = [r[0] for r in domain_ids]
+    try:
+        page = int(args['page'])
+
+        if page < 0:
+            raise BadInput('Negative page not allowed.')
+
+        domain_ids = await request.app.db.fetch(f"""
+        SELECT domain_id, COUNT(*) OVER() as total_count
+        FROM domains
+        ORDER BY domain_id ASC
+        LIMIT {per_page}
+        OFFSET ($1 * {per_page})
+        """, page)
+    except KeyError:
+        page = -1
+        domain_ids = await request.app.db.fetch("""
+        SELECT domain_id, COUNT(*) OVER() as total_count
+        FROM domains
+        ORDER BY domain_id ASC
+        """)
+    except ValueError:
+        raise BadInput('Invalid page number')
 
     res = {}
 
-    for domain_id in domain_ids:
+    for row in domain_ids:
+        domain_id = row['domain_id']
         info = await get_domain_info(request.app.db, domain_id)
         res[domain_id] = info
 
-    return response.json(res)
+    total_count = 0 if not domain_ids else domain_ids[0]['total_count']
+
+    # page being -1 serves as a signal that the client
+    # isn't paginated, so we shouldn't even add the extra
+    # pagination-specific fields.
+    extra = {} if page == -1 else {
+        'pagination': {
+            'total': ceil(total_count / per_page),
+            'current': page,
+        },
+    }
+
+    return response.json({**res, **extra})
