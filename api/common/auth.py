@@ -180,12 +180,12 @@ async def login_user(request):
         log.info(f'login: {username!r} does not exist')
         raise FailedAuth('User or password invalid')
 
+    await check_bans(request, user['user_id'])
+    await pwd_check(request, user['password_hash'], password)
+
     if not user['active']:
         log.warning(f'login: {username!r} is not active')
         raise FailedAuth('User is deactivated')
-
-    await check_bans(request, user['user_id'])
-    await pwd_check(request, user['password_hash'], password)
 
     return user
 
