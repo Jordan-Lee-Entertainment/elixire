@@ -8,10 +8,15 @@ import asyncpg
 import aiohttp
 import aioredis
 
-from sanic import Sanic
-from sanic.exceptions import NotFound, FileNotFound
-from sanic import response
-from sanic_cors import CORS
+# from sanic import Sanic
+# from sanic.exceptions import NotFound, FileNotFound
+# from sanic import response
+# from sanic_cors import CORS
+
+from starlette.applications import Starlette
+from starlette.responses import JSONResponse
+import uvicorn
+
 from dns import resolver
 
 import api.bp.auth
@@ -43,21 +48,21 @@ from api.bp.admin.audit_log import AuditLog
 
 import config
 
-app = Sanic()
+app = Starlette(debug=True)
 app.econfig = config
 
 # enable cors on api, images and shortens
-CORS(
-    app,
-    resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"],
-    automatic_options=True,
-    expose_headers=[
-        'X-Ratelimit-Scope',
-        'X-Ratelimit-Limit',
-        'X-Ratelimit-Remaining',
-        'X-Ratelimit-Reset'
-    ]
-)
+# CORS(
+#     app,
+#     resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"],
+#     automatic_options=True,
+#     expose_headers=[
+#         'X-Ratelimit-Scope',
+#         'X-Ratelimit-Limit',
+#         'X-Ratelimit-Remaining',
+#         'X-Ratelimit-Reset'
+#     ]
+# )
 
 level = getattr(config, 'LOGGING_LEVEL', 'INFO')
 logging.basicConfig(level=level)
@@ -72,33 +77,35 @@ log = logging.getLogger(__name__)
 
 
 def set_blueprints(app_):
+    #app.mount('/', api.bp.auth)
+
     # load blueprints
-    app_.blueprint(api.bp.ratelimit.bp)
-    app_.blueprint(api.bp.auth.bp)
-    app_.blueprint(api.bp.index.bp)
-    app_.blueprint(api.bp.profile.bp)
-    app_.blueprint(api.bp.upload.bp)
-    app_.blueprint(api.bp.files.bp)
-    app_.blueprint(api.bp.shorten.bp)
-    app_.blueprint(api.bp.fetch.bp)
+    #app_.blueprint(api.bp.ratelimit.bp)
+    #app_.blueprint(api.bp.auth.bp)
+    #app_.blueprint(api.bp.index.bp)
+    #app_.blueprint(api.bp.profile.bp)
+    #app_.blueprint(api.bp.upload.bp)
+    #app_.blueprint(api.bp.files.bp)
+    #app_.blueprint(api.bp.shorten.bp)
+    #app_.blueprint(api.bp.fetch.bp)
 
-    # load admin blueprints
-    app_.blueprint(api.bp.admin.user_bp)
-    app_.blueprint(api.bp.admin.object_bp)
-    app_.blueprint(api.bp.admin.domain_bp)
-    app_.blueprint(api.bp.admin.misc_bp)
-    app_.blueprint(api.bp.admin.settings_bp)
+    ## load admin blueprints
+    #app_.blueprint(api.bp.admin.user_bp)
+    #app_.blueprint(api.bp.admin.object_bp)
+    #app_.blueprint(api.bp.admin.domain_bp)
+    #app_.blueprint(api.bp.admin.misc_bp)
+    #app_.blueprint(api.bp.admin.settings_bp)
 
-    app_.blueprint(api.bp.register.bp)
-    app_.blueprint(api.bp.datadump.bp)
-    app_.blueprint(api.bp.personal_stats.bp)
-    app_.blueprint(api.bp.d1check.bp)
-    app_.blueprint(api.bp.misc.bp)
-    app_.blueprint(api.bp.frontend.bp)
-    app_.blueprint(api.bp.metrics.bp)
+    #app_.blueprint(api.bp.register.bp)
+    #app_.blueprint(api.bp.datadump.bp)
+    #app_.blueprint(api.bp.personal_stats.bp)
+    #app_.blueprint(api.bp.d1check.bp)
+    #app_.blueprint(api.bp.misc.bp)
+    #app_.blueprint(api.bp.frontend.bp)
+    #app_.blueprint(api.bp.metrics.bp)
 
-    # meme blueprint
-    app_.blueprint(api.bp.wpadmin.bp)
+    ## meme blueprint
+    #app_.blueprint(api.bp.wpadmin.bp)
 
 
 async def options_handler(request, *args, **kwargs):
@@ -138,7 +145,7 @@ async def _handle_ban(request, reason: str):
         await ban_webhook(rapp, user_id, reason, period)
 
 
-@app.exception(Banned)
+# @app.exception(Banned)
 async def handle_ban(request, exception):
     """Handle the Banned exception being raised through a request.
 
@@ -175,7 +182,7 @@ async def handle_ban(request, exception):
     return resp
 
 
-@app.exception(APIError)
+# @app.exception(APIError)
 def handle_api_error(request, exception):
     """Handle any kind of application-level raised error."""
     log.warning(f'API error: {exception!r}')
@@ -194,7 +201,7 @@ def handle_api_error(request, exception):
     return response.json(res, status=scode)
 
 
-@app.exception(Exception)
+# @app.exception(Exception)
 def handle_exception(request, exception):
     """Handle any kind of exception."""
     status_code = 500
@@ -234,7 +241,7 @@ def handle_exception(request, exception):
     }, status=status_code)
 
 
-@app.listener('before_server_start')
+# @app.listener('before_server_start')
 async def setup_db(rapp, loop):
     """Initialize db connection before app start"""
     rapp.sched = JobManager()
@@ -272,7 +279,7 @@ async def setup_db(rapp, loop):
         rapp.audit_log = AuditLog(rapp)
 
 
-@app.listener('after_server_stop')
+# @app.listener('after_server_stop')
 async def close_db(rapp, _loop):
     """Close all database connections."""
     log.info('closing db')
@@ -288,25 +295,22 @@ async def close_db(rapp, _loop):
 
 # we set blueprints globally
 # and after every listener is declared.
-set_blueprints(app)
+# set_blueprints(app)
+
+
+
+@app.route('/')
+async def homepage(request):
+    return JSONResponse({'hello': 'world'})
 
 
 def main():
     """Main application entry point."""
-    # "fix" CORS.
-    routelist = list(app.router.routes_all.keys())
-    for uri in list(routelist):
-        try:
-            app.add_route(options_handler, uri, methods=['OPTIONS'])
-        except Exception:
-            pass
+    # app.static('/humans.txt', './static/humans.txt')
+    # app.static('/robots.txt', './static/robots.txt')
 
-    del routelist
-
-    app.static('/humans.txt', './static/humans.txt')
-    app.static('/robots.txt', './static/robots.txt')
-
-    app.run(host=config.HOST, port=config.PORT)
+    # app.run(host=config.HOST, port=config.PORT)
+    uvicorn.run(app, host=config.HOST, port=config.PORT)
 
 
 if __name__ == '__main__':
