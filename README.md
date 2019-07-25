@@ -99,15 +99,13 @@ Both the Client API and the Admin API are documented there.
 
 Install `tox` manually (the python package, not the messenger).
 
+Create these users:
+
 ```bash
-cd utils
-
-./adduser.py h@h.co hi hihihihi
-./adduser.py a@a.co admin adminadmin
-./adduser.py n@n.co nousage nousagenousage
-./adduser.py q@q.co quotareached quotareached
-
-cd ..
+./manage.py adduser h@h.co hi hihihihi
+./manage.py adduser a@a.co admin adminadmin
+./manage.py adduser n@n.co nousage nousagenousage
+./manage.py adduser q@q.co quotareached quotareached
 ```
 
 After creating the users, enter the PSQL Shell:

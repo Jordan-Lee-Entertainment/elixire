@@ -20,13 +20,12 @@ class JobManager:
             log.debug('running job: %r', job_name)
             await coro
             log.debug('job finish: %r', job_name)
-
-            #: remove itself from the job scheduler
-            self.jobs.pop(job_name)
         except asyncio.CancelledError:
             log.warning('cancelled job: %r', job_name)
         except Exception:
             log.exception('Error while running job %r', job_name)
+        finally:
+            self.jobs.pop(job_name)
 
     async def _wrapper_bg(self, job_name, func, args, period: int):
         log.debug('wrapped %r in periodic %dsec',
@@ -41,6 +40,11 @@ class JobManager:
             log.warning('cancelled job: %r', job_name)
         except Exception:
             log.exception('Error while running job %r', job_name)
+        finally:
+            try:
+                self.jobs.pop(job_name)
+            except KeyError:
+                pass
 
     def spawn(self, coro, name: str = None):
         """Spawn a backgrund task once.
@@ -77,10 +81,18 @@ class JobManager:
         """Stop a single job."""
         log.debug('stopping job %r', job_name)
         try:
-            job = self.jobs.pop(job_name)
+            job = self.jobs[job_name]
             job.cancel()
         except KeyError:
             log.warning('unknown job to cancel: %r', job_name)
+        finally:
+            # as a last measure, try to pop() the job
+            # post-cancel. if that fails, the job probably
+            # already cleaned itself.
+            try:
+                self.jobs.pop(job_name)
+            except KeyError:
+                pass
 
     def stop(self):
         """Stop the job manager by
