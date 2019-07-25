@@ -77,7 +77,7 @@ log = logging.getLogger(__name__)
 
 
 def set_blueprints(app_):
-    #app.mount('/', api.bp.auth)
+    app.mount('/api', api.bp.auth.bp)
 
     # load blueprints
     #app_.blueprint(api.bp.ratelimit.bp)
@@ -295,13 +295,7 @@ async def close_db(rapp, _loop):
 
 # we set blueprints globally
 # and after every listener is declared.
-# set_blueprints(app)
-
-
-
-@app.route('/')
-async def homepage(request):
-    return JSONResponse({'hello': 'world'})
+set_blueprints(app)
 
 
 def main():

@@ -2,18 +2,14 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from sanic import Blueprint
-from sanic import response
+from starlette.routing import Route, Router
 
 from api.response import resp_empty
 from ..common import TokenType
 from ..common.auth import login_user, gen_token, pwd_hash
 from ..schema import validate, REVOKE_SCHEMA
 
-bp = Blueprint('auth')
 
-
-@bp.post('/api/login')
 async def login_handler(request):
     """
     Login one user to the service
@@ -28,7 +24,6 @@ async def login_handler(request):
     })
 
 
-@bp.post('/api/apikey')
 async def apikey_handler(request):
     """
     Generate an API key.
@@ -42,7 +37,6 @@ async def apikey_handler(request):
     })
 
 
-@bp.post('/api/revoke')
 async def revoke_handler(request):
     """
     Revoke all generated tokens.
@@ -68,3 +62,10 @@ async def revoke_handler(request):
     await request.app.storage.invalidate(user['user_id'], 'password_hash')
 
     return resp_empty()
+
+
+bp = Router([
+    Route('/login', endpoint=login_handler, methods=['POST']),
+    Route('/apikey', endpoint=apikey_handler, methods=['POST']),
+    Route('/revoke', endpoint=revoke_handler, methods=['POST']),
+])
