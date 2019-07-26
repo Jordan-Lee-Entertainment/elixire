@@ -85,7 +85,8 @@ def set_blueprints(app_):
     # load blueprints
 
     blueprints = {
-            api.bp.auth.bp: ''
+        api.bp.auth.bp: '',
+        api.bp.misc.bp: '',
     }
 
     for blueprint, api_prefix in blueprints.items():

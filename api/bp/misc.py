@@ -2,10 +2,10 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from sanic import Blueprint, response
+from quart import Blueprint, jsonify, current_app as app
 from api.version import VERSION, API_VERSION
 
-bp = Blueprint('misc')
+bp = Blueprint(__name__, 'misc')
 
 
 def _make_feature_list(cfg):
@@ -23,12 +23,12 @@ def _make_feature_list(cfg):
     return res
 
 
-@bp.get('/api/hello')
-async def hello_route(request):
+@bp.route('/hello')
+async def hello_route():
     """Give basic information about the instance."""
-    cfg = request.app.econfig
+    cfg = app.econfig
 
-    return response.json({
+    return jsonify({
         'name': cfg.INSTANCE_NAME,
         'version': VERSION,
         'api': API_VERSION,
