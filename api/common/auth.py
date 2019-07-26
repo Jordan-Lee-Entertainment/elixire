@@ -191,7 +191,7 @@ async def login_user() -> dict:
     return partial_user
 
 
-def _try_int(value: str):
+def _try_int(value: str) -> int:
     """Try converting a given string to an int."""
     try:
         return int(value)
@@ -199,7 +199,7 @@ def _try_int(value: str):
         raise FailedAuth('invalid token format')
 
 
-def _try_unsign(signer, token, token_age=None):
+def _try_unsign(signer, token: str, token_age: int = None):
     """Try to unsign a token given the signer,
     token, and token_age if possible.
 
@@ -254,18 +254,17 @@ async def token_check() -> int:
     else:
         user_id = _try_int(block_1)
 
-    # TODO actx_userid rename/refactor whatever
-    user = await app.storage.actx_userid(user_id)
+    partial_user = await app.storage.auth_user_from_user_id(user_id)
 
-    if not user:
+    if not partial_user:
         raise FailedAuth('unknown user ID')
 
-    if not user['active']:
+    if not partial_user['active']:
         raise FailedAuth('inactive user')
 
-    await check_bans(request, user_id)
+    await check_bans(user_id)
 
-    salt = user['password_hash']
+    salt = partial_user['password_hash']
 
     if not cfg.TOKEN_SECRET:
         raise FailedAuth('TOKEN_SECRET is not set. Please contact '
@@ -335,4 +334,4 @@ def gen_token(user: dict, token_type=TokenType.TIMED) -> str:
         # treated as an API token
         uid = f'u{uid}'
 
-    return signer.sign(uid)
+    return signer.sign(uid).decode('utf-8')

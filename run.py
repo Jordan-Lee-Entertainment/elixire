@@ -47,9 +47,6 @@ from api.bp.admin.audit_log import AuditLog
 
 import config
 
-app = Quart(__name__)
-app.econfig = config
-
 # enable cors on api, images and shortens
 # CORS(
 #     app,
@@ -78,7 +75,8 @@ log = logging.getLogger(__name__)
 def make_app() -> Quart:
     """Make a Quart instance."""
     app = Quart(__name__)
-    # TODO config
+    # TODO better config under app.cfg
+    app.econfig = config
     return app
 
 

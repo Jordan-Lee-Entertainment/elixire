@@ -298,19 +298,20 @@ class Storage:
         Returns
         -------
         PartialAuthUser
-            Partial user data containing username, user id and password hash
+            Partial user data containing user id, active field,
+            and password hash. may contain username
         """
         user_id = await self.get_uid(username)
-        if not user_id:
+        if user_id is None:
             log.warning('user not found')
             return None
 
         partial = await self.auth_user_from_user_id(user_id)
         if partial is None:
-            log.warning('actx failed')
+            log.warning('partial user for auth fetch failed')
             return None
 
-        partial.update({'user_id': user_id})
+        partial.update({'username': username})
         return ensure_non_null(partial)
 
     async def auth_user_from_user_id(self, user_id: Union[str, int]) -> PartialAuthUser:
@@ -346,6 +347,7 @@ class Storage:
             await self.set_with_ttl(f'{ukey}:active', active, 600)
 
         return ensure_non_null({
+            'user_id': user_id,
             'password_hash': password_hash,
             'active': active,
         })
