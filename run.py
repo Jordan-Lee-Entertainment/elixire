@@ -38,12 +38,12 @@ import api.bp.frontend
 
 from api.errors import APIError, Banned
 from api.common import get_ip_addr
-from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.common.utils import LockStorage
 from api.storage import Storage
 from api.jobs import JobManager
 from api.bp.metrics.counters import MetricsCounters
 from api.bp.admin.audit_log import AuditLog
+from api.common.banning import ban_request
 
 import config
 
@@ -130,48 +130,18 @@ def set_blueprints(app_):
 app = make_app()
 
 
-# TODO move those functions to their own things under api/
-async def _handle_ban(reason: str):
-    if 'ctx' not in request:
-        # use the IP as banning point
-        ip_addr = get_ip_addr(request)
-
-        log.warning(f'Banning ip address {ip_addr} with reason {reason!r}')
-
-        period = rapp.econfig.IP_BAN_PERIOD
-        await rapp.db.execute(f"""
-        INSERT INTO ip_bans (ip_address, reason, end_timestamp)
-        VALUES ($1, $2, now()::timestamp + interval '{period}')
-        """, ip_addr, reason)
-
-        await rapp.storage.raw_invalidate(f'ipban:{ip_addr}')
-        await ip_ban_webhook(rapp, ip_addr, f'[ip ban] {reason}', period)
-    else:
-        user_name, user_id = request['ctx']
-
-        log.warning(f'Banning {user_name} {user_id} with reason {reason!r}')
-
-        period = app.econfig.BAN_PERIOD
-        await rapp.db.execute(f"""
-        INSERT INTO bans (user_id, reason, end_timestamp)
-        VALUES ($1, $2, now()::timestamp + interval '{period}')
-        """, user_id, reason)
-
-        await rapp.storage.raw_invalidate(f'userban:{user_id}')
-        await ban_webhook(rapp, user_id, reason, period)
-
-
 @app.errorhandler(Banned)
 async def handle_ban(err: Banned):
-    """Handle the Banned exception being raised through a request.
-
-    This takes care of inserting a user ban.
-    """
+    """Handle the Banned exception being raised."""
     status_code = err.status_code
     reason = err.args[0]
 
-    # TODO figure out request context
-    lock_key = request['ctx'][0] if 'ctx' in request else get_ip_addr(request)
+    # we keep a lock since when we have a spam user client its best if we don't
+    # spam the underlying webhook.
+
+    # the lock is user-based when possible, fallsback to the IP address being
+    # banned.
+    lock_key = request['ctx'][0] if 'ctx' in request else get_ip_addr()
     ban_lock = app.locks['bans'][lock_key]
 
     # generate error message before anything
@@ -182,21 +152,14 @@ async def handle_ban(err: Banned):
     }
 
     res.update(err.get_payload())
-
-    # TODO this is jsonify()
     resp = jsonify(res)
 
     if ban_lock.locked():
         log.warning('Ban lock already acquired.')
         return resp, status_code
 
-    await ban_lock.acquire()
-
-    try:
-        # actual ban code is here
-        await _handle_ban(reason)
-    finally:
-        ban_lock.release()
+    async with ban_lock:
+        await ban_request(reason)
 
     return resp, status_code
 
