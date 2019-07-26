@@ -2,13 +2,14 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-async def _domain_file_stats(db, domain_id, *,
-                             ignore_consented: bool = False) -> tuple:
+
+async def _domain_file_stats(db, domain_id, *, ignore_consented: bool = False) -> tuple:
     """Get domain file stats (count and sum of all bytes)."""
 
-    consented_clause = '' if ignore_consented else 'AND users.consented = true'
+    consented_clause = "" if ignore_consented else "AND users.consented = true"
 
-    row = await db.fetchrow(f"""
+    row = await db.fetchrow(
+        f"""
     SELECT COUNT(*), SUM(file_size)
     FROM files
     JOIN users
@@ -16,41 +17,53 @@ async def _domain_file_stats(db, domain_id, *,
     WHERE files.domain = $1
       AND files.deleted = false
       {consented_clause}
-    """, domain_id)
+    """,
+        domain_id,
+    )
 
-    return row['count'], int(row['sum'] or 0)
+    return row["count"], int(row["sum"] or 0)
+
 
 async def get_domain_info(db, domain_id) -> dict:
     """Get domain information."""
-    raw_info = await db.fetchrow("""
+    raw_info = await db.fetchrow(
+        """
     SELECT domain, official, admin_only, permissions
     FROM domains
     WHERE domain_id = $1
-    """, domain_id)
+    """,
+        domain_id,
+    )
 
     dinfo = dict(raw_info)
-    dinfo['cf_enabled'] = False
+    dinfo["cf_enabled"] = False
 
     stats = {}
 
     # doing batch queries should help us speed up the overall request time
-    rows = await db.fetchrow("""
+    rows = await db.fetchrow(
+        """
     SELECT
         (SELECT COUNT(*) FROM users WHERE domain = $1),
         (SELECT COUNT(*) FROM shortens WHERE domain = $1)
-    """, domain_id)
+    """,
+        domain_id,
+    )
 
-    stats['users'] = rows[0]
-    stats['shortens'] = rows[1]
+    stats["users"] = rows[0]
+    stats["shortens"] = rows[1]
 
     filestats = await _domain_file_stats(db, domain_id, ignore_consented=True)
-    stats['files'], stats['size'] = filestats
+    stats["files"], stats["size"] = filestats
 
-    owner_data = await db.fetchrow("""
+    owner_data = await db.fetchrow(
+        """
     SELECT user_id::text, username, active, consented, admin
     FROM users
     WHERE user_id = (SELECT user_id FROM domain_owners WHERE domain_id = $1)
-    """, domain_id)
+    """,
+        domain_id,
+    )
 
     if owner_data:
         downer = dict(owner_data)
@@ -58,11 +71,9 @@ async def get_domain_info(db, domain_id) -> dict:
         downer = None
 
     return {
-        'info': {**dinfo, **{
-            'owner': downer
-        }},
-        'stats': stats,
-        'public_stats': await get_domain_public(db, domain_id),
+        "info": {**dinfo, **{"owner": downer}},
+        "stats": stats,
+        "public_stats": await get_domain_public(db, domain_id),
     }
 
 
@@ -70,19 +81,22 @@ async def get_domain_public(db, domain_id) -> dict:
     """Get public information about a domain."""
     public_stats = {}
 
-    rows = await db.fetchrow("""
+    rows = await db.fetchrow(
+        """
     SELECT
         (SELECT COUNT(*) FROM users
          WHERE domain = $1 AND consented = true),
         (SELECT COUNT(*) FROM shortens
          JOIN users ON users.user_id = shortens.uploader
          WHERE shortens.domain = $1 AND users.consented = true)
-    """, domain_id)
+    """,
+        domain_id,
+    )
 
-    public_stats['users'] = rows[0]
-    public_stats['shortens'] = rows[1]
+    public_stats["users"] = rows[0]
+    public_stats["shortens"] = rows[1]
 
     filestats = await _domain_file_stats(db, domain_id)
-    public_stats['files'], public_stats['size'] = filestats
+    public_stats["files"], public_stats["size"] = filestats
 
     return public_stats

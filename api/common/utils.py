@@ -16,14 +16,12 @@ def int_(val, default=None):
 def _semaphore(num):
     def _wrap():
         return asyncio.Semaphore(num)
+
     return _wrap
 
 
 class LockStorage:
-    _fields = (
-        ('delete_files', _semaphore(10)),
-        ('bans', asyncio.Lock),
-    )
+    _fields = (("delete_files", _semaphore(10)), ("bans", asyncio.Lock))
 
     def __init__(self):
         self._locks = {}

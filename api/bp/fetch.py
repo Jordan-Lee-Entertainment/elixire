@@ -13,7 +13,7 @@ from PIL import Image
 
 from ..errors import NotFound
 
-bp = Blueprint('fetch')
+bp = Blueprint("fetch")
 log = logging.getLogger(__name__)
 
 
@@ -26,7 +26,7 @@ async def filecheck(request, filename):
 
     filepath = await storage.get_fspath(shortname, domain_id)
     if not filepath:
-        raise NotFound('No files with this name on this domain.')
+        raise NotFound("No files with this name on this domain.")
 
     # If we don't do this, there's a tiny chance of someone uploading an .exe
     # with extension of .png or whatever and slipping through ClamAV
@@ -36,12 +36,12 @@ async def filecheck(request, filename):
     # and due to that, it makes cf cache revokes MUCH less painful
     db_ext = os.path.splitext(filepath)[-1]
     if db_ext != ext:
-        raise NotFound('No files with this name on this domain.')
+        raise NotFound("No files with this name on this domain.")
 
     return filepath, shortname
 
 
-@bp.get('/i/<filename>')
+@bp.get("/i/<filename>")
 async def file_handler(request, filename):
     """Handles file serves."""
     app = request.app
@@ -52,18 +52,17 @@ async def file_handler(request, filename):
     # taking a guess at it.
     mimetype = await app.storage.get_file_mime(shortname)
 
-    if mimetype == 'text/plain':
-        mimetype = 'text/plain; charset=utf-8'
+    if mimetype == "text/plain":
+        mimetype = "text/plain; charset=utf-8"
 
     return await response.file_stream(
         filepath,
-        headers={
-            'Content-Security-Policy': "sandbox; frame-src 'none'"
-        },
-        mime_type=mimetype)
+        headers={"Content-Security-Policy": "sandbox; frame-src 'none'"},
+        mime_type=mimetype,
+    )
 
 
-@bp.get('/t/<filename>')
+@bp.get("/t/<filename>")
 async def thumbnail_handler(request, filename):
     """Handles thumbnail serves."""
     appcfg = request.app.econfig
@@ -76,7 +75,7 @@ async def thumbnail_handler(request, filename):
         return await response.file_stream(fspath)
 
     thb_folder = appcfg.THUMBNAIL_FOLDER
-    thumbpath = os.path.join(thb_folder, f'{thumbtype}{filename}')
+    thumbpath = os.path.join(thb_folder, f"{thumbtype}{filename}")
 
     if not os.path.isfile(thumbpath):
         tstart = time.monotonic()
@@ -87,13 +86,13 @@ async def thumbnail_handler(request, filename):
 
         tend = time.monotonic()
         delta = round((tend - tstart) * 1000, 5)
-        log.info(f'Took {delta} msec generating thumbnail '
-                 f'type {thumbtype} for {filename}')
+        log.info(
+            f"Took {delta} msec generating thumbnail "
+            f"type {thumbtype} for {filename}"
+        )
 
     # yes, we are doing more I/O by using response.file
     # and not sending the bytes ourselves.
     return await response.file_stream(
-        thumbpath,
-        headers={
-            'Content-Security-Policy': "sandbox; frame-src 'none'"
-        })
+        thumbpath, headers={"Content-Security-Policy": "sandbox; frame-src 'none'"}
+    )

@@ -16,7 +16,7 @@ class Action:
 
     def __init__(self, request):
         self.app = request.app
-        self.admin_id = request['ctx'][1]
+        self.admin_id = request["ctx"][1]
         self.context = {}
 
     async def details(self):
@@ -33,7 +33,7 @@ class Action:
         try:
             action_text = await self.details()
         except NotImplementedError:
-            action_text = '<no text set for action>'
+            action_text = "<no text set for action>"
 
         # actions can decide to "cancel themselves" if they return False
         # (this allows actions to only count as actions under certain conditions)
@@ -41,30 +41,27 @@ class Action:
             return
 
         if isinstance(action_text, list):
-            action_text = '\n'.join(action_text)
+            action_text = "\n".join(action_text)
 
-        lines = [
-            action_text,
-            f'\naction context (for debugging purposes):',
-        ]
+        lines = [action_text, f"\naction context (for debugging purposes):"]
 
         for key, val in self.context.items():
-            lines.append(f'\t{key!r}: {val!r}')
+            lines.append(f"\t{key!r}: {val!r}")
 
         # get admin via request ctx
         admin_id = self.admin_id
         admin_username = await self.app.storage.get_username(admin_id)
-        lines.append(f'admin that performed the action: {admin_username} ({admin_id})')
+        lines.append(f"admin that performed the action: {admin_username} ({admin_id})")
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     async def __aenter__(self):
-        log.debug('entering context, action %s', self)
+        log.debug("entering context, action %s", self)
         return self
 
     async def __aexit__(self, type, value, traceback):
         # only notify when there are no errors happening inside the context
-        log.debug('exiting context, action %s, exc=%s', self, value)
+        log.debug("exiting context, action %s, exc=%s", self, value)
         if type is None and value is None and traceback is None:
             return await self.app.audit_log.push(self)
 
@@ -77,7 +74,7 @@ class Action:
         return self.context.get(key)
 
     def __repr__(self):
-        return f'<Action admin_id={self.admin_id}>'
+        return f"<Action admin_id={self.admin_id}>"
 
 
 class EditAction(Action):
@@ -153,7 +150,7 @@ class AuditLog:
 
     async def push(self, action: Action):
         """Push an action to the queue."""
-        log.debug('[OwO] pushing action to queue: %s', action)
+        log.debug("[OwO] pushing action to queue: %s", action)
         self.actions.append(action)
         self._reset()
 
@@ -169,9 +166,9 @@ class AuditLog:
         action_count = len(actions)
 
         if action_count == 1:
-            subject = 'Audit Log'
+            subject = "Audit Log"
         else:
-            subject = f'Audit Log - {action_count} actions'
+            subject = f"Audit Log - {action_count} actions"
 
         rendered_actions = []
 
@@ -183,13 +180,13 @@ class AuditLog:
                 continue
 
             rendered_actions.append(text)
-            rendered_actions.append('\n')
+            rendered_actions.append("\n")
 
         if not rendered_actions:
             return
 
         # construct full text from all of the rendered actions
-        full = '\n'.join(rendered_actions)
+        full = "\n".join(rendered_actions)
         await self.send_email(subject, full)
 
     async def _sender(self):
@@ -197,13 +194,14 @@ class AuditLog:
             await asyncio.sleep(60)
             await self._consume_and_process_queue()
         except asyncio.CancelledError:
-            log.debug('cancelled send task')
+            log.debug("cancelled send task")
         except Exception:
-            log.exception('error while sending')
+            log.exception("error while sending")
 
     async def send_email(self, subject, full_text):
         """Send an email to all admins."""
-        admins = await self.app.db.fetch("""
+        admins = await self.app.db.fetch(
+            """
         SELECT users.user_id
         FROM users
         JOIN admin_user_settings
@@ -212,11 +210,12 @@ class AuditLog:
             users.admin = true AND
             admin_user_settings.audit_log_emails = true
         )
-        """)
+        """
+        )
 
-        admins = [r['user_id'] for r in admins]
+        admins = [r["user_id"] for r in admins]
 
-        log.info('sending audit log event to %d admins', len(admins))
+        log.info("sending audit log event to %d admins", len(admins))
 
         for admin_id in admins:
             await send_user_email(self.app, admin_id, subject, full_text)

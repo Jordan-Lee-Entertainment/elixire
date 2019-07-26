@@ -6,6 +6,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 async def second_tasks(app):
     """Quick submission of per-second metrics."""
     metrics = app.metrics
@@ -13,7 +14,7 @@ async def second_tasks(app):
 
     for counter in counters.data:
         # ignore those specific counters, as they're on their own task
-        if counter in ('file_upload_hour', 'file_upload_hour_pub'):
+        if counter in ("file_upload_hour", "file_upload_hour_pub"):
             continue
 
         await counters.auto_submit(metrics, counter)
@@ -24,72 +25,92 @@ async def file_upload_counts(app):
     metrics = app.metrics
     counters = app.counters
 
-    await counters.auto_submit(metrics, 'file_upload_hour')
-    await counters.auto_submit(metrics, 'file_upload_hour_pub')
+    await counters.auto_submit(metrics, "file_upload_hour")
+    await counters.auto_submit(metrics, "file_upload_hour_pub")
 
 
 async def file_total_counts(app):
     """Submit total file count."""
-    total_files = await app.db.fetchval("""
+    total_files = await app.db.fetchval(
+        """
     SELECT COUNT(*)
     FROM files
-    """)
+    """
+    )
 
-    total_files_public = await app.db.fetchval("""
+    total_files_public = await app.db.fetchval(
+        """
     SELECT COUNT(*)
     FROM files
     JOIN users on files.uploader = users.user_id
     WHERE users.consented = true
-    """)
+    """
+    )
 
     metrics = app.metrics
-    await metrics.submit('total_files', total_files)
-    await metrics.submit('total_files_public', total_files_public)
+    await metrics.submit("total_files", total_files)
+    await metrics.submit("total_files_public", total_files_public)
 
 
 async def file_size_counts(app):
     """Submit file sizes in megabytes."""
-    total_size = await app.db.fetchval("""
+    total_size = (
+        await app.db.fetchval(
+            """
     SELECT SUM(file_size) / 1048576
     FROM files
-    """) or 0.0
+    """
+        )
+        or 0.0
+    )
 
-    total_size_public = await app.db.fetchval("""
+    total_size_public = (
+        await app.db.fetchval(
+            """
     SELECT SUM(file_size) / 1048576
     FROM files
     JOIN users ON files.uploader = users.user_id
     WHERE users.consented = true
-    """) or 0.0
+    """
+        )
+        or 0.0
+    )
 
     metrics = app.metrics
-    await metrics.submit('total_size', total_size)
-    await metrics.submit('total_size_public', total_size_public)
+    await metrics.submit("total_size", total_size)
+    await metrics.submit("total_size_public", total_size_public)
 
 
 async def user_counts(app):
     """Submit information related to our users."""
-    active = await app.db.fetchval("""
+    active = await app.db.fetchval(
+        """
     SELECT COUNT(*)
     FROM users
     WHERE active = true
-    """)
+    """
+    )
 
-    consented = await app.db.fetchval("""
+    consented = await app.db.fetchval(
+        """
     SELECT COUNT(*)
     FROM users
     WHERE active = true AND consented = true
-    """)
+    """
+    )
 
-    inactive = await app.db.fetchval("""
+    inactive = await app.db.fetchval(
+        """
     SELECT COUNT(*)
     FROM users
     WHERE active = false
-    """)
+    """
+    )
 
     metrics = app.metrics
-    await metrics.submit('active_users', active)
-    await metrics.submit('consented_users', consented)
-    await metrics.submit('inactive_users', inactive)
+    await metrics.submit("active_users", active)
+    await metrics.submit("consented_users", consented)
+    await metrics.submit("inactive_users", inactive)
 
 
 async def hourly_tasks(app):
@@ -105,20 +126,24 @@ async def upload_uniq_task(app):
     in the past 24 hours."""
     metrics = app.metrics
 
-    count = await app.db.fetchval("""
+    count = await app.db.fetchval(
+        """
     SELECT COUNT(DISTINCT uploader)
     FROM files
     WHERE file_id > time_snowflake(now() - interval '24 hours')
-    """)
+    """
+    )
 
-    await metrics.submit('uniq_uploaders_day', count)
+    await metrics.submit("uniq_uploaders_day", count)
 
-    countpub = await app.db.fetchval("""
+    countpub = await app.db.fetchval(
+        """
     SELECT COUNT(DISTINCT uploader)
     FROM files
     JOIN users ON users.user_id = files.uploader
     WHERE file_id > time_snowflake(now() - interval '24 hours')
         AND users.consented = true
-    """)
+    """
+    )
 
-    await metrics.submit('uniq_uploaders_day_pub', countpub)
+    await metrics.submit("uniq_uploaders_day_pub", countpub)

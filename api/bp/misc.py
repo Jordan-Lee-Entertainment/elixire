@@ -5,38 +5,40 @@
 from quart import Blueprint, jsonify, current_app as app
 from api.version import VERSION, API_VERSION
 
-bp = Blueprint(__name__, 'misc')
+bp = Blueprint(__name__, "misc")
 
 
 def _make_feature_list(cfg):
     res = []
 
     if cfg.UPLOADS_ENABLED:
-        res.append('uploads')
+        res.append("uploads")
     elif cfg.SHORTENS_ENABLED:
-        res.append('shortens')
+        res.append("shortens")
     elif cfg.REGISTRATIONS_ENABLED:
-        res.append('registrations')
+        res.append("registrations")
     elif cfg.PATCH_API_PROFILE_ENABLED:
-        res.append('pfupdate')
+        res.append("pfupdate")
 
     return res
 
 
-@bp.route('/hello')
+@bp.route("/hello")
 async def hello_route():
     """Give basic information about the instance."""
     cfg = app.econfig
 
-    return jsonify({
-        'name': cfg.INSTANCE_NAME,
-        'version': VERSION,
-        'api': API_VERSION,
-        'invite': cfg.MAIN_INVITE,
-        'support_email': cfg.SUPPORT_EMAIL,
-        'ban_period': cfg.BAN_PERIOD,
-        'ip_ban_period': cfg.IP_BAN_PERIOD,
-        'rl_threshold': cfg.RL_THRESHOLD,
-        'accepted_mimes': cfg.ACCEPTED_MIMES,
-        'features': _make_feature_list(cfg)
-    })
+    return jsonify(
+        {
+            "name": cfg.INSTANCE_NAME,
+            "version": VERSION,
+            "api": API_VERSION,
+            "invite": cfg.MAIN_INVITE,
+            "support_email": cfg.SUPPORT_EMAIL,
+            "ban_period": cfg.BAN_PERIOD,
+            "ip_ban_period": cfg.IP_BAN_PERIOD,
+            "rl_threshold": cfg.RL_THRESHOLD,
+            "accepted_mimes": cfg.ACCEPTED_MIMES,
+            "features": _make_feature_list(cfg),
+        }
+    )

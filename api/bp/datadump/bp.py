@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 bp = Blueprint(__name__)
 
 
-@bp.listener('after_server_start')
+@bp.listener("after_server_start")
 async def start_dump_worker_ss(app, _loop):
     """Start the dump worker on application startup
     so we can resume if any is there to resume."""
@@ -22,10 +22,10 @@ async def start_dump_worker_ss(app, _loop):
         start_worker(app)
         start_janitor(app)
     else:
-        log.info('data dumps are disabled!')
+        log.info("data dumps are disabled!")
 
 
-@bp.post('/api/dump/request')
+@bp.post("/api/dump/request")
 async def request_data_dump(request):
     """Request a data dump to be scheduled
     at the earliest convenience of the system.
@@ -48,142 +48,153 @@ async def request_data_dump(request):
     an email to the user containing the dump.
     """
     if not request.app.econfig.DUMP_ENABLED:
-        raise FeatureDisabled('Data dumps are disabled in this instance')
+        raise FeatureDisabled("Data dumps are disabled in this instance")
 
     user_id = await token_check(request)
 
     # check if user is already underway
-    current_work = await request.app.db.fetchval("""
+    current_work = await request.app.db.fetchval(
+        """
     SELECT start_timestamp
     FROM current_dump_state
     WHERE user_id = $1
-    """, user_id)
+    """,
+        user_id,
+    )
 
     if current_work is not None:
-        raise BadInput('Your data dump is currently being processed.')
+        raise BadInput("Your data dump is currently being processed.")
 
     # so that intellectual users don't queue themselves twice.
-    in_queue = await request.app.db.fetchval("""
+    in_queue = await request.app.db.fetchval(
+        """
     SELECT request_timestamp
     FROM dump_queue
     WHERE user_id = $1
-    """, user_id)
+    """,
+        user_id,
+    )
 
     if in_queue:
-        raise BadInput('You already requested your data dump.')
+        raise BadInput("You already requested your data dump.")
 
     # insert into queue
-    await request.app.db.execute("""
+    await request.app.db.execute(
+        """
     INSERT INTO dump_queue (user_id)
     VALUES ($1)
-    """, user_id)
+    """,
+        user_id,
+    )
 
     start_worker(request.app)
 
-    return response.json({
-        'success': True,
-    })
+    return response.json({"success": True})
 
 
 async def get_dump_status(db, user_id: int):
     """Get datadump status."""
-    row = await db.fetchrow("""
+    row = await db.fetchrow(
+        """
     SELECT user_id, start_timestamp, current_id, total_files, files_done
     FROM current_dump_state
     WHERE user_id = $1
-    """, user_id)
+    """,
+        user_id,
+    )
 
     if not row:
-        queue = await db.fetch("""
+        queue = await db.fetch(
+            """
         SELECT user_id
         FROM dump_queue
         ORDER BY request_timestamp ASC
-        """)
+        """
+        )
 
-        queue = [r['user_id'] for r in queue]
+        queue = [r["user_id"] for r in queue]
 
         try:
             pos = queue.index(user_id)
-            return {
-                'state': 'in_queue',
-                'position': pos + 1,
-            }
+            return {"state": "in_queue", "position": pos + 1}
         except ValueError:
-            return {
-                'state': 'not_in_queue'
-            }
+            return {"state": "not_in_queue"}
 
     return {
-        'state': 'processing',
-        'start_timestamp': row['start_timestamp'].isoformat(),
-        'current_id': str(row['current_id']),
-        'total_files': row['total_files'],
-        'files_done': row['files_done']
+        "state": "processing",
+        "start_timestamp": row["start_timestamp"].isoformat(),
+        "current_id": str(row["current_id"]),
+        "total_files": row["total_files"],
+        "files_done": row["files_done"],
     }
 
 
-@bp.get('/api/dump/status')
+@bp.get("/api/dump/status")
 async def data_dump_user_status(request):
     """Give information about the current dump for the user,
     if one exists."""
     user_id = await token_check(request)
 
-    return response.json(
-        await get_dump_status(request.app.db, user_id)
-    )
+    return response.json(await get_dump_status(request.app.db, user_id))
 
 
-@bp.get('/api/admin/dump_status')
+@bp.get("/api/admin/dump_status")
 async def data_dump_global_status(request):
     """Only for admins: all stuff related to data dump state."""
     user_id = await token_check(request)
     await check_admin(request, user_id, True)
 
-    queue = await request.app.db.fetch("""
+    queue = await request.app.db.fetch(
+        """
     SELECT user_id
     FROM dump_queue
     ORDER BY request_timestamp ASC
-    """)
+    """
+    )
 
-    queue = [str(el['user_id']) for el in queue]
+    queue = [str(el["user_id"]) for el in queue]
 
-    current = await request.app.db.fetchrow("""
+    current = await request.app.db.fetchrow(
+        """
     SELECT user_id, total_files, files_done
     FROM current_dump_state
-    """)
+    """
+    )
 
-    return response.json({
-        'queue': queue,
-        'current': dict(current or {})
-    })
+    return response.json({"queue": queue, "current": dict(current or {})})
 
 
-@bp.get('/api/dump_get')
+@bp.get("/api/dump_get")
 async def get_dump(request):
     """Download the dump file."""
     try:
-        dump_token = str(request.args['key'][0])
+        dump_token = str(request.args["key"][0])
     except (KeyError, TypeError, ValueError):
-        raise BadInput('No valid key provided.')
+        raise BadInput("No valid key provided.")
 
-    user_id = await request.app.db.fetchval("""
+    user_id = await request.app.db.fetchval(
+        """
     SELECT user_id
     FROM email_dump_tokens
     WHERE hash = $1 AND now() < expiral
-    """, dump_token)
+    """,
+        dump_token,
+    )
 
     if not user_id:
-        raise BadInput('Invalid or expired token.')
+        raise BadInput("Invalid or expired token.")
 
-    user_name = await request.app.db.fetchval("""
+    user_name = await request.app.db.fetchval(
+        """
     SELECT username
     FROM users
     WHERE user_id = $1
-    """, user_id)
+    """,
+        user_id,
+    )
 
     zip_path = os.path.join(
-        request.app.econfig.DUMP_FOLDER,
-        f'{user_id}_{user_name}.zip',
+        request.app.econfig.DUMP_FOLDER, f"{user_id}_{user_name}.zip"
     )
 
     return await response.file_stream(zip_path)

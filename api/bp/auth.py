@@ -10,10 +10,10 @@ from api.common.auth import login_user, gen_token, pwd_hash
 from api.schema import validate, REVOKE_SCHEMA
 
 
-bp = Blueprint(__name__, 'auth')
+bp = Blueprint(__name__, "auth")
 
 
-@bp.route('/login', methods=['POST'])
+@bp.route("/login", methods=["POST"])
 async def login_handler():
     """
     Login one user to the service
@@ -22,12 +22,10 @@ async def login_handler():
     returns a timed token
     """
     user = await login_user()
-    return jsonify({
-        'token': gen_token(user, TokenType.TIMED),
-    })
+    return jsonify({"token": gen_token(user, TokenType.TIMED)})
 
 
-@bp.route('/apikey', methods=['POST'])
+@bp.route("/apikey", methods=["POST"])
 async def apikey_handler():
     """
     Generate an API key.
@@ -35,12 +33,10 @@ async def apikey_handler():
     Those types of tokens are non-timed.
     """
     user = await login_user()
-    return jsonify({
-        'api_key': gen_token(user, TokenType.NONTIMED),
-    })
+    return jsonify({"api_key": gen_token(user, TokenType.NONTIMED)})
 
 
-@bp.route('/revoke', methods=['POST'])
+@bp.route("/revoke", methods=["POST"])
 async def revoke_handler():
     """
     Revoke all generated tokens.
@@ -54,15 +50,19 @@ async def revoke_handler():
     # secret data that is signing the tokens,
     # with that, we invalidate any other token
     # used with the old hash
-    user_pwd = payload['password']
+    user_pwd = payload["password"]
     hashed = await pwd_hash(user_pwd)
 
-    await app.db.execute("""
+    await app.db.execute(
+        """
     UPDATE users
     SET password_hash = $1
     WHERE user_id = $2
-    """, hashed, user['user_id'])
+    """,
+        hashed,
+        user["user_id"],
+    )
 
-    await app.storage.invalidate(user['user_id'], 'password_hash')
+    await app.storage.invalidate(user["user_id"], "password_hash")
 
     return resp_empty()

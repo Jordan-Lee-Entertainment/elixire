@@ -8,10 +8,10 @@ from cryptography.fernet import Fernet, InvalidToken
 from api.common import get_ip_addr
 from api.errors import BadInput
 
-bp = Blueprint('d1check', __name__)
+bp = Blueprint("d1check", __name__)
 
 
-@bp.route('/check', methods=['POST'])
+@bp.route("/check", methods=["POST"])
 async def d1_check():
     """Check endpoint for d1.
 
@@ -21,22 +21,20 @@ async def d1_check():
     """
     try:
         j = await request.get_json()
-        ciphertext = j['data']
+        ciphertext = j["data"]
     except (TypeError, KeyError):
-        raise BadInput('Invalid json')
+        raise BadInput("Invalid json")
 
     fernet = Fernet(app.econfig.SECRET_KEY)
 
     try:
         data = fernet.decrypt(ciphertext.encode()).decode()
     except InvalidToken:
-        raise BadInput('Invalid ciphertext')
+        raise BadInput("Invalid ciphertext")
 
     ipaddr = get_ip_addr()
-    data2 = f'{data},{ipaddr}'
+    data2 = f"{data},{ipaddr}"
 
     ciphertext_res = fernet.encrypt(data2.encode())
 
-    return jsonify({
-        'data': ciphertext_res
-    })
+    return jsonify({"data": ciphertext_res})

@@ -11,12 +11,12 @@ class MetricsCounters:
 
     def __init__(self):
         self.data = {
-            'request' : 0,
-            'response': 0,
-            'error': 0,
-            'error_ise': 0,
-            'file_upload_hour': 0,
-            'file_upload_hour_pub': 0,
+            "request": 0,
+            "response": 0,
+            "error": 0,
+            "error_ise": 0,
+            "file_upload_hour": 0,
+            "file_upload_hour_pub": 0,
         }
 
     def reset_all(self):
@@ -37,7 +37,7 @@ class MetricsCounters:
         try:
             self.data[counter] += 1
         except KeyError:
-            log.warning('unknown counter: %s', counter)
+            log.warning("unknown counter: %s", counter)
 
     async def auto_submit(self, metrics, counter: str):
         await metrics.submit(counter, self.data[counter])
