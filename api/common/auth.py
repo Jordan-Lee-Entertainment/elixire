@@ -187,7 +187,7 @@ async def login_user() -> dict:
         log.warning(f'login: {username!r} is not active')
         raise FailedAuth('User is deactivated')
 
-    await check_bans(request, partial_user['user_id'])
+    await check_bans(partial_user['user_id'])
     return partial_user
 
 

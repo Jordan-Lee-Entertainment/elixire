@@ -38,7 +38,7 @@ def get_ip_addr(request) -> str:
     the client's IP.
     """
     if 'X-Forwarded-For' not in request.headers:
-        return request.ip
+        return request.remote_addr
     return request.headers['X-Forwarded-For']
 
 

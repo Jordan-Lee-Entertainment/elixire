@@ -408,9 +408,9 @@ class Storage:
         ban_reason_val = await self.get(key, str)
         ban_reason = ban_reason_val.value
 
-        if ban_reason.flag == StorageFlag.PostgresNotFound:
+        if ban_reason_val.flag == StorageFlag.PostgresNotFound:
             return None
-        elif ban_reason.flag == StorageFlag.NotFound:
+        elif ban_reason_val.flag == StorageFlag.NotFound:
             row = await self.db.fetchrow("""
             SELECT reason, end_timestamp
             FROM bans
