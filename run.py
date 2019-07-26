@@ -18,6 +18,7 @@ from quart import Quart, jsonify, request
 
 from dns import resolver
 
+# TODO from api.bp import ...
 import api.bp.auth
 import api.bp.profile
 import api.bp.upload
@@ -60,14 +61,6 @@ import config
 #     ]
 # )
 
-level = getattr(config, 'LOGGING_LEVEL', 'INFO')
-logging.basicConfig(level=level)
-logging.getLogger('aioinflux').setLevel(logging.INFO)
-
-if level == 'DEBUG':
-    fh = logging.FileHandler('elixire.log')
-    fh.setLevel(logging.DEBUG)
-    logging.getLogger().addHandler(fh)
 
 log = logging.getLogger(__name__)
 
@@ -75,8 +68,19 @@ log = logging.getLogger(__name__)
 def make_app() -> Quart:
     """Make a Quart instance."""
     app = Quart(__name__)
-    # TODO better config under app.cfg
+
+    # TODO better config under app.cfg. check #112
     app.econfig = config
+
+    level = getattr(config, "LOGGING_LEVEL", "INFO")
+    logging.basicConfig(level=level)
+    logging.getLogger("aioinflux").setLevel(logging.INFO)
+
+    if level == "DEBUG":
+        fhandle = logging.FileHandler("elixire.log")
+        fhandle.setLevel(logging.DEBUG)
+        logging.getLogger().addHandler(fhandle)
+
     return app
 
 
@@ -84,44 +88,41 @@ def set_blueprints(app_):
     """Set the blueprints on the app."""
     # load blueprints
 
-    blueprints = {
-        api.bp.auth.bp: '',
-        api.bp.misc.bp: '',
-        api.bp.d1check.bp: '',
-    }
+    blueprints = {api.bp.auth.bp: "", api.bp.misc.bp: "", api.bp.d1check.bp: ""}
 
     for blueprint, api_prefix in blueprints.items():
         route_prefix = f'/api{api_prefix or ""}'
 
         if api_prefix == -1:
-            route_prefix = ''
+            route_prefix = ""
 
         app_.register_blueprint(blueprint, url_prefix=route_prefix)
 
     # TODO those are old sanic blueprints
-    #app_.blueprint(api.bp.ratelimit.bp)
-    #app_.blueprint(api.bp.index.bp)
-    #app_.blueprint(api.bp.profile.bp)
-    #app_.blueprint(api.bp.upload.bp)
-    #app_.blueprint(api.bp.files.bp)
-    #app_.blueprint(api.bp.shorten.bp)
-    #app_.blueprint(api.bp.fetch.bp)
+    # app_.blueprint(api.bp.ratelimit.bp)
+    # app_.blueprint(api.bp.index.bp)
+    # app_.blueprint(api.bp.profile.bp)
+    # app_.blueprint(api.bp.upload.bp)
+    # app_.blueprint(api.bp.files.bp)
+    # app_.blueprint(api.bp.shorten.bp)
+    # app_.blueprint(api.bp.fetch.bp)
 
     ## load admin blueprints
-    #app_.blueprint(api.bp.admin.user_bp)
-    #app_.blueprint(api.bp.admin.object_bp)
-    #app_.blueprint(api.bp.admin.domain_bp)
-    #app_.blueprint(api.bp.admin.misc_bp)
-    #app_.blueprint(api.bp.admin.settings_bp)
+    # app_.blueprint(api.bp.admin.user_bp)
+    # app_.blueprint(api.bp.admin.object_bp)
+    # app_.blueprint(api.bp.admin.domain_bp)
+    # app_.blueprint(api.bp.admin.misc_bp)
+    # app_.blueprint(api.bp.admin.settings_bp)
 
-    #app_.blueprint(api.bp.register.bp)
-    #app_.blueprint(api.bp.datadump.bp)
-    #app_.blueprint(api.bp.personal_stats.bp)
-    #app_.blueprint(api.bp.frontend.bp)
-    #app_.blueprint(api.bp.metrics.bp)
+    # app_.blueprint(api.bp.register.bp)
+    # app_.blueprint(api.bp.datadump.bp)
+    # app_.blueprint(api.bp.personal_stats.bp)
+    # app_.blueprint(api.bp.frontend.bp)
+    # app_.blueprint(api.bp.metrics.bp)
 
     ## meme blueprint
-    #app_.blueprint(api.bp.wpadmin.bp)
+    # app_.blueprint(api.bp.wpadmin.bp)
+
 
 # blueprints are set at the end of the file after declaration of the main
 # handlers
@@ -139,21 +140,17 @@ async def handle_ban(err: Banned):
 
     # the lock is user-based when possible, fallsback to the IP address being
     # banned.
-    lock_key = request['ctx'][0] if 'ctx' in request else get_ip_addr()
-    ban_lock = app.locks['bans'][lock_key]
+    lock_key = request["ctx"][0] if "ctx" in request else get_ip_addr()
+    ban_lock = app.locks["bans"][lock_key]
 
     # generate error message before anything
-    res = {
-        'error': True,
-        'code': status_code,
-        'message': reason,
-    }
+    res = {"error": True, "code": status_code, "message": reason}
 
     res.update(err.get_payload())
     resp = jsonify(res)
 
     if ban_lock.locked():
-        log.warning('Ban lock already acquired.')
+        log.warning("Ban lock already acquired.")
         return resp, status_code
 
     async with ban_lock:
@@ -165,17 +162,13 @@ async def handle_ban(err: Banned):
 @app.errorhandler(APIError)
 def handle_api_error(err: APIError):
     """Handle any kind of application-level raised error."""
-    log.warning(f'API error: {err!r}')
+    log.warning(f"API error: {err!r}")
 
     # api errors count as errors as well
-    app.counters.inc('error')
+    app.counters.inc("error")
 
     status_code = err.status_code
-    res = {
-        'error': True,
-        'code': status_code,
-        'message': err.args[0]
-    }
+    res = {"error": True, "code": status_code, "message": err.args[0]}
 
     res.update(err.get_payload())
     return jsonify(res), status_code
@@ -193,7 +186,7 @@ def handle_exception(exception):
         pass
 
     # TODO maybe remove this code
-    #if isinstance(exception, (NotFound, FileNotFound, FileNotFoundError)):
+    # if isinstance(exception, (NotFound, FileNotFound, FileNotFoundError)):
     #    status_code = 404
     #    log.warning(f'File not found: {exception!r}')
 
@@ -208,18 +201,15 @@ def handle_exception(exception):
     #            return response.file(
     #                './frontend/output/404.html',
     #                status=404)
-    #else:
+    # else:
     #    log.exception(f'Error in request: {exception!r}')
 
-    request.app.counters.inc('error')
+    request.app.counters.inc("error")
 
     if status_code == 500:
-        request.app.counters.inc('error_ise')
+        request.app.counters.inc("error_ise")
 
-    return jsonify({
-        'error': True,
-        'message': repr(exception)
-    }), status_code
+    return jsonify({"error": True, "message": repr(exception)}), status_code
 
 
 @app.before_serving
@@ -229,14 +219,12 @@ async def app_before_serving():
 
     app.session = aiohttp.ClientSession(loop=app.loop)
 
-    log.info('connecting to db')
+    log.info("connecting to db")
     app.db = await asyncpg.create_pool(**config.db)
 
-    log.info('connecting to redis')
+    log.info("connecting to redis")
     app.redis = await aioredis.create_redis_pool(
-        config.redis,
-        minsize=3, maxsize=11,
-        loop=app.loop, encoding='utf-8'
+        config.redis, minsize=3, maxsize=11, loop=app.loop, encoding="utf-8"
     )
 
     app.storage = Storage(app)
@@ -257,17 +245,17 @@ async def app_before_serving():
     # don't stress InfluxDB out while running the tests.
 
     # maybe move this to current_app too?
-    if not getattr(app, '_test', False):
+    if not getattr(app, "_test", False):
         app.audit_log = AuditLog(app)
 
 
 @app.after_serving
 async def close_db():
     """Close all database connections."""
-    log.info('closing db')
+    log.info("closing db")
     await app.db.close()
 
-    log.info('closing redis')
+    log.info("closing redis")
     app.redis.close()
     await app.redis.wait_closed()
 
