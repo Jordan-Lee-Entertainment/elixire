@@ -68,7 +68,7 @@ def validate(document, schema):
 
 
 PROFILE_SCHEMA = {
-    'username': {'type': 'string', 'required': False},
+    'username': {'type': 'username', 'required': False, 'coerce': str.lower},
     'password': {'type': 'password', 'required': False},
     'domain': {'type': 'integer', 'nullable': True},
     'subdomain': {'type': 'subdomain', 'nullable': True},
@@ -83,19 +83,20 @@ PROFILE_SCHEMA = {
 }
 
 REGISTRATION_SCHEMA = {
-    'username': {'type': 'username', 'required': True},
+    'username': {'type': 'username', 'required': True, 'coerce': str.lower},
     'password': {'type': 'password', 'required': True},
     'discord_user': {'type': 'discord', 'required': True},
     'email': {'type': 'email', 'required': True},
 }
 
 REVOKE_SCHEMA = {
-    'user': {'type': 'string', 'nullable': False, 'required': True},
+    'user': {'type': 'string', 'nullable': False, 'required': True, 'coerce': str.lower},
     'password': {'type': 'string', 'required': True},
 }
 
 LOGIN_SCHEMA = {
-    'user': {'type': 'string', 'nullable': False, 'required': True},
+    'user': {'type': 'string', 'nullable': False,
+             'required': True, 'coerce': str.lower},
     'password': {'type': 'string', 'nullable': False, 'required': True},
 }
 
@@ -104,7 +105,7 @@ DEACTIVATE_USER_SCHEMA = {
 }
 
 PASSWORD_RESET_SCHEMA = {
-    'username': {'type': 'string', 'required': True}
+    'username': {'type': 'string', 'required': True, 'coerce': str.lower}
 }
 
 PASSWORD_RESET_CONFIRM_SCHEMA = {

@@ -6,13 +6,18 @@
 storage.py - multiple routines to fetch things
 from redis (as caching) and using postgres as a fallback
 """
+
 import logging
 import datetime
+import enum
 
-from .errors import NotFound
+from typing import Optional, Dict, Union, Any, List, Tuple, Iterable
+
+from api.errors import NotFound
 
 log = logging.getLogger(__name__)
 
+PartialAuthUser = Optional[Dict[str, Union[int, str]]]
 
 def calc_ttl(dtime: datetime.datetime) -> float:
     """Calculate how many seconds remain
@@ -31,7 +36,7 @@ def calc_ttl(dtime: datetime.datetime) -> float:
     return (dtime - now).total_seconds()
 
 
-def check(map_data) -> dict:
+def ensure_non_null(map_data: Dict[Any, Any]) -> Optional[Dict[Any, Any]]:
     """Check if all values in the map aren't None.
 
     If one is, returns None.
@@ -43,13 +48,16 @@ def check(map_data) -> dict:
     return map_data
 
 
-def prefix(user_id: int) -> str:
+def prefix(user_id: Union[str, int]) -> str:
     """Return the prefix for a key, given user ID."""
     return f'uid:{user_id}'
 
 
-def solve_domain(domain_name: str, redis=True) -> list:
-    """Solve a domain into its Redis keys."""
+def solve_domain(domain_name: str, redis: bool = True) -> List[str]:
+    """Solve a domain into its Redis keys.
+
+    Returns a prefixed namespace when ``redis`` is true.
+    """
     k = domain_name.find('.')
     raw_wildcard = f'*.{domain_name}'
     wildcard_name = f'*.{domain_name[k + 1:]}'
@@ -70,35 +78,60 @@ def solve_domain(domain_name: str, redis=True) -> list:
     return domains
 
 
-class Storage:
-    """Storage system.
+class StorageFlag(enum.Enum):
+    """Flags for the result of Storage.get
 
-    This is used by the codebase to provide caching with Redis.
+     - Found means the key was found on the cache.
+     - NotFound means the key was not found on cache.
+     - PostgresNotFound means the cache said postgres does not have the data.
+    """
+    Found = 1
+    NotFound = 2
+    PostgresNotFound = 3
+
+
+STORAGE_FLAG_NOT_FOUND = (StorageFlag.NotFound, StorageFlag.PostgresNotFound)
+
+
+class StorageValue:
+    """Represents a value from Redis."""
+    def __init__(self, flag: StorageFlag, value: Any):
+        self.flag = flag
+        self.value = value
+
+    def __bool__(self) -> bool:
+        return self.flag in (StorageFlag.NotFound, StorageFlag.PostgresNotFound)
+
+
+def _wrap(value) -> StorageValue:
+    return StorageValue(StorageFlag.Found, value)
+
+
+class Storage:
+    """Storage subsystem.
+
+    This is used by to provide caching with Redis.
+
+    When storing a given key to redis, it can be of any value, 
     """
     def __init__(self, app):
         self.app = app
         self.db = app.db
         self.redis = app.redis
 
-    async def get(self, key, typ=str):
+    async def get(self, key: str, typ: type = str) -> StorageValue:
         """Get one key from Redis.
 
         Parameters
         ----------
-        key: str
+        key:
             Key you want to find.
-        typ: any
+        typ:
             The type of the value.
 
         Returns
         -------
-        None
-            If the key doesn't exist
-        False
-            If Postgres didn't give anything.
-            This serves more as a hint.
-        any: typ
-            If the key fetching succeeded.
+        StorageValue
         """
         with await self.redis as conn:
             val = await conn.get(key)
@@ -106,22 +139,23 @@ class Storage:
         log.debug(f'get {key!r}, type {typ!r}, value {val!r}')
         if typ == bool:
             if val == 'True':
-                return True
+                return _wrap(True)
             elif val == 'False':
-                return False
+                return _wrap(False)
 
         # always use "false" to show when the db
         # didnt give us anything
         if val == 'false':
-            return False
+            return StorageValue(StorageFlag.PostgresNotFound, None)
 
         # key does not exist
         elif val is None:
-            return
+            return StorageValue(StorageFlag.NotFound, None)
 
-        return typ(val)
+        return StorageValue(StorageFlag.Found, typ(val))
 
-    async def get_multi(self, keys: list, typ=str) -> list:
+    async def get_multi(self, keys: List[str],
+                        typ: type = str) -> List[StorageValue]:
         """Fetch multiple keys."""
         res = []
 
@@ -131,9 +165,16 @@ class Storage:
 
         return res
 
-    async def set(self, key, value, **kwargs):
-        """Set a key in Redis."""
-        key = str(key)
+    async def set(self, key: str, value: Optional[Any]):
+        """Set a key in Redis.
+
+        When setting booleans in the cache, they're casted to strings
+        internally since Redis only works with strings. However they'll still
+        be booleans when you get() them back with typ=bool.
+
+        If value is None, then get() will return
+        StorageFlag.PostgresNotFound.
+        """
 
         with await self.redis as conn:
             if isinstance(value, bool):
@@ -144,31 +185,31 @@ class Storage:
             # the string false tells that whatever
             # query the db did returned None.
             value = 'false' if value is None else value
-            await conn.set(key, value, **kwargs)
+            await conn.set(key, value)
 
-    async def set_with_ttl(self, key, value, ttl):
+    async def set_with_ttl(self, key: str, value: Optional[Any], ttl: int):
         """Set a key and set its TTL afterwards.
 
         This works better than the expire and pexpire
-        keyword arguments in the set() call
+        keyword arguments in self.redis.set().
         """
         await self.set(key, value)
         await self.redis.expire(key, ttl)
 
-    async def set_multi_one(self, keys: list, value):
+    async def set_multi_one(self, keys: List[str], value: Optional[Any]):
         """Set multiple keys to one given value.
 
         Parameters
         ----------
-        keys: List[str]
+        keys:
             List of keys to set.
-        value: any
+        value:
             Value to set for the keys.
         """
         for key in keys:
             await self.set(key, value)
 
-    async def raw_invalidate(self, *keys: tuple):
+    async def raw_invalidate(self, *keys: Iterable[str]):
         """Invalidate/delete a set of keys.
 
         Parameters
@@ -181,22 +222,28 @@ class Storage:
         with await self.redis as conn:
             await conn.delete(*keys)
 
-    async def invalidate(self, user_id: int, *fields: tuple):
+    async def invalidate(self, user_id: int, *fields: Tuple[str]):
         """Invalidate fields given a user id."""
         ukey = prefix(user_id)
         keys = (f'{ukey}:{field}' for field in fields)
         await self.raw_invalidate(*keys)
 
-    async def _generic_1(self, key: str, key_type, ttl: int,
-                         query: str, *query_args: tuple):
-        """Generic storage function for Storage.get_uid
-        and Storage.get_username.
+    async def _generic_1(self, key: str, key_type: type, ttl: int,
+                         query: str, *query_args) -> Optional[Any]:
+        """Generic storage function.
+
+        Since many functions in here are based off the same structure:
+         - fetch from redis
+         - if failure, fetch from db and set on redis
+         - return value
+
+        this function was created.
 
         Parameters
         ----------
         key: str
             The key to fetch from Redis.
-        key_type: any
+        key_type: type
             The key type.
         ttl: int
             The TTL value of the key after setting.
@@ -214,18 +261,19 @@ class Storage:
         any
             Any value that is cached, or found in database.
         """
-        val = await self.get(key, key_type)
+        storage_value = await self.get(key, key_type)
+        value = storage_value.value
 
-        if val is False:
-            return
+        if storage_value.flag == StorageFlag.PostgresNotFound:
+            return None
 
-        if val is None:
-            val = await self.db.fetchval(query, *query_args)
-            await self.set_with_ttl(key, val or 'false', ttl)
+        if storage_value.flag == StorageFlag.NotFound:
+            value = await self.db.fetchval(query, *query_args)
+            await self.set_with_ttl(key, value or 'false', ttl)
 
-        return val
+        return value
 
-    async def get_uid(self, username: str) -> int:
+    async def get_uid(self, username: str) -> Optional[int]:
         """Get an user ID given a username."""
         return await self._generic_1(f'uid:{username}', int, 600, """
             SELECT user_id
@@ -234,7 +282,7 @@ class Storage:
             LIMIT 1
         """, username)
 
-    async def get_username(self, user_id: int) -> str:
+    async def get_username(self, user_id: int) -> Optional[str]:
         """Get a username given user ID."""
         return await self._generic_1(f'uname:{user_id}', str, 600, """
             SELECT username
@@ -243,56 +291,40 @@ class Storage:
             LIMIT 1
         """, user_id)
 
-    async def actx_username(self, username: str) -> dict:
-        """Fetch authentication context important stuff
-        given an username.
-
-        The authentication context (actx) is important
-        information of the user, only related to authentication
-        purposes.
-
-        With that set, actx only contains:
-         - username
-         - user id
-         - password hash
-
-        But doesn't contain anything else in regards to e.g
-        user settings.
+    async def auth_user_from_username(self, username: str) -> PartialAuthUser:
+        """Fetch a partial user (for authentication purposes), given
+        their username.
 
         Returns
         -------
-        dict
+        PartialAuthUser
+            Partial user data containing username, user id and password hash
         """
         user_id = await self.get_uid(username)
         if not user_id:
             log.warning('user not found')
-            return
+            return None
 
-        actx = await self.actx_userid(user_id)
-        if not actx:
+        partial = await self.auth_user_from_user_id(user_id)
+        if partial is None:
             log.warning('actx failed')
-            return
+            return None
 
-        actx.update({'user_id': user_id})
-        return check(actx)
+        partial.update({'user_id': user_id})
+        return ensure_non_null(partial)
 
-    async def actx_userid(self, user_id: str) -> dict:
-        """Fetch authentication-related information
-        given an user ID.
-
-        More information about the authentication context
-        is in Storage.actx_username.
-
-        Returns
-        -------
-        dict
-        """
+    async def auth_user_from_user_id(self, user_id: Union[str, int]) -> PartialAuthUser:
+        """TODO docstring"""
         ukey = prefix(user_id)
 
-        password_hash = await self.get(f'{ukey}:password_hash')
-        active = await self.get(f'{ukey}:active', bool)
+        # this gets and unwraps the value inside of them
+        pwd_hash_val = await self.get(f'{ukey}:password_hash')
+        password_hash = pwd_hash_val.value
 
-        if password_hash is None:
+        active_val = await self.get(f'{ukey}:active', bool)
+        active = active_val.value
+
+        if pwd_hash_val.flag in STORAGE_FLAG_NOT_FOUND:
             password_hash = await self.db.fetchval("""
             SELECT password_hash
             FROM users
@@ -300,11 +332,10 @@ class Storage:
             """, user_id)
 
             # keep this cached for 10 minutes
-            await self.set_with_ttl(f'{ukey}:password_hash',
-                                    password_hash,
-                                    600)
+            await self.set_with_ttl(
+                f'{ukey}:password_hash', password_hash, 600)
 
-        if active is None:
+        if active_val.flag in STORAGE_FLAG_NOT_FOUND:
             active = await self.db.fetchval("""
             SELECT active
             FROM users
@@ -314,12 +345,12 @@ class Storage:
             # keep this cached as well
             await self.set_with_ttl(f'{ukey}:active', active, 600)
 
-        return check({
+        return ensure_non_null({
             'password_hash': password_hash,
             'active': active,
         })
 
-    async def get_fspath(self, shortname: str, domain_id: int) -> str:
+    async def get_fspath(self, shortname: str, domain_id: int) -> Optional[str]:
         """Get the filesystem path of an image."""
         key = f'fspath:{domain_id}:{shortname}'
         return await self._generic_1(key, str, 600, """
@@ -331,7 +362,7 @@ class Storage:
             LIMIT 1
         """, shortname, domain_id)
 
-    async def get_urlredir(self, filename: str, domain_id: int) -> str:
+    async def get_urlredir(self, filename: str, domain_id: int) -> Optional[str]:
         """Get a redirection of an URL."""
         key = f'redir:{domain_id}:{filename}'
         return await self._generic_1(key, str, 600, """
@@ -342,15 +373,15 @@ class Storage:
             AND domain = $2
         """, filename, domain_id)
 
-    async def get_ipban(self, ip_address: str) -> str:
+    async def get_ipban(self, ip_address: str) -> Optional[str]:
         """Get the reason for a specific IP ban."""
         key = f'ipban:{ip_address}'
-        ban_reason = await self.get(key, str)
+        ban_reason_val = await self.get(key, str)
+        ban_reason = ban_reason_val.value
 
-        if ban_reason is False:
-            return
-
-        if ban_reason is None:
+        if ban_reason_val.flag == StorageFlag.PostgresNotFound:
+            return None
+        elif ban_reason_val.flag == StorageFlag.NotFound:
             row = await self.db.fetchrow("""
             SELECT reason, end_timestamp
             FROM ip_bans
@@ -371,15 +402,15 @@ class Storage:
 
         return ban_reason
 
-    async def get_ban(self, user_id: int) -> str:
+    async def get_ban(self, user_id: int) -> Optional[str]:
         """Get the ban reason for a specific user id."""
         key = f'userban:{user_id}'
-        ban_reason = await self.get(key, str)
+        ban_reason_val = await self.get(key, str)
+        ban_reason = ban_reason_val.value
 
-        if ban_reason is False:
-            return
-
-        if ban_reason is None:
+        if ban_reason.flag == StorageFlag.PostgresNotFound:
+            return None
+        elif ban_reason.flag == StorageFlag.NotFound:
             row = await self.db.fetchrow("""
             SELECT reason, end_timestamp
             FROM bans
@@ -400,11 +431,11 @@ class Storage:
 
         return ban_reason
 
-    async def get_domain_id(self, domain_name: str, err_flag=True) -> int:
+    async def get_domain_id(self, domain_name: str,
+                            err_flag: bool = True) -> Optional[int]:
         """Get a domain ID, given the domain.
 
-        The old function was common_auth.check_domain and was modified
-        so that it could account for our caching.
+        Raises NotFound if ``err_flag`` is true.
         """
 
         keys = solve_domain(domain_name, True)
@@ -415,8 +446,8 @@ class Storage:
             # as soon as we get a key that is valid,
             # return it
             if not isinstance(possible_id, bool) and \
-                    possible_id is not None:
-                return possible_id
+                    possible_id.flag == StorageFlag.Found:
+                return possible_id.value
 
         # if no keys solve to any domain,
         # query from db and set those keys
@@ -443,8 +474,8 @@ class Storage:
             await self.set_multi_one(keys, 'false')
 
             if err_flag:
-                raise NotFound('This domain does not exist in '
-                               'this elixire instance.')
+                raise NotFound(
+                    'This domain does not exist in this elixire instance.')
 
             return None
 
@@ -452,25 +483,23 @@ class Storage:
         await self.set(f'domain_id:{domain_name}', domain_id)
         return domain_id
 
-    async def get_domain_shorten(self, shortname: str) -> int:
+    async def get_domain_shorten(self, shortname: str) -> Optional[int]:
         """Get a domain ID for a shorten."""
-
         return await self.db.fetchval("""
         SELECT domain
         FROM shortens
         WHERE filename = $1
         """, shortname)
 
-    async def get_domain_file(self, shortname: str) -> int:
+    async def get_domain_file(self, shortname: str) -> Optional[int]:
         """Get a domain ID for a file."""
-
         return await self.db.fetchval("""
         SELECT domain
         FROM files
         WHERE filename = $1
         """, shortname)
 
-    async def get_file_mime(self, shortname: str) -> str:
+    async def get_file_mime(self, shortname: str) -> Optional[str]:
         """Get the File's mimetype stored on the database."""
 
         key = f'mime:{shortname}'

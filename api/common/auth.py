@@ -166,33 +166,27 @@ async def check_domain_id(domain_id: int, error_on_nodomain=True):
 
 
 async def login_user() -> dict:
-    """
-    Log in a user, given their username and password.
+    """Log in a user, given their username and password.
 
-    Returns a partial user row.
+    Returns a partial user dictionary.
     """
     payload = validate(await request.get_json(), LOGIN_SCHEMA)
+    username, password = payload['user'], payload['password']
 
-    # always treat usernames as all-lowercase
-    username = payload['user'].lower()
-    password = payload['password']
+    partial_user = await app.storage.auth_user_from_username(username)
 
-    # know more about actx over Storage.actx_username (api/storage.py)
-    user = await request.app.storage.actx_username(username)
-
-    if not user:
+    if partial_user is None:
         log.info(f'login: {username!r} does not exist')
         raise FailedAuth('User or password invalid')
 
-    await pwd_check(user['password_hash'], password)
+    await pwd_check(partial_user['password_hash'], password)
 
-    if not user['active']:
+    if not partial_user['active']:
         log.warning(f'login: {username!r} is not active')
         raise FailedAuth('User is deactivated')
 
-    await check_bans(request, user['user_id'])
-
-    return user
+    await check_bans(request, partial_user['user_id'])
+    return partial_user
 
 
 def _try_int(value: str):
