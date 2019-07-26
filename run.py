@@ -117,8 +117,6 @@ def set_blueprints(app_):
     #app_.blueprint(api.bp.register.bp)
     #app_.blueprint(api.bp.datadump.bp)
     #app_.blueprint(api.bp.personal_stats.bp)
-    #app_.blueprint(api.bp.d1check.bp)
-    #app_.blueprint(api.bp.misc.bp)
     #app_.blueprint(api.bp.frontend.bp)
     #app_.blueprint(api.bp.metrics.bp)
 
@@ -170,9 +168,7 @@ def handle_api_error(err: APIError):
     log.warning(f'API error: {err!r}')
 
     # api errors count as errors as well
-
-    # TODO counters on app instance
-    # current_app.counters.inc('error')
+    app.counters.inc('error')
 
     status_code = err.status_code
     res = {
