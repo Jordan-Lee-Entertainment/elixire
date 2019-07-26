@@ -9,7 +9,7 @@ elixi.re - schema data
 import re
 
 from cerberus import Validator
-from .errors import BadInput
+from api.errors import BadInput
 
 USERNAME_REGEX = re.compile(r'^[a-zA-Z0-9]{1}[a-zA-Z0-9_]{2,19}$', re.A)
 SUBDOMAIN_REGEX = re.compile(r'^([a-zA-Z0-9_][a-zA-Z0-9_-]{0,61}'
