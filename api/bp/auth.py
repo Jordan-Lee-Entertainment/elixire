@@ -2,7 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from starlette.routing import Route, Router
+from quart import Blueprint, jsonify
 
 from api.response import resp_empty
 from ..common import TokenType
@@ -10,6 +10,10 @@ from ..common.auth import login_user, gen_token, pwd_hash
 from ..schema import validate, REVOKE_SCHEMA
 
 
+bp = Blueprint(__name__, 'auth')
+
+
+@bp.route('/login', methods=['POST'])
 async def login_handler(request):
     """
     Login one user to the service
@@ -18,12 +22,12 @@ async def login_handler(request):
     returns a timed token
     """
     user = await login_user(request)
-
-    return response.json({
+    return jsonify({
         'token': gen_token(request.app, user, TokenType.TIMED),
     })
 
 
+@bp.route('/apikey', methods=['POST'])
 async def apikey_handler(request):
     """
     Generate an API key.
@@ -31,12 +35,12 @@ async def apikey_handler(request):
     Those types of tokens are non-timed.
     """
     user = await login_user(request)
-
-    return response.json({
+    return jsonify({
         'api_key': gen_token(request.app, user, TokenType.NONTIMED),
     })
 
 
+@bp.route('/revoke', methods=['POST'])
 async def revoke_handler(request):
     """
     Revoke all generated tokens.
@@ -62,10 +66,3 @@ async def revoke_handler(request):
     await request.app.storage.invalidate(user['user_id'], 'password_hash')
 
     return resp_empty()
-
-
-bp = Router([
-    Route('/login', endpoint=login_handler, methods=['POST']),
-    Route('/apikey', endpoint=apikey_handler, methods=['POST']),
-    Route('/revoke', endpoint=revoke_handler, methods=['POST']),
-])

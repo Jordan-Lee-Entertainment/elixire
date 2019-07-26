@@ -13,9 +13,7 @@ import aioredis
 # from sanic import response
 # from sanic_cors import CORS
 
-from starlette.applications import Starlette
-from starlette.responses import JSONResponse
-import uvicorn
+from quart import Quart
 
 from dns import resolver
 
@@ -48,7 +46,7 @@ from api.bp.admin.audit_log import AuditLog
 
 import config
 
-app = Starlette(debug=True)
+app = Quart(__name__)
 app.econfig = config
 
 # enable cors on api, images and shortens
@@ -77,8 +75,6 @@ log = logging.getLogger(__name__)
 
 
 def set_blueprints(app_):
-    app.mount('/api', api.bp.auth.bp)
-
     # load blueprints
     #app_.blueprint(api.bp.ratelimit.bp)
     #app_.blueprint(api.bp.auth.bp)
@@ -106,11 +102,7 @@ def set_blueprints(app_):
 
     ## meme blueprint
     #app_.blueprint(api.bp.wpadmin.bp)
-
-
-async def options_handler(request, *args, **kwargs):
-    """Dummy OPTIONS handler for CORS stuff."""
-    return response.text('ok')
+    pass
 
 
 async def _handle_ban(request, reason: str):
@@ -296,16 +288,3 @@ async def close_db(rapp, _loop):
 # we set blueprints globally
 # and after every listener is declared.
 set_blueprints(app)
-
-
-def main():
-    """Main application entry point."""
-    # app.static('/humans.txt', './static/humans.txt')
-    # app.static('/robots.txt', './static/robots.txt')
-
-    # app.run(host=config.HOST, port=config.PORT)
-    uvicorn.run(app, host=config.HOST, port=config.PORT)
-
-
-if __name__ == '__main__':
-    main()
