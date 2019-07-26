@@ -5,9 +5,9 @@
 from quart import Blueprint, jsonify
 
 from api.response import resp_empty
-from ..common import TokenType
-from ..common.auth import login_user, gen_token, pwd_hash
-from ..schema import validate, REVOKE_SCHEMA
+from api.common import TokenType
+from api.common.auth import login_user, gen_token, pwd_hash
+from api.schema import validate, REVOKE_SCHEMA
 
 
 bp = Blueprint(__name__, 'auth')
@@ -21,9 +21,9 @@ async def login_handler(request):
 
     returns a timed token
     """
-    user = await login_user(request)
+    user = await login_user()
     return jsonify({
-        'token': gen_token(request.app, user, TokenType.TIMED),
+        'token': gen_token(user, TokenType.TIMED),
     })
 
 
