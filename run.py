@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
+import asyncio
 
 import asyncpg
 import aiohttp
@@ -13,7 +14,7 @@ import aioredis
 # from sanic import response
 # from sanic_cors import CORS
 
-from quart import Quart
+from quart import Quart, jsonify
 
 from dns import resolver
 
@@ -74,10 +75,31 @@ if level == 'DEBUG':
 log = logging.getLogger(__name__)
 
 
+def make_app() -> Quart:
+    """Make a Quart instance."""
+    app = Quart(__name__)
+    # TODO config
+    return app
+
+
 def set_blueprints(app_):
+    """Set the blueprints on the app."""
     # load blueprints
+
+    blueprints = {
+            api.bp.auth.bp: ''
+    }
+
+    for blueprint, api_prefix in blueprints.items():
+        route_prefix = f'/api{api_prefix or ""}'
+
+        if api_prefix == -1:
+            route_prefix = ''
+
+        app_.register_blueprint(blueprint, url_prefix=route_prefix)
+
+    # TODO those are old sanic blueprints
     #app_.blueprint(api.bp.ratelimit.bp)
-    #app_.blueprint(api.bp.auth.bp)
     #app_.blueprint(api.bp.index.bp)
     #app_.blueprint(api.bp.profile.bp)
     #app_.blueprint(api.bp.upload.bp)
@@ -102,9 +124,13 @@ def set_blueprints(app_):
 
     ## meme blueprint
     #app_.blueprint(api.bp.wpadmin.bp)
-    pass
+
+# blueprints are set at the end of the file after declaration of the main
+# handlers
+app = make_app()
 
 
+# TODO move those functions to their own things under api/
 async def _handle_ban(request, reason: str):
     rapp = request.app
 
@@ -157,6 +183,8 @@ async def handle_ban(request, exception):
     }
 
     res.update(exception.get_payload())
+
+    # TODO this is jsonify()
     resp = response.json(res, status=scode)
 
     if ban_lock.locked():
@@ -174,27 +202,29 @@ async def handle_ban(request, exception):
     return resp
 
 
-# @app.exception(APIError)
-def handle_api_error(request, exception):
+@app.errorhandler(APIError)
+def handle_api_error(err: APIError):
     """Handle any kind of application-level raised error."""
-    log.warning(f'API error: {exception!r}')
+    log.warning(f'API error: {err!r}')
 
     # api errors count as errors as well
-    request.app.counters.inc('error')
 
-    scode = exception.status_code
+    # TODO counters on app instance
+    # current_app.counters.inc('error')
+
+    status_code = err.status_code
     res = {
         'error': True,
-        'code': scode,
-        'message': exception.args[0]
+        'code': status_code,
+        'message': err.args[0]
     }
 
-    res.update(exception.get_payload())
-    return response.json(res, status=scode)
+    res.update(err.get_payload())
+    return jsonify(res, status_code=status_code)
 
 
-# @app.exception(Exception)
-def handle_exception(request, exception):
+@app.errorhandler(500)
+def handle_exception(exception):
     """Handle any kind of exception."""
     status_code = 500
     url = request.path
@@ -204,6 +234,7 @@ def handle_exception(request, exception):
     except AttributeError:
         pass
 
+    # TODO maybe remove this code
     if isinstance(exception, (NotFound, FileNotFound, FileNotFoundError)):
         status_code = 404
         log.warning(f'File not found: {exception!r}')
@@ -227,38 +258,38 @@ def handle_exception(request, exception):
     if status_code == 500:
         request.app.counters.inc('error_ise')
 
-    return response.json({
+    return jsonify({
         'error': True,
         'message': repr(exception)
-    }, status=status_code)
+    }, status_code=status_code)
 
 
-# @app.listener('before_server_start')
-async def setup_db(rapp, loop):
-    """Initialize db connection before app start"""
-    rapp.sched = JobManager()
+@app.before_serving
+async def app_before_serving():
+    app.sched = JobManager()
+    app.loop = asyncio.get_event_loop()
 
-    rapp.session = aiohttp.ClientSession(loop=loop)
+    app.session = aiohttp.ClientSession(loop=app.loop)
 
     log.info('connecting to db')
-    rapp.db = await asyncpg.create_pool(**config.db)
+    app.db = await asyncpg.create_pool(**config.db)
 
     log.info('connecting to redis')
-    rapp.redis = await aioredis.create_redis_pool(
+    app.redis = await aioredis.create_redis_pool(
         config.redis,
         minsize=3, maxsize=11,
-        loop=loop, encoding='utf-8'
+        loop=app.loop, encoding='utf-8'
     )
 
-    rapp.storage = Storage(app)
-    rapp.locks = LockStorage()
+    app.storage = Storage(app)
+    app.locks = LockStorage()
 
     # keep an app-level resolver instead of instantiate
     # on every check_email call
-    rapp.resolv = resolver.Resolver()
+    app.resolv = resolver.Resolver()
 
     # metrics stuff
-    rapp.counters = MetricsCounters()
+    app.counters = MetricsCounters()
 
     # only give real AuditLog when we are on production
     # a MockAuditLog instance will be in that attribute
@@ -267,24 +298,23 @@ async def setup_db(rapp, loop):
     # TODO: maybe we can make a MockMetricsManager so that we
     # don't stress InfluxDB out while running the tests.
 
-    if not getattr(rapp, 'test', False):
-        rapp.audit_log = AuditLog(rapp)
+    # maybe move this to current_app too?
+    if not getattr(app, '_test', False):
+        app.audit_log = AuditLog(app)
 
 
-# @app.listener('after_server_stop')
-async def close_db(rapp, _loop):
+@app.after_serving
+async def close_db():
     """Close all database connections."""
     log.info('closing db')
-    await rapp.db.close()
+    await app.db.close()
 
     log.info('closing redis')
-    rapp.redis.close()
-    await rapp.redis.wait_closed()
+    app.redis.close()
+    await app.redis.wait_closed()
 
-    rapp.sched.stop()
-    await rapp.session.close()
+    app.sched.stop()
+    await app.session.close()
 
 
-# we set blueprints globally
-# and after every listener is declared.
 set_blueprints(app)
