@@ -14,7 +14,7 @@ import aioredis
 # from sanic import response
 # from sanic_cors import CORS
 
-from quart import Quart, jsonify
+from quart import Quart, jsonify, request
 
 from dns import resolver
 
@@ -131,9 +131,7 @@ app = make_app()
 
 
 # TODO move those functions to their own things under api/
-async def _handle_ban(request, reason: str):
-    rapp = request.app
-
+async def _handle_ban(reason: str):
     if 'ctx' not in request:
         # use the IP as banning point
         ip_addr = get_ip_addr(request)
@@ -163,29 +161,30 @@ async def _handle_ban(request, reason: str):
         await ban_webhook(rapp, user_id, reason, period)
 
 
-# @app.exception(Banned)
-async def handle_ban(request, exception):
+@app.errorhandler(Banned)
+async def handle_ban(err: Banned):
     """Handle the Banned exception being raised through a request.
 
     This takes care of inserting a user ban.
     """
-    scode = exception.status_code
-    reason = exception.args[0]
+    status_code = err.status_code
+    reason = err.args[0]
 
+    # TODO figure out request context
     lock_key = request['ctx'][0] if 'ctx' in request else get_ip_addr(request)
     ban_lock = app.locks['bans'][lock_key]
 
     # generate error message before anything
     res = {
         'error': True,
-        'code': scode,
+        'code': status_code,
         'message': reason,
     }
 
-    res.update(exception.get_payload())
+    res.update(err.get_payload())
 
     # TODO this is jsonify()
-    resp = response.json(res, status=scode)
+    resp = jsonify(res, status_code=status_code)
 
     if ban_lock.locked():
         log.warning('Ban lock already acquired.')
@@ -195,7 +194,7 @@ async def handle_ban(request, exception):
 
     try:
         # actual ban code is here
-        await _handle_ban(request, reason)
+        await _handle_ban(reason)
     finally:
         ban_lock.release()
 
