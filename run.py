@@ -178,7 +178,7 @@ def handle_api_error(err: APIError):
 def handle_exception(exception):
     """Handle any kind of exception."""
     status_code = 500
-    url = request.path
+    # url = request.path
 
     try:
         status_code = exception.status_code
