@@ -31,7 +31,7 @@ class FileNameType:
     SHORTEN = 1
 
 
-def get_ip_addr(request) -> str:
+def get_ip_addr() -> str:
     """Fetch the IP address for a request.
 
     Handles the cloudflare headers responsible to set

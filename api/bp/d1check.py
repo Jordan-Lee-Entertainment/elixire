@@ -32,7 +32,7 @@ async def d1_check():
     except InvalidToken:
         raise BadInput('Invalid ciphertext')
 
-    ipaddr = get_ip_addr(request)
+    ipaddr = get_ip_addr()
     data2 = f'{data},{ipaddr}'
 
     ciphertext_res = fernet.encrypt(data2.encode())
