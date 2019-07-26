@@ -87,6 +87,7 @@ def set_blueprints(app_):
     blueprints = {
         api.bp.auth.bp: '',
         api.bp.misc.bp: '',
+        api.bp.d1check.bp: '',
     }
 
     for blueprint, api_prefix in blueprints.items():
