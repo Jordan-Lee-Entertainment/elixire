@@ -7,6 +7,7 @@ elixi.re - common auth
     Common authentication-related functions.
 """
 import logging
+from typing import Tuple
 
 import bcrypt
 import itsdangerous
@@ -20,16 +21,17 @@ from .common import TokenType, check_bans, gen_filename
 log = logging.getLogger(__name__)
 
 
-async def gen_shortname(request, user_id: int, table: str = 'files') -> str:
+async def gen_shortname(user_id: int,
+                        table: str = 'files') -> Tuple[str, int]:
     """Generate a shortname for a file.
 
     Checks if the user is in paranoid mode.
     """
-    is_paranoid = await check_paranoid(request, user_id)
+    is_paranoid = await check_paranoid(user_id)
 
     # TODO config
-    shortname_len = 8 if is_paranoid else request.app.econfig.SHORTNAME_LEN
-    return await gen_filename(request, shortname_len, table)
+    shortname_len = 8 if is_paranoid else app.econfig.SHORTNAME_LEN
+    return await gen_filename(shortname_len, table)
 
 
 def get_token() -> str:
