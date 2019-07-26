@@ -184,11 +184,11 @@ async def handle_ban(err: Banned):
     res.update(err.get_payload())
 
     # TODO this is jsonify()
-    resp = jsonify(res, status_code=status_code)
+    resp = jsonify(res)
 
     if ban_lock.locked():
         log.warning('Ban lock already acquired.')
-        return resp
+        return resp, status_code
 
     await ban_lock.acquire()
 
@@ -198,7 +198,7 @@ async def handle_ban(err: Banned):
     finally:
         ban_lock.release()
 
-    return resp
+    return resp, status_code
 
 
 @app.errorhandler(APIError)
@@ -219,7 +219,7 @@ def handle_api_error(err: APIError):
     }
 
     res.update(err.get_payload())
-    return jsonify(res, status_code=status_code)
+    return jsonify(res), status_code
 
 
 @app.errorhandler(500)
@@ -234,23 +234,23 @@ def handle_exception(exception):
         pass
 
     # TODO maybe remove this code
-    if isinstance(exception, (NotFound, FileNotFound, FileNotFoundError)):
-        status_code = 404
-        log.warning(f'File not found: {exception!r}')
+    #if isinstance(exception, (NotFound, FileNotFound, FileNotFoundError)):
+    #    status_code = 404
+    #    log.warning(f'File not found: {exception!r}')
 
-        if request.app.econfig.ENABLE_FRONTEND:
-            # admin panel routes all 404's back to index (without a 404).
-            if url.startswith('/admin'):
-                return response.file(
-                    './admin-panel/build/index.html')
+    #    if request.app.econfig.ENABLE_FRONTEND:
+    #        # admin panel routes all 404's back to index (without a 404).
+    #        if url.startswith('/admin'):
+    #            return response.file(
+    #                './admin-panel/build/index.html')
 
-            # if we aren't on /api/, return elixire-fe's 404 page
-            if not url.startswith('/api'):
-                return response.file(
-                    './frontend/output/404.html',
-                    status=404)
-    else:
-        log.exception(f'Error in request: {exception!r}')
+    #        # if we aren't on /api/, return elixire-fe's 404 page
+    #        if not url.startswith('/api'):
+    #            return response.file(
+    #                './frontend/output/404.html',
+    #                status=404)
+    #else:
+    #    log.exception(f'Error in request: {exception!r}')
 
     request.app.counters.inc('error')
 
@@ -260,7 +260,7 @@ def handle_exception(exception):
     return jsonify({
         'error': True,
         'message': repr(exception)
-    }, status_code=status_code)
+    }), status_code
 
 
 @app.before_serving
