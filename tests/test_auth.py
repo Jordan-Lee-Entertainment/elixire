@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from .creds import USERNAME, PASSWORD
-from .common import token, username, login_normal
+from .common import token, username, login_normal, login_admin
+from .test_admin import _extract_uid
 
 
 async def test_login(test_cli):
@@ -16,6 +17,48 @@ async def test_login(test_cli):
     resp_json = await response.json()
     assert isinstance(resp_json, dict)
     assert isinstance(resp_json['token'], str)
+
+
+async def test_login_deactivated(test_cli):
+    # login using the hi user
+    hi_token = await login_normal(test_cli)
+    user_id = _extract_uid(hi_token)
+
+    # login admin to deactivate the account
+    admin_token = await login_admin(test_cli)
+
+    resp = await test_cli.post(f'/api/admin/deactivate/{user_id}', headers={
+        'Authorization': admin_token,
+    })
+
+    assert resp.status == 200
+
+    # "user is deactivated" when correct password provided
+    resp = await test_cli.post('/api/login', json={
+        'user': USERNAME,
+        'password': PASSWORD,
+    })
+
+    assert resp.status == 403
+    json = await resp.json()
+    assert json['message'] == 'User is deactivated'
+
+    # "user or password invalid" when incorrect password provided
+    resp = await test_cli.post('/api/login', json={
+        'user': USERNAME,
+        'password': 'notthepassword',
+    })
+
+    assert resp.status == 403
+    json = await resp.json()
+    assert json['message'] == 'User or password invalid'
+
+    # reactivate user
+    resp = await test_cli.post(f'/api/admin/activate/{user_id}', headers={
+        'Authorization': admin_token,
+    })
+
+    assert resp.status == 200
 
 
 async def test_login_badinput(test_cli):
