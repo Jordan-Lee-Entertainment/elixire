@@ -45,6 +45,7 @@ from api.jobs import JobManager
 from api.bp.metrics.counters import MetricsCounters
 from api.bp.admin.audit_log import AuditLog
 from api.common.banning import ban_request
+from api.bp.ratelimit
 
 import config
 
@@ -261,6 +262,5 @@ async def close_db():
 
     app.sched.stop()
     await app.session.close()
-
 
 set_blueprints(app)

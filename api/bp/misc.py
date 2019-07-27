@@ -5,7 +5,7 @@
 from quart import Blueprint, jsonify, current_app as app
 from api.version import VERSION, API_VERSION
 
-bp = Blueprint(__name__, "misc")
+bp = Blueprint("misc", __name__)
 
 
 def _make_feature_list(cfg):
@@ -24,7 +24,7 @@ def _make_feature_list(cfg):
 
 
 @bp.route("/hello")
-async def hello_route():
+async def hello():
     """Give basic information about the instance."""
     cfg = app.econfig
 

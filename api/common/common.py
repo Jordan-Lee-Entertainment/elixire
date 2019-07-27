@@ -319,7 +319,7 @@ async def check_bans(user_id: int):
         if reason:
             raise FailedAuth(f"User is banned. {reason}")
 
-    ip_addr = get_ip_addr(request)
+    ip_addr = get_ip_addr()
     ip_ban_reason = await app.storage.get_ipban(ip_addr)
     if ip_ban_reason:
         raise FailedAuth(f"IP address is banned. {ip_ban_reason}")

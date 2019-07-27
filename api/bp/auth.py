@@ -10,7 +10,7 @@ from api.common.auth import login_user, gen_token, pwd_hash
 from api.schema import validate, REVOKE_SCHEMA
 
 
-bp = Blueprint(__name__, "auth")
+bp = Blueprint("auth", __name__)
 
 
 @bp.route("/login", methods=["POST"])

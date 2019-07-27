@@ -2,34 +2,34 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-"""
-elixi.re - ratelimit blueprint
-"""
-from sanic import Blueprint
-from ..ratelimit import RatelimitManager
-from ..errors import Ratelimited, Banned
-from ..common import check_bans, get_ip_addr
-from ..common.auth import token_check, get_token
+from quart import Blueprint, request, current_app as app, jsonify
+from api.ratelimit import RatelimitManager
+from api.errors import Ratelimited, Banned
+from api.common import check_bans, get_ip_addr
+from api.common.auth import token_check, get_token
 
-bp = Blueprint("ratelimit")
+bp = Blueprint("ratelimit", __name__)
+
+# force ip based ratelimiting on those rules.
+FORCE_IP = (
+    "auth.login_handler",
+    "auth.apikey_handler",
+    "auth.revoke_handler",
+    "misc.hello",
+)
 
 
-FORCE_IP = ("/api/login", "/api/apikey", "/api/revoke", "/api/hello")
-
-
-def check_rtl(request, bucket):
+def check_rtl(bucket):
     """Check the ratelimit bucket."""
     retry_after = bucket.update_rate_limit()
-    if bucket.retries > request.app.econfig.RL_THRESHOLD:
+    if bucket.retries > app.econfig.RL_THRESHOLD:
         raise Banned("Reached retry limit on ratelimiting.")
 
     if retry_after:
         raise Ratelimited("You are being ratelimited.", retry_after)
 
 
-async def finish_ratelimit(
-    request, best_rtl, bucket_key, do_ban_checking: bool = False
-):
+async def finish_ratelimit(best_rtl, bucket_key, do_ban_checking: bool = False):
     """Finish the ratelimiting operation.
         - getting the bucket, setting it as _ratelimit_bucket
         - checking ban info (only when required)
@@ -48,25 +48,39 @@ async def finish_ratelimit(
 
         # calling check_bans from here without any flags up
         # would be a waste of redis calls.
-        await check_bans(request, None)
 
-    return check_rtl(request, bucket)
+        # TODO refactor
+        await check_bans(request)
+
+    return check_rtl(bucket)
 
 
-@bp.middleware("request")
-async def ratelimit_handler(request):
-    """Ratelimit handler."""
-    # ignore any OPTIONS
+@bp.before_app_request
+async def ratelimit_handler():
     if request.method == "OPTIONS":
         return
 
-    app = request.app
+    rule = request.url_rule
+
+    if rule is None:
+        # if no rule is found, then we should assume a global ratelimit
+        pass
+
+    pass
+
+
+# @bp.before_app_request
+async def _ratelimit_handler():
+    """Ratelimit handler."""
+    # TODO rewrite this
+    if request.method == "OPTIONS":
+        return
 
     # list of preferred ratelimit buckets
     preferred = []
 
     try:
-        token = get_token(request)
+        token = get_token()
     except KeyError:
         token = False
 
@@ -117,19 +131,19 @@ async def ratelimit_handler(request):
     # from the best ratelimiter, acquire the bucket
     # (which is based on IP or user ID)
     if preferred_scope == "ip":
-        ip_address = get_ip_addr(request)
-        return await finish_ratelimit(request, best_rtl, ip_address, True)
+        ip_address = get_ip_addr()
+        return await finish_ratelimit(best_rtl, ip_address, True)
 
     # user-based ratelimiting from now on
-    user_id = await token_check(request)
+    user_id = await token_check()
     username = await app.storage.get_username(user_id)
 
     request["ctx"] = (username, user_id)
-    return await finish_ratelimit(request, best_rtl, username)
+    return await finish_ratelimit(best_rtl, username)
 
 
-@bp.middleware("response")
-async def rl_header_set(request, resp):
+@bp.after_app_request
+async def rl_header_set(response):
     """Set ratelimit headers when possible!"""
     if request.method == "OPTIONS":
         return
@@ -141,23 +155,23 @@ async def rl_header_set(request, resp):
         return
 
     try:
-        resp.headers["X-Ratelimit-Scope"] = request["_ratelimit_scope"]
+        response.headers["X-Ratelimit-Scope"] = request["_ratelimit_scope"]
     except KeyError:
         pass
 
     try:
-        resp.headers["X-Ratelimit-Path"] = request["_ratelimit_path"]
+        response.headers["X-Ratelimit-Path"] = request["_ratelimit_path"]
     except KeyError:
         pass
 
     if bucket:
-        resp.headers["X-RateLimit-Limit"] = bucket.requests
-        resp.headers["X-RateLimit-Remaining"] = bucket._tokens
-        resp.headers["X-RateLimit-Reset"] = bucket._window + bucket.second
+        response.headers["X-RateLimit-Limit"] = bucket.requests
+        response.headers["X-RateLimit-Remaining"] = bucket._tokens
+        response.headers["X-RateLimit-Reset"] = bucket._window + bucket.second
 
 
-@bp.listener("before_server_start")
-async def start_ratelimiters(app, _loop):
+@bp.before_app_serving
+async def _start_ratelimiters():
     rtls = app.econfig.RATELIMITS
     app.ratelimits = {}
 
