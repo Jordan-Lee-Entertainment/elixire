@@ -217,28 +217,11 @@ EXIF_TOOBIG_WEBHOOK = ""
 USER_REGISTER_WEBHOOK = ""
 
 # === RATELIMIT SETTINGS ===
-#
+
 RATELIMITS = {
-    # global ratelimit for authenticated connections
-    '/': {
-        'requests': 7,
-        'second': 5
-    },
-    ('ip', '/'): {
-        'filter': 'ip',
-        'requests': 15,
-        'second': 5
-    },
-    '/i/': {
-        'filter': 'ip',
-        'requests': 50,
-        'second': 6
-    },
-    '/t/': {
-        'filter': 'ip',
-        'requests': 80,
-        'second': 10,
-    }
+    '*': (15, 5),
+    'fetch.file_handler': (50, 6),
+    'fetch.thumbnail_handler': (80, 10),
 }
 
 # === THUMBNAIL SETTINGS ===

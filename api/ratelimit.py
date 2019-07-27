@@ -15,9 +15,9 @@ log = logging.getLogger(__name__)
 class RatelimitBucket:
     """Main ratelimit bucket class."""
 
-    def __init__(self, **kwargs):
-        self.requests = int(kwargs.get("requests"))
-        self.second = kwargs.get("second")
+    def __init__(self, requests, second):
+        self.requests = int(requests)
+        self.second = int(second)
 
         self._window = 0.0
         self._tokens = self.requests
@@ -87,13 +87,12 @@ class RatelimitBucket:
 class RatelimitManager:
     """Manages buckets."""
 
-    def __init__(self, scope, ratelimit):
-        self.scope = scope
+    def __init__(self, *args):
         self._cache = {}
-        self._cooldown = RatelimitBucket(**ratelimit)
+        self._cooldown = RatelimitBucket(*args)
 
     def __repr__(self):
-        return f"<RatelimitManager scope={self.scope} " f"cooldown={self._cooldown}>"
+        return f"<RatelimitManager cooldown={self._cooldown}>"
 
     def _verify_cache(self):
         current = time.time()

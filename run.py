@@ -89,8 +89,12 @@ def set_blueprints(app_):
     """Set the blueprints on the app."""
     # load blueprints
 
-    # TODO ratelimit bp when its rewritten
-    blueprints = {api.bp.auth.bp: "", api.bp.misc.bp: "", api.bp.d1check.bp: ""}
+    blueprints = {
+        api.bp.ratelimit.bp: "",
+        api.bp.auth.bp: "",
+        api.bp.misc.bp: "",
+        api.bp.d1check.bp: "",
+    }
 
     for blueprint, api_prefix in blueprints.items():
         route_prefix = f'/api{api_prefix or ""}'
@@ -204,10 +208,10 @@ def handle_exception(exception):
     # else:
     #    log.exception(f'Error in request: {exception!r}')
 
-    request.app.counters.inc("error")
+    app.counters.inc("error")
 
     if status_code == 500:
-        request.app.counters.inc("error_ise")
+        app.counters.inc("error_ise")
 
     return jsonify({"error": True, "message": repr(exception)}), status_code
 
@@ -236,6 +240,8 @@ async def app_before_serving():
 
     # metrics stuff
     app.counters = MetricsCounters()
+
+    api.bp.ratelimit.setup_ratelimits()
 
     # only give real AuditLog when we are on production
     # a MockAuditLog instance will be in that attribute

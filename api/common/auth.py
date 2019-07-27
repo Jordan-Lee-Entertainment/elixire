@@ -40,8 +40,7 @@ def get_token() -> str:
     if it fails, will fetch from the Authorization header.
     """
     try:
-        # TODO is it really raw_args on quart
-        return request.raw_args["token"]
+        return request.args["token"]
     except KeyError:
         return request.headers["Authorization"]
 
@@ -236,7 +235,7 @@ async def token_check() -> int:
     performing proper validation depending on its type.
     """
     # TODO config
-    cfg = request.app.econfig
+    cfg = app.econfig
 
     try:
         token = get_token()
