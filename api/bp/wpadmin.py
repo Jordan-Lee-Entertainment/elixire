@@ -5,14 +5,11 @@
 # This blueprint contains routes for the sole purpose of being humorous.
 
 import datetime
-import logging
 import random
 
-from sanic import Blueprint
-from sanic import response
+from quart import Blueprint, redirect, jsonify
 
-bp = Blueprint("wpadmin")
-log = logging.getLogger(__name__)
+bp = Blueprint("wpadmin", __name__)
 
 WORLD_POWER_DEADLINE = datetime.date(2023, 7, 24)
 
@@ -29,36 +26,34 @@ memes = [
 ]
 
 
-@bp.get("ajaxproxy/proxy.php")
-@bp.get("bitrix/admin/index.php")
-@bp.get("magmi/web/magmi.php")
-@bp.get("wp-admin/admin-ajax.php")
-@bp.get("wp-admin/includes/themes.php")
-@bp.get("wp-admin/options-link.php")
-@bp.get("wp-admin/post-new.php")
-@bp.get("wp-login.php")
-@bp.get("xmlrpc.php")
-async def wpadmin(request):
+@bp.route("/ajaxproxy/proxy.php")
+@bp.route("/bitrix/admin/index.php")
+@bp.route("/magmi/web/magmi.php")
+@bp.route("/wp-admin/admin-ajax.php")
+@bp.route("/wp-admin/includes/themes.php")
+@bp.route("/wp-admin/options-link.php")
+@bp.route("/wp-admin/post-new.php")
+@bp.route("/wp-login.php")
+@bp.route("/xmlrpc.php")
+async def wpadmin():
     """Redirect bots to memes."""
-
     url = random.choice(memes)
+    return redirect(url)
 
-    return response.redirect(url)
 
-
-@bp.get("/api/science")
-async def science_route(request):
+@bp.route("/api/science")
+async def science_route():
     """*insert b4nzyblob*"""
-    return response.text("Hewoo! We'we nyot discowd we don't spy on nyou :3")
+    return "Hewoo! We'we nyot discowd we don't spy on nyou :3", 200
 
 
-@bp.get("/api/boron")
-async def ipek_yolu(request):
+@bp.route("/api/boron")
+async def ipek_yolu():
     """calculates days until 100th year anniversary of treaty of lausanne"""
     today = datetime.date.today()
     days_to_wp = (WORLD_POWER_DEADLINE - today).days
     is_world_power = days_to_wp <= 0
 
-    return response.json(
+    return jsonify(
         {"world_power": is_world_power, "days_until_world_power": days_to_wp}
     )

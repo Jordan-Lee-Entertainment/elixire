@@ -94,6 +94,7 @@ def set_blueprints(app_):
         api.bp.auth.bp: "",
         api.bp.misc.bp: "",
         api.bp.d1check.bp: "",
+        api.bp.wpadmin.bp: -1,
     }
 
     for blueprint, api_prefix in blueprints.items():
@@ -102,10 +103,10 @@ def set_blueprints(app_):
         if api_prefix == -1:
             route_prefix = ""
 
+        log.debug('loading blueprint %s', blueprint)
         app_.register_blueprint(blueprint, url_prefix=route_prefix)
 
     # TODO those are old sanic blueprints
-    # app_.blueprint(api.bp.ratelimit.bp)
     # app_.blueprint(api.bp.index.bp)
     # app_.blueprint(api.bp.profile.bp)
     # app_.blueprint(api.bp.upload.bp)
