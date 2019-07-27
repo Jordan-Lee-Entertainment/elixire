@@ -4,6 +4,7 @@
 
 import logging
 import asyncio
+from typing import Tuple
 
 import asyncpg
 import aiohttp
@@ -45,7 +46,6 @@ from api.jobs import JobManager
 from api.bp.metrics.counters import MetricsCounters
 from api.bp.admin.audit_log import AuditLog
 from api.common.banning import ban_request
-from api.bp.ratelimit
 
 import config
 
@@ -89,6 +89,7 @@ def set_blueprints(app_):
     """Set the blueprints on the app."""
     # load blueprints
 
+    # TODO ratelimit bp when its rewritten
     blueprints = {api.bp.auth.bp: "", api.bp.misc.bp: "", api.bp.d1check.bp: ""}
 
     for blueprint, api_prefix in blueprints.items():
@@ -130,10 +131,15 @@ def set_blueprints(app_):
 app = make_app()
 
 
+def _wrap_err_in_json(err: APIError) -> Tuple[dict, int]:
+    res = {"error": True, "message": err.args[0]}
+    res.update(err.get_payload())
+    return res, err.status_code
+
+
 @app.errorhandler(Banned)
 async def handle_ban(err: Banned):
     """Handle the Banned exception being raised."""
-    status_code = err.status_code
     reason = err.args[0]
 
     # we keep a lock since when we have a spam user client its best if we don't
@@ -144,20 +150,17 @@ async def handle_ban(err: Banned):
     lock_key = request["ctx"][0] if "ctx" in request else get_ip_addr()
     ban_lock = app.locks["bans"][lock_key]
 
-    # generate error message before anything
-    res = {"error": True, "code": status_code, "message": reason}
-
-    res.update(err.get_payload())
-    resp = jsonify(res)
+    # return value
+    ret_val = _wrap_err_in_json(err)
 
     if ban_lock.locked():
         log.warning("Ban lock already acquired.")
-        return resp, status_code
+        return ret_val
 
     async with ban_lock:
         await ban_request(reason)
 
-    return resp, status_code
+    return ret_val
 
 
 @app.errorhandler(APIError)
@@ -168,11 +171,7 @@ def handle_api_error(err: APIError):
     # api errors count as errors as well
     app.counters.inc("error")
 
-    status_code = err.status_code
-    res = {"error": True, "code": status_code, "message": err.args[0]}
-
-    res.update(err.get_payload())
-    return jsonify(res), status_code
+    return _wrap_err_in_json(err)
 
 
 @app.errorhandler(500)
@@ -262,5 +261,6 @@ async def close_db():
 
     app.sched.stop()
     await app.session.close()
+
 
 set_blueprints(app)
