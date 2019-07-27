@@ -93,6 +93,7 @@ def set_blueprints(app_):
         api.bp.ratelimit.bp: "",
         api.bp.auth.bp: "",
         api.bp.misc.bp: "",
+        api.bp.index.bp: "",
         api.bp.d1check.bp: "",
         api.bp.wpadmin.bp: -1,
     }
@@ -126,9 +127,6 @@ def set_blueprints(app_):
     # app_.blueprint(api.bp.personal_stats.bp)
     # app_.blueprint(api.bp.frontend.bp)
     # app_.blueprint(api.bp.metrics.bp)
-
-    ## meme blueprint
-    # app_.blueprint(api.bp.wpadmin.bp)
 
 
 # blueprints are set at the end of the file after declaration of the main
