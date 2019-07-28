@@ -246,11 +246,11 @@ async def token_check() -> int:
         raise FailedAuth("no token provided")
 
     # decrease calls to storage in half by checking context beforehand
-    # (request['ctx'] is set by the ratelimiter on api/bp/ratelimit.py)
+    # (request.ctx is set by the ratelimiter on api/bp/ratelimit.py)
     try:
-        _, uid = request["ctx"]
+        _, uid = request.ctx
         return uid
-    except KeyError:
+    except AttributeError:
         pass
 
     data = token.split(".")
