@@ -13,11 +13,16 @@ from api.errors import BadUpload
 
 class UploadFile:
     def __init__(self, data):
-        self.name: str = data.name
-        self.body = data.body
+        self.name: str = data.filename
+
+        # TODO this is inefficient as we load the
+        # entire file into memory.
+        self.body = data.stream.read()
+        data.stream.seek(0)
         self.size: int = len(self.body)
-        self.io = io.BytesIO(self.body)
-        self.mime: str = data.type
+        self.io = data.stream
+
+        self.mime: str = data.mimetype
 
         self.hash: Optional[str] = None
         self.path: Optional[Path] = None
@@ -47,19 +52,23 @@ class UploadFile:
         return file_size
 
     @classmethod
-    def from_request(cls, request):
+    async def from_request(cls, request):
         # get the first file in the request
+        files = await request.files
+
+        print(files)
+        print(await request.form)
+
         try:
-            key = next(iter(request.files.keys()))
+            key = next(iter(files.keys()))
         except StopIteration:
             raise BadUpload("No images given")
 
-        data = next(iter(request.files[key]))
-
-        return cls(data)
+        return cls(files[key])
 
     async def hash_file(self, app):
-        self.hash = await calculate_hash(app, io.BytesIO(self.body))
+        self.hash = await calculate_hash(app, self.io)
+        self.io.seek(0)
 
     async def resolve(self, app, extension):
         folder = app.econfig.IMAGE_FOLDER

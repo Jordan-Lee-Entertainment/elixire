@@ -89,15 +89,15 @@ def _fetch_domain() -> Tuple[Optional[int], Optional[str]]:
         given_domain = None
 
     try:
-        given_subdomain = str(request.raw_args["subdomain"])
+        given_subdomain = request.args["subdomain"]
     except KeyError:
         given_subdomain = None
 
     return given_domain, given_subdomain
 
 
-@bp.route("/api/upload", methods=["POST"])
-async def upload_handler(user_id):
+@bp.route("/upload", methods=["POST"])
+async def upload_handler():
     """Main upload handler."""
     user_id = await token_check()
 
@@ -112,7 +112,8 @@ async def upload_handler(user_id):
     if not do_checks:
         await check_admin(user_id, True)
 
-    file = UploadFile.from_request(request)
+    # TODO cleaner api with request contextvar
+    file = await UploadFile.from_request(request)
 
     # by default, assume the extension given in the filename
     # is the one we should use.

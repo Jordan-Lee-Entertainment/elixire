@@ -58,9 +58,6 @@ async def gen_filename(length=3, table="files", _curc=0) -> Tuple[str, int]:
 
     Parameters
     ----------
-    request: sanic.Request
-        So the function can call the database.
-
     length, optional: int
         Minimal amount of characters to use, default 3.
         Grows with the amount of failed generations.
@@ -90,7 +87,7 @@ async def gen_filename(length=3, table="files", _curc=0) -> Tuple[str, int]:
     for try_count in range(10):
         random_fname = _gen_fname(length)
 
-        filerow = await request.app.db.fetchrow(
+        filerow = await app.db.fetchrow(
             f"""
         SELECT {field}
         FROM {table}
