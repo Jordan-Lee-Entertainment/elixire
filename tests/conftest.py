@@ -12,13 +12,11 @@ from run import app, set_blueprints
 from .mock import MockAuditLog
 
 
-@pytest.fixture(name='app')
+@pytest.fixture(name="app")
 def app_fixture(event_loop):
     app._test = True
     app.loop = event_loop
-    app.econfig.RATELIMITS = {
-        '*': (10000, 1),
-    }
+    app.econfig.RATELIMITS = {"*": (10000, 1)}
 
     # use mock instances of some external services.
     app.audit_log = MockAuditLog()

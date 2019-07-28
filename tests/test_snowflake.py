@@ -4,10 +4,7 @@
 
 import time
 
-from api.snowflake import (
-    _snowflake as time_snowflake,
-    get_snowflake, snowflake_time
-)
+from api.snowflake import _snowflake as time_snowflake, get_snowflake, snowflake_time
 
 
 def test_snowflake_simple():
@@ -25,6 +22,7 @@ def test_snowflake_guarantee():
 
     assert tstamp == tstamp2
 
+
 def test_sflake_overflow():
     """Ensure snowflake library doesn't fall on a regression after
     generating ~4096 snowflakes."""
@@ -39,7 +37,7 @@ def test_sflake_overflow():
         delta = new_id - last_id
 
         if delta > 100000000:
-            raise RuntimeError('delta too great')
+            raise RuntimeError("delta too great")
 
         # update last_id to keep up
         last_id = new_id

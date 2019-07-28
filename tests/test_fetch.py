@@ -11,20 +11,20 @@ from .common import token, username, login_normal
 
 @pytest.mark.asyncio
 async def test_invalid_path(test_cli):
-    fmts = ['jpg', 'png', 'jpeg', 'gif']
-    invalid_shit = [f'{username()}.{random.choice(fmts)}' for _ in range(100)]
+    fmts = ["jpg", "png", "jpeg", "gif"]
+    invalid_shit = [f"{username()}.{random.choice(fmts)}" for _ in range(100)]
 
     for invalid in invalid_shit:
-        resp = await test_cli.get(f'/i/{invalid}')
+        resp = await test_cli.get(f"/i/{invalid}")
         assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_invalid_path_thumbnail(test_cli):
-    fmts = ['jpg', 'png', 'jpeg', 'gif']
-    invalid_shit = [f'{username()}.{random.choice(fmts)}' for _ in range(100)]
+    fmts = ["jpg", "png", "jpeg", "gif"]
+    invalid_shit = [f"{username()}.{random.choice(fmts)}" for _ in range(100)]
 
     for invalid in invalid_shit:
-        prefix = random.choice(['s', 't', 'l', 'm'])
-        resp = await test_cli.get(f'/t/{prefix}{invalid}')
+        prefix = random.choice(["s", "t", "l", "m"])
+        resp = await test_cli.get(f"/t/{prefix}{invalid}")
         assert resp.status_code == 404
