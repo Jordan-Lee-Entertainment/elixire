@@ -108,7 +108,7 @@ def set_blueprints(app_):
         if api_prefix == -1:
             route_prefix = ""
 
-        log.debug('loading blueprint %s', blueprint)
+        log.debug("loading blueprint %s", blueprint)
         app_.register_blueprint(blueprint, url_prefix=route_prefix)
 
     # TODO those are old sanic blueprints

@@ -590,7 +590,7 @@ Do not reply to this email specifically, it will not work.
     return jsonify({"success": resp.status == 200})
 
 
-@bp.route("/reset_password_confirm", methods=['POST'])
+@bp.route("/reset_password_confirm", methods=["POST"])
 async def password_reset_confirmation():
     """Handle the confirmation of a password reset."""
     payload = validate(await request.get_json(), PASSWORD_RESET_CONFIRM_SCHEMA)

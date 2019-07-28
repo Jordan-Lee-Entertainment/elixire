@@ -138,7 +138,7 @@ class Storage:
         StorageValue
         """
         # with await self.redis as conn:
-        log.error('loop: %r', self.app.loop)
+        log.error("loop: %r", self.app.loop)
         val = await self.redis.get(key)
 
         log.debug(f"get {key!r}, type {typ!r}, value {val!r}")

@@ -14,6 +14,7 @@ from api.common.auth import token_check
 bp = Blueprint("ratelimit", __name__)
 
 import logging
+
 log = logging.getLogger(__name__)
 
 # force ip based ratelimiting on those rules.
@@ -49,7 +50,9 @@ def _check_bucket(bucket: RatelimitBucket):
         raise Ratelimited("You are being rate limited.", retry_after)
 
 
-async def _handle_ratelimit(ratelimit: Optional[RatelimitManager], is_global: bool = False):
+async def _handle_ratelimit(
+    ratelimit: Optional[RatelimitManager], is_global: bool = False
+):
     try:
         _username, user_id = request.ctx
     except AttributeError:
@@ -58,7 +61,7 @@ async def _handle_ratelimit(ratelimit: Optional[RatelimitManager], is_global: bo
     if is_global:
         ctx = request.ratelimit_ctx
         ctx.bucket_global = True
-        ratelimit = app.ratelimits['*']
+        ratelimit = app.ratelimits["*"]
 
     if ratelimit is None:
         return
