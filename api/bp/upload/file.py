@@ -67,7 +67,7 @@ class UploadFile:
         return cls(files[key])
 
     async def hash_file(self, app):
-        self.hash = await calculate_hash(app, self.io)
+        self.hash = await calculate_hash(self.io)
         self.io.seek(0)
 
     async def resolve(self, app, extension):

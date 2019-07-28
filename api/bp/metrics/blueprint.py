@@ -5,16 +5,16 @@
 import logging
 import time
 
-from sanic import Blueprint
+from quart import Blueprint, request, current_app as app
 from api.bp.metrics.tasks import second_tasks, hourly_tasks, upload_uniq_task
 from api.bp.metrics.compactor import compact_task
 from api.bp.metrics.manager import MetricsManager
 
-bp = Blueprint("metrics")
+bp = Blueprint("metrics", __name__)
 log = logging.getLogger(__name__)
 
 
-async def is_consenting(app, user_id: int) -> bool:
+async def is_consenting(user_id: int) -> bool:
     """Return if a user consented to data processing."""
     return await app.db.fetchval(
         """
@@ -26,10 +26,9 @@ async def is_consenting(app, user_id: int) -> bool:
     )
 
 
-@bp.listener("before_server_start")
-async def create_db(app, loop):
+async def create_db():
     """Create InfluxDB database"""
-    app.metrics = MetricsManager(app, loop)
+    app.metrics = MetricsManager(app, app.loop)
 
     if not app.econfig.ENABLE_METRICS:
         return
@@ -40,8 +39,7 @@ async def create_db(app, loop):
     await app.metrics.influx.create_database(db=dbname)
 
 
-@bp.listener("after_server_start")
-async def start_tasks(app, _loop):
+def start_tasks():
     """Spawn various metric-related tasks."""
     if not app.econfig.ENABLE_METRICS:
         return
@@ -57,15 +55,12 @@ async def start_tasks(app, _loop):
     )
 
 
-@bp.listener("after_server_stop")
-async def close_worker(app, loop):
+async def close_worker():
     await app.metrics.stop()
 
 
-@bp.middleware("request")
-async def on_request(request):
-    app = request.app
-
+@bp.before_app_request
+async def on_request():
     if not app.econfig.ENABLE_METRICS:
         return
 
@@ -73,13 +68,11 @@ async def on_request(request):
     app.counters.inc("request")
 
     # so we can measure response latency
-    request["start_time"] = time.monotonic()
+    request.start_time = time.monotonic()
 
 
-@bp.middleware("response")
-async def on_response(request, response):
-    app = request.app
-
+@bp.after_app_request
+async def on_response(response):
     if not app.econfig.ENABLE_METRICS:
         return
 
@@ -89,10 +82,10 @@ async def on_response(request, response):
     try:
         # calculate latency to get a response, and submit that to influx
         # this field won't help in the case of network failure
-        latency = time.monotonic() - request["start_time"]
+        latency = time.monotonic() - request.start_time
 
         # submit the metric as milliseconds since it is more tangible in
         # normal scenarios
         await app.metrics.submit("response_latency", latency * 1000)
-    except KeyError:
+    except AttributeError:
         pass

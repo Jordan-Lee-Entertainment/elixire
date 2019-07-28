@@ -6,6 +6,8 @@ import asyncio
 
 import logging
 
+from quart.ctx import copy_current_app_context
+
 log = logging.getLogger(__name__)
 
 
@@ -64,7 +66,11 @@ class JobManager:
         every ``period`` seconds."""
         name = name or func.__name__
 
-        task = self.loop.create_task(self._wrapper_bg(name, func, args, period))
+        @copy_current_app_context
+        async def _ctx_wrapper_bg(*args, **kwargs):
+            await self._wrapper_bg(*args, **kwargs)
+
+        task = self.loop.create_task(_ctx_wrapper_bg(name, func, args, period))
 
         self.jobs[name] = task
         return task

@@ -37,6 +37,7 @@ import api.bp.misc
 import api.bp.index
 import api.bp.ratelimit
 import api.bp.frontend
+import api.bp.metrics.blueprint
 
 from api.errors import APIError, Banned
 from api.common import get_ip_addr
@@ -244,6 +245,8 @@ async def app_before_serving():
     app.counters = MetricsCounters()
 
     api.bp.ratelimit.setup_ratelimits()
+    await api.bp.metrics.blueprint.create_db()
+    api.bp.metrics.blueprint.start_tasks()
 
     # only give real AuditLog when we are on production
     # a MockAuditLog instance will be in that attribute
@@ -269,6 +272,7 @@ async def close_db():
 
     app.sched.stop()
     await app.session.close()
+    await api.bp.metrics.blueprint.close_worker()
 
 
 set_blueprints(app)
