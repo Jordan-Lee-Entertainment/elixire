@@ -8,42 +8,27 @@ import os
 
 sys.path.append(os.getcwd())
 
-from run import app as mainapp
+from run import make_app
 
 from .mock import MockAuditLog
 
 
-@pytest.yield_fixture
-def app():
-    app_ = mainapp
-    app_.test = True
-    app_.econfig.RATELIMITS = {
-        '/': {
-            'requests': 10000,
-            'second': 1
-        },
-        ('ip', '/'): {
-            'requests': 10000,
-            'second': 1
-        },
-        ('ip', '/i/'): {
-            'requests': 1000,
-            'second': 1
-        },
-        ('ip', '/t/'): {
-            'requests': 1000,
-            'second': 1,
-        }
+@pytest.fixture(name='app')
+def app_fixture(event_loop):
+    app = make_app()
+    app.test = True
+    app.econfig.RATELIMITS = {
+        '*': (10000, 1),
     }
 
-
     # use mock instances of some external services.
-    app_.audit_log = MockAuditLog()
+    app.audit_log = MockAuditLog()
 
-    yield app_
+    event_loop.run_until_complete(app.startup())
+    yield app
+    event_loop.run_until_complete(app.shutdown())
 
 
 @pytest.fixture
-def test_cli(loop, app, test_client):
-    return loop.run_until_complete(test_client(app))
-
+def test_cli(app):
+    return app.test_client()
