@@ -5,20 +5,22 @@
 import logging
 import pathlib
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
-from sanic import Blueprint, response
+from quart import Blueprint, jsonify, current_app as app, request
 
 from api.common import get_domain_info, get_random_domain, transform_wildcard
-from api.common.auth import check_admin, gen_shortname
+from api.common.auth import check_admin, gen_shortname, token_check
 from api.decorators import auth_route
 from api.permissions import Permissions, domain_permissions
 from api.snowflake import get_snowflake
 from .context import UploadContext
 from .file import UploadFile
+
+# TODO move to api.common
 from ..metrics import is_consenting
 
-bp = Blueprint("upload")
+bp = Blueprint("upload", __name__)
 log = logging.getLogger(__name__)
 
 
@@ -30,7 +32,7 @@ def _construct_url(domain, shortname, extension):
 
 
 async def check_repeat(
-    app, fspath: str, extension: str, ctx: UploadContext
+    fspath: str, extension: str, ctx: UploadContext
 ) -> Optional[Dict[str, Any]]:
     # check which files have the same fspath (the same hash)
     files = await app.db.fetch(
@@ -70,7 +72,7 @@ async def check_repeat(
     }
 
 
-async def upload_metrics(app, ctx):
+async def upload_metrics(ctx):
     """Upload total time taken for procesisng to InfluxDB."""
     end = time.monotonic()
     metrics = app.metrics
@@ -79,11 +81,11 @@ async def upload_metrics(app, ctx):
     await metrics.submit("upload_latency", delta)
 
 
-def _fetch_domain(request):
+def _fetch_domain() -> Tuple[Optional[int], Optional[str]]:
     """Fetch domain information, if any"""
     try:
-        given_domain = int(request.raw_args["domain"])
-    except KeyError:
+        given_domain = int(request.args["domain"])
+    except (KeyError, ValueError):
         given_domain = None
 
     try:
@@ -94,22 +96,21 @@ def _fetch_domain(request):
     return given_domain, given_subdomain
 
 
-@bp.post("/api/upload")
-@auth_route
-async def upload_handler(request, user_id):
+@bp.route("/api/upload", methods=["POST"])
+async def upload_handler(user_id):
     """Main upload handler."""
-    app = request.app
+    user_id = await token_check()
 
     # if admin is set on request.args, we will # do an "admin upload", without
     # any checking for viruses, weekly limits, MIME, etc.
-    do_checks = not ("admin" in request.args and request.args["admin"])
-    random_domain = "random" in request.args and request.args["random"]
-    given_domain, given_subdomain = _fetch_domain(request)
+    do_checks = not bool(request.args.get("admin"))
+    random_domain = bool(request.args.get("random"))
+    given_domain, given_subdomain = _fetch_domain()
 
     # if the user is admin and they wanted an admin
     # upload, check if they're actually an admin
     if not do_checks:
-        await check_admin(request, user_id, True)
+        await check_admin(user_id, True)
 
     file = UploadFile.from_request(request)
 
@@ -122,7 +123,7 @@ async def upload_handler(request, user_id):
 
     # generate a filename so we can identify later when removing it
     # because of virus scanning.
-    shortname, tries = await gen_shortname(request, user_id)
+    shortname, tries = await gen_shortname(user_id)
     await app.metrics.submit("shortname_gen_tries", tries)
 
     # construct an upload context, which holds the file and other data about
@@ -152,10 +153,10 @@ async def upload_handler(request, user_id):
 
     # file already exists? let's just return the existing one
     if file.path.exists():
-        res = await check_repeat(app, file.raw_path, extension, ctx)
+        res = await check_repeat(file.raw_path, extension, ctx)
         if res is not None:
-            await upload_metrics(app, ctx)
-            return response.json(res)
+            await upload_metrics(ctx)
+            return jsonify(res)
 
     # at this point, we have to resolve the domain (and subdomain) that the file
     # will be placed on.
@@ -171,14 +172,12 @@ async def upload_handler(request, user_id):
     # account settings.
 
     # get the user's domain settings
-    user_domain_id, user_subdomain, user_domain = await get_domain_info(
-        request, user_id
-    )
+    user_domain_id, user_subdomain, user_domain = await get_domain_info(user_id)
 
     if random_domain:
         # let's get a random domain and pretend that it was specified in the
         # request (given_subdomain is that)
-        given_domain = await get_random_domain(app)
+        given_domain = await get_random_domain()
         domain_id = given_domain
         subdomain_name = given_subdomain
     else:
@@ -245,11 +244,11 @@ async def upload_handler(request, user_id):
         raw_file.write(buffer.getvalue())
 
     # upload file latency metrics
-    await upload_metrics(app, ctx)
+    await upload_metrics(ctx)
 
     instance_url = app.econfig.MAIN_URL
 
-    return response.json(
+    return jsonify(
         {
             "url": _construct_url(domain, shortname, extension),
             "shortname": shortname,
