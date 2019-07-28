@@ -5,11 +5,11 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from quart import Blueprint, request, current_app as app, jsonify
+from quart import Blueprint, request, current_app as app
 from api.ratelimit import RatelimitManager, RatelimitBucket
 from api.errors import Ratelimited, Banned, FailedAuth
-from api.common import check_bans, get_ip_addr
-from api.common.auth import token_check, get_token
+from api.common import get_ip_addr
+from api.common.auth import token_check
 
 bp = Blueprint("ratelimit", __name__)
 
@@ -53,7 +53,7 @@ async def _handle_ratelimit(ratelimit: Optional[RatelimitManager], is_global: bo
     try:
         _username, user_id = request.ctx
     except AttributeError:
-        user_id = request.remote_addr
+        user_id = get_ip_addr()
 
     if is_global:
         ctx = request.ratelimit_ctx
