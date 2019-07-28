@@ -73,7 +73,7 @@ async def test_delete_file(test_cli):
         'Authorization': utoken
     })
 
-    assert resp_del.status == 204
+    assert resp_del.status_code == 204
 
     await check_exists(test_cli, respjson['shortname'], utoken, True)
 
@@ -88,11 +88,11 @@ async def test_delete_nonexist(test_cli):
         'Authorization': utoken
     })
 
-    assert resp_del.status == 404
+    assert resp_del.status_code == 404
 
     # ensure sharex compatibility endpoint works too
     resp_del = await test_cli.get(f'/api/files/{rand_file}/delete', headers={
         'Authorization': utoken
     })
 
-    assert resp_del.status == 404
+    assert resp_del.status_code == 404

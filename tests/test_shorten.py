@@ -56,9 +56,9 @@ async def test_shorten_complete(test_cli):
         'Authorization': utoken,
     })
 
-    assert listdata.status == 200
+    assert listdata.status_code == 200
 
-    listdata = await listdata.json()
+    listdata = await listdata.json
 
     shortens = listdata['shortens']
     try:
