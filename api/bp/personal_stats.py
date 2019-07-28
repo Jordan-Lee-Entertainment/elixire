@@ -59,9 +59,7 @@ async def get_counts(conn, user_id: int) -> dict:
 async def personal_stats_handler():
     """Personal statistics for users."""
     user_id = await token_check()
-    val = await get_counts(app.db, user_id)
-    print(val)
-    return jsonify(val)
+    return jsonify(await get_counts(app.db, user_id))
 
 
 @bp.route("/my_domains")
