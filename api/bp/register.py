@@ -11,19 +11,19 @@ This also includes routes like recovering username from email.
 import bcrypt
 import asyncpg
 
-from sanic import Blueprint, response
+from quart import Blueprint, current_app as app, request, jsonify
 from dns import resolver
 
-from ..snowflake import get_snowflake
-from ..errors import BadInput, FeatureDisabled
-from ..schema import validate, REGISTRATION_SCHEMA, RECOVER_USERNAME
-from ..common.email import send_email, fmt_email
-from ..common.webhook import register_webhook
+from api.snowflake import get_snowflake
+from api.errors import BadInput, FeatureDisabled
+from api.schema import validate, REGISTRATION_SCHEMA, RECOVER_USERNAME
+from api.common.email import send_email, fmt_email
+from api.common.webhook import register_webhook
 
-bp = Blueprint("register")
+bp = Blueprint("register", __name__)
 
 
-async def send_register_email(app, email: str) -> bool:
+async def send_register_email(email: str) -> bool:
     """Send an email about the signup."""
     _inst_name = app.econfig.INSTANCE_NAME
 
@@ -56,7 +56,7 @@ Do not reply to this email specifically, it will not work.
     return resp.status == 200
 
 
-async def check_email(app, loop, email: str):
+async def check_email(loop, email: str):
     """Check if a given email has an MX record.
 
     This does not check if the result of the MX record query
@@ -71,24 +71,24 @@ async def check_email(app, loop, email: str):
         raise BadInput("Email domain resolution failed" "(timeout or does not exist)")
 
 
-@bp.post("/api/register")
-async def register_user(request):
+@bp.route("/api/register", methods=["POST"])
+async def register_user():
     """Send an 'account registration request' to a certain
     discord webhook.
 
     Look into /api/admin/activate for registration acceptance.
     """
-    if not request.app.econfig.REGISTRATIONS_ENABLED:
+    if not app.econfig.REGISTRATIONS_ENABLED:
         raise FeatureDisabled("Registrations are currently disabled")
 
-    payload = validate(request.json, REGISTRATION_SCHEMA)
+    payload = validate(await request.get_json(), REGISTRATION_SCHEMA)
 
     username = payload["username"].lower()
     password = payload["password"]
     discord_user = payload["discord_user"]
     email = payload["email"]
 
-    await check_email(request.app, request.app.loop, email)
+    await check_email(app.loop, email)
 
     # borrowed from utils/adduser
     user_id = get_snowflake()
@@ -97,7 +97,7 @@ async def register_user(request):
     hashed = bcrypt.hashpw(_pwd, bcrypt.gensalt(14))
 
     try:
-        await request.app.db.execute(
+        await app.db.execute(
             """
         INSERT INTO users (user_id, username, password_hash, email, active)
         VALUES ($1, $2, $3, $4, false)
@@ -110,7 +110,7 @@ async def register_user(request):
     except asyncpg.exceptions.UniqueViolationError:
         raise BadInput("Username or email already exist.")
 
-    await request.app.db.execute(
+    await app.db.execute(
         """
     INSERT INTO limits (user_id) VALUES ($1)
     """,
@@ -119,19 +119,19 @@ async def register_user(request):
 
     # invalidate if anything happened before
     # just to make sure.
-    await request.app.storage.raw_invalidate(f"uid:{username}")
+    await app.storage.raw_invalidate(f"uid:{username}")
 
-    app = request.app
-
-    succ = await send_register_email(app, email)
+    # TODO email and webhook rewrite
+    succ = await send_register_email(email)
     succ_wb = await register_webhook(
         app, app.econfig.USER_REGISTER_WEBHOOK, user_id, username, discord_user, email
     )
 
-    return response.json({"success": succ and succ_wb})
+    # TODO return '', 204
+    return jsonify({"success": succ and succ_wb})
 
 
-async def send_recover_uname(app, uname: str, email: str):
+async def send_recover_uname(uname: str, email: str):
     email_body = fmt_email(
         app,
         """
@@ -150,11 +150,9 @@ Your username is {uname}.
     return resp.status == 200
 
 
-@bp.post("/api/recover_username")
-async def recover_username(request):
-    payload = validate(request.json, RECOVER_USERNAME)
-    app = request.app
-
+@bp.route("/api/recover_username", methods=["POST"])
+async def recover_username():
+    payload = validate(await request.get_json(), RECOVER_USERNAME)
     email = payload["email"]
 
     row = await app.db.fetchrow(
@@ -173,4 +171,5 @@ async def recover_username(request):
     # send email
     succ = await send_recover_uname(app, row["username"], row["email"])
 
-    return response.json({"success": succ})
+    # TODO '', 204
+    return jsonify({"success": succ})
