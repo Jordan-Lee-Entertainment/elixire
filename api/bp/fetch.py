@@ -5,26 +5,25 @@
 import logging
 import os
 import time
+from typing import Optional
 
-from sanic import Blueprint
-from sanic import response
+from quart import Blueprint, current_app as app, request, send_file
 
 from PIL import Image
 
-from ..errors import NotFound
+from api.errors import NotFound
 
-bp = Blueprint("fetch")
+bp = Blueprint("fetch", __name__)
 log = logging.getLogger(__name__)
 
 
-async def filecheck(request, filename):
+async def filecheck(filename):
     """Check if the given file exists on the domain."""
-    storage = request.app.storage
-    domain_id = await storage.get_domain_id(request.host)
+    domain_id = await app.storage.get_domain_id(request.host)
 
     shortname, ext = os.path.splitext(filename)
 
-    filepath = await storage.get_fspath(shortname, domain_id)
+    filepath = await app.storage.get_fspath(shortname, domain_id)
     if not filepath:
         raise NotFound("No files with this name on this domain.")
 
@@ -41,11 +40,16 @@ async def filecheck(request, filename):
     return filepath, shortname
 
 
-@bp.get("/i/<filename>")
-async def file_handler(request, filename):
+async def _send_file(fspath: str, mimetype: Optional[str] = None):
+    resp = await send_file(fspath, mimetype=mimetype)
+    resp.headers["content-security-policy"] = "sandbox; frame-src 'None'"
+    return resp
+
+
+@bp.route("/i/<filename>")
+async def file_handler(filename):
     """Handles file serves."""
-    app = request.app
-    filepath, shortname = await filecheck(request, filename)
+    filepath, shortname = await filecheck(filename)
 
     # fetch the file's mimetype from the database
     # which should be way more reliable than sanic
@@ -55,24 +59,20 @@ async def file_handler(request, filename):
     if mimetype == "text/plain":
         mimetype = "text/plain; charset=utf-8"
 
-    return await response.file_stream(
-        filepath,
-        headers={"Content-Security-Policy": "sandbox; frame-src 'none'"},
-        mime_type=mimetype,
-    )
+    return await _send_file(filepath, mimetype)
 
 
-@bp.get("/t/<filename>")
-async def thumbnail_handler(request, filename):
+@bp.route("/t/<filename>")
+async def thumbnail_handler(filename):
     """Handles thumbnail serves."""
-    appcfg = request.app.econfig
+    appcfg = app.econfig
     thumbtype, filename = filename[0], filename[1:]
-    fspath, _shortname = await filecheck(request, filename)
+    fspath, _shortname = await filecheck(filename)
 
     # if thumbnails are disabled, just return
     # the same file
     if not appcfg.THUMBNAILS:
-        return await response.file_stream(fspath)
+        return await _send_file(fspath)
 
     thb_folder = appcfg.THUMBNAIL_FOLDER
     thumbpath = os.path.join(thb_folder, f"{thumbtype}{filename}")
@@ -93,6 +93,4 @@ async def thumbnail_handler(request, filename):
 
     # yes, we are doing more I/O by using response.file
     # and not sending the bytes ourselves.
-    return await response.file_stream(
-        thumbpath, headers={"Content-Security-Policy": "sandbox; frame-src 'none'"}
-    )
+    return await _send_file(thumbpath)
