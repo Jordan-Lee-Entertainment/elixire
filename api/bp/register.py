@@ -11,7 +11,7 @@ This also includes routes like recovering username from email.
 import bcrypt
 import asyncpg
 
-from quart import Blueprint, current_app as app, request, jsonify
+from quart import Blueprint, current_app as app, jsonify
 from dns import resolver
 
 from api.snowflake import get_snowflake
