@@ -11,7 +11,6 @@ from quart import Blueprint, jsonify, current_app as app, request
 
 from api.common import get_domain_info, get_random_domain, transform_wildcard
 from api.common.auth import check_admin, gen_shortname, token_check
-from api.decorators import auth_route
 from api.permissions import Permissions, domain_permissions
 from api.snowflake import get_snowflake
 from .context import UploadContext

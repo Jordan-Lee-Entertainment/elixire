@@ -8,7 +8,7 @@ import os
 
 sys.path.append(os.getcwd())
 
-from run import app, set_blueprints
+from run import app
 from .mock import MockAuditLog
 
 

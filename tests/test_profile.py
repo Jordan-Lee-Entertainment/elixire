@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-import aiohttp
 from .creds import USERNAME, PASSWORD
 from .common import token, username, email, login_normal
 

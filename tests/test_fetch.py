@@ -3,10 +3,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-import secrets
 import random
 
-from .common import token, username, login_normal
+from .common import username
 
 
 @pytest.mark.asyncio

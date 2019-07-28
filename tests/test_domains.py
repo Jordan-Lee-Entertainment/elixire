@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .common import token, username, login_normal, login_admin
+from .common import login_normal, login_admin
 
 
 async def assert_domains(resp):
