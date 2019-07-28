@@ -4,29 +4,29 @@
 
 import logging
 
-from sanic import Blueprint
-from sanic import response
+from quart import Blueprint, current_app as app, request, jsonify
 
-from api.decorators import auth_route
+from api.common.auth import token_check
 from api.common.domain import get_domain_public
 
 
-bp = Blueprint("personal_stats")
+bp = Blueprint("personal_stats", __name__)
 log = logging.getLogger(__name__)
 
 
 async def _get_counts(conn, table: str, user_id: int, extra: str = "") -> int:
-    res = await conn.fetchval(
-        f"""
+    return (
+        await conn.fetchval(
+            f"""
     SELECT COUNT(*)
     FROM {table}
     WHERE uploader = $1
     {extra}
     """,
-        user_id,
+            user_id,
+        )
+        or 0
     )
-
-    return res or 0
 
 
 async def get_counts(conn, user_id: int) -> dict:
@@ -38,7 +38,7 @@ async def get_counts(conn, user_id: int) -> dict:
     total_bytes = (
         await conn.fetchval(
             """
-    SELECT SUM(file_size)
+    SELECT SUM(file_size)::bigint
     FROM files
     WHERE uploader = $1
     """,
@@ -55,19 +55,20 @@ async def get_counts(conn, user_id: int) -> dict:
     }
 
 
-@bp.get("/api/stats")
-@auth_route
-async def personal_stats_handler(request, user_id):
+@bp.route("")
+async def personal_stats_handler():
     """Personal statistics for users."""
+    user_id = await token_check()
+    val = await get_counts(app.db, user_id)
+    print(val)
+    return jsonify(val)
 
-    return response.json(await get_counts(request.app.db, user_id))
 
-
-@bp.get("/api/stats/my_domains")
-@auth_route
-async def personal_domain_stats(request, user_id):
+@bp.route("/my_domains")
+async def personal_domain_stats():
     """Fetch information about the domains you own."""
-    db = request.app.db
+    user_id = await token_check()
+    db = app.db
 
     domain_ids = await db.fetch(
         """
@@ -98,4 +99,4 @@ async def personal_domain_stats(request, user_id):
         public = await get_domain_public(db, domain_id)
         res[domain_id] = {"info": dinfo, "stats": public}
 
-    return response.json(res)
+    return jsonify(res)

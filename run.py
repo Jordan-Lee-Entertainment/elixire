@@ -98,6 +98,7 @@ def set_blueprints(app_):
         api.bp.profile.bp: "",
         api.bp.d1check.bp: "",
         api.bp.upload.bp: "",
+        api.bp.personal_stats.bp: "/stats",
         api.bp.fetch.bp: -1,
         api.bp.wpadmin.bp: -1,
     }
