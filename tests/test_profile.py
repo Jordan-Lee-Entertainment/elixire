@@ -2,11 +2,13 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import pytest
 import aiohttp
 from .creds import USERNAME, PASSWORD
 from .common import token, username, email, login_normal
 
 
+@pytest.mark.asyncio
 async def test_profile_work(test_cli):
     """Test the profile user, just getting data."""
     utoken = await login_normal(test_cli)
@@ -14,8 +16,8 @@ async def test_profile_work(test_cli):
         'Authorization': utoken
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
 
     assert isinstance(rjson['user_id'], str)
@@ -39,14 +41,15 @@ async def test_profile_work(test_cli):
     assert isinstance(dstatus['state'], str)
 
 
+@pytest.mark.asyncio
 async def test_limits_work(test_cli):
     utoken = await login_normal(test_cli)
     resp = await test_cli.get('/api/limits', headers={
         'Authorization': utoken
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
 
     assert isinstance(rjson['limit'], int)
@@ -58,6 +61,7 @@ async def test_limits_work(test_cli):
     assert rjson['shortenused'] <= rjson['shortenlimit']
 
 
+@pytest.mark.asyncio
 async def test_patch_profile(test_cli):
     utoken = await login_normal(test_cli)
 
@@ -67,8 +71,8 @@ async def test_patch_profile(test_cli):
         'Authorization': utoken
     })
 
-    assert profileresp.status == 200
-    profile = await profileresp.json()
+    assert profileresp.status_code == 200
+    profile = await profileresp.json
     assert isinstance(profile, dict)
 
     # request 2: updating profile
@@ -90,8 +94,8 @@ async def test_patch_profile(test_cli):
         'password': PASSWORD,
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     assert isinstance(rjson['updated_fields'], list)
@@ -111,8 +115,8 @@ async def test_patch_profile(test_cli):
         'password': PASSWORD,
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     assert isinstance(rjson['updated_fields'], list)
@@ -123,6 +127,7 @@ async def test_patch_profile(test_cli):
     assert 'paranoid' in rjson['updated_fields']
 
 
+@pytest.mark.asyncio
 async def test_profile_wrong_token(test_cli):
     """Test the profile route with wrong tokens."""
     for _ in range(50):
@@ -130,4 +135,4 @@ async def test_profile_wrong_token(test_cli):
             'Authorization': token()
         })
 
-        assert resp.status == 403
+        assert resp.status_code == 403

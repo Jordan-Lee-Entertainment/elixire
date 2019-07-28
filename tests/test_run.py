@@ -2,12 +2,14 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import pytest
 
+@pytest.mark.asyncio
 async def test_hello(test_cli):
     """Test basic route"""
     response = await test_cli.get('/api/hello')
-    assert response.status == 200
-    rjson = await response.json()
+    assert response.status_code == 200
+    rjson = await response.json
 
     assert isinstance(rjson['name'], str)
     assert isinstance(rjson['version'], str)

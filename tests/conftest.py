@@ -8,15 +8,14 @@ import os
 
 sys.path.append(os.getcwd())
 
-from run import make_app
-
+from run import app, set_blueprints
 from .mock import MockAuditLog
 
 
 @pytest.fixture(name='app')
 def app_fixture(event_loop):
-    app = make_app()
-    app.test = True
+    app._test = True
+    app.loop = event_loop
     app.econfig.RATELIMITS = {
         '*': (10000, 1),
     }

@@ -2,6 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import pytest
 from .common import login_normal, login_admin
 
 def _extract_uid(token) -> str:
@@ -13,6 +14,7 @@ def _extract_uid(token) -> str:
     return uid
 
 
+@pytest.mark.asyncio
 async def test_non_admin(test_cli):
     utoken = await login_normal(test_cli)
 
@@ -20,10 +22,11 @@ async def test_non_admin(test_cli):
         'Authorization': utoken,
     })
 
-    assert resp.status != 200
-    assert resp.status == 403
+    assert resp.status_code != 200
+    assert resp.status_code == 403
 
 
+@pytest.mark.asyncio
 async def test_admin(test_cli):
     utoken = await login_admin(test_cli)
 
@@ -31,13 +34,14 @@ async def test_admin(test_cli):
         'Authorization': utoken,
     })
 
-    assert resp.status == 200
-    data = await resp.json()
+    assert resp.status_code == 200
+    data = await resp.json
 
     assert isinstance(data, dict)
     assert data['admin']
 
 
+@pytest.mark.asyncio
 async def test_user_fetch(test_cli):
     atoken = await login_admin(test_cli)
     uid = _extract_uid(atoken)
@@ -46,8 +50,8 @@ async def test_user_fetch(test_cli):
         'Authorization': atoken
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     assert isinstance(rjson['user_id'], str)
@@ -69,8 +73,8 @@ async def test_user_fetch(test_cli):
             'Authorization': atoken
         })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     # just checking the id should work, as the response of
     # /by-username/ is the same as doing it by ID.
@@ -78,6 +82,7 @@ async def test_user_fetch(test_cli):
     assert rjson['user_id'] == user_id
 
 
+@pytest.mark.asyncio
 async def test_user_activate_cycle(test_cli):
     # logic here is to:
     # - deactivate user
@@ -94,15 +99,15 @@ async def test_user_activate_cycle(test_cli):
         'Authorization': atoken
     })
 
-    assert resp.status == 204
+    assert resp.status_code == 204
 
     # check profile for deactivation
     resp = await test_cli.get(f'/api/admin/users/{uid}', headers={
         'Authorization': atoken
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
     assert not rjson['active']
 
@@ -110,19 +115,20 @@ async def test_user_activate_cycle(test_cli):
     resp = await test_cli.post(f'/api/admin/activate/{uid}', headers={
         'Authorization': atoken
     })
-    assert resp.status == 204
+    assert resp.status_code == 204
 
     # check profile
     resp = await test_cli.get(f'/api/admin/users/{uid}', headers={
         'Authorization': atoken
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
     assert rjson['active']
 
 
+@pytest.mark.asyncio
 async def test_user_search(test_cli):
     """Test seaching of users."""
     # there isnt much other testing than calling the route
@@ -136,8 +142,8 @@ async def test_user_search(test_cli):
         'Authorization': atoken,
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     assert isinstance(rjson['results'], list)
@@ -148,6 +154,7 @@ async def test_user_search(test_cli):
     assert isinstance(pag['current'], int)
 
 
+@pytest.mark.asyncio
 async def test_domain_search(test_cli):
     token = await login_admin(test_cli)
 
@@ -165,9 +172,9 @@ async def test_domain_search(test_cli):
         'Authorization': token,
     })
 
-    assert resp.status == 200
+    assert resp.status_code == 200
 
-    json = await resp.json()
+    json = await resp.json
     assert_standard_response(json)
 
     # sample query
@@ -175,14 +182,15 @@ async def test_domain_search(test_cli):
         'Authorization': token,
     }, params={'query': 'elix'})
 
-    assert resp.status == 200
+    assert resp.status_code == 200
 
-    json = await resp.json()
+    json = await resp.json
     assert_standard_response(json)
 
     assert all('elix' in domain['info']['domain'] for domain in json['results'].values())
 
 
+@pytest.mark.asyncio
 async def test_domain_stats(test_cli):
     """Get instance-wide domain stats."""
     atoken = await login_admin(test_cli)
@@ -191,8 +199,8 @@ async def test_domain_stats(test_cli):
         'Authorization': atoken
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     # not the best data validation...
     assert isinstance(rjson, dict)
@@ -203,6 +211,7 @@ async def test_domain_stats(test_cli):
         assert isinstance(domain['public_stats'], dict)
 
 
+@pytest.mark.asyncio
 async def test_domain_patch(test_cli):
     """Test editing of a single domain."""
     atoken = await login_admin(test_cli)
@@ -220,8 +229,8 @@ async def test_domain_patch(test_cli):
         'Authorization': atoken
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
 
     fields = rjson['updated']
@@ -236,8 +245,8 @@ async def test_domain_patch(test_cli):
         'Authorization': atoken,
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     dinfo = rjson['info']
@@ -258,8 +267,8 @@ async def test_domain_patch(test_cli):
         'Authorization': atoken
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
 
     fields = rjson['updated']
@@ -274,8 +283,8 @@ async def test_domain_patch(test_cli):
         'Authorization': atoken,
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     dinfo = rjson['info']
@@ -286,6 +295,7 @@ async def test_domain_patch(test_cli):
     assert dinfo['permissions'] == 3
 
 
+@pytest.mark.asyncio
 async def test_user_patch(test_cli):
     atoken = await login_admin(test_cli)
     utoken = await login_normal(test_cli)
@@ -300,8 +310,8 @@ async def test_user_patch(test_cli):
         'Authorization': atoken,
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, list)
     assert 'upload_limit' in rjson
     assert 'shorten_limit' in rjson
@@ -311,8 +321,8 @@ async def test_user_patch(test_cli):
         'Authorization': atoken,
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
     assert isinstance(rjson['limits'], dict)
     assert rjson['limits']['limit'] == 1000
@@ -326,12 +336,13 @@ async def test_user_patch(test_cli):
         'Authorization': atoken,
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, list)
     assert 'upload_limit' in rjson
     assert 'shorten_limit' in rjson
 
+@pytest.mark.asyncio
 async def test_my_stats_as_admin(test_cli):
     """Test the personal domain stats route but as an admin."""
     utoken = await login_admin(test_cli)
@@ -340,9 +351,9 @@ async def test_my_stats_as_admin(test_cli):
         'Authorization': utoken,
     })
 
-    assert resp.status == 200
+    assert resp.status_code == 200
 
-    rjson = await resp.json()
+    rjson = await resp.json
     assert isinstance(rjson, dict)
 
     try:

@@ -1,17 +1,19 @@
 # elixire: Image Host software
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
-
+import pytest
 from .common import token, username, login_normal
 
+@pytest.mark.asyncio
 async def test_invalid_shorten(test_cli):
     invalid_shit = [f'{username()}' for _ in range(100)]
 
     for invalid in invalid_shit:
         resp = await test_cli.get(f'/s/{invalid}')
-        assert resp.status == 404
+        assert resp.status_code == 404
 
 
+@pytest.mark.asyncio
 async def test_shorten(test_cli):
     utoken = await login_normal(test_cli)
 
@@ -21,12 +23,13 @@ async def test_shorten(test_cli):
         'url': 'https://elixi.re'
     })
 
-    assert resp.status == 200
-    data = await resp.json()
+    assert resp.status_code == 200
+    data = await resp.json
     assert isinstance(data, dict)
     assert isinstance(data['url'], str)
 
 
+@pytest.mark.asyncio
 async def test_shorten_complete(test_cli):
     utoken = await login_normal(test_cli)
     url = 'https://elixi.re'
@@ -37,8 +40,8 @@ async def test_shorten_complete(test_cli):
         'url': url,
     })
 
-    assert resp.status == 200
-    data = await resp.json()
+    assert resp.status_code == 200
+    data = await resp.json
     assert isinstance(data, dict)
     assert isinstance(data['url'], str)
 
@@ -66,6 +69,7 @@ async def test_shorten_complete(test_cli):
 
     assert shorten['redirto'] == url
 
+@pytest.mark.asyncio
 async def test_shorten_wrong_scheme(test_cli):
     utoken = await login_normal(test_cli)
 
@@ -88,4 +92,4 @@ async def test_shorten_wrong_scheme(test_cli):
             'url': wrong_url,
         })
 
-        assert resp.status == 400
+        assert resp.status_code == 400

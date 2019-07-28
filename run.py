@@ -216,8 +216,11 @@ def handle_exception(exception):
 
 @app.before_serving
 async def app_before_serving():
+    try:
+        app.loop
+    except AttributeError:
+        app.loop = asyncio.get_event_loop()
     app.sched = JobManager()
-    app.loop = asyncio.get_event_loop()
 
     app.session = aiohttp.ClientSession(loop=app.loop)
 

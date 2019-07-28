@@ -2,6 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import pytest
 import aiohttp
 import secrets
 from .common import login_normal, png_data
@@ -13,8 +14,8 @@ async def check_exists(test_cli, shortname, utoken, not_exists=False):
         'Authorization': utoken,
     })
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson['files'], dict)
 
@@ -24,6 +25,7 @@ async def check_exists(test_cli, shortname, utoken, not_exists=False):
         assert shortname in rjson['files']
 
 
+@pytest.mark.asyncio
 async def test_upload_png(test_cli):
     """Test that the upload route works given test data"""
     utoken = await login_normal(test_cli)
@@ -37,14 +39,15 @@ async def test_upload_png(test_cli):
         'Authorization': utoken,
     }, data=data)
 
-    assert resp.status == 200
-    respjson = await resp.json()
+    assert resp.status_code == 200
+    respjson = await resp.json
     assert isinstance(respjson, dict)
     assert isinstance(respjson['url'], str)
     assert isinstance(respjson['delete_url'], str)
     await check_exists(test_cli, respjson['shortname'], utoken)
 
 
+@pytest.mark.asyncio
 async def test_delete_file(test_cli):
     utoken = await login_normal(test_cli)
     data = aiohttp.FormData()
@@ -57,8 +60,8 @@ async def test_delete_file(test_cli):
         'Authorization': utoken,
     }, data=data)
 
-    assert resp.status == 200
-    respjson = await resp.json()
+    assert resp.status_code == 200
+    respjson = await resp.json
     assert isinstance(respjson, dict)
     assert isinstance(respjson['url'], str)
     await check_exists(test_cli, respjson['shortname'], utoken)
@@ -75,6 +78,7 @@ async def test_delete_file(test_cli):
     await check_exists(test_cli, respjson['shortname'], utoken, True)
 
 
+@pytest.mark.asyncio
 async def test_delete_nonexist(test_cli):
     """Test deletions of files that don't exist."""
     utoken = await login_normal(test_cli)
