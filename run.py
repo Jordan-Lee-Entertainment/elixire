@@ -15,7 +15,7 @@ import aioredis
 # from sanic import response
 # from sanic_cors import CORS
 
-from quart import Quart, jsonify, request
+from quart import Quart, jsonify, request, send_file
 
 from dns import resolver
 
@@ -177,35 +177,30 @@ def handle_api_error(err: APIError):
     return _wrap_err_in_json(err)
 
 
+@app.errorhandler(FileNotFoundError)
+async def handle_notfound(_err):
+    """Give specific pages/behavior when reaching files that aren't found."""
+    has_frontend = app.econfig.ENABLE_FRONTEND
+
+    if has_frontend and request.path.startswith("/admin/"):
+        return await send_file("./admin-panel/build/index.html")
+    elif request.path.startswith("/api"):
+        return "Not Found", 404
+    elif has_frontend:
+        return (await send_file("./frontend/output/404.html")), 404
+
+    return "Not Found", 404
+
+
 @app.errorhandler(500)
 def handle_exception(exception):
     """Handle any kind of exception."""
     status_code = 500
-    # url = request.path
 
     try:
         status_code = exception.status_code
     except AttributeError:
         pass
-
-    # TODO maybe remove this code
-    # if isinstance(exception, (NotFound, FileNotFound, FileNotFoundError)):
-    #    status_code = 404
-    #    log.warning(f'File not found: {exception!r}')
-
-    #    if request.app.econfig.ENABLE_FRONTEND:
-    #        # admin panel routes all 404's back to index (without a 404).
-    #        if url.startswith('/admin'):
-    #            return response.file(
-    #                './admin-panel/build/index.html')
-
-    #        # if we aren't on /api/, return elixire-fe's 404 page
-    #        if not url.startswith('/api'):
-    #            return response.file(
-    #                './frontend/output/404.html',
-    #                status=404)
-    # else:
-    #    log.exception(f'Error in request: {exception!r}')
 
     app.counters.inc("error")
 
