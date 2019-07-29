@@ -5,44 +5,45 @@
 import os
 import logging
 
-from sanic import Blueprint
-from sanic import response
+from quart import Blueprint, jsonify, request, current_app as app
 
 from api.response import resp_empty
-from ..common import delete_file, delete_shorten
-from ..common.auth import token_check, password_check
-from ..decorators import auth_route
-from ..errors import BadInput
-from .profile import delete_file_task
+from api.common import delete_file, delete_shorten
+from api.common.auth import token_check, password_check
+from api.errors import BadInput
 
-bp = Blueprint("files")
+# TODO move to api.common.user or api.common.file or whatever
+from api.bp.profile import delete_file_task
+
+bp = Blueprint("files", __name__)
 log = logging.getLogger(__name__)
 
 
-async def domain_list(request):
+async def domain_list():
     """Returns a dictionary with domain IDs mapped to domain names"""
-    domain_info = await request.app.db.fetch(
-        """
+    return dict(
+        await app.db.fetch(
+            """
         SELECT domain_id, domain
         FROM domains
     """
+        )
     )
-    return dict(domain_info)
 
 
-@bp.get("/api/list")
-async def list_handler(request):
+@bp.route("/list")
+async def list_handler():
     """Get list of files."""
     # TODO: simplify this code
     try:
-        page = int(request.args["page"][0])
-    except (TypeError, ValueError, KeyError, IndexError):
+        page = int(request.args["page"])
+    except (ValueError, KeyError):
         raise BadInput("Page parameter needs to be supplied correctly.")
 
-    user_id = await token_check(request)
-    domains = await domain_list(request)
+    user_id = await token_check()
+    domains = await domain_list()
 
-    user_files = await request.app.db.fetch(
+    user_files = await app.db.fetch(
         """
     SELECT file_id, filename, file_size, fspath, domain, mimetype
     FROM files
@@ -57,7 +58,7 @@ async def list_handler(request):
         page,
     )
 
-    user_shortens = await request.app.db.fetch(
+    user_shortens = await app.db.fetch(
         """
     SELECT shorten_id, filename, redirto, domain
     FROM shortens
@@ -72,7 +73,7 @@ async def list_handler(request):
         page,
     )
 
-    use_https = request.app.econfig.USE_HTTPS
+    use_https = app.econfig.USE_HTTPS
     prefix = "https://" if use_https else "http://"
 
     filenames = {}
@@ -115,40 +116,48 @@ async def list_handler(request):
             "url": shorten_url,
         }
 
-    return response.json({"success": True, "files": filenames, "shortens": shortens})
+    return jsonify({"success": True, "files": filenames, "shortens": shortens})
 
 
-@bp.post("/api/delete_all")
-@auth_route
-async def delete_all(request, user_id):
+# TODO finish and rename to POST /api/files/delete_all
+@bp.route("/delete_all", methods=["POST"])
+async def delete_all():
     """Delete all files for the user"""
-    app = request.app
+    user_id = await token_check()
+
+    j = await request.get_json()
 
     try:
-        password = request.json["password"]
+        password = j["password"]
     except KeyError:
         raise BadInput("password not provided")
 
-    await password_check(request, user_id, password)
+    await password_check(user_id, password)
+
+    task_name = f"delete_files_{user_id}"
+    if app.sched.exists(task_name):
+        return (
+            jsonify({"error": True, "message": "background task already running"}),
+            409,
+        )
 
     # create task to delete all files in the background
-    app.sched.spawn(delete_file_task(app, user_id, False), f"delete_files_{user_id}")
+    app.sched.spawn(delete_file_task(user_id, False), task_name)
+    return "", 204
 
-    return resp_empty()
 
-
-@bp.delete("/api/files/<shortname>")
-@bp.get("/api/files/<shortname>/delete")
-@auth_route
-async def delete_single(request, user_id, shortname):
+@bp.route("/files/<shortname>", methods=["DELETE"])
+@bp.route("/files/<shortname>/delete", methods=["GET"])
+async def delete_single(shortname):
     """Delete a single file."""
-    await delete_file(request.app, shortname, user_id)
-    return resp_empty()
+    user_id = await token_check()
+    await delete_file(shortname, user_id)
+    return "", 204
 
 
-@bp.delete("/api/shortens/<shorten_name>")
-@auth_route
-async def shortendelete_handler(request, user_id, shorten_name):
+@bp.route("/shortens/<shorten_name>", methods=["DELETE"])
+async def shortendelete_handler(user_id, shorten_name):
     """Invalidate a shorten."""
-    await delete_shorten(request.app, shorten_name, user_id)
-    return resp_empty()
+    user_id = await token_check()
+    await delete_shorten(shorten_name, user_id)
+    return "", 204

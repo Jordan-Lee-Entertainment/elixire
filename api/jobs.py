@@ -56,7 +56,11 @@ class JobManager:
         """
         name = name or coro.__name__
 
-        task = self.loop.create_task(self._wrapper(name, coro))
+        @copy_current_app_context
+        async def _ctx_wrapper_bg():
+            await coro
+
+        task = self.loop.create_task(self._wrapper(name, _ctx_wrapper_bg()))
 
         self.jobs[name] = task
         return task

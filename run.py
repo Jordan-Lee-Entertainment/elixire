@@ -100,6 +100,7 @@ def set_blueprints(app_):
         api.bp.upload.bp: "",
         api.bp.personal_stats.bp: "/stats",
         api.bp.register.bp: "",
+        api.bp.files.bp: "",
         api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,
         api.bp.wpadmin.bp: -1,
@@ -115,7 +116,6 @@ def set_blueprints(app_):
         app_.register_blueprint(blueprint, url_prefix=route_prefix)
 
     # TODO those are old sanic blueprints
-    # app_.blueprint(api.bp.files.bp)
     # app_.blueprint(api.bp.shorten.bp)
 
     ## load admin blueprints
