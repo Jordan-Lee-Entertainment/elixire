@@ -100,6 +100,7 @@ def set_blueprints(app_):
         api.bp.upload.bp: "",
         api.bp.personal_stats.bp: "/stats",
         api.bp.register.bp: "",
+        api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,
         api.bp.wpadmin.bp: -1,
     }
@@ -125,9 +126,7 @@ def set_blueprints(app_):
     # app_.blueprint(api.bp.admin.settings_bp)
 
     # app_.blueprint(api.bp.datadump.bp)
-    # app_.blueprint(api.bp.personal_stats.bp)
     # app_.blueprint(api.bp.frontend.bp)
-    # app_.blueprint(api.bp.metrics.bp)
 
 
 # blueprints are set at the end of the file after declaration of the main
