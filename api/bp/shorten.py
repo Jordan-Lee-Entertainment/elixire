@@ -5,39 +5,40 @@
 import pathlib
 import urllib.parse
 
-from sanic import Blueprint
-from sanic import response
+from quart import Blueprint, jsonify, redirect, current_app as app, request
 
-from ..common.auth import gen_shortname, token_check, check_admin
-from ..errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
-from ..common import get_domain_info, transform_wildcard, FileNameType
-from ..snowflake import get_snowflake
-from ..permissions import Permissions, domain_permissions
+from api.common.auth import gen_shortname, token_check, check_admin
+from api.errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
+from api.common import get_domain_info, transform_wildcard, FileNameType
+from api.snowflake import get_snowflake
+from api.permissions import Permissions, domain_permissions
 
-bp = Blueprint("shorten")
+bp = Blueprint("shorten", __name__)
 
 
-@bp.get("/s/<filename>")
-async def shorten_serve_handler(request, filename):
+@bp.route("/s/<filename>")
+async def shorten_serve_handler(filename):
     """Handles serving of shortened links."""
-    storage = request.app.storage
+    storage = app.storage
+
+    # TODO check if request.host is the right one
     domain_id = await storage.get_domain_id(request.host)
     url_toredir = await storage.get_urlredir(filename, domain_id)
 
     if not url_toredir:
         raise NotFound("No shortened links found with this name " "on this domain.")
 
-    return response.redirect(url_toredir)
+    return redirect(url_toredir)
 
 
-@bp.post("/api/shorten")
-async def shorten_handler(request):
+@bp.route("/api/shorten", methods=["POST"])
+async def shorten_handler():
     """Handles addition of shortened links."""
-    user_id = await token_check(request)
-    app = request.app
+    user_id = await token_check()
 
     try:
-        url_toredir = str(request.json["url"])
+        j = await request.get_json()
+        url_toredir = str(j["url"])
         url_parsed = urllib.parse.urlparse(url_toredir)
     except (TypeError, ValueError):
         raise BadInput("Invalid URL")
@@ -48,10 +49,10 @@ async def shorten_handler(request):
             "Only https and http are allowed."
         )
 
-    if len(url_toredir) > request.app.econfig.MAX_SHORTEN_URL_LEN:
+    if len(url_toredir) > app.econfig.MAX_SHORTEN_URL_LEN:
         raise BadInput(
             f"Your URL is way too long ({len(url_toredir)} "
-            f"> {request.app.econfig.MAX_SHORTEN_URL_LEN})."
+            f"> {app.econfig.MAX_SHORTEN_URL_LEN})."
         )
 
     # Check if admin is set in get values, if not, do checks
@@ -61,14 +62,15 @@ async def shorten_handler(request):
     # Let's actually check if the user is an admin
     # and raise an error if they're not an admin
     if not do_checks:
-        await check_admin(request, user_id, True)
+        await check_admin(user_id, True)
 
     # Skip checks for admins
     if do_checks:
-        if not request.app.econfig.SHORTENS_ENABLED:
+        if not app.econfig.SHORTENS_ENABLED:
             raise FeatureDisabled("shortens are currently disabled")
 
-        shortens_used = await request.app.db.fetch(
+        # TODO quota calculations in full sql? is that possible?
+        shortens_used = await app.db.fetch(
             """
         SELECT shorten_id
         FROM shortens
@@ -80,7 +82,7 @@ async def shorten_handler(request):
 
         shortens_used = len(shortens_used)
 
-        shorten_limit = await request.app.db.fetchval(
+        shorten_limit = await app.db.fetchval(
             """
         SELECT shlimit
         FROM limits
@@ -99,21 +101,21 @@ async def shorten_handler(request):
                 "This shorten blows the weekly limit of" f" {shorten_limit} shortens"
             )
 
-    redir_rname, tries = await gen_shortname(request, user_id, "shortens")
+    redir_rname, tries = await gen_shortname(user_id, "shortens")
     await app.metrics.submit("shortname_gen_tries", tries)
 
     redir_id = get_snowflake()
     domain_id, subdomain_name, domain = await get_domain_info(
-        request, user_id, FileNameType.SHORTEN
+        user_id, FileNameType.SHORTEN
     )
 
-    await domain_permissions(request.app, domain_id, Permissions.SHORTEN)
+    await domain_permissions(app, domain_id, Permissions.SHORTEN)
     domain = transform_wildcard(domain, subdomain_name)
 
     # make sure cache doesn't fuck up
     await app.storage.raw_invalidate(f"redir:{domain_id}:{redir_rname}")
 
-    await request.app.db.execute(
+    await app.db.execute(
         """
     INSERT INTO shortens (shorten_id, filename,
         uploader, redirto, domain)
@@ -130,4 +132,4 @@ async def shorten_handler(request):
     dpath = pathlib.Path(domain)
     fpath = dpath / "s" / f"{redir_rname}"
 
-    return response.json({"url": f"https://{str(fpath)}"})
+    return jsonify({"url": f"https://{str(fpath)}"})
