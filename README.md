@@ -1,105 +1,165 @@
-Elixire
-==========
+# elixire
 
-```
-"elixirae is the futureae"
-  - lunae bunae genserv, 2018
-```
+> "elixirae is the futureae"
+>
+> — lunae bunae genserv, 2018
 
-Elixire is an open source image host solution.
+elixire is an open source image host and link shortener written in [Python].
 
-The first iteration of Elixire was written in PHP,
-then rewritten in Python and this is the main language
-we are working on.
+## Installation
 
-*(no, we won't write Elixir, read BACKEND.md for the reason)*
+### Requirements
 
-# Installation and Running
+- [Python] 3.7+
+- [PostgreSQL]
+- [Redis]
+- [Node.js] LTS
+  - [Yarn] and [npm]
 
-**Dockerfiles exist in this repository. Do not attempt to run them.
-(Merge Requests "fixing" them will be closed.)**
+[python]: https://www.python.org
+[postgresql]: https://www.postgresql.or
+[redis]: https://redis.io
+[node.js]: https://nodejs.org
+[yarn]: https://yarnpkg.com
+[npm]: https://npmjs.com
 
-Requirements:
- - Python 3.6+
- - PostgreSQL
- - Redis
- - A decent version of Node
+Optional, but useful:
 
-Optional requirements:
- - ClamAV, for virus scanning of uploads.
- - InfluxDB, for metrics (look into `docs/MANAGE.md` for more detail).
- - Mailgun, so that the instance becomes able to send emails to users.
- - Discord webhooks (so that the admins know when a malicious
-    file was uploaded, etc).
+- [ClamAV] for virus scanning uploads
+- [InfluxDB] for metrics (see [`docs/managing.md`](docs/managing.md) for more
+  details).
+- A [Mailgun] API key for sending emails
+- [Discord] webhooks for admin notifications
+
+[clamav]: https://www.clamav.net
+[influxdb]: https://www.influxdata.com
+[mailgun]: https://mailgun.com
+[discord]: https://discordapp.com
+
+Make sure you have everything you want installed before proceeding.
+
+### Installing
+
+Clone the [git] repository:
+
+[git]: https://git-scm.com
 
 ```bash
-git clone https://gitlab.com/elixire/elixire.git
-cd elixire
+git clone --recursive https://gitlab.com/elixire/elixire.git && cd elixire
+```
 
-# Download the current versions for frontend and admin-panel.
-git submodule init
-git submodule update
+Create some necessary directories:
 
-# You are able to use a virtual enviroment if you want.
+```bash
+mkdir -p images dumps thumbnails
+```
+
+Install [Python] dependencies using pip:
+
+```bash
+# You can use a virtual environment, too.
 python3.6 -m pip install -Ur requirements.txt
+```
 
-# make sure those folders exist
-mkdir images
-mkdir dumps
-mkdir thumbnails
+Create the [PostgreSQL] database if it doesn't already exist:
 
-# Please edit schema.sql before continuing.
-# Specially the "INSERT INTO domains" line.
-psql -U postgres -f schema.sql
+```bash
+createdb elixire
+```
 
-# Edit frontend/config.json and admin-panel/config.json
-# so they're pointing to your domain.
+Execute the schema using `psql`:
 
-# This sets up the folder structure in ./images for you.
-# Do not run 'cd utils/upgrade' then run the script.
+```bash
+# You want to edit schema.sql before continuing, specifically the "INSERT INTO
+# domains" line, unless your main domain is "elixi.re".
+$EDITOR schema.sql
+
+# Your username might be different.
+psql -U postgres -d elixire -f schema.sql
+```
+
+Setup the directory structure in `./images`:
+
+```bash
+# Make sure you are running this from the repository root.
 ./utils/upgrade/folder_sharding.py
+```
 
-# Update frontend and admin-panel repositories.
-# Use this makefile task to update your instance.
-make update
+Configure the admin panel and frontend:
 
-# Build the frontend and the admin-panel.
-make 
+```bash
+$EDITOR frontend/config.json
+$EDITOR admin-panel/config.json
+```
 
-# Read carefully over the configuration file
-# to enable/disable instance features (like registration and webhooks).
+More information on configuring can be found in the `README.md` file of each
+project:
+
+- [frontend readme](https://gitlab.com/elixire/frontend#readme)
+- [admin-panel readme](https://gitlab.com/elixire/admin-panel#readme)
+
+Build the frontend and admin panel (this requires [Yarn]):
+
+```bash
+make
+```
+
+Configure elixire itself using [`config.py.example`](./config.py.example) as a
+base:
+
+```bash
 cp config.py.example config.py
 
-# Run application, also works under external process managers.
+# Configure elixire to your liking.
+$EDITOR config.py
+```
+
+Run the app:
+
+```bash
 python3.6 run.py
 ```
 
-# Operator's Manual
+## Operator's Manual
 
-**TODO**
+The operator's manual is still under construction, but here's some important
+notes:
 
-Here's some important notes while this is still a todo:
+- If you're running elixire behind a reverse proxy (which you should be), make
+  sure to enable host forwarding:
 
-- If you're proxying the instance (you should), enable host forwarding [like this](https://old-s.ave.zone/fjt.png).
-- If you get an error saying something like "route already registered", then you forgot to build the frontend, either disable it or build the frontend. **You need a reasonably decent node version.**
-- Ensure that you redirect www to non-www or non-www to www or else the domain checking stuff won't be super happy (you'll not be able to fetch stuff properly).
+```conf
+location / {
+    proxy_set_header Host $host;
+    proxy_pass ...;
+}
+```
 
-## Tools
+- If you get an error saying something like "route already registered", then you
+  forgot to build the frontend. You can disable it in `config.py` or build it.
+- Ensure that you redirect www to non-www or non-www to www or else the domain
+  checking stuff won't be super happy (you'll not be able to fetch stuff
+  properly).
 
-Please look under the `docs/` directory for more complete tooling documentation.
+### Tools
 
-# API Documentation
+See [`docs/managing.md`](docs/managing.md) for more information on managing your
+elixire instance.
 
-[See this repo](https://gitlab.com/elixire/api-docs) for API Docs.
-Both the Client API and the Admin API are documented there.
+## API Documentation
 
-# Setting and running a test environment
+[See this repo](https://gitlab.com/elixire/api-docs) for the API documentation.
+Both the client and admin API are documented there.
 
-**NOTE: DO NOT RUN TESTS IN YOUR PRODUCTION ENVIRONMENT. AT ALL.**
+## Setting and running a test environment
 
-Install `tox` manually (the python package, not the messenger).
+⚠ **NOTE: NEVER RUN TESTS IN YOUR PRODUCTION ENVIRONMENT.**
 
-Create these users:
+Install [tox] manually (the [Python] package, not the messenger).
+
+[tox]: https://pypi.org/project/tox
+
+Create the testing users:
 
 ```bash
 ./manage.py adduser h@h.co hi hihihihi
@@ -108,36 +168,23 @@ Create these users:
 ./manage.py adduser q@q.co quotareached quotareached
 ```
 
-After creating the users, enter the PSQL Shell:
+Then, enter the [PostgreSQL] shell, `psql`, and run these queries:
 
-## Setting admin to actual admin
+```bash
+psql -U postgres -d elixire
+```
+
 ```sql
 UPDATE users
 SET admin = true
 WHERE username = 'admin';
-```
-
-## Fetch admin ID and setting it as owner
-```sql
-SELECT user_id
-FROM users
-WHERE username = 'admin';
-```
-
-```sql
--- repeat this operation for any domains
--- you added in your development environment
 
 INSERT INTO domain_owners (domain_id, user_id)
-VALUES (0, ADMIN_USER_ID_YOU_JUST_SEARCHED);
+VALUES (0, (SELECT user_id FROM users WHERE username = 'admin'));
 ```
 
-**Make sure to insert some big ratelimits to be able to run
-the test battery, 1000/1s should be enough for both user ratelimits
-and IP based ratelimits.**
+Then you can run the tests with [tox]:
 
-## Running
-Then, run the tests with tox.
 ```bash
 tox
 ```
