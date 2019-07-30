@@ -4,9 +4,10 @@
 
 import asyncpg
 
-from sanic import Blueprint, response
+from quart import Blueprint, current_app as app, request, jsonify
 
 from api.common import delete_file, delete_shorten
+from api.common.auth import token_check, check_admin
 from api.schema import validate, ADMIN_MODIFY_FILE
 from api.errors import BadInput, NotFound
 from api.decorators import admin_route
@@ -15,50 +16,54 @@ from api.bp.admin.audit_log_actions.object import ObjectEditAction, ObjectDelete
 
 from api.common.fetch import OBJ_MAPPING
 
-bp = Blueprint(__name__)
+bp = Blueprint("admin_object", __name__)
 
 
-async def _handler_object(request, obj_type: str, obj_fname: str) -> response:
+async def _handler_object(obj_type: str, obj_fname: str):
     """Handler for fetching files/shortens."""
     id_handler, obj_handler = OBJ_MAPPING[obj_type]
 
-    conn = request.app.db
+    conn = app.db
 
     obj_id = await id_handler(conn, obj_fname)
 
     if obj_id is None:
         raise NotFound("Object not found")
 
-    return response.json(await obj_handler(conn, obj_id))
+    return jsonify(await obj_handler(conn, obj_id))
 
 
-@bp.get("/api/admin/file/<shortname>")
-@admin_route
-async def get_file_by_name(request, _admin_id, shortname):
+@bp.route("/file/<shortname>")
+async def get_file_by_name(shortname: str):
     """Get a file's information by shortname."""
-    return await _handler_object(request, "file", shortname)
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    return await _handler_object("file", shortname)
 
 
-@bp.get("/api/admin/shorten/<shortname>")
-@admin_route
-async def get_shorten_by_name(request, _admin_id, shortname):
+@bp.route("/shorten/<shortname>")
+async def get_shorten_by_name(shortname: str):
     """Get a shorten's information by shortname."""
-    return await _handler_object(request, "shorten", shortname)
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    return await _handler_object("shorten", shortname)
 
 
-async def handle_modify(obj_type: str, request, obj_id: int) -> response:
+async def handle_modify(obj_type: str, obj_id: int):
     """Generic function to work with files OR shortens."""
     table = "files" if obj_type == "file" else "shortens"
     field = "file_id" if obj_type == "file" else "shorten_id"
 
-    payload = validate(request.json, ADMIN_MODIFY_FILE)
+    payload = validate(await request.get_json(), ADMIN_MODIFY_FILE)
 
     new_domain = payload.get("domain_id")
     new_shortname = payload.get("shortname")
 
     updated = []
 
-    row = await request.app.db.fetchrow(
+    row = await app.db.fetchrow(
         f"""
     SELECT filename, domain
     FROM {table}
@@ -72,7 +77,7 @@ async def handle_modify(obj_type: str, request, obj_id: int) -> response:
 
     if new_domain is not None:
         try:
-            await request.app.db.execute(
+            await app.db.execute(
                 f"""
             UPDATE {table}
             SET domain = $1
@@ -88,13 +93,13 @@ async def handle_modify(obj_type: str, request, obj_id: int) -> response:
         to_invalidate = "fspath" if obj_type == "file" else "redir"
         to_invalidate = f"{to_invalidate}:{old_domain}:{obj_name}"
 
-        await request.app.storage.raw_invalidate(to_invalidate)
+        await app.storage.raw_invalidate(to_invalidate)
         updated.append("domain")
 
     if new_shortname is not None:
         # Ignores deleted files, just sets the new filename
         try:
-            await request.app.db.execute(
+            await app.db.execute(
                 f"""
             UPDATE {table}
             SET filename = $1
@@ -107,38 +112,44 @@ async def handle_modify(obj_type: str, request, obj_id: int) -> response:
             raise BadInput("Shortname already exists.")
 
         # Invalidate both old and new
-        await request.app.storage.raw_invalidate(
+        await app.storage.raw_invalidate(
             *[f"fspath:{old_domain}:{obj_name}", f"fspath:{old_domain}:{new_shortname}"]
         )
 
         updated.append("shortname")
 
-    return response.json(updated)
+    # TODO move to {"updated": updated}
+    return jsonify(updated)
 
 
-@bp.patch("/api/admin/file/<file_id:int>")
-@admin_route
-async def modify_file(request, _admin_id, file_id):
+@bp.route("/file/<int:file_id>", methods=["PATCH"])
+async def modify_file(file_id: int):
     """Modify file information."""
+
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
 
     async with ObjectEditAction(request, file_id, "file"):
-        return await handle_modify("file", request, file_id)
+        return await handle_modify("file", file_id)
 
 
-@bp.patch("/api/admin/shorten/<shorten_id:int>")
-@admin_route
-async def modify_shorten(request, _admin_id, shorten_id):
+@bp.route("/shorten/<int:shorten_id>", methods=["PATCH"])
+async def modify_shorten(shorten_id: int):
     """Modify file information."""
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
 
     async with ObjectEditAction(request, shorten_id, "shorten"):
-        return await handle_modify("shorten", request, shorten_id)
+        return await handle_modify("shorten", shorten_id)
 
 
-@bp.delete("/api/admin/file/<file_id:int>")
-@admin_route
-async def delete_file_handler(request, _admin_id, file_id):
+@bp.route("/file/<int:file_id>", methods=["DELETE"])
+async def delete_file_handler(file_id: int):
     """Delete a file."""
-    row = await request.app.db.fetchrow(
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    row = await app.db.fetchrow(
         """
     SELECT filename, uploader
     FROM files
@@ -151,9 +162,9 @@ async def delete_file_handler(request, _admin_id, file_id):
         raise BadInput("File not found")
 
     async with ObjectDeleteAction(request, file_id, "file"):
-        await delete_file(request.app, row["filename"], row["uploader"])
+        await delete_file(row["filename"], row["uploader"])
 
-    return response.json(
+    return jsonify(
         {
             "shortname": row["filename"],
             "uploader": str(row["uploader"]),
@@ -162,11 +173,13 @@ async def delete_file_handler(request, _admin_id, file_id):
     )
 
 
-@bp.delete("/api/admin/shorten/<shorten_id:int>")
-@admin_route
-async def delete_shorten_handler(request, _admin_id, shorten_id: int):
+@bp.route("/shorten/<int:shorten_id>", methods=["DELETE"])
+async def delete_shorten_handler(shorten_id: int):
     """Delete a shorten."""
-    row = await request.app.db.fetchrow(
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    row = await app.db.fetchrow(
         """
     SELECT filename, uploader
     FROM shortens
@@ -179,9 +192,9 @@ async def delete_shorten_handler(request, _admin_id, shorten_id: int):
         raise BadInput("Shorten not found")
 
     async with ObjectDeleteAction(request, shorten_id, "shorten"):
-        await delete_shorten(request.app, row["filename"], row["uploader"])
+        await delete_shorten(row["filename"], row["uploader"])
 
-    return response.json(
+    return jsonify(
         {
             "shortname": row["filename"],
             "uploader": str(row["uploader"]),

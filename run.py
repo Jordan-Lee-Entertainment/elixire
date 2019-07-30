@@ -86,6 +86,7 @@ def set_blueprints(app_):
         api.bp.files.bp: "",
         api.bp.datadump.bp: "/dump",
         api.bp.admin.user_bp: "/admin/users",
+        api.bp.admin.object_bp: "/admin",
         api.bp.shorten.bp: -1,
         api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,
@@ -104,7 +105,6 @@ def set_blueprints(app_):
     # TODO those are old sanic blueprints
 
     ## load admin blueprints
-    # app_.blueprint(api.bp.admin.object_bp)
     # app_.blueprint(api.bp.admin.domain_bp)
     # app_.blueprint(api.bp.admin.misc_bp)
     # app_.blueprint(api.bp.admin.settings_bp)
