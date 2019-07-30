@@ -1,9 +1,12 @@
 # elixire: Image Host software
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+
 import copy
 import logging
 import asyncio
+
+from quart import current_app as app, request
 
 from api.common.email import send_user_email
 from api.common.utils import find_different_keys
@@ -14,9 +17,9 @@ log = logging.getLogger(__name__)
 class Action:
     """Represents a generic action taken by an admin."""
 
-    def __init__(self, request):
-        self.app = request.app
-        self.admin_id = request["ctx"][1]
+    def __init__(self):
+        self.app = app
+        self.admin_id = request.ctx[1]
         self.context = {}
 
     async def details(self):
@@ -80,8 +83,8 @@ class Action:
 class EditAction(Action):
     """An action which describes an object is edited."""
 
-    def __init__(self, request, id):
-        super().__init__(request)
+    def __init__(self, _request, id):
+        super().__init__()
         self.id = id
         self.before = None
         self.after = None
@@ -113,8 +116,8 @@ class EditAction(Action):
 class DeleteAction(Action):
     """An action which describes the removal of an object."""
 
-    def __init__(self, request, id):
-        super().__init__(request)
+    def __init__(self, _request, id):
+        super().__init__()
         self.id = id
         self.object = None
 

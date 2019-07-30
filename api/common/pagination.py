@@ -4,14 +4,16 @@
 
 import math
 
+from quart import request
+
 from api.errors import BadInput
 
 
 class Pagination:
     """A utility class that helps with pagination."""
 
-    def __init__(self, request):
-        self._raw_args = request.raw_args
+    def __init__(self):
+        self._args = request.args
         self.page = self._int_arg("page")
         self.per_page = self._int_arg("per_page", 20)
 
@@ -31,4 +33,4 @@ class Pagination:
         }
 
     def _int_arg(self, name, default=0):
-        return int(self._raw_args.get(name, default))
+        return int(self._args.get(name, default))

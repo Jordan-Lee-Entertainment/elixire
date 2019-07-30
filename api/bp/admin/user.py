@@ -4,9 +4,8 @@
 
 import logging
 
-from sanic import Blueprint, response
+from quart import Blueprint, request, jsonify, current_app as app
 
-from api.decorators import admin_route
 from api.errors import NotFound, BadInput
 from api.schema import validate, ADMIN_MODIFY_USER
 
@@ -17,6 +16,7 @@ from api.common.email import (
     uid_from_email,
     clean_etoken,
 )
+from api.common.auth import token_check, check_admin
 from api.common.pagination import Pagination
 
 from api.bp.profile import get_limits, delete_user
@@ -25,14 +25,27 @@ from api.bp.admin.audit_log_actions.user import UserEditAction, UserDeleteAction
 from api.response import resp_empty
 
 log = logging.getLogger(__name__)
-bp = Blueprint(__name__)
+bp = Blueprint("admin_user", __name__)
 
 
-@bp.get("/api/admin/users/<user_id:int>")
-@admin_route
-async def get_user_handler(request, admin_id, user_id: int):
+async def _user_resp_from_row(user_row):
+    if not user_row:
+        raise NotFound("User not found")
+
+    user = dict(user_row)
+    user["limits"] = await get_limits(request.app.db, user["user_id"])
+    user["user_id"] = str(user["user_id"])
+
+    return jsonify(user)
+
+
+@bp.route("/<int:user_id>")
+async def get_user_handler(user_id: int):
     """Get a user's details in the service."""
-    udata = await request.app.db.fetchrow(
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    row = await app.db.fetchrow(
         """
     SELECT user_id, username, active, admin, domain, subdomain,
       consented, email, paranoid
@@ -42,33 +55,29 @@ async def get_user_handler(request, admin_id, user_id: int):
         user_id,
     )
 
-    if not udata:
-        raise NotFound("User not found")
-
-    dudata = dict(udata)
-    dudata["user_id"] = str(dudata["user_id"])
-    dudata["limits"] = await get_limits(request.app.db, user_id)
-
-    return response.json(dudata)
+    return await _user_resp_from_row(row)
 
 
-@bp.get("/api/admin/users/by-username/<username>")
-@admin_route
-async def get_user_by_username(request, _admin_id: int, username: str):
+@bp.route("/by-username/<username>")
+async def get_user_by_username(username: str):
     """Get a user object via their username instead of user ID."""
-    user_id = await request.app.db.fetchval(
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    row = await app.db.fetchrow(
         """
-    SELECT user_id
+    SELECT user_id, username, active, admin, domain, subdomain,
+      consented, email, paranoid
     FROM users
     WHERE username = $1
     """,
         username,
     )
 
-    return await get_user_handler(request, user_id)
+    return await _user_resp_from_row(row)
 
 
-async def notify_activate(app, user_id: int):
+async def notify_activate(user_id: int):
     """Inform user that they got an account."""
     if not app.econfig.NOTIFY_ACTIVATION_EMAILS:
         return
@@ -103,12 +112,14 @@ Do not reply to this automated email.
         log.error(f"Failed to send email to {user_id} {user_email}")
 
 
-@bp.post("/api/admin/activate/<user_id:int>")
-@admin_route
-async def activate_user(request, admin_id, user_id: int):
-    """Activate one user, given its ID."""
+@bp.route("/activate/<int:user_id>", methods=["POST"])
+async def activate_user(user_id: int):
+    """Activate one user, given their ID."""
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
     async with UserEditAction(request, user_id):
-        result = await request.app.db.execute(
+        result = await app.db.execute(
             """
         UPDATE users
         SET active = true
@@ -120,19 +131,21 @@ async def activate_user(request, admin_id, user_id: int):
         if result == "UPDATE 0":
             raise BadInput("Provided user ID does not reference any user.")
 
-    await request.app.storage.invalidate(user_id, "active")
-    await notify_activate(request.app, user_id)
+    await app.storage.invalidate(user_id, "active")
+    await notify_activate(user_id)
 
-    # returning resp_empty instead of the result as it's practically useless.
-    return resp_empty()
+    # TODO check success of notify_activate
+    return "", 204
 
 
-@bp.post("/api/admin/activate_email/<user_id:int>")
-@admin_route
-async def activation_email(request, admin_id, user_id):
+@bp.route("/activate_email/<int:user_id>", methods=["POST"])
+async def activation_email(user_id):
     """Send an email to the user so they become able
     to activate their account manually."""
-    active = await request.app.db.fetchval(
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    active = await app.db.fetchval(
         """
     SELECT active
     FROM users
@@ -153,21 +166,21 @@ async def activation_email(request, admin_id, user_id):
     resp_tup, _email = await activate_email_send(request.app, user_id)
     resp, _ = resp_tup
 
-    return response.json({"success": resp.status == 200})
+    # TODO '', 204
+    return jsonify({"success": resp.status == 200})
 
 
-@bp.get("/api/activate_email")
-async def activate_user_from_email(request):
+@bp.route("/api/activate_email")
+async def activate_user_from_email():
     """Called when a user clicks the activation URL in their email."""
     try:
-        email_token = str(request.raw_args["key"])
-    except (KeyError, TypeError):
+        email_token = request.args["key"]
+    except KeyError:
         raise BadInput("no key provided")
 
-    app = request.app
     user_id = await uid_from_email(app, email_token, "email_activation_tokens")
 
-    res = await request.app.db.execute(
+    res = await app.db.execute(
         """
     UPDATE users
     SET active = true
@@ -176,19 +189,21 @@ async def activate_user_from_email(request):
         user_id,
     )
 
-    await request.app.storage.invalidate(user_id, "active")
+    await app.storage.invalidate(user_id, "active")
     await clean_etoken(app, email_token, "email_activation_tokens")
     log.info(f"Activated user id {user_id}")
 
-    return response.json({"success": res == "UPDATE 1"})
+    return jsonify({"success": res == "UPDATE 1"})
 
 
-@bp.post("/api/admin/deactivate/<user_id:int>")
-@admin_route
-async def deactivate_user(request, admin_id: int, user_id: int):
+@bp.route("/deactivate/<int:user_id>", methods=["POST"])
+async def deactivate_user(user_id: int):
     """Deactivate one user, given its ID."""
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
     async with UserEditAction(request, user_id):
-        result = await request.app.db.execute(
+        result = await app.db.execute(
             """
         UPDATE users
         SET active = false
@@ -200,22 +215,23 @@ async def deactivate_user(request, admin_id: int, user_id: int):
         if result == "UPDATE 0":
             raise BadInput("Provided user ID does not reference any user.")
 
-    await request.app.storage.invalidate(user_id, "active")
+    await app.storage.invalidate(user_id, "active")
+    return "", 204
 
-    return resp_empty()
 
-
-@bp.get("/api/admin/users/search")
-@admin_route
-async def users_search(request, admin_id):
+@bp.route("/search")
+async def users_search():
     """New, revamped search endpoint."""
-    args = request.raw_args
-    pagination = Pagination(request)
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
 
+    pagination = Pagination()
+
+    args = request.args
     active = args.get("active", True) != "false"
     query = args.get("query")
 
-    users = await request.app.db.fetch(
+    users = await app.db.fetch(
         """
     SELECT user_id, username, active, admin, consented,
            COUNT(*) OVER() as total_count
@@ -245,9 +261,10 @@ async def users_search(request, admin_id):
     results = map(map_user, users)
     total_count = 0 if not users else users[0]["total_count"]
 
-    return response.json(pagination.response(results, total_count=total_count))
+    return jsonify(pagination.response(results, total_count=total_count))
 
 
+# TODO i tried to pull a "generic" in here and it turned out to be shit.
 async def _pu_check(db, db_name, user_id, payload, updated_fields, field, col=None):
     """Checks if the given field exists on payload.
 
@@ -297,15 +314,17 @@ async def _pu_check(db, db_name, user_id, payload, updated_fields, field, col=No
         updated_fields.append(field)
 
 
-@bp.patch("/api/admin/user/<user_id:int>")
-@admin_route
-async def modify_user(request, admin_id, user_id):
+@bp.route("/<int:user_id>", methods=["PATCH"])
+async def modify_user(user_id):
     """Modify a user's information."""
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
     payload = validate(request.json, ADMIN_MODIFY_USER)
 
     updated = []
 
-    db = request.app.db
+    db = app.db
 
     # _pu_check serves as a template for the following code structure:
     #   X = payload.get(field)
@@ -322,17 +341,19 @@ async def modify_user(request, admin_id, user_id):
             db, "limits", user_id, payload, updated, "shorten_limit", "shlimit"
         )
 
-    return response.json(updated)
+    return jsonify(updated)
 
 
-@bp.delete("/api/admin/user/<user_id:int>")
-@admin_route
-async def del_user(request, admin_id, user_id):
+@bp.route("/<int:user_id>", methods=["DELETE"])
+async def del_user(user_id):
     """Delete a single user.
 
     File deletion happens in the background.
     """
-    active = await request.app.db.fetchval(
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    active = await app.db.fetchval(
         """
     SELECT active
     FROM users
@@ -345,6 +366,6 @@ async def del_user(request, admin_id, user_id):
         raise BadInput("user not found")
 
     async with UserDeleteAction(request, user_id):
-        await delete_user(request.app, user_id, True)
+        await delete_user(user_id, True)
 
-    return resp_empty()
+    return "", 204
