@@ -10,11 +10,6 @@ import asyncpg
 import aiohttp
 import aioredis
 
-# from sanic import Sanic
-# from sanic.exceptions import NotFound, FileNotFound
-# from sanic import response
-# from sanic_cors import CORS
-
 from quart import Quart, jsonify, request, send_file
 
 from dns import resolver
@@ -38,6 +33,7 @@ import api.bp.index
 import api.bp.ratelimit
 import api.bp.frontend
 import api.bp.metrics.blueprint
+import api.bp.cors
 
 from api.errors import APIError, Banned
 from api.common import get_ip_addr
@@ -49,20 +45,6 @@ from api.bp.admin.audit_log import AuditLog
 from api.common.banning import ban_request
 
 import config
-
-# enable cors on api, images and shortens
-# CORS(
-#     app,
-#     resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"],
-#     automatic_options=True,
-#     expose_headers=[
-#         'X-Ratelimit-Scope',
-#         'X-Ratelimit-Limit',
-#         'X-Ratelimit-Remaining',
-#         'X-Ratelimit-Reset'
-#     ]
-# )
-
 
 log = logging.getLogger(__name__)
 
@@ -91,6 +73,7 @@ def set_blueprints(app_):
     # load blueprints
 
     blueprints = {
+        api.bp.cors.bp: -1,
         api.bp.ratelimit.bp: "",
         api.bp.auth.bp: "",
         api.bp.misc.bp: "",
