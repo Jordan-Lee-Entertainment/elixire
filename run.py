@@ -101,6 +101,7 @@ def set_blueprints(app_):
         api.bp.personal_stats.bp: "/stats",
         api.bp.register.bp: "",
         api.bp.files.bp: "",
+        api.bp.datadump.bp: "/dump",
         api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,
         api.bp.wpadmin.bp: -1,
@@ -126,7 +127,6 @@ def set_blueprints(app_):
     # app_.blueprint(api.bp.admin.settings_bp)
 
     # app_.blueprint(api.bp.datadump.bp)
-    # app_.blueprint(api.bp.frontend.bp)
 
 
 # blueprints are set at the end of the file after declaration of the main
@@ -137,7 +137,7 @@ app = make_app()
 def _wrap_err_in_json(err: APIError) -> Tuple[dict, int]:
     res = {"error": True, "message": err.args[0]}
     res.update(err.get_payload())
-    return res, err.status_code
+    return jsonify(res), err.status_code
 
 
 @app.errorhandler(Banned)
@@ -252,6 +252,8 @@ async def app_before_serving():
     # maybe move this to current_app too?
     if not getattr(app, "_test", False):
         app.audit_log = AuditLog(app)
+
+    await api.bp.datadump.start_dump_worker_ss()
 
 
 @app.after_serving

@@ -13,6 +13,8 @@ import zipfile
 import pathlib
 import os.path
 
+from quart import current_app as app
+
 from api.common.email import gen_email_token, send_user_email
 
 log = logging.getLogger(__name__)
@@ -224,7 +226,7 @@ async def dispatch_dump(app, user_id: int, user_name: str):
     email_body = f"""This is an automated email from {_inst_name}
 about your data dump.
 
-Visit {app.econfig.MAIN_URL}/api/dump_get?key={dump_token} to fetch your
+Visit {app.econfig.MAIN_URL}/api/dump/get?key={dump_token} to fetch your
 data dump.
 
 The URL will be invalid in 6 hours.
@@ -351,7 +353,7 @@ async def resume_dump(app, user_id: int):
         zipdump.close()
 
 
-async def dump_worker(app):
+async def dump_worker():
     """Main dump worker.
 
     Works dump resuming, manages the next user on the queue, etc.
@@ -395,27 +397,19 @@ async def dump_worker(app):
 
         # if no user is in the queue, the function
         # will stop.
-        return await dump_worker(app)
+        return await dump_worker()
 
 
-async def dump_worker_wrapper(app):
-    """Wrap the dump_worker inside a try/except block for logging."""
-    try:
-        await dump_worker(app)
-    except Exception:
-        log.exception("error in dump worker task")
-
-
-def start_worker(app):
+def start_worker():
     """Start the dump worker, but not start more than 1 of them."""
     if app.sched.exists("dump_worker_wrapper"):
-        log.info("worker wrapper exists, skipping")
+        log.info("worker exists, skipping")
         return
 
-    app.sched.spawn(dump_worker_wrapper(app))
+    app.sched.spawn(dump_worker(), "dd_worker")
 
 
-async def dump_janitor(app):
+async def dump_janitor():
     """Main data dump janitor task.
 
     This checks the dump folder every DUMP_JANITOR_PERIOD amount
@@ -445,9 +439,6 @@ async def dump_janitor(app):
             log.info(f"Ignoring {fpath}, life {file_life}s < 21600")
 
 
-def start_janitor(app):
+def start_janitor():
     """Start dump janitor."""
-
-    # call dump_janitor every DUMP_JANITOR_PERIOD
-    # seconds.
-    app.sched.spawn_periodic(dump_janitor, [app], app.econfig.DUMP_JANITOR_PERIOD)
+    app.sched.spawn_periodic(dump_janitor, [], app.econfig.DUMP_JANITOR_PERIOD)
