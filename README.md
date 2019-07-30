@@ -58,7 +58,7 @@ Install [Python] dependencies using pip:
 
 ```bash
 # You can use a virtual environment, too.
-python3.6 -m pip install -Ur requirements.txt
+python3 -m pip install -Ur requirements.txt
 ```
 
 Create the [PostgreSQL] database if it doesn't already exist:
@@ -117,7 +117,7 @@ $EDITOR config.py
 Run the app:
 
 ```bash
-python3.6 run.py
+python3 run.py
 ```
 
 ## Operator's Manual
