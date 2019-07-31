@@ -9,6 +9,7 @@ import bcrypt
 
 from api.snowflake import get_snowflake
 from api.bp.profile import delete_user
+from api.common.user import create_user
 from ..utils import get_user
 
 
@@ -20,34 +21,18 @@ async def adduser(ctx, args):
     password = args.password if args.password else secrets.token_urlsafe(25)
 
     pass_hashing = password.encode()
-    hashed = bcrypt.hashpw(pass_hashing, bcrypt.gensalt(14))
 
-    user_id = get_snowflake()
+    if len(password) > 72:
+        print("password is more than 72 characters, which is above bcrypt limitations")
+        return
 
-    await ctx.db.execute(
-        """
-    INSERT INTO users (user_id, username, password_hash, email)
-    VALUES ($1, $2, $3, $4)
-    """,
-        user_id,
-        username,
-        hashed.decode(),
-        email,
-    )
-
-    await ctx.db.execute(
-        """
-    INSERT INTO limits (user_id)
-    VALUES ($1)
-    """,
-        user_id,
-    )
-
-    await ctx.redis.delete(f"uid:{username}")
+    # TODO app context for custom context
+    # we maybe could do that with quart.ctx.AppContext(ctx)???
+    udata = await create_user(username, password, email)
 
     print(
         f"""
-    user id: {user_id}
+    user id: {udata["user_id"]}
     username: {username!r}
     password: {password!r}
     """
@@ -60,7 +45,8 @@ async def del_user(ctx, args):
 
     userid = await get_user(ctx, username)
 
-    task = await delete_user(ctx, userid, True)
+    # TODO app context for custom context
+    task = await delete_user(userid, True)
     await asyncio.shield(task)
 
     print("OK")

@@ -23,8 +23,8 @@ async def create_user(
 
     await app.db.execute(
         """
-    insert into users (user_id, username, password_hash, email, active)
-    values ($1, $2, $3, $4, $5)
+    INSERT INTO users (user_id, username, password_hash, email, active)
+    VALUES ($1, $2, $3, $4, $5)
     """,
         user_id,
         username,

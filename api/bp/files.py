@@ -11,8 +11,7 @@ from api.common import delete_file, delete_shorten
 from api.common.auth import token_check, password_check
 from api.errors import BadInput
 
-# TODO move to api.common.user or api.common.file or whatever
-from api.bp.profile import delete_file_task
+from api.common.user import mass_file_delete
 
 bp = Blueprint("files", __name__)
 log = logging.getLogger(__name__)
@@ -141,7 +140,7 @@ async def delete_all():
         )
 
     # create task to delete all files in the background
-    app.sched.spawn(delete_file_task(user_id, False), task_name)
+    app.sched.spawn(mass_file_delete(user_id, False), task_name)
     return "", 204
 
 
