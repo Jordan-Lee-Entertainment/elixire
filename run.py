@@ -87,6 +87,8 @@ def set_blueprints(app_):
         api.bp.datadump.bp: "/dump",
         api.bp.admin.user_bp: "/admin/users",
         api.bp.admin.object_bp: "/admin",
+        # TODO namespace this blueprint
+        api.bp.admin.domain_bp: -1,
         api.bp.shorten.bp: -1,
         api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,

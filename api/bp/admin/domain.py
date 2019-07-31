@@ -4,10 +4,10 @@
 
 from math import ceil
 
-from sanic import Blueprint, response
+from quart import Blueprint, jsonify, current_app as app, request
 
 from api.schema import validate, ADMIN_MODIFY_DOMAIN, ADMIN_SEND_DOMAIN_EMAIL
-from api.decorators import admin_route
+from api.common.auth import token_check, check_admin
 from api.common.email import send_user_email
 from api.common.pagination import Pagination
 from api.storage import solve_domain
@@ -23,21 +23,24 @@ from api.bp.admin.audit_log_actions.email import DomainOwnerNotifyAction
 
 from api.common.domain import get_domain_info
 
-bp = Blueprint(__name__)
+bp = Blueprint("admin_domain", __name__)
 
 
-@bp.put("/api/admin/domains")
-@admin_route
-async def add_domain(request, admin_id: int):
+@bp.route("/api/admin/domains", methods=["PUT"])
+async def add_domain():
     """Add a domain."""
-    domain_name = str(request.json["domain"])
-    is_adminonly = bool(request.json["admin_only"])
-    is_official = bool(request.json["official"])
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
 
-    # default 3
-    permissions = int(request.json.get("permissions", 3))
+    j = await request.get_json()
 
-    db = request.app.db
+    # TODO use validate()
+    domain_name = str(j["domain"])
+    is_adminonly = bool(j["admin_only"])
+    is_official = bool(j["official"])
+    permissions = int(j.get("permissions", 3))
+
+    db = app.db
 
     result = await db.execute(
         """
@@ -61,11 +64,11 @@ async def add_domain(request, admin_id: int):
         domain_name,
     )
 
-    async with DomainAddAction(request) as action:
+    async with DomainAddAction() as action:
         action.update(domain_id=domain_id)
 
         if "owner_id" in request.json:
-            owner_id = int(request.json["owner_id"])
+            owner_id = int(j["owner_id"])
             action.update(owner_id=owner_id)
 
             await db.execute(
@@ -78,11 +81,12 @@ async def add_domain(request, admin_id: int):
             )
 
     keys = solve_domain(domain_name)
-    await request.app.storage.raw_invalidate(*keys)
+    await app.storage.raw_invalidate(*keys)
 
-    return response.json({"success": True, "result": result, "new_id": domain_id})
+    return jsonify({"success": True, "result": result, "new_id": domain_id})
 
 
+# TODO remove this macro-like shit
 async def _dp_check(
     db, domain_id: int, payload: dict, updated_fields: list, field: str
 ):
@@ -102,14 +106,16 @@ async def _dp_check(
         updated_fields.append(field)
 
 
-@bp.patch("/api/admin/domains/<domain_id:int>")
-@admin_route
-async def patch_domain(request, admin_id: int, domain_id: int):
+@bp.route("/api/admin/domains/<int:domain_id>", methods=["PATCH"])
+async def patch_domain(domain_id: int):
     """Patch a domain's information"""
-    payload = validate(request.json, ADMIN_MODIFY_DOMAIN)
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    payload = validate(await request.get_json(), ADMIN_MODIFY_DOMAIN)
 
     updated_fields = []
-    db = request.app.db
+    db = app.db
 
     async with DomainEditAction(request, domain_id):
         if "owner_id" in payload:
@@ -132,16 +138,18 @@ async def patch_domain(request, admin_id: int, domain_id: int):
         await _dp_check(db, domain_id, payload, updated_fields, "official")
         await _dp_check(db, domain_id, payload, updated_fields, "permissions")
 
-    return response.json({"updated": updated_fields})
+    return jsonify({"updated": updated_fields})
 
 
-@bp.post("/api/admin/email_domain/<domain_id:int>")
-@admin_route
-async def email_domain(request, admin_id: int, domain_id: int):
-    payload = validate(request.json, ADMIN_SEND_DOMAIN_EMAIL)
+@bp.route("/api/admin/email_domain/<int:domain_id>", methods=["POST"])
+async def email_domain(domain_id: int):
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    payload = validate(await request.get_json(), ADMIN_SEND_DOMAIN_EMAIL)
     subject, body = payload["subject"], payload["body"]
 
-    owner_id = await request.app.db.fetchval(
+    owner_id = await app.db.fetchval(
         """
     SELECT user_id
     FROM domain_owners
@@ -153,33 +161,34 @@ async def email_domain(request, admin_id: int, domain_id: int):
     if owner_id is None:
         raise BadInput("Domain Owner not found")
 
-    async with DomainOwnerNotifyAction(request) as action:
+    async with DomainOwnerNotifyAction() as action:
         action.update(
             domain_id=domain_id, owner_id=owner_id, subject=subject, body=body
         )
 
-        resp_tup, user_email = await send_user_email(
-            request.app, owner_id, subject, body
-        )
+        resp_tup, user_email = await send_user_email(app, owner_id, subject, body)
 
     resp, _ = resp_tup
 
-    return response.json(
+    return jsonify(
         {"success": resp.status == 200, "owner_id": owner_id, "owner_email": user_email}
     )
 
 
-@bp.put("/api/admin/domains/<domain_id:int>/owner")
-@admin_route
-async def add_owner(request, admin_id: int, domain_id: int):
+@bp.route("/api/admin/domains/<int:domain_id>/owner", methods=["PUT"])
+async def add_owner(domain_id: int):
     """Add an owner to a single domain."""
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+    j = await request.get_json()
+
     try:
-        owner_id = int(request.json["owner_id"])
+        owner_id = int(j["owner_id"])
     except (ValueError, KeyError):
         raise BadInput("Invalid number for owner ID")
 
     async with DomainEditAction(request, domain_id):
-        exec_out = await request.app.db.execute(
+        exec_out = await app.db.execute(
             """
         INSERT INTO domain_owners (domain_id, user_id)
         VALUES ($1, $2)
@@ -188,14 +197,16 @@ async def add_owner(request, admin_id: int, domain_id: int):
             owner_id,
         )
 
-    return response.json({"success": True, "output": exec_out})
+    return jsonify({"success": True, "output": exec_out})
 
 
-@bp.delete("/api/admin/domains/<domain_id:int>")
-@admin_route
-async def remove_domain(request, admin_id: int, domain_id: int):
+@bp.route("/api/admin/domains/<int:domain_id>", methods=["DELETE"])
+async def remove_domain(domain_id: int):
     """Remove a domain."""
-    domain_name = await request.app.db.fetchval(
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    domain_name = await app.db.fetchval(
         """
     SELECT domain
     FROM domains
@@ -204,28 +215,28 @@ async def remove_domain(request, admin_id: int, domain_id: int):
         domain_id,
     )
 
-    files_count = await request.app.db.execute(
+    files_count = await app.db.execute(
         """
     UPDATE files set domain = 0 WHERE domain = $1
     """,
         domain_id,
     )
 
-    shorten_count = await request.app.db.execute(
+    shorten_count = await app.db.execute(
         """
     UPDATE shortens set domain = 0 WHERE domain = $1
     """,
         domain_id,
     )
 
-    users_count = await request.app.db.execute(
+    users_count = await app.db.execute(
         """
     UPDATE users set domain = 0 WHERE domain = $1
     """,
         domain_id,
     )
 
-    users_shorten_count = await request.app.db.execute(
+    users_shorten_count = await app.db.execute(
         """
     UPDATE users set shorten_domain = 0 WHERE shorten_domain = $1
     """,
@@ -233,7 +244,7 @@ async def remove_domain(request, admin_id: int, domain_id: int):
     )
 
     async with DomainRemoveAction(request, domain_id):
-        await request.app.db.execute(
+        await app.db.execute(
             """
         DELETE FROM domain_owners
         WHERE domain_id = $1
@@ -241,7 +252,7 @@ async def remove_domain(request, admin_id: int, domain_id: int):
             domain_id,
         )
 
-        result = await request.app.db.execute(
+        result = await app.db.execute(
             """
         DELETE FROM domains
         WHERE domain_id = $1
@@ -250,9 +261,9 @@ async def remove_domain(request, admin_id: int, domain_id: int):
         )
 
     keys = solve_domain(domain_name)
-    await request.app.storage.raw_invalidate(*keys)
+    await app.storage.raw_invalidate(*keys)
 
-    return response.json(
+    return jsonify(
         {
             "success": True,
             "file_move_result": files_count,
@@ -264,17 +275,21 @@ async def remove_domain(request, admin_id: int, domain_id: int):
     )
 
 
-@bp.get("/api/admin/domains/<domain_id:int>")
-@admin_route
-async def get_domain_stats(request, admin_id, domain_id):
+@bp.route("/api/admin/domains/<int:domain_id>")
+async def get_domain_stats(domain_id: int):
     """Get information about a domain."""
-    return response.json(await get_domain_info(request.app.db, domain_id))
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    return jsonify(await get_domain_info(app.db, domain_id))
 
 
-@bp.get("/api/admin/domains")
-@admin_route
-async def get_domain_stats_all(request, _admin_id):
+@bp.route("/api/admin/domains")
+async def get_domain_stats_all():
     """Request information about all domains"""
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
     args = request.raw_args
     per_page = int(args.get("per_page", 20))
 
@@ -284,7 +299,7 @@ async def get_domain_stats_all(request, _admin_id):
         if page < 0:
             raise BadInput("Negative page not allowed.")
 
-        domain_ids = await request.app.db.fetch(
+        domain_ids = await app.db.fetch(
             f"""
         SELECT domain_id, COUNT(*) OVER() as total_count
         FROM domains
@@ -296,7 +311,7 @@ async def get_domain_stats_all(request, _admin_id):
         )
     except KeyError:
         page = -1
-        domain_ids = await request.app.db.fetch(
+        domain_ids = await app.db.fetch(
             """
         SELECT domain_id, COUNT(*) OVER() as total_count
         FROM domains
@@ -310,7 +325,7 @@ async def get_domain_stats_all(request, _admin_id):
 
     for row in domain_ids:
         domain_id = row["domain_id"]
-        info = await get_domain_info(request.app.db, domain_id)
+        info = await get_domain_info(app.db, domain_id)
         res[domain_id] = info
 
     total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
@@ -324,19 +339,18 @@ async def get_domain_stats_all(request, _admin_id):
         else {"pagination": {"total": ceil(total_count / per_page), "current": page}}
     )
 
-    return response.json({**res, **extra})
+    return jsonify({**res, **extra})
 
 
-@bp.get("/api/admin/domains/search")
-@admin_route
-async def domains_search(request, admin_id):
+@bp.route("/api/admin/domains/search")
+async def domains_search():
     """Search for domains"""
-    args = request.raw_args
-    pagination = Pagination(request)
+    args = request.args
+    pagination = Pagination()
 
     query = args.get("query")
 
-    domain_ids = await request.app.db.fetch(
+    domain_ids = await app.db.fetch(
         """
     SELECT domain_id, COUNT(*) OVER () AS total_count
     FROM domains
@@ -354,7 +368,7 @@ async def domains_search(request, admin_id):
 
     for row in domain_ids:
         domain_id = row["domain_id"]
-        results[domain_id] = await get_domain_info(request.app.db, domain_id)
+        results[domain_id] = await get_domain_info(app.db, domain_id)
 
     total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
-    return response.json(pagination.response(results, total_count=total_count))
+    return jsonify(pagination.response(results, total_count=total_count))
