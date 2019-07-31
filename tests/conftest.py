@@ -10,26 +10,26 @@ import pytest
 
 sys.path.append(os.getcwd())
 
-from run import app
+from run import app as app_
 from .mock import MockAuditLog
-from .common import email
+from .common import email, TestClient
 
 
 @pytest.fixture(name="app")
 def app_fixture(event_loop):
-    app._test = True
-    app.loop = event_loop
-    app.econfig.RATELIMITS = {"*": (10000, 1)}
+    app_._test = True
+    app_.loop = event_loop
+    app_.econfig.RATELIMITS = {"*": (10000, 1)}
 
     # TODO should we keep this as false?
-    app.econfig.ENABLE_METRICS = False
+    app_.econfig.ENABLE_METRICS = False
 
     # use mock instances of some external services.
-    app.audit_log = MockAuditLog()
+    app_.audit_log = MockAuditLog()
 
-    event_loop.run_until_complete(app.startup())
+    event_loop.run_until_complete(app_.startup())
     yield app
-    event_loop.run_until_complete(app.shutdown())
+    event_loop.run_until_complete(app_.shutdown())
 
 
 @pytest.fixture(name="test_cli")
@@ -93,21 +93,10 @@ async def test_cli_staff(test_cli):
     test_user = await _user_fixture_setup(app)
     user_id = test_user["id"]
 
-    # copied from manage.cmd.users.set_user_staff.
-    old_flags = await app.db.fetchval(
-        """
-    SELECT flags FROM users WHERE id = $1
-    """,
-        user_id,
-    )
-
-    new_flags = old_flags | UserFlags.staff
-
     await app.db.execute(
         """
-    UPDATE users SET flags = $1 WHERE id = $2
+    UPDATE users SET admin = true WHERE id = $2
     """,
-        new_flags,
         user_id,
     )
 
