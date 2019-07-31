@@ -3,3 +3,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from .command import setup
+
+__all__ = ["setup"]

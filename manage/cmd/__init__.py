@@ -7,3 +7,5 @@ from .files import setup as files
 from .find import setup as find
 from .user import setup as user
 from .migration import setup as migration
+
+__all__ = ["ban", "files", "find", "user", "migration"]
