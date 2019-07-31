@@ -110,7 +110,7 @@ async def test_user_activate_cycle(test_cli):
 
     # activate
     resp = await test_cli.post(
-        f"/api/admin/activate/{uid}", headers={"Authorization": atoken}
+        f"/api/admin/users/activate/{uid}", headers={"Authorization": atoken}
     )
     assert resp.status_code == 204
 
