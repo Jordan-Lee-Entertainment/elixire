@@ -90,6 +90,7 @@ def set_blueprints(app_):
         # TODO namespace those admin blueprints
         api.bp.admin.domain_bp: -1,
         api.bp.admin.settings_bp: -1,
+        api.bp.admin.misc_bp: -1,
         api.bp.shorten.bp: -1,
         api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,
@@ -104,11 +105,6 @@ def set_blueprints(app_):
 
         log.debug("loading blueprint %s", blueprint)
         app_.register_blueprint(blueprint, url_prefix=route_prefix)
-
-    # TODO those are old sanic blueprints
-
-    ## load admin blueprints
-    # app_.blueprint(api.bp.admin.misc_bp)
 
 
 # blueprints are set at the end of the file after declaration of the main
