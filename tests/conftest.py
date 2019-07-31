@@ -10,6 +10,8 @@ import pytest
 
 sys.path.append(os.getcwd())
 
+from api.common.user import create_user, delete_user
+from api.common.auth import gen_token
 from run import app as app_
 from .mock import MockAuditLog
 from .common import email, TestClient
@@ -48,32 +50,33 @@ async def _user_fixture_setup(app):
 
     # TODO fix
 
-    user_id, pwd_hash = await create_user(
-        username, user_email, password, app.db, app.loop
-    )
+    async with app.app_context():
+        user = await create_user(username, user_email, password)
 
-    # generate a token for api access
-    user_token = make_token(user_id, pwd_hash)
+    user_token = gen_token(user)
 
     return {
-        "id": user_id,
-        "token": user_token,
-        "email": user_email,
-        "username": username,
-        "password": password,
+        **user,
+        **{
+            "token": user_token,
+            "email": user_email,
+            "username": username,
+            "password": password,
+        },
     }
 
 
-async def _user_fixture_teardown(app, udata: dict):
-    await delete_user(udata["id"], db=app.db)
+async def _user_fixture_teardown(app, user: dict):
+    async with app.app_context():
+        await delete_user(user["user_id"], delete=True)
 
 
 @pytest.fixture(name="test_user")
 async def test_user_fixture(app):
     """Yield a randomly generated test user."""
-    udata = await _user_fixture_setup(app)
-    yield udata
-    await _user_fixture_teardown(app, udata)
+    user = await _user_fixture_setup(app)
+    yield user
+    await _user_fixture_teardown(app, user)
 
 
 @pytest.fixture
@@ -91,7 +94,7 @@ async def test_cli_staff(test_cli):
     # same test_cli_user, which isn't acceptable.
     app = test_cli.app
     test_user = await _user_fixture_setup(app)
-    user_id = test_user["id"]
+    user_id = test_user["user_id"]
 
     await app.db.execute(
         """
