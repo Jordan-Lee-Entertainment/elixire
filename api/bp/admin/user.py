@@ -33,7 +33,7 @@ async def _user_resp_from_row(user_row):
         raise NotFound("User not found")
 
     user = dict(user_row)
-    user["limits"] = await get_limits(request.app.db, user["user_id"])
+    user["limits"] = await get_limits(app.db, user["user_id"])
     user["user_id"] = str(user["user_id"])
 
     return jsonify(user)
@@ -163,7 +163,7 @@ async def activation_email(user_id):
     # there was an invalidate() call which is unecessary
     # because its already invalidated on activate_user_from_email
 
-    resp_tup, _email = await activate_email_send(request.app, user_id)
+    resp_tup, _email = await activate_email_send(app, user_id)
     resp, _ = resp_tup
 
     # TODO '', 204
@@ -228,11 +228,21 @@ async def users_search():
     pagination = Pagination()
 
     args = request.args
-    active = args.get("active", True) != "false"
     query = args.get("query")
 
+    # default to TRUE so the query parses correctly, instead of giving empty
+    # string
+    active_query = "TRUE"
+    active = args.get("active")
+    query_args = []
+
+    if active is not None:
+        active_query = "active = $4"
+        active = active != "false"
+        query_args = [active]
+
     users = await app.db.fetch(
-        """
+        f"""
     SELECT user_id, username, active, admin, consented,
            COUNT(*) OVER() as total_count
     FROM users
@@ -243,13 +253,13 @@ async def users_search():
             OR (username LIKE '%'||$2||'%' OR user_id::text LIKE '%'||$2||'%')
         )
     ORDER BY user_id ASC
-    LIMIT $4
-    OFFSET ($2::integer * $4::integer)
+    LIMIT $3
+    OFFSET ($1::integer * $3::integer)
     """,
-        active,
         pagination.page,
         query or "",
         pagination.per_page,
+        *query_args,
     )
 
     def map_user(record):
@@ -258,7 +268,7 @@ async def users_search():
         del row["total_count"]
         return row
 
-    results = map(map_user, users)
+    results = list(map(map_user, users))
     total_count = 0 if not users else users[0]["total_count"]
 
     return jsonify(pagination.response(results, total_count=total_count))
@@ -320,7 +330,7 @@ async def modify_user(user_id):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    payload = validate(request.json, ADMIN_MODIFY_USER)
+    payload = validate(await request.get_json(), ADMIN_MODIFY_USER)
 
     updated = []
 

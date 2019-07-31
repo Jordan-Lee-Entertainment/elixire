@@ -40,7 +40,7 @@ async def _update_password(user_id, new_pwd):
     """Update a user's password."""
     new_hash = await pwd_hash(new_pwd)
 
-    await request.app.db.execute(
+    await app.db.execute(
         """
         UPDATE users
         SET password_hash = $1
@@ -290,7 +290,7 @@ async def change_profile():
     try:
         new_consent_state = payload["consented"]
 
-        await request.app.db.execute(
+        await app.db.execute(
             """
             UPDATE users
             SET consented = $1
@@ -351,7 +351,7 @@ async def delete_own_user():
     _inst_name = app.econfig.INSTANCE_NAME
     _support = app.econfig.SUPPORT_EMAIL
 
-    email_token = await gen_email_token(request.app, user_id, "email_deletion_tokens")
+    email_token = await gen_email_token(app, user_id, "email_deletion_tokens")
 
     log.info(f"Generated email hash {email_token} for account deactivation")
 
@@ -367,7 +367,7 @@ async def delete_own_user():
     email_body = f"""This is an automated email from {_inst_name}
 about your account deletion.
 
-Please visit {request.app.econfig.MAIN_URL}/deleteconfirm.html#{email_token} to
+Please visit {app.econfig.MAIN_URL}/deleteconfirm.html#{email_token} to
 confirm the deletion of your account.
 
 The link will be invalid in 12 hours. Do not share it with anyone.
@@ -379,7 +379,7 @@ might be compromised.
 
 Do not reply to this email specifically, it will not work.
 
-- {_inst_name}, {request.app.econfig.MAIN_URL}
+- {_inst_name}, {app.econfig.MAIN_URL}
 """
 
     # TODO: change this to send user email?
@@ -569,7 +569,7 @@ async def reset_password_req():
     email_body = f"""This is an automated email from {_inst_name}
 about your password reset.
 
-Please visit {request.app.econfig.MAIN_URL}/password_reset.html#{email_token} to
+Please visit {app.econfig.MAIN_URL}/password_reset.html#{email_token} to
 reset your password.
 
 The link will be invalid in 30 minutes. Do not share the link with anyone else.
@@ -579,7 +579,7 @@ Reply to {_support} if you have any questions.
 
 Do not reply to this email specifically, it will not work.
 
-- {_inst_name}, {request.app.econfig.MAIN_URL}
+- {_inst_name}, {app.econfig.MAIN_URL}
 """
 
     resp, _ = await send_email(

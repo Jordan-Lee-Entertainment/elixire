@@ -67,7 +67,7 @@ async def add_domain():
     async with DomainAddAction() as action:
         action.update(domain_id=domain_id)
 
-        if "owner_id" in request.json:
+        if "owner_id" in j:
             owner_id = int(j["owner_id"])
             action.update(owner_id=owner_id)
 
@@ -77,7 +77,7 @@ async def add_domain():
             VALUES ($1, $2)
             """,
                 domain_id,
-                int(request.json["owner_id"]),
+                owner_id,
             )
 
     keys = solve_domain(domain_name)
@@ -290,7 +290,7 @@ async def get_domain_stats_all():
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    args = request.raw_args
+    args = request.args
     per_page = int(args.get("per_page", 20))
 
     try:

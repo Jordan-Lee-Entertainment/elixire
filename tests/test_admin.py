@@ -93,7 +93,7 @@ async def test_user_activate_cycle(test_cli):
 
     # deactivate
     resp = await test_cli.post(
-        f"/api/admin/deactivate/{uid}", headers={"Authorization": atoken}
+        f"/api/admin/users/deactivate/{uid}", headers={"Authorization": atoken}
     )
 
     assert resp.status_code == 204
@@ -178,7 +178,7 @@ async def test_domain_search(test_cli):
     resp = await test_cli.get(
         "/api/admin/domains/search",
         headers={"Authorization": token},
-        params={"query": "elix"},
+        query_string={"query": "elix"},
     )
 
     assert resp.status_code == 200
@@ -303,7 +303,7 @@ async def test_user_patch(test_cli):
 
     # request 1: change default user to admin, etc
     resp = await test_cli.patch(
-        f"/api/admin/user/{user_id}",
+        f"/api/admin/users/{user_id}",
         json={"upload_limit": 1000, "shorten_limit": 1000},
         headers={"Authorization": atoken},
     )
@@ -328,7 +328,7 @@ async def test_user_patch(test_cli):
 
     # request 3: changing it back
     resp = await test_cli.patch(
-        f"/api/admin/user/{user_id}",
+        f"/api/admin/users/{user_id}",
         json={"upload_limit": 104857600, "shorten_limit": 100},
         headers={"Authorization": atoken},
     )

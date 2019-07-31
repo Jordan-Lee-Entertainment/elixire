@@ -71,7 +71,7 @@ async def password_check(user_id: int, password: str):
 
     Raises FailedAuth on invalid password.
     """
-    stored = await request.app.db.fetchval(
+    stored = await app.db.fetchval(
         """
         select password_hash
         from users

@@ -18,6 +18,9 @@ def app_fixture(event_loop):
     app.loop = event_loop
     app.econfig.RATELIMITS = {"*": (10000, 1)}
 
+    # TODO should we keep this as false?
+    app.econfig.ENABLE_METRICS = False
+
     # use mock instances of some external services.
     app.audit_log = MockAuditLog()
 
