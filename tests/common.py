@@ -32,7 +32,7 @@ def token():
 
 
 def username():
-    return token()
+    return secrets.token_hex(random.randint(5, 13))
 
 
 def email():
