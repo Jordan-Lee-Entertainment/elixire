@@ -2,12 +2,12 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from sanic import Blueprint, response
+from quart import Blueprint, current_app as app, request, jsonify
 
-from api.decorators import admin_route
+from api.common.auth import token_check, check_admin
 from api.errors import BadInput
 
-bp = Blueprint("admin_settings")
+bp = Blueprint("admin_settings", __name__)
 
 
 async def get_admin_settings(conn, admin_id: int) -> dict:
@@ -35,23 +35,29 @@ async def get_admin_settings(conn, admin_id: int) -> dict:
     return dict(row)
 
 
-@bp.get("/api/admin/settings")
-@admin_route
-async def _admin_settings(request, admin_id):
+@bp.route("/api/admin/settings")
+async def _admin_settings():
     """Get own admin settings."""
-    return response.json(await get_admin_settings(request.app.db, admin_id))
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    return jsonify(await get_admin_settings(app.db, admin_id))
 
 
-@bp.patch("/api/admin/settings")
-@admin_route
-async def change_admin_settings(request, admin_id):
+@bp.route("/api/admin/settings", methods=["PATCH"])
+async def change_admin_settings():
     """Change own admin settings."""
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    j = await request.get_json()
+
     try:
-        audit_emails = bool(request.json["audit_log_emails"])
+        audit_emails = bool(j["audit_log_emails"])
     except (KeyError, ValueError, TypeError):
         raise BadInput("bad/nonexistant value for audit_log_emails")
 
-    await request.app.db.execute(
+    await app.db.execute(
         """
     INSERT INTO admin_user_settings (user_id, audit_log_emails)
     VALUES ($1, $2)
@@ -65,4 +71,4 @@ async def change_admin_settings(request, admin_id):
         audit_emails,
     )
 
-    return response.text("", status=204)
+    return "", 204
