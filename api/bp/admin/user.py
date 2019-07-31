@@ -22,7 +22,6 @@ from api.common.pagination import Pagination
 from api.bp.profile import get_limits, delete_user
 
 from api.bp.admin.audit_log_actions.user import UserEditAction, UserDeleteAction
-from api.response import resp_empty
 
 log = logging.getLogger(__name__)
 bp = Blueprint("admin_user", __name__)

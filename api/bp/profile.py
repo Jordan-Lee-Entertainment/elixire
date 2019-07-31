@@ -3,10 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
-import asyncio
 
 import asyncpg
-
 from quart import Blueprint, request, current_app as app, jsonify
 
 from api.response import resp_empty
@@ -26,7 +24,6 @@ from api.schema import (
     PASSWORD_RESET_SCHEMA,
     PASSWORD_RESET_CONFIRM_SCHEMA,
 )
-from api.common import delete_file
 from api.common.utils import int_
 from api.common.user import delete_user
 

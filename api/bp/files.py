@@ -7,7 +7,6 @@ import logging
 
 from quart import Blueprint, jsonify, request, current_app as app
 
-from api.response import resp_empty
 from api.common import delete_file, delete_shorten
 from api.common.auth import token_check, password_check
 from api.errors import BadInput

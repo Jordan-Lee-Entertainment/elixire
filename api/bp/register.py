@@ -11,7 +11,7 @@ This also includes routes like recovering username from email.
 import asyncpg
 import logging
 
-from quart import Blueprint, current_app as app, jsonify, request
+from quart import Blueprint, current_app as app, request
 from dns import resolver
 
 from api.errors import BadInput, FeatureDisabled
@@ -105,14 +105,17 @@ async def register_user():
     )
 
     if not email_ok:
+        # TODO send webhook about failure
         log.warning("failed to send email, deleting user")
         await delete_user(user_id, delete=True)
         raise BadInput("Failed to send email.")
 
     log.info("registration side-effects: email=%r, webhook=%r", email_ok, webhook_ok)
 
-    # TODO return '', 204
-    return jsonify({"success": succ and succ_wb})
+    if email_ok and webhook_ok:
+        return "", 204
+
+    return "", 500
 
 
 async def send_recover_uname(uname: str, email: str):
@@ -153,7 +156,6 @@ async def recover_username():
         raise BadInput("Email not found")
 
     # send email
-    succ = await send_recover_uname(app, row["username"], row["email"])
+    email_ok = await send_recover_uname(row["username"], row["email"])
 
-    # TODO '', 204
-    return jsonify({"success": succ})
+    return "", 204 if email_ok else 500
