@@ -55,7 +55,6 @@ async def test_limits_work(test_cli_user):
 
 @pytest.mark.asyncio
 async def test_patch_profile(test_cli_user):
-
     # request 1: getting profile info to
     # change back to later
     profileresp = await test_cli_user.get("/api/profile")
@@ -67,17 +66,19 @@ async def test_patch_profile(test_cli_user):
     # request 2: updating profile
     new_uname = username()
 
+    print(test_cli_user)
+
     resp = await test_cli_user.patch(
         "/api/profile",
         json={
-            # change to a random username
             "username": f"test{new_uname}",
-            # random email
             "email": email(),
             # users dont have paranoid by default, so
             # change that too. the more we change,
             # the better
             "paranoid": True,
+            # password required to change username and email
+            "password": test_cli_user["password"],
         },
     )
 
@@ -97,8 +98,10 @@ async def test_patch_profile(test_cli_user):
         "/api/profile",
         json={
             "username": test_cli_user["username"],
-            "email": profile["email"],
+            "email": test_cli_user["email"],
             "paranoid": False,
+            # password required to change username and email
+            "password": test_cli_user["password"],
         },
     )
 

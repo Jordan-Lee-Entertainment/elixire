@@ -30,7 +30,7 @@ def token():
 
 
 def username():
-    return secrets.token_hex(random.randint(5, 13))
+    return secrets.token_hex(5)
 
 
 def email():
@@ -57,8 +57,14 @@ class TestClient:
         passing the request on to the underlying TestClient."""
         headers = kwargs.get("headers", {})
 
-        if not kwargs.get("do_token", True):
+        do_token = kwargs.get("do_token", True)
+
+        try:
             kwargs.pop("do_token")
+        except KeyError:
+            pass
+
+        if not do_token:
             return headers
 
         headers["authorization"] = self.user["token"]

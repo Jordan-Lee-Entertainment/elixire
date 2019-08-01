@@ -2,6 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import asyncio
 import secrets
 import sys
 import os
@@ -52,7 +53,7 @@ async def _user_fixture_setup():
     password = secrets.token_hex(6)
     user_email = email()
 
-    user = await create_user(username, user_email, password)
+    user = await create_user(username, password, user_email)
     user_token = gen_token(user)
 
     return {
@@ -67,7 +68,8 @@ async def _user_fixture_setup():
 
 
 async def _user_fixture_teardown(user: dict):
-    await delete_user(user["user_id"], delete=True)
+    task = await delete_user(user["user_id"], delete=True)
+    await asyncio.shield(task)
 
 
 @pytest.fixture(name="test_user")

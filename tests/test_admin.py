@@ -213,7 +213,7 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     assert dinfo["owner"]["user_id"] == user_id
     assert dinfo["admin_only"]
     assert dinfo["official"]
-    assert dinfo["permissions"] == 666
+    assert dinfo["permissions"] == 0
 
     # reset the domain properties
     # to sane defaults

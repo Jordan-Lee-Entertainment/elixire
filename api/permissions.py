@@ -31,8 +31,8 @@ async def domain_permissions(
         domain_id,
     )
 
-    if not perm:
-        raise BadInput("Domain not found")
+    if perm is None:
+        raise BadInput(f"Domain {domain_id} not found")
 
     flag = perm & (1 << permission)
 

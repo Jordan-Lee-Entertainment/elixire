@@ -57,8 +57,8 @@ async def pwd_hash(password: str) -> str:
 
 async def pwd_check(stored: str, password: str):
     """Raw version of password_check."""
-    pwd_bytes = bytes(password, "utf-8")
-    pwd_orig = bytes(stored, "utf-8")
+    pwd_bytes = password.encode("utf-8")
+    pwd_orig = stored.encode("utf-8")
 
     future = app.loop.run_in_executor(None, bcrypt.checkpw, pwd_bytes, pwd_orig)
 

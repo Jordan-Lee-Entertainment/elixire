@@ -52,7 +52,7 @@ async def test_login_baduser(test_cli_user):
 @pytest.mark.asyncio
 async def test_no_token(test_cli):
     """Test no token request."""
-    resp = await test_cli.get("/api/profile", do_token=False)
+    resp = await test_cli.get("/api/profile")
     assert resp.status_code == 403
 
 
