@@ -3,85 +3,83 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .creds import USERNAME, PASSWORD
-from .common import token, username, login_normal
+from .common import token, username
 
 
 @pytest.mark.asyncio
-async def test_login(test_cli):
-    response = await test_cli.post(
-        "/api/login", json={"user": USERNAME, "password": PASSWORD}
+async def test_login(test_cli_user):
+    resp = await test_cli_user.post(
+        "/api/login",
+        do_token=False,
+        json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
     )
 
-    assert response.status_code == 200
-    resp_json = await response.json
-    assert isinstance(resp_json, dict)
-    assert isinstance(resp_json["token"], str)
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["token"], str)
 
 
 @pytest.mark.asyncio
-async def test_login_badinput(test_cli):
-    response = await test_cli.post("/api/login", json={"user": USERNAME})
-
-    assert response.status_code == 400
-
-
-@pytest.mark.asyncio
-async def test_login_badpwd(test_cli):
-    response = await test_cli.post(
-        "/api/login", json={"user": USERNAME, "password": token()}
+async def test_login_badinput(test_cli_user):
+    resp = await test_cli_user.post(
+        "/api/login", do_token=False, json={"user": test_cli_user["username"]}
     )
 
-    assert response.status_code == 403
+    assert resp.status_code == 400
 
 
 @pytest.mark.asyncio
-async def test_login_baduser(test_cli):
-    response = await test_cli.post(
-        "/api/login", json={"user": username(), "password": PASSWORD}
+async def test_login_badpwd(test_cli_user):
+    response = await test_cli_user.post(
+        "/api/login",
+        do_token=False,
+        json={"user": test_cli_user["username"], "password": token()},
     )
 
     assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_login_baduser(test_cli_user):
+    resp = await test_cli_user.post(
+        "/api/login", json={"user": username(), "password": test_cli_user["password"]}
+    )
+
+    assert resp.status_code == 403
 
 
 @pytest.mark.asyncio
 async def test_no_token(test_cli):
     """Test no token request."""
-    response = await test_cli.get("/api/profile", headers={})
-    assert response.status_code == 403
+    resp = await test_cli.get("/api/profile", do_token=False)
+    assert resp.status_code == 403
 
 
 @pytest.mark.asyncio
 async def test_invalid_token(test_cli):
     """Test invalid token."""
-    response = await test_cli.get("/api/profile", headers={"Authorization": token()})
-    assert response.status_code == 403
+    resp = await test_cli.get("/api/profile", headers={"Authorization": token()})
+    assert resp.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_valid_token(test_cli):
-    token = await login_normal(test_cli)
-    response_valid = await test_cli.get(
-        "/api/profile", headers={"Authorization": token}
-    )
-
-    assert response_valid.status_code == 200
+async def test_valid_token(test_cli_user):
+    resp = await test_cli_user.get("/api/profile")
+    assert resp.status_code == 200
 
 
 @pytest.mark.asyncio
-async def test_revoke(test_cli):
-    token = await login_normal(test_cli)
-
-    resp = await test_cli.get("/api/profile", headers={"Authorization": token})
-
+async def test_revoke(test_cli, test_cli_user):
+    resp = await test_cli_user.get("/api/profile")
     assert resp.status_code == 200
 
     resp = await test_cli.post(
-        "/api/revoke", json={"user": USERNAME, "password": PASSWORD}
+        "/api/revoke",
+        json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
     )
 
     assert resp.status_code == 204
 
-    resp = await test_cli.get("/api/profile", headers={"Authorization": token})
-
+    resp = await test_cli_user.get("/api/profile")
     assert resp.status_code == 403

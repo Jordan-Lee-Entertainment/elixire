@@ -56,6 +56,11 @@ class TestClient:
         """Inject the test user's API key into the test request before
         passing the request on to the underlying TestClient."""
         headers = kwargs.get("headers", {})
+
+        if not kwargs.get("do_token", True):
+            kwargs.pop("do_token")
+            return headers
+
         headers["authorization"] = self.user["token"]
         return headers
 
