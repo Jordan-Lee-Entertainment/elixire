@@ -16,21 +16,15 @@ def _extract_uid(token) -> str:
 
 
 @pytest.mark.asyncio
-async def test_non_admin(test_cli):
-    utoken = await login_normal(test_cli)
-
-    resp = await test_cli.get("/api/admin/test", headers={"Authorization": utoken})
-
+async def test_non_admin(test_cli_user):
+    resp = await test_cli_user.get("/api/admin/test")
     assert resp.status_code != 200
     assert resp.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_admin(test_cli):
-    utoken = await login_admin(test_cli)
-
-    resp = await test_cli.get("/api/admin/test", headers={"Authorization": utoken})
-
+async def test_admin(test_cli_user):
+    resp = await test_cli_user.get("/api/admin/test")
     assert resp.status_code == 200
     data = await resp.json
 
@@ -39,13 +33,10 @@ async def test_admin(test_cli):
 
 
 @pytest.mark.asyncio
-async def test_user_fetch(test_cli):
-    atoken = await login_admin(test_cli)
+async def test_user_fetch(test_cli_admin):
     uid = _extract_uid(atoken)
 
-    resp = await test_cli.get(
-        f"/api/admin/users/{uid}", headers={"Authorization": atoken}
-    )
+    resp = await test_cli_admin.get(f"/api/admin/users/{uid}")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -65,10 +56,7 @@ async def test_user_fetch(test_cli):
     # trying to fetch the user from the username we got
     # should also work
     user_id = rjson["user_id"]
-    resp = await test_cli.get(
-        f'/api/admin/users/by-username/{rjson["username"]}',
-        headers={"Authorization": atoken},
-    )
+    resp = await test_cli_admin.get(f'/api/admin/users/by-username/{rjson["username"]}')
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -80,28 +68,22 @@ async def test_user_fetch(test_cli):
 
 
 @pytest.mark.asyncio
-async def test_user_activate_cycle(test_cli):
-    # logic here is to:
-    # - deactivate user
-    # - check the user's profile, make sure its deactivated
-    # - activate user
-    # - check profile again, making sure its activated
-    ntoken = await login_normal(test_cli)
-    atoken = await login_admin(test_cli)
-
-    uid = _extract_uid(ntoken)
+async def test_user_activate_cycle(test_cli_user, test_cli_admin):
+    """
+    logic here is to:
+     - deactivate user
+     - check the user's profile, make sure its deactivated
+     - activate user
+     - check profile again, making sure its activated
+    """
+    uid = test_cli_user.user["user_id"]
 
     # deactivate
-    resp = await test_cli.post(
-        f"/api/admin/users/deactivate/{uid}", headers={"Authorization": atoken}
-    )
-
+    resp = await test_cli_admin.post(f"/api/admin/users/deactivate/{uid}")
     assert resp.status_code == 204
 
     # check profile for deactivation
-    resp = await test_cli.get(
-        f"/api/admin/users/{uid}", headers={"Authorization": atoken}
-    )
+    resp = await test_cli_admin.get(f"/api/admin/users/{uid}")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -109,15 +91,11 @@ async def test_user_activate_cycle(test_cli):
     assert not rjson["active"]
 
     # activate
-    resp = await test_cli.post(
-        f"/api/admin/users/activate/{uid}", headers={"Authorization": atoken}
-    )
+    resp = await test_cli_admin.post(f"/api/admin/users/activate/{uid}")
     assert resp.status_code == 204
 
     # check profile
-    resp = await test_cli.get(
-        f"/api/admin/users/{uid}", headers={"Authorization": atoken}
-    )
+    resp = await test_cli_admin.get(f"/api/admin/users/{uid}")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -126,18 +104,14 @@ async def test_user_activate_cycle(test_cli):
 
 
 @pytest.mark.asyncio
-async def test_user_search(test_cli):
+async def test_user_search(test_cli_admin):
     """Test seaching of users."""
     # there isnt much other testing than calling the route
     # and checking for the data types...
 
-    # no idea how we would test all the query arguments
+    # NOTE no idea how we would test all the query arguments
     # in the route.
-    atoken = await login_admin(test_cli)
-
-    resp = await test_cli.get(
-        "/api/admin/users/search", headers={"Authorization": atoken}
-    )
+    resp = await test_cli_admin.get("/api/admin/users/search")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -152,9 +126,7 @@ async def test_user_search(test_cli):
 
 
 @pytest.mark.asyncio
-async def test_domain_search(test_cli):
-    token = await login_admin(test_cli)
-
+async def test_domain_search(test_cli_admin):
     def assert_standard_response(json):
         assert isinstance(json, dict)
         assert isinstance(json["results"], dict)
@@ -165,9 +137,7 @@ async def test_domain_search(test_cli):
         assert isinstance(pag["current"], int)
 
     # no query -- returns all users, paginated
-    resp = await test_cli.get(
-        "/api/admin/domains/search", headers={"Authorization": token}
-    )
+    resp = await test_cli_admin.get("/api/admin/domains/search")
 
     assert resp.status_code == 200
 
@@ -175,10 +145,8 @@ async def test_domain_search(test_cli):
     assert_standard_response(json)
 
     # sample query
-    resp = await test_cli.get(
-        "/api/admin/domains/search",
-        headers={"Authorization": token},
-        query_string={"query": "elix"},
+    resp = await test_cli_admin.get(
+        "/api/admin/domains/search", query_string={"query": "elix"}
     )
 
     assert resp.status_code == 200
@@ -192,11 +160,9 @@ async def test_domain_search(test_cli):
 
 
 @pytest.mark.asyncio
-async def test_domain_stats(test_cli):
+async def test_domain_stats(test_cli_admin):
     """Get instance-wide domain stats."""
-    atoken = await login_admin(test_cli)
-
-    resp = await test_cli.get("/api/admin/domains", headers={"Authorization": atoken})
+    resp = await test_cli_admin.get("/api/admin/domains")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -211,23 +177,19 @@ async def test_domain_stats(test_cli):
 
 
 @pytest.mark.asyncio
-async def test_domain_patch(test_cli):
+async def test_domain_patch(test_cli_user, test_cli_admin):
     """Test editing of a single domain."""
-    atoken = await login_admin(test_cli)
-    utoken = await login_normal(test_cli)
+    user_id = test_cli_user.user["user_id"]
+    admin_id = test_cli_admin.user["user_id"]
 
-    admin_id = _extract_uid(atoken)
-    user_id = _extract_uid(utoken)
-
-    resp = await test_cli.patch(
+    resp = await test_cli_admin.patch(
         "/api/admin/domains/0",
         json={
             "owner_id": user_id,
             "admin_only": True,
             "official": True,
-            "permissions": 666,
+            "permissions": 0,
         },
-        headers={"Authorization": atoken},
     )
 
     assert resp.status_code == 200
@@ -242,7 +204,7 @@ async def test_domain_patch(test_cli):
     assert "permissions" in fields
 
     # fetch domain info
-    resp = await test_cli.get("/api/admin/domains/0", headers={"Authorization": atoken})
+    resp = await test_cli_admin.get("/api/admin/domains/0")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -257,7 +219,7 @@ async def test_domain_patch(test_cli):
 
     # reset the domain properties
     # to sane defaults
-    resp = await test_cli.patch(
+    resp = await test_cli_admin.patch(
         "/api/admin/domains/0",
         json={
             "owner_id": admin_id,
@@ -265,7 +227,6 @@ async def test_domain_patch(test_cli):
             "official": False,
             "permissions": 3,
         },
-        headers={"Authorization": atoken},
     )
 
     assert resp.status_code == 200
@@ -280,7 +241,7 @@ async def test_domain_patch(test_cli):
     assert "permissions" in fields
 
     # fetch domain info, again, to make sure.
-    resp = await test_cli.get("/api/admin/domains/0", headers={"Authorization": atoken})
+    resp = await test_cli_admin.get("/api/admin/domains/0")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -295,17 +256,13 @@ async def test_domain_patch(test_cli):
 
 
 @pytest.mark.asyncio
-async def test_user_patch(test_cli):
-    atoken = await login_admin(test_cli)
-    utoken = await login_normal(test_cli)
-
-    user_id = _extract_uid(utoken)
+async def test_user_patch(test_cli_user, test_cli_admin):
+    user_id = test_cli_user.user["user_id"]
 
     # request 1: change default user to admin, etc
-    resp = await test_cli.patch(
+    resp = await test_cli_admin.patch(
         f"/api/admin/users/{user_id}",
         json={"upload_limit": 1000, "shorten_limit": 1000},
-        headers={"Authorization": atoken},
     )
 
     assert resp.status_code == 200
@@ -315,9 +272,8 @@ async def test_user_patch(test_cli):
     assert "shorten_limit" in rjson
 
     # request 2: check by getting user info
-    resp = await test_cli.get(
-        f"/api/admin/users/{user_id}", headers={"Authorization": atoken}
-    )
+    # TODO maybe we can check GET /api/profile
+    resp = await test_cli_admin.get(f"/api/admin/users/{user_id}")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -327,10 +283,9 @@ async def test_user_patch(test_cli):
     assert rjson["limits"]["shortenlimit"] == 1000
 
     # request 3: changing it back
-    resp = await test_cli.patch(
+    resp = await test_cli_admin.patch(
         f"/api/admin/users/{user_id}",
         json={"upload_limit": 104857600, "shorten_limit": 100},
-        headers={"Authorization": atoken},
     )
 
     assert resp.status_code == 200
@@ -339,16 +294,13 @@ async def test_user_patch(test_cli):
     assert "upload_limit" in rjson
     assert "shorten_limit" in rjson
 
+    # TODO check the set values here
+
 
 @pytest.mark.asyncio
-async def test_my_stats_as_admin(test_cli):
+async def test_my_stats_as_admin(test_cli_admin):
     """Test the personal domain stats route but as an admin."""
-    utoken = await login_admin(test_cli)
-
-    resp = await test_cli.get(
-        "/api/stats/my_domains", headers={"Authorization": utoken}
-    )
-
+    resp = await test_cli_admin.get("/api/stats/my_domains")
     assert resp.status_code == 200
 
     rjson = await resp.json

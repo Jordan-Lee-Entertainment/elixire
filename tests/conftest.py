@@ -87,8 +87,8 @@ async def test_cli_user(test_cli, test_user):
 
 
 @pytest.fixture
-async def test_cli_staff(test_cli):
-    """Yield a TestClient with a staff user."""
+async def test_cli_admin(test_cli):
+    """Yield a TestClient with an admin user."""
     # This does not use the test_user because if a given test uses both
     # test_cli_user and test_cli_admin, test_cli_admin will just point to that
     # same test_cli_user, which isn't acceptable.
@@ -101,6 +101,18 @@ async def test_cli_staff(test_cli):
     UPDATE users SET admin = true WHERE id = $2
     """,
         user_id,
+    )
+
+    await test_cli.app.db.execute(
+        """
+    INSERT INTO domain_owners (domain_id, user_id)
+    VALUES (0, $1)
+    ON CONFLICT ON CONSTRAINT domain_owners_pkey
+    DO UPDATE
+        SET user_id = $1
+        WHERE domain_owners.domain_id = 0
+    """,
+        test_user["user_id"],
     )
 
     yield TestClient(test_cli, test_user)
