@@ -66,8 +66,6 @@ async def test_patch_profile(test_cli_user):
     # request 2: updating profile
     new_uname = username()
 
-    print(test_cli_user)
-
     resp = await test_cli_user.patch(
         "/api/profile",
         json={
