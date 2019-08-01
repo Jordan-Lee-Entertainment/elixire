@@ -3,14 +3,11 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .common import login_normal, login_admin
 
 
 @pytest.mark.asyncio
-async def test_stats(test_cli):
-    utoken = await login_normal(test_cli)
-
-    resp = await test_cli.get("/api/stats", headers={"Authorization": utoken})
+async def test_stats(test_cli_user):
+    resp = await test_cli_user.get("/api/stats")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -23,13 +20,9 @@ async def test_stats(test_cli):
 
 
 @pytest.mark.asyncio
-async def test_domains(test_cli):
+async def test_domains(test_cli_admin):
     # admins always own at least domain 0
-    atoken = await login_admin(test_cli)
-
-    resp = await test_cli.get(
-        "/api/stats/my_domains", headers={"Authorization": atoken}
-    )
+    resp = await test_cli_admin.get("/api/stats/my_domains")
 
     assert resp.status_code == 200
     rjson = await resp.json
