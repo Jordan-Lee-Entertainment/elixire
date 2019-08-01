@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .common import login_normal, login_admin
 
 
 def _extract_uid(token) -> str:
@@ -34,8 +33,7 @@ async def test_admin(test_cli_user):
 
 @pytest.mark.asyncio
 async def test_user_fetch(test_cli_admin):
-    uid = _extract_uid(atoken)
-
+    uid = test_cli_admin["user_id"]
     resp = await test_cli_admin.get(f"/api/admin/users/{uid}")
 
     assert resp.status_code == 200

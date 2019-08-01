@@ -3,8 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .creds import USERNAME, PASSWORD
-from .common import token, username, email, login_normal
+from .common import token, username, email
 
 
 @pytest.mark.asyncio

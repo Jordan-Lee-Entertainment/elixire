@@ -28,7 +28,7 @@ async def _test_upload_png(test_cli_user):
     # https://gitlab.com/pgjones/quart/issues/147
     resp = await test_cli_user.post(
         "/api/upload",
-        headers={"authorization": utoken, "content-type": "multipart/form-data"},
+        headers={"content-type": "multipart/form-data"},
         form={"file": (png_data(), "random.png"), "content-type": "image/png"},
     )
 
@@ -37,13 +37,13 @@ async def _test_upload_png(test_cli_user):
     assert isinstance(respjson, dict)
     assert isinstance(respjson["url"], str)
     assert isinstance(respjson["delete_url"], str)
-    await check_exists(test_cli_user, respjson["shortname"], utoken)
+    await check_exists(test_cli_user, respjson["shortname"])
 
 
 @pytest.mark.asyncio
 async def _test_delete_file(test_cli_user):
     # TODO file
-    resp = await test_cli_user.post("/api/upload", headers={"Authorization": utoken})
+    resp = await test_cli_user.post("/api/upload")
 
     assert resp.status_code == 200
     respjson = await resp.json

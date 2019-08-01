@@ -30,7 +30,7 @@ def app_fixture(event_loop):
     app_.audit_log = MockAuditLog()
 
     event_loop.run_until_complete(app_.startup())
-    yield app
+    yield app_
     event_loop.run_until_complete(app_.shutdown())
 
 
@@ -51,6 +51,7 @@ async def _user_fixture_setup(app):
     # TODO fix
 
     async with app.app_context():
+        # print(app)
         user = await create_user(username, user_email, password)
 
     user_token = gen_token(user)
