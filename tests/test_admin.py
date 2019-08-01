@@ -22,8 +22,8 @@ async def test_non_admin(test_cli_user):
 
 
 @pytest.mark.asyncio
-async def test_admin(test_cli_user):
-    resp = await test_cli_user.get("/api/admin/test")
+async def test_admin(test_cli_admin):
+    resp = await test_cli_admin.get("/api/admin/test")
     assert resp.status_code == 200
     data = await resp.json
 
@@ -177,8 +177,8 @@ async def test_domain_stats(test_cli_admin):
 @pytest.mark.asyncio
 async def test_domain_patch(test_cli_user, test_cli_admin):
     """Test editing of a single domain."""
-    user_id = test_cli_user.user["user_id"]
-    admin_id = test_cli_admin.user["user_id"]
+    user_id = str(test_cli_user.user["user_id"])
+    admin_id = str(test_cli_admin.user["user_id"])
 
     resp = await test_cli_admin.patch(
         "/api/admin/domains/0",

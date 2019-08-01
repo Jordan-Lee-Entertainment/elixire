@@ -18,7 +18,7 @@ from .common import email, TestClient
 
 
 @pytest.fixture(name="app")
-def app_fixture(event_loop):
+async def app_fixture(event_loop):
     app_._test = True
     app_.loop = event_loop
     app_.econfig.RATELIMITS = {"*": (10000, 1)}
@@ -29,9 +29,13 @@ def app_fixture(event_loop):
     # use mock instances of some external services.
     app_.audit_log = MockAuditLog()
 
-    event_loop.run_until_complete(app_.startup())
+    # event_loop.run_until_complete(app_.startup())
+    await app_.startup()
+
     yield app_
-    event_loop.run_until_complete(app_.shutdown())
+
+    # event_loop.run_until_complete(app_.shutdown())
+    await app_.shutdown()
 
 
 @pytest.fixture(name="test_cli")
@@ -43,17 +47,12 @@ def test_cli_fixture(app):
 # https://gitlab.com/elixire/elixire/merge_requests/52
 # now its being redone with that code + litecord code
 # https://gitlab.com/litecord/litecord/merge_requests/42
-async def _user_fixture_setup(app):
+async def _user_fixture_setup():
     username = secrets.token_hex(6)
     password = secrets.token_hex(6)
     user_email = email()
 
-    # TODO fix
-
-    async with app.app_context():
-        # print(app)
-        user = await create_user(username, user_email, password)
-
+    user = await create_user(username, user_email, password)
     user_token = gen_token(user)
 
     return {
@@ -67,17 +66,20 @@ async def _user_fixture_setup(app):
     }
 
 
-async def _user_fixture_teardown(app, user: dict):
-    async with app.app_context():
-        await delete_user(user["user_id"], delete=True)
+async def _user_fixture_teardown(user: dict):
+    await delete_user(user["user_id"], delete=True)
 
 
 @pytest.fixture(name="test_user")
 async def test_user_fixture(app):
     """Yield a randomly generated test user."""
-    user = await _user_fixture_setup(app)
+    async with app.app_context():
+        user = await _user_fixture_setup()
+
     yield user
-    await _user_fixture_teardown(app, user)
+
+    async with app.app_context():
+        await _user_fixture_teardown(user)
 
 
 @pytest.fixture
@@ -94,17 +96,20 @@ async def test_cli_admin(test_cli):
     # test_cli_user and test_cli_admin, test_cli_admin will just point to that
     # same test_cli_user, which isn't acceptable.
     app = test_cli.app
-    test_user = await _user_fixture_setup(app)
+
+    async with app.app_context():
+        test_user = await _user_fixture_setup()
+
     user_id = test_user["user_id"]
 
     await app.db.execute(
         """
-    UPDATE users SET admin = true WHERE id = $2
+    UPDATE users SET admin = true WHERE user_id = $1
     """,
         user_id,
     )
 
-    await test_cli.app.db.execute(
+    await app.db.execute(
         """
     INSERT INTO domain_owners (domain_id, user_id)
     VALUES (0, $1)
@@ -117,4 +122,6 @@ async def test_cli_admin(test_cli):
     )
 
     yield TestClient(test_cli, test_user)
-    await _user_fixture_teardown(test_cli.app, test_user)
+
+    async with app.app_context():
+        await _user_fixture_teardown(test_user)
