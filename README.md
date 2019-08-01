@@ -153,35 +153,9 @@ Both the client and admin API are documented there.
 
 ## Setting and running a test environment
 
-⚠ **NOTE: NEVER RUN TESTS IN YOUR PRODUCTION ENVIRONMENT.**
-
 Install [tox] manually (the [Python] package, not the messenger).
 
 [tox]: https://pypi.org/project/tox
-
-Create the testing users:
-
-```bash
-./manage.py adduser h@h.co hi hihihihi
-./manage.py adduser a@a.co admin adminadmin
-./manage.py adduser n@n.co nousage nousagenousage
-./manage.py adduser q@q.co quotareached quotareached
-```
-
-Then, enter the [PostgreSQL] shell, `psql`, and run these queries:
-
-```bash
-psql -U postgres -d elixire
-```
-
-```sql
-UPDATE users
-SET admin = true
-WHERE username = 'admin';
-
-INSERT INTO domain_owners (domain_id, user_id)
-VALUES (0, (SELECT user_id FROM users WHERE username = 'admin'));
-```
 
 Then you can run the tests with [tox]:
 
