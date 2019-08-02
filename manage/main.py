@@ -85,13 +85,18 @@ def main(config):
     # load our setup() calls on manage/cmd files
     parser = set_parser()
 
+    async def _ctx_wrapper(ctx, args):
+        app = ctx.make_app()
+        async with app.app_context():
+            await args.func(ctx, args)
+
     try:
         if len(sys.argv) < 2:
             parser.print_help()
             return
 
         args = parser.parse_args()
-        loop.run_until_complete(args.func(ctx, args))
+        loop.run_until_complete(_ctx_wrapper(ctx, args))
     except PrintException as exc:
         print(exc.args[0])
     except ArgError as exc:

@@ -4,9 +4,9 @@
 
 import datetime
 
-from .errors import ArgError
-
+from quart import Quart
 from api.snowflake import snowflake_time
+from .errors import ArgError
 
 
 class Context:
@@ -33,6 +33,17 @@ class Context:
         self.session = None
         self.storage = None
         self.sched = None
+
+    def make_app(self) -> Quart:
+        app = Quart(__name__)
+        app.db = self.db
+        app.redis = self.redis
+        app.loop = self.loop
+        app.locks = self.locks
+        app.session = self.session
+        app.storage = self.storage
+        app.sched = self.sched
+        return app
 
 
 async def get_user(ctx, username: str) -> int:
