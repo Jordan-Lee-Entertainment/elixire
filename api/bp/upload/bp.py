@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from quart import Blueprint, jsonify, current_app as app, request
 
-from api.common import get_domain_info, get_random_domain, transform_wildcard
+from api.common import get_domain_info, transform_wildcard
 from api.common.auth import check_admin, gen_shortname, token_check
 from api.permissions import Permissions, domain_permissions
 from api.snowflake import get_snowflake
@@ -103,7 +103,6 @@ async def upload_handler():
     # if admin is set on request.args, we will # do an "admin upload", without
     # any checking for viruses, weekly limits, MIME, etc.
     do_checks = not bool(request.args.get("admin"))
-    random_domain = bool(request.args.get("random"))
     given_domain, given_subdomain = _fetch_domain()
 
     # if the user is admin and they wanted an admin
@@ -162,11 +161,8 @@ async def upload_handler():
     # will be placed on.
     #
     # however, this is quite complicated:
-    # - the user can specify ?random=1 to pick a random domain
     # - the user can specify a specific domain or subdomain they want the file
     #   to be uploaded on for this request SPECIFICALLY
-    # - if the user specifies a random domain, we need to use their specific
-    #   subdomain or fallback on the account specified one
     #
     # we also want to fallback on the user's configured domain settings in their
     # account settings.
@@ -174,17 +170,10 @@ async def upload_handler():
     # get the user's domain settings
     user_domain_id, user_subdomain, user_domain = await get_domain_info(user_id)
 
-    if random_domain:
-        # let's get a random domain and pretend that it was specified in the
-        # request (given_subdomain is that)
-        given_domain = await get_random_domain()
-        domain_id = given_domain
-        subdomain_name = given_subdomain
-    else:
-        # use the specified domain stuff from the request, but fall back
-        # to the domain info
-        domain_id = given_domain or user_domain_id
-        subdomain_name = given_subdomain or user_subdomain
+    # use the specified domain stuff from the request, but fall back
+    # to the domain info
+    domain_id = given_domain or user_domain_id
+    subdomain_name = given_subdomain or user_subdomain
 
     # check if domain is uploadable
     await domain_permissions(app, domain_id, Permissions.UPLOAD)
