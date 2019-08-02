@@ -19,7 +19,8 @@ from api.common.email import (
 from api.common.auth import token_check, check_admin
 from api.common.pagination import Pagination
 
-from api.bp.profile import get_limits, delete_user
+from api.common.user import delete_user
+from api.common.profile import get_limits
 
 from api.bp.admin.audit_log_actions.user import UserEditAction, UserDeleteAction
 
@@ -32,7 +33,7 @@ async def _user_resp_from_row(user_row):
         raise NotFound("User not found")
 
     user = dict(user_row)
-    user["limits"] = await get_limits(app.db, user["user_id"])
+    user["limits"] = await get_limits(int(user["user_id"]))
     user["user_id"] = str(user["user_id"])
 
     return jsonify(user)

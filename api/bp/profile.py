@@ -24,7 +24,6 @@ from api.schema import (
     PASSWORD_RESET_SCHEMA,
     PASSWORD_RESET_CONFIRM_SCHEMA,
 )
-from api.common.utils import int_
 from api.common.user import delete_user, get_basic_user
 from api.common.profile import get_limits, get_counts
 
@@ -261,7 +260,7 @@ async def change_profile():
 async def limits_handler():
     """Query a user's limits."""
     user_id = await token_check()
-    limits = await get_limits(app.db, user_id)
+    limits = await get_limits(user_id)
     return jsonify(limits)
 
 

@@ -7,7 +7,6 @@ import secrets
 
 import bcrypt
 
-from api.snowflake import get_snowflake
 from api.bp.profile import delete_user
 from api.common.user import create_user
 from ..utils import get_user
@@ -19,8 +18,6 @@ async def adduser(ctx, args):
     username = args.username
 
     password = args.password if args.password else secrets.token_urlsafe(25)
-
-    pass_hashing = password.encode()
 
     if len(password) > 72:
         print("password is more than 72 characters, which is above bcrypt limitations")
