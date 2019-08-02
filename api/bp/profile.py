@@ -8,7 +8,7 @@ import asyncpg
 from quart import Blueprint, request, current_app as app, jsonify
 
 from api.response import resp_empty
-from api.errors import FailedAuth, FeatureDisabled, BadInput
+from api.errors import FailedAuth, FeatureDisabled, BadInput, APIError
 from api.common.auth import (
     token_check,
     password_check,
@@ -25,9 +25,9 @@ from api.schema import (
     PASSWORD_RESET_CONFIRM_SCHEMA,
 )
 from api.common.utils import int_
-from api.common.user import delete_user
+from api.common.user import delete_user, get_basic_user
+from api.common.profile import get_limits, get_counts
 
-from api.bp.personal_stats import get_counts
 from api.bp.datadump.bp import get_dump_status
 
 bp = Blueprint("profile", __name__)
@@ -51,81 +51,28 @@ async def _update_password(user_id, new_pwd):
     await app.storage.invalidate(user_id, "password_hash")
 
 
-async def get_limits(db, user_id) -> dict:
-    """Get a user's limit information."""
-    limits = await db.fetchrow(
-        """
-    SELECT blimit, shlimit
-    FROM limits
-    WHERE user_id = $1
-    """,
-        user_id,
-    )
-
-    if not limits:
-        return {"limit": None, "used": None, "shortenlimit": None, "shortenused": None}
-
-    bytes_used = await db.fetchval(
-        """
-    SELECT SUM(file_size)
-    FROM files
-    WHERE uploader = $1
-    AND file_id > time_snowflake(now() - interval '7 days')
-    """,
-        user_id,
-    )
-
-    shortens_used = await db.fetchval(
-        """
-    SELECT COUNT(*)
-    FROM shortens
-    WHERE uploader = $1
-    AND shorten_id > time_snowflake(now() - interval '7 days')
-    """,
-        user_id,
-    )
-
-    return {
-        "limit": limits["blimit"],
-        "used": int_(bytes_used, 0),
-        "shortenlimit": limits["shlimit"],
-        "shortenused": shortens_used,
-    }
-
-
 @bp.route("/profile", methods=["GET"])
 async def profile_handler():
     """Get your basic information as a user."""
     user_id = await token_check()
 
-    # TODO storage.get_user
-    user = await app.db.fetchrow(
-        """
-    SELECT user_id, username, active, email,
-           consented, admin, subdomain, domain, paranoid,
-           shorten_domain, shorten_subdomain
-    FROM users
-    WHERE user_id = $1
-    """,
-        user_id,
-    )
+    user = await get_basic_user(user_id)
+    if user is None:
+        raise FailedAuth("Unknown user")
 
-    if not user:
-        raise FailedAuth("unknown user")
+    limits = await get_limits(user_id)
+    if limits is None:
+        raise APIError("Failed to fetch limits")
 
-    limits = await get_limits(app.db, user_id)
+    user["limits"] = limits
 
-    duser = dict(user)
-    duser["user_id"] = str(duser["user_id"])
-    duser["limits"] = limits
-
-    counts = await get_counts(app.db, user_id)
-    duser["stats"] = counts
+    counts = await get_counts(user_id)
+    user["stats"] = counts
 
     dump_status = await get_dump_status(app.db, user_id)
-    duser["dump_status"] = dump_status
+    user["dump_status"] = dump_status
 
-    return jsonify(duser)
+    return jsonify(user)
 
 
 @bp.route("/profile", methods=["PATCH"])
