@@ -58,7 +58,7 @@ async def get_domain_info(db, domain_id) -> dict:
 
     owner_data = await db.fetchrow(
         """
-    SELECT user_id::text, username, active, consented, admin
+    SELECT user_id::text, username, active, consented, admin, paranoid
     FROM users
     WHERE user_id = (SELECT user_id FROM domain_owners WHERE domain_id = $1)
     """,
