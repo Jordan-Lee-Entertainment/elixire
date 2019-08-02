@@ -8,18 +8,19 @@ elixi.re backend source code - register route
 This also includes routes like recovering username from email.
 """
 
-import bcrypt
 import asyncpg
+import logging
 
-from quart import Blueprint, current_app as app, jsonify
+from quart import Blueprint, current_app as app, request
 from dns import resolver
 
-from api.snowflake import get_snowflake
 from api.errors import BadInput, FeatureDisabled
 from api.schema import validate, REGISTRATION_SCHEMA, RECOVER_USERNAME
 from api.common.email import send_email, fmt_email
 from api.common.webhook import register_webhook
+from api.common.user import create_user, delete_user
 
+log = logging.getLogger(__name__)
 bp = Blueprint("register", __name__)
 
 
@@ -90,45 +91,31 @@ async def register_user():
 
     await check_email(app.loop, email)
 
-    # borrowed from utils/adduser
-    user_id = get_snowflake()
-
-    _pwd = bytes(password, "utf-8")
-    hashed = bcrypt.hashpw(_pwd, bcrypt.gensalt(14))
-
     try:
-        await app.db.execute(
-            """
-        INSERT INTO users (user_id, username, password_hash, email, active)
-        VALUES ($1, $2, $3, $4, false)
-        """,
-            user_id,
-            username,
-            hashed.decode("utf-8"),
-            email,
-        )
+        udata = await create_user(username, password, email, active=False)
     except asyncpg.exceptions.UniqueViolationError:
         raise BadInput("Username or email already exist.")
 
-    await app.db.execute(
-        """
-    INSERT INTO limits (user_id) VALUES ($1)
-    """,
-        user_id,
-    )
-
-    # invalidate if anything happened before
-    # just to make sure.
-    await app.storage.raw_invalidate(f"uid:{username}")
+    user_id = udata["user_id"]
 
     # TODO email and webhook rewrite
-    succ = await send_register_email(email)
-    succ_wb = await register_webhook(
+    email_ok = await send_register_email(email)
+    webhook_ok = await register_webhook(
         app, app.econfig.USER_REGISTER_WEBHOOK, user_id, username, discord_user, email
     )
 
-    # TODO return '', 204
-    return jsonify({"success": succ and succ_wb})
+    if not email_ok:
+        # TODO send webhook about failure
+        log.warning("failed to send email, deleting user")
+        await delete_user(user_id, delete=True)
+        raise BadInput("Failed to send email.")
+
+    log.info("registration side-effects: email=%r, webhook=%r", email_ok, webhook_ok)
+
+    if email_ok and webhook_ok:
+        return "", 204
+
+    return "", 500
 
 
 async def send_recover_uname(uname: str, email: str):
@@ -169,7 +156,6 @@ async def recover_username():
         raise BadInput("Email not found")
 
     # send email
-    succ = await send_recover_uname(app, row["username"], row["email"])
+    email_ok = await send_recover_uname(row["username"], row["email"])
 
-    # TODO '', 204
-    return jsonify({"success": succ})
+    return "", 204 if email_ok else 500

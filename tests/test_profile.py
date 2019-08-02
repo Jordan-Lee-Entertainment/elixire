@@ -3,15 +3,13 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .creds import USERNAME, PASSWORD
-from .common import token, username, email, login_normal
+from .common import token, username, email
 
 
 @pytest.mark.asyncio
-async def test_profile_work(test_cli):
+async def test_profile_work(test_cli_user):
     """Test the profile user, just getting data."""
-    utoken = await login_normal(test_cli)
-    resp = await test_cli.get("/api/profile", headers={"Authorization": utoken})
+    resp = await test_cli_user.get("/api/profile")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -39,9 +37,8 @@ async def test_profile_work(test_cli):
 
 
 @pytest.mark.asyncio
-async def test_limits_work(test_cli):
-    utoken = await login_normal(test_cli)
-    resp = await test_cli.get("/api/limits", headers={"Authorization": utoken})
+async def test_limits_work(test_cli_user):
+    resp = await test_cli_user.get("/api/limits")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -57,12 +54,10 @@ async def test_limits_work(test_cli):
 
 
 @pytest.mark.asyncio
-async def test_patch_profile(test_cli):
-    utoken = await login_normal(test_cli)
-
+async def test_patch_profile(test_cli_user):
     # request 1: getting profile info to
     # change back to later
-    profileresp = await test_cli.get("/api/profile", headers={"Authorization": utoken})
+    profileresp = await test_cli_user.get("/api/profile")
 
     assert profileresp.status_code == 200
     profile = await profileresp.json
@@ -71,19 +66,17 @@ async def test_patch_profile(test_cli):
     # request 2: updating profile
     new_uname = username()
 
-    resp = await test_cli.patch(
+    resp = await test_cli_user.patch(
         "/api/profile",
-        headers={"Authorization": utoken},
         json={
-            # change to a random username
             "username": f"test{new_uname}",
-            # random email
             "email": email(),
             # users dont have paranoid by default, so
             # change that too. the more we change,
             # the better
             "paranoid": True,
-            "password": PASSWORD,
+            # password required to change username and email
+            "password": test_cli_user["password"],
         },
     )
 
@@ -99,14 +92,14 @@ async def test_patch_profile(test_cli):
     assert "paranoid" in rjson["updated_fields"]
 
     # request 3: changing profile info back
-    resp = await test_cli.patch(
+    resp = await test_cli_user.patch(
         "/api/profile",
-        headers={"Authorization": utoken},
         json={
-            "username": USERNAME,
-            "email": profile["email"],
+            "username": test_cli_user["username"],
+            "email": test_cli_user["email"],
             "paranoid": False,
-            "password": PASSWORD,
+            # password required to change username and email
+            "password": test_cli_user["password"],
         },
     )
 
@@ -116,7 +109,6 @@ async def test_patch_profile(test_cli):
     assert isinstance(rjson, dict)
     assert isinstance(rjson["updated_fields"], list)
 
-    # making sure...
     assert "username" in rjson["updated_fields"]
     assert "email" in rjson["updated_fields"]
     assert "paranoid" in rjson["updated_fields"]
@@ -125,7 +117,5 @@ async def test_patch_profile(test_cli):
 @pytest.mark.asyncio
 async def test_profile_wrong_token(test_cli):
     """Test the profile route with wrong tokens."""
-    for _ in range(50):
-        resp = await test_cli.get("/api/profile", headers={"Authorization": token()})
-
-        assert resp.status_code == 403
+    resp = await test_cli.get("/api/profile", headers={"Authorization": token()})
+    assert resp.status_code == 403

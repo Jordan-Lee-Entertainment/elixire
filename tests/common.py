@@ -8,8 +8,6 @@ import io
 import base64
 import string
 
-from .creds import USERNAME, PASSWORD, ADMIN_USER, ADMIN_PASSWORD
-
 EMAIL_ALPHABET = string.ascii_lowercase
 
 
@@ -17,7 +15,7 @@ def choice_repeat(seq, length):
     return "".join([secrets.choice(seq) for _ in range(length)])
 
 
-def png_data():
+def png_data() -> io.BytesIO:
     return io.BytesIO(
         base64.b64decode(
             b"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABC"
@@ -32,35 +30,67 @@ def token():
 
 
 def username():
-    return secrets.token_hex(random.randint(5, 13))
+    return secrets.token_hex(5)
 
 
 def email():
-    name = choice_repeat(string.ascii_lowercase, 16)
-    domain = choice_repeat(string.ascii_lowercase, 16)
+    name = username()
+    domain = username()
 
     return f"{name}@{domain}.com"
 
 
-async def login_normal(test_cli) -> str:
-    resp = await test_cli.post(
-        "/api/login", json={"user": USERNAME, "password": PASSWORD}
-    )
+class TestClient:
+    """Test client that wraps quart's TestClient and a test
+    user and adds authorization headers to test requests."""
 
-    assert resp.status_code == 200
-    data = await resp.json
-    assert isinstance(data, dict)
+    def __init__(self, test_cli, test_user):
+        self.cli = test_cli
+        self.app = test_cli.app
+        self.user = test_user
 
-    return data["token"]
+    def __getitem__(self, key):
+        return self.user[key]
 
+    def _inject_auth(self, kwargs: dict) -> list:
+        """Inject the test user's API key into the test request before
+        passing the request on to the underlying TestClient."""
+        headers = kwargs.get("headers", {})
 
-async def login_admin(test_cli) -> str:
-    resp = await test_cli.post(
-        "/api/login", json={"user": ADMIN_USER, "password": ADMIN_PASSWORD}
-    )
+        do_token = kwargs.get("do_token", True)
 
-    assert resp.status_code == 200
-    data = await resp.json
-    assert isinstance(data, dict)
+        try:
+            kwargs.pop("do_token")
+        except KeyError:
+            pass
 
-    return data["token"]
+        if not do_token:
+            return headers
+
+        headers["authorization"] = self.user["token"]
+        return headers
+
+    async def get(self, *args, **kwargs):
+        """Send a GET request."""
+        kwargs["headers"] = self._inject_auth(kwargs)
+        return await self.cli.get(*args, **kwargs)
+
+    async def post(self, *args, **kwargs):
+        """Send a POST request."""
+        kwargs["headers"] = self._inject_auth(kwargs)
+        return await self.cli.post(*args, **kwargs)
+
+    async def put(self, *args, **kwargs):
+        """Send a POST request."""
+        kwargs["headers"] = self._inject_auth(kwargs)
+        return await self.cli.put(*args, **kwargs)
+
+    async def patch(self, *args, **kwargs):
+        """Send a PATCH request."""
+        kwargs["headers"] = self._inject_auth(kwargs)
+        return await self.cli.patch(*args, **kwargs)
+
+    async def delete(self, *args, **kwargs):
+        """Send a DELETE request."""
+        kwargs["headers"] = self._inject_auth(kwargs)
+        return await self.cli.delete(*args, **kwargs)

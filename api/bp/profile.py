@@ -3,10 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
-import asyncio
 
 import asyncpg
-
 from quart import Blueprint, request, current_app as app, jsonify
 
 from api.response import resp_empty
@@ -26,8 +24,8 @@ from api.schema import (
     PASSWORD_RESET_SCHEMA,
     PASSWORD_RESET_CONFIRM_SCHEMA,
 )
-from api.common import delete_file
 from api.common.utils import int_
+from api.common.user import delete_user
 
 from api.bp.personal_stats import get_counts
 from api.bp.datadump.bp import get_dump_status
@@ -389,127 +387,6 @@ Do not reply to this email specifically, it will not work.
 
     # TODO return '', 204
     return jsonify({"success": resp.status == 200})
-
-
-async def _delete_file_wrapper(shortname, user_id):
-    """Wrapper function for a single file delete, so that users doing
-    multiple deletes don't run into concurrency problems.
-
-    This function requires a lock due to the extra work delete_file()
-    goes through, creating dummy users, checking external fspaths, etc.
-    """
-    lock = app.locks["delete_files"][user_id]
-    async with lock:
-        await delete_file(shortname, user_id, False)
-
-
-async def delete_file_task(app_, user_id: int, delete=False):
-    """Delete all the files from the user.
-
-    Parameters
-    ----------
-    app: sanic.App
-        App instance holding database connection
-    user_id: int
-        User ID to have all files deleted from.
-    delete, optional: bool
-        If delete the user when all files are deleted
-    """
-    file_shortnames = await app_.db.fetch(
-        """
-    SELECT filename
-    FROM files
-    WHERE uploader = $1
-    """,
-        user_id,
-    )
-
-    log.info(f"Deleting ALL {len(file_shortnames)} files")
-
-    tasks = []
-
-    for row in file_shortnames:
-        shortname = row["filename"]
-
-        # TODO copy quart context for app object pass into task?
-        task = app.loop.create_task(_delete_file_wrapper(shortname, user_id))
-        tasks.append(task)
-
-    if tasks:
-        await asyncio.wait(tasks)
-
-    log.info(f"finished waiting for {len(tasks)} tasks")
-    log.info(f"delete? {delete}")
-
-    if delete:
-        log.info(f"Deleting user id {user_id}")
-        await app.db.execute(
-            """
-        DELETE FROM users
-        WHERE user_id = $1
-        """,
-            user_id,
-        )
-
-
-# TODO move all those functions into api.common.user
-async def delete_user(user_id: int, delete: bool = False):
-    """Delete all user files.
-
-    If the delete flag is set, it will delete the user record,
-    else it'll mark the user as deactivated.
-
-    Parameters
-    ----------
-    user_id: int
-        User ID to delete.
-    delete: bool, optional
-        Delete the user records?
-    """
-    # ignore deletion of the dummy user via any admin-facing
-    # administration util (manage.py will also be unable
-    # to delete the dummy user).
-    #  instance admins should proceed to deleting via the psql shell.
-    if user_id == 0:
-        log.warning("Not deleting dummy user")
-        return
-
-    await app.db.execute(
-        """
-    UPDATE users
-    SET active = false
-    WHERE user_id = $1
-    """,
-        user_id,
-    )
-
-    await app.db.execute(
-        """
-    UPDATE files
-    SET deleted = true
-    WHERE uploader = $1
-    """,
-        user_id,
-    )
-
-    await app.db.execute(
-        """
-    UPDATE shortens
-    SET deleted = true
-    WHERE uploader = $1
-    """,
-        user_id,
-    )
-
-    await app.storage.invalidate(user_id, "active", "password_hash")
-
-    # since there is a lot of db load
-    # when calling delete_file, we create a task that deletes them.
-
-    # TODO copy quart context for task
-    return app.sched.spawn(
-        delete_file_task(app, user_id, delete), f"delete_files_{user_id}"
-    )
 
 
 @bp.route("/delete_confirm", methods=["POST"])

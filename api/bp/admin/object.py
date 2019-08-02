@@ -10,7 +10,6 @@ from api.common import delete_file, delete_shorten
 from api.common.auth import token_check, check_admin
 from api.schema import validate, ADMIN_MODIFY_FILE
 from api.errors import BadInput, NotFound
-from api.decorators import admin_route
 
 from api.bp.admin.audit_log_actions.object import ObjectEditAction, ObjectDeleteAction
 

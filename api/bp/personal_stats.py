@@ -4,7 +4,7 @@
 
 import logging
 
-from quart import Blueprint, current_app as app, request, jsonify
+from quart import Blueprint, current_app as app, jsonify
 
 from api.common.auth import token_check
 from api.common.domain import get_domain_public
