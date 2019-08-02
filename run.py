@@ -155,7 +155,7 @@ def handle_api_error(err: APIError):
     return _wrap_err_in_json(err)
 
 
-@app.errorhandler(FileNotFoundError)
+@app.errorhandler(404)
 async def handle_notfound(_err):
     """Give specific pages/behavior when reaching files that aren't found."""
     has_frontend = app.econfig.ENABLE_FRONTEND

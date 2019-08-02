@@ -67,8 +67,12 @@ class UploadContext(
         if not app.econfig.UPLOADS_ENABLED:
             raise FeatureDisabled("Uploads are currently disabled")
 
-        # Get file's mimetype
-        mimetype_future = app.loop.run_in_executor(None, self.get_mime, self.file.body)
+        # to get the mime we extract only the first 512 bytes
+        self.file.stream.seek(0)
+        chunk = self.file.stream.read(512)
+        self.file.stream.seek(0)
+
+        mimetype_future = app.loop.run_in_executor(None, self.get_mime, chunk)
         mimetype = await mimetype_future
 
         # Check if file's mimetype is in allowed mimetypes

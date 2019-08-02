@@ -83,7 +83,7 @@ async def upload_metrics(ctx):
 def _fetch_domain() -> Tuple[Optional[int], Optional[str]]:
     """Fetch domain information, if any"""
     try:
-        given_domain = int(request.args["domain"])
+        given_domain: Optional[int] = int(request.args["domain"])
     except (KeyError, ValueError):
         given_domain = None
 
