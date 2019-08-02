@@ -6,7 +6,9 @@ import io
 import logging
 import mimetypes
 from collections import namedtuple
+
 import magic
+from quart import current_app as app
 
 from api.bp.upload.exif import clear_exif
 from api.bp.upload.virus import scan_file
@@ -29,15 +31,17 @@ class UploadContext(
         ],
     )
 ):
-    async def strip_exif(self, app) -> io.BytesIO:
+    async def strip_exif(self) -> io.BytesIO:
+        """Strip EXIF information from a given file."""
+        stream = self.file.stream
         if not app.econfig.CLEAR_EXIF or self.file.mime != "image/jpeg":
             log.debug("not stripping exif, disabled or not jpeg")
-            return self.file.io
+            return stream
 
         log.debug("going to clear exif now")
         ratio_limit = app.econfig.EXIF_INCREASELIMIT
-        noexif_body = await clear_exif(self.file.io, loop=app.loop)
 
+        noexif_body = await clear_exif(stream, loop=app.loop)
         noexif_len = len(noexif_body.getvalue())
         ratio = noexif_len / self.file.size
 
