@@ -106,8 +106,8 @@ async def show_stats(ctx, _args):
     nd_file_count, d_file_count = await db.fetchrow(
         """
         SELECT
-            (COUNT(*) FROM files WHERE deleted = false),
-            (COUNT(*) FROM files WHERE deleted = true)
+            (SELECT COUNT(*) FROM files WHERE deleted = false),
+            (SELECT COUNT(*) FROM files WHERE deleted = true)
         """
     )
 
@@ -119,12 +119,12 @@ async def show_stats(ctx, _args):
         """
     )
 
-    total_nd_file_size, total_d_file_size = await db.fetchval(
+    total_nd_file_size, total_d_file_size = await db.fetchrow(
         """
-    SELECT
-        (SUM(file_size) FROM files WHERE deleted = false),
-        (SUM(file_size) FROM files WHERE deleted = true),
-    """
+        SELECT
+            (SELECT SUM(file_size) FROM files WHERE deleted = false),
+            (SELECT SUM(file_size) FROM files WHERE deleted = true)
+        """
     )
 
     # Total non-deleted file uploads in last week
@@ -188,12 +188,12 @@ async def show_stats(ctx, _args):
     )
 
     # Total active user count
-    total_active_user_count, total_inactive_user_count = await db.fetchval(
+    total_active_user_count, total_inactive_user_count = await db.fetchrow(
         """
-    SELECT
-        (COUNT(*) FROM users WHERE active = true),
-        (COUNT(*) FROM users WHERE active = false)
-    """
+        SELECT
+            (SELECT COUNT(*) FROM users WHERE active = true),
+            (SELECT COUNT(*) FROM users WHERE active = false)
+        """
     )
 
     # Biggest file
