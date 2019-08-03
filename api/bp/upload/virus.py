@@ -14,12 +14,10 @@ from api.common import delete_file
 from api.common.webhook import scan_webhook
 from api.errors import BadImage, APIError
 
-from api.bp.upload.context import UploadContext
-
 log = logging.getLogger(__name__)
 
 
-async def run_scan(ctx: UploadContext) -> None:
+async def run_scan(ctx) -> None:
     """Scan a file for viruses using clamdscan.
 
     Raises BadImage on any non-successful scan.
@@ -83,7 +81,7 @@ async def run_scan(ctx: UploadContext) -> None:
         raise APIError("clamdscan returned unknown error code")
 
 
-async def _delete_file_from_scan(ctx: UploadContext) -> None:
+async def _delete_file_from_scan(ctx) -> None:
     """
     This is a "wrapper" around "delete_file()" tailored
     for the end result of virus scanning.
@@ -112,7 +110,7 @@ async def _delete_file_from_scan(ctx: UploadContext) -> None:
     log.info(f"Deleted file {ctx.shortname} (virus found)")
 
 
-async def scan_bg_waiter(ctx: UploadContext, scan_task: asyncio.Task) -> Any:
+async def scan_bg_waiter(ctx, scan_task: asyncio.Task) -> Any:
     """Waits for the virus scan task to finish and checks its result."""
 
     # NOTE should we wait without bounds for the scan task?
@@ -131,7 +129,7 @@ async def scan_bg_waiter(ctx: UploadContext, scan_task: asyncio.Task) -> Any:
         log.exception("error while scanning (from background waiter)")
 
 
-async def scan_file(ctx: UploadContext) -> Any:
+async def scan_file(ctx) -> Any:
     """Run a scan on a file."""
     if not app.econfig.UPLOAD_SCAN:
         log.warning("Scans are disabled, not scanning this file.")
