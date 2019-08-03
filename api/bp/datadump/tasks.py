@@ -21,7 +21,7 @@ from api.common.email import gen_email_token, send_user_email
 log = logging.getLogger(__name__)
 
 
-def _dump_json(zipdump, filepath, obj):
+def _dump_json(zipdump, filepath, obj) -> None:
     objstr = json.dumps(obj, indent=4)
     zipdump.writestr(filepath, objstr)
 
@@ -53,7 +53,7 @@ async def open_zipdump(
     return zipfile.ZipFile(zip_path, "a", compression=zipfile.ZIP_DEFLATED), user_name
 
 
-async def dump_user_data(app, zipdump, user_id):
+async def dump_user_data(app, zipdump, user_id) -> None:
     """Insert user information into the dump."""
     udata = await app.db.fetchrow(
         """
@@ -68,7 +68,7 @@ async def dump_user_data(app, zipdump, user_id):
     _dump_json(zipdump, "user_data.json", dict(udata))
 
 
-async def dump_user_bans(app, zipdump, user_id):
+async def dump_user_bans(app, zipdump: zipfile.ZipFile, user_id: int) -> None:
     """Insert user bans, if any, into the dump."""
     bans = await app.db.fetch(
         """
@@ -92,7 +92,7 @@ async def dump_user_bans(app, zipdump, user_id):
     _dump_json(zipdump, "bans.json", treated)
 
 
-async def dump_user_limits(app, zipdump, user_id: int):
+async def dump_user_limits(app, zipdump: zipfile.ZipFile, user_id: int) -> None:
     """Write the current limits for the user in the dump."""
     limits = await app.db.fetchrow(
         """
@@ -106,7 +106,7 @@ async def dump_user_limits(app, zipdump, user_id: int):
     _dump_json(zipdump, "limits.json", dict(limits))
 
 
-async def dump_user_files(app, zipdump, user_id):
+async def dump_user_files(app, zipdump: zipfile.ZipFile, user_id: int) -> None:
     """Dump all information about the user's files."""
     all_files = await app.db.fetch(
         """
@@ -124,7 +124,7 @@ async def dump_user_files(app, zipdump, user_id):
     _dump_json(zipdump, "files.json", all_files_l)
 
 
-async def dump_user_shortens(app, zipdump, user_id):
+async def dump_user_shortens(app, zipdump: zipfile.ZipFile, user_id: int) -> None:
     """Dump all information about the user's shortens."""
     all_shortens = await app.db.fetch(
         """
@@ -142,7 +142,9 @@ async def dump_user_shortens(app, zipdump, user_id):
     _dump_json(zipdump, "shortens.json", all_shortens_l)
 
 
-async def dump_files(app, zipdump, user_id, minid, files_done):
+async def dump_files(
+    app, zipdump: zipfile.ZipFile, user_id: int, minid: int, files_done: int
+) -> None:
     """Dump files into the data dump zip."""
 
     # start from minimum id
@@ -208,7 +210,7 @@ async def dump_files(app, zipdump, user_id, minid, files_done):
         )
 
 
-async def dispatch_dump(app, user_id: int, user_name: str):
+async def dispatch_dump(app, user_id: int, user_name: str) -> None:
     """Dispatch the data dump to a user."""
     log.info(f"Dispatching dump for {user_id} {user_name!r}")
 
@@ -262,7 +264,7 @@ Do not reply to this automated email.
         log.error(f"Failed to send email to {user_id} {user_email}")
 
 
-async def dump_static(app, zipdump, user_id):
+async def dump_static(app, zipdump: zipfile.ZipFile, user_id: int) -> None:
     """Dump static files. Those files are JSON encoded
     with the required information."""
     await dump_user_data(app, zipdump, user_id)
@@ -272,7 +274,7 @@ async def dump_static(app, zipdump, user_id):
     await dump_user_shortens(app, zipdump, user_id)
 
 
-async def do_dump(app, user_id: int):
+async def do_dump(app, user_id: int) -> None:
     """Make a data dump for the user."""
     # insert user in current dump state
     row = await app.db.fetchrow(
@@ -330,7 +332,7 @@ async def do_dump(app, user_id: int):
         zipdump.close()
 
 
-async def resume_dump(app, user_id: int):
+async def resume_dump(app, user_id: int) -> None:
     """Resume a data dump"""
     # check the current state
     row = await app.db.fetchrow(
@@ -362,7 +364,7 @@ async def resume_dump(app, user_id: int):
         zipdump.close()
 
 
-async def dump_worker():
+async def dump_worker() -> None:
     """Main dump worker.
 
     Works dump resuming, manages the next user on the queue, etc.
@@ -409,7 +411,7 @@ async def dump_worker():
         return await dump_worker()
 
 
-def start_worker():
+def start_worker() -> None:
     """Start the dump worker, but not start more than 1 of them."""
     if app.sched.exists("dump_worker_wrapper"):
         log.info("worker exists, skipping")
@@ -418,7 +420,7 @@ def start_worker():
     app.sched.spawn(dump_worker(), "dd_worker")
 
 
-async def dump_janitor():
+async def dump_janitor() -> None:
     """Main data dump janitor task.
 
     This checks the dump folder every DUMP_JANITOR_PERIOD amount
@@ -448,6 +450,6 @@ async def dump_janitor():
             log.info(f"Ignoring {fpath}, life {file_life}s < 21600")
 
 
-def start_janitor():
+def start_janitor() -> None:
     """Start dump janitor."""
     app.sched.spawn_periodic(dump_janitor, [], app.econfig.DUMP_JANITOR_PERIOD)
