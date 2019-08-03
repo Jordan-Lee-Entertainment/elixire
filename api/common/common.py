@@ -91,10 +91,10 @@ async def gen_filename(
 
         filerow = await app.db.fetchrow(
             f"""
-        SELECT {field}
-        FROM {table}
-        WHERE filename = $1
-        """,
+            SELECT {field}
+            FROM {table}
+            WHERE filename = $1
+            """,
             random_fname,
         )
 
@@ -161,10 +161,10 @@ async def remove_fspath(shortname: str):
 
     fspath = await app.db.fetchval(
         """
-    SELECT fspath
-    FROM files
-    WHERE filename = $1
-    """,
+        SELECT fspath
+        FROM files
+        WHERE filename = $1
+        """,
         shortname,
     )
 
@@ -175,10 +175,10 @@ async def remove_fspath(shortname: str):
     # and on the hash system, means the same hash
     same_fspath = await app.db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM files
-    WHERE fspath = $1 AND deleted = false
-    """,
+        SELECT COUNT(*)
+        FROM files
+        WHERE fspath = $1 AND deleted = false
+        """,
         fspath,
     )
 
@@ -220,9 +220,9 @@ async def delete_file(file_name: str, user_id, set_delete=True):
     try:
         await app.db.execute(
             """
-        INSERT INTO users (user_id, username, active, password_hash, email)
-        VALUES (0, 'dummy', false, 'blah', 'd u m m y')
-        """
+            INSERT INTO users (user_id, username, active, password_hash, email)
+            VALUES (0, 'dummy', false, 'blah', 'd u m m y')
+            """
         )
     except asyncpg.UniqueViolationError:
         pass
@@ -230,12 +230,12 @@ async def delete_file(file_name: str, user_id, set_delete=True):
     if set_delete:
         exec_out = await app.db.execute(
             """
-        UPDATE files
-        SET deleted = true
-        WHERE uploader = $1
-          AND filename = $2
-          AND deleted = false
-        """,
+            UPDATE files
+            SET deleted = true
+            WHERE uploader = $1
+            AND filename = $2
+            AND deleted = false
+            """,
             user_id,
             file_name,
         )
@@ -250,30 +250,30 @@ async def delete_file(file_name: str, user_id, set_delete=True):
         if user_id:
             await app.db.execute(
                 """
-            UPDATE files
-            SET uploader = 0,
-                file_size = 0,
-                fspath = '',
-                deleted = true,
-                domain = 0
-            WHERE
-                filename = $1
-            AND uploader = $2
-            """,
+                UPDATE files
+                SET uploader = 0,
+                    file_size = 0,
+                    fspath = '',
+                    deleted = true,
+                    domain = 0
+                WHERE
+                    filename = $1
+                AND uploader = $2
+                """,
                 file_name,
                 user_id,
             )
         else:
             await app.db.execute(
                 """
-            UPDATE files
-            SET uploader = 0,
-                file_size = 0,
-                fspath = '',
-                deleted = true,
-                domain = 0
-            WHERE filename = $1
-            """,
+                UPDATE files
+                SET uploader = 0,
+                    file_size = 0,
+                    fspath = '',
+                    deleted = true,
+                    domain = 0
+                WHERE filename = $1
+                """,
                 file_name,
             )
 
@@ -284,12 +284,12 @@ async def delete_shorten(shortname: str, user_id: int):
     """Remove a shorten from the system"""
     exec_out = await app.db.execute(
         """
-    UPDATE shortens
-    SET deleted = true
-    WHERE uploader = $1
-    AND filename = $2
-    AND deleted = false
-    """,
+        UPDATE shortens
+        SET deleted = true
+        WHERE uploader = $1
+        AND filename = $2
+        AND deleted = false
+        """,
         user_id,
         shortname,
     )
@@ -346,39 +346,39 @@ async def get_domain_info(
     """
     domain_id, subdomain_name = await app.db.fetchrow(
         """
-    SELECT domain, subdomain
-    FROM users
-    WHERE user_id = $1
-    """,
+        SELECT domain, subdomain
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
     domain = await app.db.fetchval(
         """
-    SELECT domain
-    FROM domains
-    WHERE domain_id = $1
-    """,
+        SELECT domain
+        FROM domains
+        WHERE domain_id = $1
+        """,
         domain_id,
     )
 
     if dtype == FileNameType.SHORTEN:
         shorten_domain_id, shorten_subdomain = await app.db.fetchrow(
             """
-        SELECT shorten_domain, shorten_subdomain
-        FROM users
-        WHERE user_id = $1
-        """,
+            SELECT shorten_domain, shorten_subdomain
+            FROM users
+            WHERE user_id = $1
+            """,
             user_id,
         )
 
         if shorten_domain_id is not None:
             shorten_domain = await app.db.fetchval(
                 """
-            SELECT domain
-            FROM domains
-            WHERE domain_id = $1
-            """,
+                SELECT domain
+                FROM domains
+                WHERE domain_id = $1
+                """,
                 shorten_domain_id,
             )
 
