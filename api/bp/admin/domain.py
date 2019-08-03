@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from math import ceil
+from typing import List
 
 from quart import Blueprint, jsonify, current_app as app, request
 
@@ -86,24 +87,43 @@ async def add_domain():
     return jsonify({"success": True, "result": result, "new_id": domain_id})
 
 
-# TODO remove this macro-like shit
-async def _dp_check(
-    db, domain_id: int, payload: dict, updated_fields: list, field: str
-):
-    """Check a field inside the payload and update it if it exists."""
+async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
+    fields: List[str] = []
 
-    if field in payload:
-        await db.execute(
+    if "owner_id" in j:
+        await app.db.execute(
+            """
+            INSERT INTO domain_owners (domain_id, user_id)
+            VALUES ($1, $2)
+            ON CONFLICT ON CONSTRAINT domain_owners_pkey
+            DO UPDATE
+                SET user_id = $2
+                WHERE domain_owners.domain_id = $1
+            """,
+            domain_id,
+            j["owner_id"],
+        )
+
+        fields.append("owner_id")
+        j.pop("owner_id")
+
+    # the other available fields are admin_only, official, and permissions.
+    # all of those follow the same sql query, so we can just write a for loop
+    # to process them
+    for field, value in j.items():
+        await app.db.execute(
             f"""
-        UPDATE domains
-        SET {field} = $1
-        WHERE domain_id = $2
-        """,
-            payload[field],
+            UPDATE domains
+            SET {field} = $1
+            WHERE domain_id = $2
+            """,
+            value,
             domain_id,
         )
 
-        updated_fields.append(field)
+        fields.append(field)
+
+    return fields
 
 
 @bp.route("/api/admin/domains/<int:domain_id>", methods=["PATCH"])
@@ -112,33 +132,11 @@ async def patch_domain(domain_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    payload = validate(await request.get_json(), ADMIN_MODIFY_DOMAIN)
-
-    updated_fields = []
-    db = app.db
+    j = validate(await request.get_json(), ADMIN_MODIFY_DOMAIN)
 
     async with DomainEditAction(request, domain_id):
-        if "owner_id" in payload:
-            exec_out = await db.execute(
-                """
-            UPDATE domain_owners
-            SET user_id = $1
-            WHERE domain_id = $2
-            """,
-                int(payload["owner_id"]),
-                domain_id,
-            )
-
-            if exec_out != "UPDATE 0":
-                updated_fields.append("owner_id")
-
-        # since we're passing updated_fields which is a reference to the
-        # list, it can be mutaded and it will propagate into this function.
-        await _dp_check(db, domain_id, payload, updated_fields, "admin_only")
-        await _dp_check(db, domain_id, payload, updated_fields, "official")
-        await _dp_check(db, domain_id, payload, updated_fields, "permissions")
-
-    return jsonify({"updated": updated_fields})
+        fields = await _patch_domain_handler(domain_id, j)
+        return jsonify({"updated": fields})
 
 
 @bp.route("/api/admin/email_domain/<int:domain_id>", methods=["POST"])

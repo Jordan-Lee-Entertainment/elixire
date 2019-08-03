@@ -113,13 +113,13 @@ async def test_cli_admin(test_cli):
 
     await app.db.execute(
         """
-    INSERT INTO domain_owners (domain_id, user_id)
-    VALUES (0, $1)
-    ON CONFLICT ON CONSTRAINT domain_owners_pkey
-    DO UPDATE
-        SET user_id = $1
-        WHERE domain_owners.domain_id = 0
-    """,
+        INSERT INTO domain_owners (domain_id, user_id)
+        VALUES (0, $1)
+        ON CONFLICT ON CONSTRAINT domain_owners_pkey
+        DO UPDATE
+            SET user_id = $1
+            WHERE domain_owners.domain_id = 0
+        """,
         test_user["user_id"],
     )
 

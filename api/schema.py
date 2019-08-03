@@ -130,10 +130,10 @@ ADMIN_MODIFY_USER = {
 }
 
 ADMIN_MODIFY_DOMAIN = {
-    "owner_id": {"type": "snowflake", "required": False},
+    "owner_id": {"coerce": int, "required": False},
     "admin_only": {"type": "boolean", "required": False},
     "official": {"type": "boolean", "required": False},
-    "permissions": {"type": "integer", "required": False},
+    "permissions": {"coerce": int, "required": False},
 }
 
 ADMIN_SEND_DOMAIN_EMAIL = {
