@@ -103,7 +103,7 @@ class StorageValue:
         self.value = value
 
     def __bool__(self) -> bool:
-        return self.flag in (StorageFlag.NotFound, StorageFlag.PostgresNotFound)
+        return self.flag in STORAGE_FLAG_NOT_FOUND
 
 
 def _wrap(value) -> StorageValue:
@@ -115,7 +115,12 @@ class Storage:
 
     This is used by to provide caching with Redis.
 
-    When storing a given key to redis, it can be of any value, 
+    When storing a given key to redis, it can be of any value, however,
+    internally, the value is *always* stored as a string. This requires typing
+    check code that is implemented in get() and set().
+
+    A note on the inernal storage is that the string "false", when dealing
+    with keys that aren't boolean, represents that PostgreSQL returned None.
     """
 
     def __init__(self, app):
@@ -167,7 +172,7 @@ class Storage:
 
         return res
 
-    async def set(self, key: str, value: Optional[Any]):
+    async def set(self, key: str, value: Optional[Any]) -> None:
         """Set a key in Redis.
 
         When setting booleans in the cache, they're casted to strings
@@ -189,7 +194,7 @@ class Storage:
             value = "false" if value is None else value
             await conn.set(key, value)
 
-    async def set_with_ttl(self, key: str, value: Optional[Any], ttl: int):
+    async def set_with_ttl(self, key: str, value: Optional[Any], ttl: int) -> None:
         """Set a key and set its TTL afterwards.
 
         This works better than the expire and pexpire
@@ -198,7 +203,7 @@ class Storage:
         await self.set(key, value)
         await self.redis.expire(key, ttl)
 
-    async def set_multi_one(self, keys: List[str], value: Optional[Any]):
+    async def set_multi_one(self, keys: List[str], value: Optional[Any]) -> None:
         """Set multiple keys to one given value.
 
         Parameters
@@ -211,7 +216,7 @@ class Storage:
         for key in keys:
             await self.set(key, value)
 
-    async def raw_invalidate(self, *keys: Iterable[str]):
+    async def raw_invalidate(self, *keys: Iterable[str]) -> None:
         """Invalidate/delete a set of keys.
 
         Parameters
@@ -224,7 +229,7 @@ class Storage:
         with await self.redis as conn:
             await conn.delete(*keys)
 
-    async def invalidate(self, user_id: int, *fields: Tuple[str]):
+    async def invalidate(self, user_id: int, *fields: Tuple[str]) -> None:
         """Invalidate fields given a user id."""
         ukey = prefix(user_id)
         keys = (f"{ukey}:{field}" for field in fields)
