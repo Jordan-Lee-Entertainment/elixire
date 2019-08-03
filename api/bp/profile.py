@@ -7,7 +7,6 @@ import logging
 import asyncpg
 from quart import Blueprint, request, current_app as app, jsonify
 
-from api.response import resp_empty
 from api.errors import FailedAuth, FeatureDisabled, BadInput, APIError
 from api.common.auth import (
     token_check,
@@ -349,7 +348,7 @@ async def deactivate_user_from_email():
 
     log.warning(f"Deactivated user ID {user_id} by request.")
 
-    return resp_empty()
+    return "", 204
 
 
 @bp.route("/reset_password", methods=["POST"])
@@ -424,5 +423,4 @@ async def password_reset_confirmation():
     await _update_password(user_id, new_pwd)
     await clean_etoken(app, token, "email_pwd_reset_tokens")
 
-    # TODO return '', 204
-    return resp_empty()
+    return "", 204
