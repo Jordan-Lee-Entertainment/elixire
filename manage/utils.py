@@ -46,14 +46,14 @@ class Context:
         return app
 
 
-async def get_user(ctx, username: str) -> int:
+async def get_user(ctx: Context, username: str) -> int:
     """Fetch a user's ID, given username"""
     user_id = await ctx.db.fetchval(
         """
-    SELECT user_id
-    FROM users
-    WHERE username = $1
-    """,
+        SELECT user_id
+        FROM users
+        WHERE username = $1
+        """,
         username,
     )
 
@@ -63,42 +63,41 @@ async def get_user(ctx, username: str) -> int:
     return user_id
 
 
-async def get_counts(ctx, user_id) -> str:
+async def get_counts(ctx: Context, user_id: int) -> str:
     """Show consent and count information in a string."""
     consented = await ctx.db.fetchval(
         """
-    SELECT consented
-    FROM users
-    WHERE user_id = $1
-    """,
+        SELECT consented
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
     files = await ctx.db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM files
-    WHERE files.uploader = $1
-    """,
+        SELECT COUNT(*)
+        FROM files
+        WHERE files.uploader = $1
+        """,
         user_id,
     )
 
     shortens = await ctx.db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM files
-    WHERE files.uploader = $1
-    """,
+        SELECT COUNT(*)
+        FROM files
+        WHERE files.uploader = $1
+        """,
         user_id,
     )
 
     cons = "consented" if consented else "not consented"
-
     return f"{cons}, {files} files, {shortens} shortens"
 
 
-def account_delta(user_id) -> datetime.timedelta:
+def account_delta(user_id: int) -> datetime.timedelta:
     """Show an account's age."""
-    tstamp = snowflake_time(user_id)
-    tstamp = datetime.datetime.fromtimestamp(tstamp)
-    return datetime.datetime.utcnow() - tstamp
+    unix_timestamp = snowflake_time(user_id)
+    timestamp = datetime.datetime.fromtimestamp(unix_timestamp)
+    return datetime.datetime.utcnow() - timestamp
