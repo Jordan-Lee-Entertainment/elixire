@@ -104,11 +104,11 @@ Build the frontend and admin panel (this requires [Yarn]):
 make
 ```
 
-Configure elixire itself using [`config.py.example`](./config.py.example) as a
+Configure elixire itself using [`config.example.py`](./config.example.py) as a
 base:
 
 ```bash
-cp config.py.example config.py
+cp config.example.py config.py
 
 # Configure elixire to your liking.
 $EDITOR config.py

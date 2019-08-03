@@ -1,15 +1,15 @@
 all: frontend panel
 
-.PHONY: all frontend panel
+.PHONY: all frontend admin-panel
 
 frontend:
 	echo "Building frontend"
 	cd frontend; yarn
 	cd frontend; yarn build:production
 
-panel:
-	echo "Building Admin Panel"
-	cd admin-panel; npm install
+admin-panel:
+	echo "Building admin-panel"
+	cd admin-panel; npm ci
 	cd admin-panel; npm run build
 
 update:
