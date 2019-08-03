@@ -64,7 +64,7 @@ def validate(document, schema):
     if not validator.validate(document):
         raise BadInput("Bad payload", validator.errors)
 
-    return document
+    return validator.document
 
 
 PROFILE_SCHEMA = {
