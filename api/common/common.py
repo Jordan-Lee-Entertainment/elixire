@@ -44,12 +44,14 @@ def get_ip_addr() -> str:
     return request.headers["X-Forwarded-For"]
 
 
-def _gen_fname(length) -> str:
+def _gen_fname(length: int) -> str:
     """Generate a random filename."""
     return "".join(secrets.choice(ALPHABET) for _ in range(length))
 
 
-async def gen_filename(length=3, table="files", _curc=0) -> Tuple[str, int]:
+async def gen_filename(
+    length: int = 3, table: str = "files", _curc: int = 0
+) -> Tuple[str, int]:
     """Generate a unique random filename.
 
     To guarantee that the generated shortnames will
