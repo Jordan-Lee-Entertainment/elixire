@@ -37,7 +37,7 @@ run_backend:
     - mkdir -p images
     - mkdir -p dumps
     - mkdir -p thumbnails
-    - cat config.py.example config.py.ci > config.py
+    - cat config.example.py config.ci.py > config.py
     - python ./utils/upgrade/folder_sharding.py
   script:
     - mkdir frontend/output admin-panel/dist -p
