@@ -7,7 +7,7 @@ elixi.re - common auth
     Common authentication-related functions.
 """
 import logging
-from typing import Tuple
+from typing import Tuple, Union
 
 import bcrypt
 import itsdangerous
@@ -211,7 +211,7 @@ def _try_int(value: str) -> int:
         raise FailedAuth("invalid token format")
 
 
-def _try_unsign(signer, token: str, token_age: int = None):
+def _try_unsign(signer, token: Union[str, bytes], token_age: int = None):
     """Try to unsign a token given the signer,
     token, and token_age if possible.
 
@@ -300,11 +300,8 @@ async def token_check() -> int:
 
         # itsdangerous.Signer does not like
         # strings, only bytes.
-        token = token.encode("utf-8")
-
-        # do the checking
-        _try_unsign(signer, token)
-
+        token_bytes = token.encode("utf-8")
+        _try_unsign(signer, token_bytes)
         return user_id
 
     # at this point in code the token is:

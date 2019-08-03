@@ -12,6 +12,7 @@ import logging
 import zipfile
 import pathlib
 import os.path
+from typing import Tuple, Optional
 
 from quart import current_app as app
 
@@ -25,7 +26,9 @@ def _dump_json(zipdump, filepath, obj):
     zipdump.writestr(filepath, objstr)
 
 
-async def open_zipdump(app, user_id, resume=False) -> zipfile.ZipFile:
+async def open_zipdump(
+    app, user_id, resume=False
+) -> Tuple[zipfile.ZipFile, Optional[str]]:
     """Open the zip file relating to your dump."""
     user_name = await app.db.fetchval(
         """
@@ -306,6 +309,9 @@ async def do_dump(app, user_id: int):
     zipdump, user_name = await open_zipdump(app, user_id)
 
     try:
+        if user_name is None:
+            return
+
         # those dumps just get stuff from DB
         # and write them into JSON files insize the zip
         await dump_static(app, zipdump, user_id)
@@ -341,6 +347,9 @@ async def resume_dump(app, user_id: int):
     zipdump, user_name = await open_zipdump(app, user_id, True)
 
     try:
+        if user_name is None:
+            return
+
         # Redump static files.
         await dump_static(app, zipdump, user_id)
 
