@@ -2,6 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+
 async def _domain_file_stats(db, domain_id, *,
                              ignore_consented: bool = False) -> tuple:
     """Get domain file stats (count and sum of all bytes)."""
@@ -19,6 +20,7 @@ async def _domain_file_stats(db, domain_id, *,
     """, domain_id)
 
     return row['count'], int(row['sum'] or 0)
+
 
 async def get_domain_info(db, domain_id) -> dict:
     """Get domain information."""
@@ -61,7 +63,7 @@ async def get_domain_info(db, domain_id) -> dict:
     """, domain_id)
 
     owner_data = await db.fetchrow("""
-    SELECT username, active, consented, admin
+    SELECT username, active, consented, admin, paranoid
     FROM users
     WHERE user_id = $1
     """, owner_id)
