@@ -3,14 +3,17 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 
+from typing import Optional
+
+
 async def get_file_id(conn, file_name):
     """Get a file ID, given a file shortname."""
     return await conn.fetchval(
         """
-    SELECT file_id
-    FROM files
-    WHERE filename = $1
-    """,
+        SELECT file_id
+        FROM files
+        WHERE filename = $1
+        """,
         file_name,
     )
 
@@ -19,23 +22,23 @@ async def get_shorten_id(conn, shorten_name):
     """Get a shorten ID, given a shorten shortname."""
     return await conn.fetchval(
         """
-    SELECT shorten_id
-    FROM shortens
-    WHERE filename = $1
-    """,
+        SELECT shorten_id
+        FROM shortens
+        WHERE filename = $1
+        """,
         shorten_name,
     )
 
 
-async def get_file(conn, file_id: int) -> dict:
+async def get_file(conn, file_id: int) -> Optional[dict]:
     """Get a dictionary holding file information."""
     row = await conn.fetchrow(
         """
-    SELECT file_id, mimetype, filename, file_size,
-           uploader, fspath, deleted, domain
-    FROM files
-    WHERE file_id = $1
-    """,
+        SELECT file_id, mimetype, filename, file_size,
+            uploader, fspath, deleted, domain
+        FROM files
+        WHERE file_id = $1
+        """,
         file_id,
     )
 
@@ -49,7 +52,7 @@ async def get_file(conn, file_id: int) -> dict:
     return drow
 
 
-async def get_shorten(conn, shorten_id: int) -> dict:
+async def get_shorten(conn, shorten_id: int) -> Optional[dict]:
     """Get a dictionary holding shorten information."""
 
     # NOTE: this is really a copypaste from get_file.
@@ -58,11 +61,11 @@ async def get_shorten(conn, shorten_id: int) -> dict:
 
     row = await conn.fetchrow(
         """
-    SELECT shorten_id, filename, redirto, uploader,
-           deleted, domain
-    FROM shortens
-    WHERE shorten_id = $1
-    """,
+        SELECT shorten_id, filename, redirto, uploader,
+            deleted, domain
+        FROM shortens
+        WHERE shorten_id = $1
+        """,
         shorten_id,
     )
 

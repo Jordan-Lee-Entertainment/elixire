@@ -110,7 +110,6 @@ async def upload_handler():
     if not do_checks:
         await check_admin(user_id, True)
 
-    # TODO cleaner api with request contextvar
     file = await UploadFile.from_request()
 
     # by default, assume the extension given in the filename

@@ -3,23 +3,33 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import asyncio
-from typing import Optional, Any
+from typing import Optional, Any, TypeVar
 from collections import defaultdict
 
+T = TypeVar("T")
 
-def int_(val: Optional[Any], default: Optional[int] = None) -> Optional[int]:
-    """Tries to convert the given variable to int.
-    Returns None or the value given in the default parameter."""
 
+def _maybe_type(typ: type, value: Any, default: Optional[T] = None) -> Optional[T]:
+    """Tries to convert the given value to the given type.
+    Returns None or the value given in the default
+    parameter if it fails."""
     # this check is required for mypy to catch that we're
-    # checking val's optional-ility
-    if val is None:
+    # checking the value's nullability
+    if value is None:
         return default
 
     try:
-        return int(val)
+        return typ(value)
     except (TypeError, ValueError):
         return default
+
+
+def int_(val: Optional[Any], default: Optional[int] = None) -> Optional[int]:
+    return _maybe_type(int, val, default)
+
+
+def dict_(val: Optional[Any], default: Optional[dict] = None) -> Optional[dict]:
+    return _maybe_type(dict, val, default)
 
 
 def _semaphore(num):

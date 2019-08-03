@@ -5,6 +5,8 @@
 # TODO replace by app and remove current app parameters
 from quart import current_app as app_
 
+from api.common.utils import dict_
+
 
 async def _domain_file_stats(db, domain_id, *, ignore_consented: bool = False) -> tuple:
     """Get domain file stats (count and sum of all bytes)."""
@@ -13,14 +15,14 @@ async def _domain_file_stats(db, domain_id, *, ignore_consented: bool = False) -
 
     row = await db.fetchrow(
         f"""
-    SELECT COUNT(*), SUM(file_size)
-    FROM files
-    JOIN users
-      ON users.user_id = files.uploader
-    WHERE files.domain = $1
-      AND files.deleted = false
-      {consented_clause}
-    """,
+        SELECT COUNT(*), SUM(file_size)
+        FROM files
+        JOIN users
+        ON users.user_id = files.uploader
+        WHERE files.domain = $1
+        AND files.deleted = false
+        {consented_clause}
+        """,
         domain_id,
     )
 
@@ -31,10 +33,10 @@ async def get_domain_info(db, domain_id) -> dict:
     """Get domain information."""
     raw_info = await db.fetchrow(
         """
-    SELECT domain, official, admin_only, permissions
-    FROM domains
-    WHERE domain_id = $1
-    """,
+        SELECT domain, official, admin_only, permissions
+        FROM domains
+        WHERE domain_id = $1
+        """,
         domain_id,
     )
 
@@ -46,10 +48,10 @@ async def get_domain_info(db, domain_id) -> dict:
     # doing batch queries should help us speed up the overall request time
     rows = await db.fetchrow(
         """
-    SELECT
-        (SELECT COUNT(*) FROM users WHERE domain = $1),
-        (SELECT COUNT(*) FROM shortens WHERE domain = $1)
-    """,
+        SELECT
+            (SELECT COUNT(*) FROM users WHERE domain = $1),
+            (SELECT COUNT(*) FROM shortens WHERE domain = $1)
+        """,
         domain_id,
     )
 
@@ -61,20 +63,17 @@ async def get_domain_info(db, domain_id) -> dict:
 
     owner_data = await db.fetchrow(
         """
-    SELECT user_id::text, username, active, consented, admin, paranoid
-    FROM users
-    WHERE user_id = (SELECT user_id FROM domain_owners WHERE domain_id = $1)
-    """,
+        SELECT user_id::text, username, active, consented, admin, paranoid
+        FROM users
+        WHERE user_id = (SELECT user_id FROM domain_owners WHERE domain_id = $1)
+        """,
         domain_id,
     )
 
-    if owner_data:
-        downer = dict(owner_data)
-    else:
-        downer = None
+    dict_owner_data = dict_(owner_data)
 
     return {
-        "info": {**dinfo, **{"owner": downer}},
+        "info": {**dinfo, **{"owner": dict_owner_data}},
         "stats": stats,
         "public_stats": await get_domain_public(db, domain_id),
     }
@@ -86,13 +85,13 @@ async def get_domain_public(db, domain_id) -> dict:
 
     rows = await db.fetchrow(
         """
-    SELECT
-        (SELECT COUNT(*) FROM users
-         WHERE domain = $1 AND consented = true),
-        (SELECT COUNT(*) FROM shortens
-         JOIN users ON users.user_id = shortens.uploader
-         WHERE shortens.domain = $1 AND users.consented = true)
-    """,
+        SELECT
+            (SELECT COUNT(*) FROM users
+            WHERE domain = $1 AND consented = true),
+            (SELECT COUNT(*) FROM shortens
+            JOIN users ON users.user_id = shortens.uploader
+            WHERE shortens.domain = $1 AND users.consented = true)
+        """,
         domain_id,
     )
 

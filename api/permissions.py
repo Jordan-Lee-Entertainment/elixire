@@ -8,6 +8,7 @@ elixi.re - domain permission helper
 from .errors import BadInput, FeatureDisabled
 
 
+# TODO make Permissions a bitflag, or something?
 class Permissions:
     """Hold bit positions for each permission."""
 
@@ -16,7 +17,7 @@ class Permissions:
 
 
 async def domain_permissions(
-    app, domain_id: int, permission: Permissions, raise_on_err=True
+    app, domain_id: int, permission: int, raise_on_err=True
 ) -> bool:
     """Check if the given domain matches a given permission.
 
