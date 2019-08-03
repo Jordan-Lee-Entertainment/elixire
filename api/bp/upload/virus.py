@@ -21,7 +21,7 @@ async def run_scan(ctx):
 
     Raises BadImage on any non-successful scan.
     """
-    await asyncio.sleep(0.5)
+    # await asyncio.sleep(2)
 
     # TODO a Timer context manager?
     scan_timestamp_start = time.monotonic()
@@ -45,7 +45,13 @@ async def run_scan(ctx):
 
         return
 
-    await process.communicate(input=ctx.file.body)
+    body = ctx.file.stream.getvalue()
+
+    # stdout and stderr here are for the webhook, not for parsing
+    out, err = map(lambda s: s.decode(), await process.communicate(input=body))
+    total_out = f"{out}{err}"
+    log.debug("output: %r", total_out)
+
     scan_timestamp_end = time.monotonic()
 
     assert process.returncode is not None
@@ -68,7 +74,7 @@ async def run_scan(ctx):
         return
     elif process.returncode == 1:
         log.warning("user id %d got caught in virus scan", ctx.user_id)
-        await scan_webhook(app, ctx, out)
+        await scan_webhook(app, ctx, total_out)
         raise BadImage("Image contains a virus.")
     else:
         raise APIError("clamdscan returned unknown error code")
@@ -108,11 +114,18 @@ async def scan_bg_waiter(ctx, scan_task):
 
     # NOTE should we wait without bounds for the scan task?
     # if we add a timeout=, make sure to check if scan_task has anything
-    await asyncio.wait(scan_task)
+    log.debug("waiting for scan task...")
+    _done, pending = await asyncio.wait([scan_task])
+
+    if pending:
+        raise AssertionError("scan task still pending")
 
     try:
-        return scan_task.result()
+        val = scan_task.result()
+        log.debug("value from scan_task: %r", val)
+        return val
     except BadImage:
+        log.debug("got badimage")
         await _delete_file_from_scan(ctx)
     except Exception:
         log.exception("error while scanning (from background waiter)")
@@ -124,10 +137,12 @@ async def scan_file(ctx):
         log.warning("Scans are disabled, not scanning this file.")
         return
 
-    task = app.sched.spawn(run_scan(ctx), f"run_scan_{ctx.file.id}")
+    task = app.sched.spawn(
+        run_scan(ctx), f"run_scan_{ctx.file.id}", raise_underlying_error=True
+    )
 
     # if the task is on pending, we return and let it continue in the background
-    # if the task completed and it returned an error, raise it to us
+    # if the task completed we .result() it
     _, pending = await asyncio.wait([task], timeout=app.econfig.SCAN_WAIT_THRESHOLD)
 
     if pending:
@@ -136,7 +151,7 @@ async def scan_file(ctx):
         # we keep a "waiter" task in the background for that scan as well,
         # since we would really want to delete the file if the scan finds a
         # positive.
-        await app.sched.spawn(scan_bg_waiter(ctx, task), f"scan_bg_{ctx.file.id}")
+        app.sched.spawn(scan_bg_waiter(ctx, task), f"scan_bg_{ctx.file.id}")
         return
 
     # from the docs, Task.result() will re-raise any exceptions

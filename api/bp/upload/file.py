@@ -22,6 +22,7 @@ class UploadFile:
 
         self.hash: Optional[str] = None
         self.path: Optional[Path] = None
+        self.id: Optional[int] = None
 
     @property
     def given_extension(self):

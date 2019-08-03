@@ -135,6 +135,9 @@ async def upload_handler():
         start_timestamp=time.monotonic(),
     )
 
+    file_id = get_snowflake()
+    ctx.file.id = file_id
+
     # perform any checks like virus scanning and quota limits. this method will
     # also check the MIME type, and return the extension that we should be
     # using. (admins get to bypass!)
@@ -142,10 +145,6 @@ async def upload_handler():
         extension = await ctx.perform_checks(app)
 
     await ctx.file.resolve(extension)
-
-    # give the file an id
-    file_id = get_snowflake()
-    ctx.file.id = file_id
 
     # we search for the file path's existance before finding any repeated file
     # since in an *ideal* scenario this doesn't happen and we'd rather decrease
@@ -233,6 +232,6 @@ async def upload_handler():
         {
             "url": _construct_url(domain, shortname, extension),
             "shortname": shortname,
-            "delete_url": f"{instance_url}/api/delete/{shortname}",
+            "delete_url": f"{instance_url}/api/files/{shortname}/delete",
         }
     )

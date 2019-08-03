@@ -19,15 +19,17 @@ class JobManager:
         self.loop = loop or asyncio.get_event_loop()
         self.jobs = {}
 
-    async def _wrapper(self, job_name, coro):
+    async def _wrapper(self, job_name, coro, **kwargs):
         try:
             log.debug("running job: %r", job_name)
             await coro
             log.debug("job finish: %r", job_name)
         except asyncio.CancelledError:
             log.warning("cancelled job: %r", job_name)
-        except Exception:
+        except Exception as err:
             log.exception("Error while running job %r", job_name)
+            if kwargs.get("raise_underlying_error", False):
+                raise err
         finally:
             self.jobs.pop(job_name)
 
@@ -49,7 +51,7 @@ class JobManager:
             except KeyError:
                 pass
 
-    def spawn(self, coro, name: str = None):
+    def spawn(self, coro, name: str = None, **kwargs):
         """Spawn a backgrund task once.
 
         This is meant for relatively short-lived tasks.
@@ -60,7 +62,7 @@ class JobManager:
         async def _ctx_wrapper_bg():
             return await coro
 
-        task = self.loop.create_task(self._wrapper(name, _ctx_wrapper_bg()))
+        task = self.loop.create_task(self._wrapper(name, _ctx_wrapper_bg(), **kwargs))
 
         self.jobs[name] = task
         return task

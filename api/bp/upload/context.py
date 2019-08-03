@@ -83,7 +83,7 @@ class UploadContext(
         await self.check_limits(app)
 
         # check the file for viruses
-        await scan_file(app, self)
+        await scan_file(self)
 
         # default to last part of mimetype
         extension = f".{self.file.mime.split('/')[-1]}"
