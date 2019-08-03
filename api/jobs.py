@@ -27,9 +27,10 @@ class JobManager:
         except asyncio.CancelledError:
             log.warning("cancelled job: %r", job_name)
         except Exception as err:
-            log.exception("Error while running job %r", job_name)
             if kwargs.get("raise_underlying_error", False):
                 raise err
+            else:
+                log.exception("Error while running job %r", job_name)
         finally:
             self.jobs.pop(job_name)
 

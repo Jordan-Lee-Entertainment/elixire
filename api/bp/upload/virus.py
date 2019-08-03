@@ -121,11 +121,8 @@ async def scan_bg_waiter(ctx, scan_task):
         raise AssertionError("scan task still pending")
 
     try:
-        val = scan_task.result()
-        log.debug("value from scan_task: %r", val)
-        return val
+        return scan_task.result()
     except BadImage:
-        log.debug("got badimage")
         await _delete_file_from_scan(ctx)
     except Exception:
         log.exception("error while scanning (from background waiter)")
