@@ -13,11 +13,11 @@ async def find_inactive_users(ctx, args):
     """
     uids = await ctx.db.fetch(
         """
-    SELECT username, user_id
-    FROM users
-    WHERE users.active = false
-      AND now() - snowflake_time(user_id) > interval '2 weeks'
-    """
+        SELECT username, user_id
+        FROM users
+        WHERE users.active = false
+        AND now() - snowflake_time(user_id) > interval '2 weeks'
+        """
     )
 
     for row in uids:
@@ -28,7 +28,7 @@ async def find_inactive_users(ctx, args):
     print(f"{len(uids)} users were found")
 
 
-async def find_unused_accs(ctx, args):
+async def find_unused_accs(ctx, _args):
     """Find unused accounts.
 
     The criteria for unused accounts are users
@@ -37,9 +37,9 @@ async def find_unused_accs(ctx, args):
 
     users = await ctx.db.fetch(
         """
-    SELECT username, user_id
-    FROM users
-    """
+        SELECT username, user_id
+        FROM users
+        """
     )
 
     count = 0
@@ -49,10 +49,10 @@ async def find_unused_accs(ctx, args):
 
         inactive = await ctx.db.fetchval(
             """
-        SELECT (now() - snowflake_time(MAX(file_id))) > interval '1 month'
-        FROM files
-        WHERE files.uploader = $1
-        """,
+            SELECT (now() - snowflake_time(MAX(file_id))) > interval '1 month'
+            FROM files
+            WHERE files.uploader = $1
+            """,
             uid,
         )
 

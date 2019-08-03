@@ -9,10 +9,11 @@ import bcrypt
 
 from api.bp.profile import delete_user
 from api.common.user import create_user
+from api.common.auth import pwd_hash
 from ..utils import get_user
 
 
-async def adduser(ctx, args):
+async def adduser(_ctx, args):
     """Add a user."""
     email = args.email
     username = args.username
@@ -23,8 +24,6 @@ async def adduser(ctx, args):
         print("password is more than 72 characters, which is above bcrypt limitations")
         return
 
-    # TODO app context for custom context
-    # we maybe could do that with quart.ctx.AppContext(ctx)???
     udata = await create_user(username, password, email)
 
     print(
@@ -39,10 +38,8 @@ async def adduser(ctx, args):
 async def del_user(ctx, args):
     """Delete a user."""
     username = args.username
-
     userid = await get_user(ctx, username)
 
-    # TODO app context for custom context
     task = await delete_user(userid, True)
     await asyncio.shield(task)
 
@@ -50,21 +47,20 @@ async def del_user(ctx, args):
 
 
 async def resetpass(ctx, args):
+    """Reset the password of the given user."""
     username = args.username
     user_id = await get_user(ctx, username)
+
     password = secrets.token_urlsafe(25)
+    password_hash = await pwd_hash(password)
 
-    _pwd = bytes(password, "utf-8")
-    hashed = bcrypt.hashpw(_pwd, bcrypt.gensalt(14))
-
-    # insert on db
     dbout = await ctx.db.execute(
         """
-    UPDATE users
-    SET password_hash = $1
-    WHERE user_id = $2
-    """,
-        hashed.decode("utf-8"),
+        UPDATE users
+        SET password_hash = $1
+        WHERE user_id = $2
+        """,
+        password_hash,
         user_id,
     )
 
