@@ -2,14 +2,14 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Dict
+from typing import Dict, Any, Optional, Union
 
 from quart import current_app as app
 
 from api.common.utils import int_
 
 
-async def get_limits(user_id) -> dict:
+async def get_limits(user_id) -> Dict[str, Optional[int]]:
     """Get a user's limit information."""
     limits = await app.db.fetchrow(
         """
@@ -90,4 +90,41 @@ async def get_counts(user_id: int) -> Dict[str, int]:
         "total_deleted_files": total_deleted,
         "total_bytes": total_bytes,
         "total_shortens": total_shortens,
+    }
+
+
+async def get_dump_status(user_id: int) -> Dict[str, Union[str, int]]:
+    """Get datadump status."""
+    row = await app.db.fetchrow(
+        """
+        SELECT user_id, start_timestamp, current_id, total_files, files_done
+        FROM current_dump_state
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+    if not row:
+        queue = await app.db.fetch(
+            """
+            SELECT user_id
+            FROM dump_queue
+            ORDER BY request_timestamp ASC
+            """
+        )
+
+        queue = [r["user_id"] for r in queue]
+
+        try:
+            pos = queue.index(user_id)
+            return {"state": "in_queue", "position": pos + 1}
+        except ValueError:
+            return {"state": "not_in_queue"}
+
+    return {
+        "state": "processing",
+        "start_timestamp": row["start_timestamp"].isoformat(),
+        "current_id": str(row["current_id"]),
+        "total_files": row["total_files"],
+        "files_done": row["files_done"],
     }

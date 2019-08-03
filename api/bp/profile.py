@@ -25,9 +25,7 @@ from api.schema import (
     PASSWORD_RESET_CONFIRM_SCHEMA,
 )
 from api.common.user import delete_user, get_basic_user
-from api.common.profile import get_limits, get_counts
-
-from api.bp.datadump.bp import get_dump_status
+from api.common.profile import get_limits, get_counts, get_dump_status
 
 bp = Blueprint("profile", __name__)
 log = logging.getLogger(__name__)
@@ -68,7 +66,7 @@ async def profile_handler():
     counts = await get_counts(user_id)
     user["stats"] = counts
 
-    dump_status = await get_dump_status(app.db, user_id)
+    dump_status = await get_dump_status(user_id)
     user["dump_status"] = dump_status
 
     return jsonify(user)
