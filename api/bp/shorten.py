@@ -21,7 +21,6 @@ async def shorten_serve_handler(filename):
     """Handles serving of shortened links."""
     storage = app.storage
 
-    # TODO check if request.host is the right one
     domain_id = await storage.get_domain_id(request.host)
     url_toredir = await storage.get_urlredir(filename, domain_id)
 
@@ -93,12 +92,12 @@ async def shorten_handler():
 
         if shortens_used and shortens_used > shorten_limit:
             raise QuotaExploded(
-                "You already blew your weekly" f" limit of {shorten_limit} shortens"
+                f"You already blew your weekly limit of {shorten_limit} shortens"
             )
 
         if shortens_used and shortens_used + 1 > shorten_limit:
             raise QuotaExploded(
-                "This shorten blows the weekly limit of" f" {shorten_limit} shortens"
+                f"This shorten blows the weekly limit of {shorten_limit} shortens"
             )
 
     redir_rname, tries = await gen_shortname(user_id, "shortens")
