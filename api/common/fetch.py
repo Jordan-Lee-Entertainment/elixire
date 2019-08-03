@@ -3,12 +3,14 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 
-from typing import Optional
+from typing import Optional, Dict, Tuple, Coroutine, Any, Callable
+
+from quart import current_app as app
 
 
-async def get_file_id(conn, file_name):
+async def get_file_id(file_name: str) -> Optional[int]:
     """Get a file ID, given a file shortname."""
-    return await conn.fetchval(
+    return await app.db.fetchval(
         """
         SELECT file_id
         FROM files
@@ -18,9 +20,9 @@ async def get_file_id(conn, file_name):
     )
 
 
-async def get_shorten_id(conn, shorten_name):
+async def get_shorten_id(shorten_name: str) -> Optional[int]:
     """Get a shorten ID, given a shorten shortname."""
-    return await conn.fetchval(
+    return await app.db.fetchval(
         """
         SELECT shorten_id
         FROM shortens
@@ -30,9 +32,9 @@ async def get_shorten_id(conn, shorten_name):
     )
 
 
-async def get_file(conn, file_id: int) -> Optional[dict]:
+async def get_file(file_id: int) -> Optional[dict]:
     """Get a dictionary holding file information."""
-    row = await conn.fetchrow(
+    row = await app.db.fetchrow(
         """
         SELECT file_id, mimetype, filename, file_size,
             uploader, fspath, deleted, domain
@@ -52,14 +54,14 @@ async def get_file(conn, file_id: int) -> Optional[dict]:
     return drow
 
 
-async def get_shorten(conn, shorten_id: int) -> Optional[dict]:
+async def get_shorten(shorten_id: int) -> Optional[dict]:
     """Get a dictionary holding shorten information."""
 
     # NOTE: this is really a copypaste from get_file.
     # the old function was unified, called generic_namefetch,
     # it was shitty... so i split it into two.
 
-    row = await conn.fetchrow(
+    row = await app.db.fetchrow(
         """
         SELECT shorten_id, filename, redirto, uploader,
             deleted, domain
@@ -79,7 +81,10 @@ async def get_shorten(conn, shorten_id: int) -> Optional[dict]:
     return drow
 
 
-OBJ_MAPPING = {
-    "file": (get_file_id, get_file),
-    "shorten": (get_shorten_id, get_shorten),
-}
+OBJ_MAPPING: Dict[
+    str,
+    Tuple[
+        Callable[[str], Coroutine[Any, Any, Optional[int]]],
+        Callable[[int], Coroutine[Any, Any, Optional[dict]]],
+    ],
+] = {"file": (get_file_id, get_file), "shorten": (get_shorten_id, get_shorten)}

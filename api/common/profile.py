@@ -9,7 +9,7 @@ from quart import current_app as app
 from api.common.utils import int_
 
 
-async def get_limits(user_id) -> Dict[str, Optional[int]]:
+async def get_limits(user_id: int) -> Dict[str, Optional[int]]:
     """Get a user's limit information."""
     limits = await app.db.fetchrow(
         """
