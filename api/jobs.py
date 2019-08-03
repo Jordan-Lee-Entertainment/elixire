@@ -58,7 +58,7 @@ class JobManager:
 
         @copy_current_app_context
         async def _ctx_wrapper_bg():
-            await coro
+            return await coro
 
         task = self.loop.create_task(self._wrapper(name, _ctx_wrapper_bg()))
 
@@ -72,7 +72,7 @@ class JobManager:
 
         @copy_current_app_context
         async def _ctx_wrapper_bg(*args, **kwargs):
-            await self._wrapper_bg(*args, **kwargs)
+            return await self._wrapper_bg(*args, **kwargs)
 
         task = self.loop.create_task(_ctx_wrapper_bg(name, func, args, period))
 
