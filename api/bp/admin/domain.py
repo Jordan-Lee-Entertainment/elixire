@@ -7,7 +7,12 @@ from typing import List
 
 from quart import Blueprint, jsonify, current_app as app, request
 
-from api.schema import validate, ADMIN_MODIFY_DOMAIN, ADMIN_SEND_DOMAIN_EMAIL
+from api.schema import (
+    validate,
+    ADMIN_MODIFY_DOMAIN,
+    ADMIN_SEND_DOMAIN_EMAIL,
+    ADMIN_PUT_DOMAIN,
+)
 from api.common.auth import token_check, check_admin
 from api.common.email import send_user_email
 from api.common.pagination import Pagination
@@ -22,7 +27,7 @@ from api.bp.admin.audit_log_actions.domain import (
 
 from api.bp.admin.audit_log_actions.email import DomainOwnerNotifyAction
 
-from api.common.domain import get_domain_info
+from api.common.domain import get_domain_info, set_domain_owner
 
 bp = Blueprint("admin_domain", __name__)
 
@@ -35,53 +40,42 @@ async def add_domain():
 
     j = await request.get_json()
 
-    # TODO use validate()
-    domain_name = str(j["domain"])
-    is_adminonly = bool(j["admin_only"])
-    is_official = bool(j["official"])
-    permissions = int(j.get("permissions", 3))
+    j = validate(await request.get_json(), ADMIN_PUT_DOMAIN)
+    domain = j["domain"]
 
-    db = app.db
-
-    result = await db.execute(
+    result = await app.db.execute(
         """
-    INSERT INTO domains
-        (domain, admin_only, official, permissions)
-    VALUES
-        ($1, $2, $3, $4)
-    """,
-        domain_name,
-        is_adminonly,
-        is_official,
-        permissions,
+        INSERT INTO domains
+            (domain, admin_only, official, permissions)
+        VALUES
+            ($1, $2, $3, $4)
+        """,
+        domain,
+        j["admin_only"],
+        j["official"],
+        j["permissions"],
     )
 
-    domain_id = await db.fetchval(
+    domain_id = await app.db.fetchval(
         """
-    SELECT domain_id
-    FROM domains
-    WHERE domain = $1
-    """,
-        domain_name,
+        SELECT domain_id
+        FROM domains
+        WHERE domain = $1
+        """,
+        domain,
     )
 
     async with DomainAddAction() as action:
         action.update(domain_id=domain_id)
 
-        if "owner_id" in j:
-            owner_id = int(j["owner_id"])
+        try:
+            owner_id = j["owner_id"]
             action.update(owner_id=owner_id)
+            await set_domain_owner(domain_id, owner_id)
+        except KeyError:
+            pass
 
-            await db.execute(
-                """
-            INSERT INTO domain_owners (domain_id, user_id)
-            VALUES ($1, $2)
-            """,
-                domain_id,
-                owner_id,
-            )
-
-    keys = solve_domain(domain_name)
+    keys = solve_domain(domain)
     await app.storage.raw_invalidate(*keys)
 
     return jsonify({"success": True, "result": result, "new_id": domain_id})
@@ -91,19 +85,7 @@ async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
     fields: List[str] = []
 
     if "owner_id" in j:
-        await app.db.execute(
-            """
-            INSERT INTO domain_owners (domain_id, user_id)
-            VALUES ($1, $2)
-            ON CONFLICT ON CONSTRAINT domain_owners_pkey
-            DO UPDATE
-                SET user_id = $2
-                WHERE domain_owners.domain_id = $1
-            """,
-            domain_id,
-            j["owner_id"],
-        )
-
+        await set_domain_owner(domain_id, j["owner_id"])
         fields.append("owner_id")
         j.pop("owner_id")
 

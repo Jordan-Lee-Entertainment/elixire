@@ -2,6 +2,9 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+# TODO replace by app and remove current app parameters
+from quart import current_app as app_
+
 
 async def _domain_file_stats(db, domain_id, *, ignore_consented: bool = False) -> tuple:
     """Get domain file stats (count and sum of all bytes)."""
@@ -100,3 +103,19 @@ async def get_domain_public(db, domain_id) -> dict:
     public_stats["files"], public_stats["size"] = filestats
 
     return public_stats
+
+
+async def set_domain_owner(domain_id: int, owner_id: int):
+    """Set domain owner for the given domain."""
+    await app_.db.execute(
+        """
+        INSERT INTO domain_owners (domain_id, user_id)
+        VALUES ($1, $2)
+        ON CONFLICT ON CONSTRAINT domain_owners_pkey
+        DO UPDATE
+            SET user_id = $2
+            WHERE domain_owners.domain_id = $1
+        """,
+        domain_id,
+        owner_id,
+    )

@@ -118,6 +118,14 @@ PASSWORD_RESET_CONFIRM_SCHEMA = {
     "new_password": {"type": "password", "required": True},
 }
 
+ADMIN_PUT_DOMAIN = {
+    "domain": {"type": "string", "required": True},
+    "admin_only": {"type": "boolean", "required": True},
+    "official": {"type": "boolean", "required": True},
+    "permissions": {"coerce": int, "required": False, "default": 3},
+    "owner_id": {"coerce": int, "required": False},
+}
+
 ADMIN_MODIFY_FILE = {
     "domain_id": {"type": "integer", "required": False},
     "shortname": {"type": "string", "required": False},
