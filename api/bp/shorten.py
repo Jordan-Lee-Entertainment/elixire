@@ -9,7 +9,7 @@ from quart import Blueprint, jsonify, redirect, current_app as app, request
 
 from api.common.auth import gen_shortname, token_check, check_admin
 from api.errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
-from api.common import get_domain_info, transform_wildcard, FileNameType
+from api.common import get_user_domain_info, transform_wildcard, FileNameType
 from api.snowflake import get_snowflake
 from api.permissions import Permissions, domain_permissions
 
@@ -104,7 +104,7 @@ async def shorten_handler():
     await app.metrics.submit("shortname_gen_tries", tries)
 
     redir_id = get_snowflake()
-    domain_id, subdomain_name, domain = await get_domain_info(
+    domain_id, subdomain_name, domain = await get_user_domain_info(
         user_id, FileNameType.SHORTEN
     )
 

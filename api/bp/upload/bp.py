@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from quart import Blueprint, jsonify, current_app as app, request
 
-from api.common import get_domain_info, transform_wildcard
+from api.common import get_user_domain_info, transform_wildcard
 from api.common.auth import check_admin, gen_shortname, token_check
 from api.permissions import Permissions, domain_permissions
 from api.snowflake import get_snowflake
@@ -154,7 +154,7 @@ async def upload_handler():
             await upload_metrics(ctx)
             return jsonify(repeat)
 
-    user_domain_id, user_subdomain, user_domain = await get_domain_info(user_id)
+    user_domain_id, user_subdomain, user_domain = await get_user_domain_info(user_id)
     domain_id = given_domain or user_domain_id
     subdomain_name = given_subdomain or user_subdomain
 

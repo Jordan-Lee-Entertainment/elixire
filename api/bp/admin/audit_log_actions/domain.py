@@ -90,7 +90,7 @@ class DomainEditAction(EditAction):
 
 class DomainRemoveAction(DeleteAction):
     async def get_object(self, domain_id):
-        return await get_domain_info(self.app.db, domain_id)
+        return await get_domain_info(domain_id)
 
     async def details(self) -> list:
         lines = [f"Domain ID {self.id} was deleted.", "Domain information:"]

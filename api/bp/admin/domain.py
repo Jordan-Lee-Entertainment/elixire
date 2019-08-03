@@ -261,7 +261,7 @@ async def get_domain_stats(domain_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    return jsonify(await get_domain_info(app.db, domain_id))
+    return jsonify(await get_domain_info(domain_id))
 
 
 @bp.route("/api/admin/domains")
@@ -305,7 +305,7 @@ async def get_domain_stats_all():
 
     for row in domain_ids:
         domain_id = row["domain_id"]
-        info = await get_domain_info(app.db, domain_id)
+        info = await get_domain_info(domain_id)
         res[domain_id] = info
 
     total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
@@ -348,7 +348,7 @@ async def domains_search():
 
     for row in domain_ids:
         domain_id = row["domain_id"]
-        results[domain_id] = await get_domain_info(app.db, domain_id)
+        results[domain_id] = await get_domain_info(domain_id)
 
     total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
     return jsonify(pagination.response(results, total_count=total_count))

@@ -11,7 +11,7 @@ from .common import (
     delete_file,
     delete_shorten,
     check_bans,
-    get_domain_info,
+    get_user_domain_info,
     transform_wildcard,
 )
 
@@ -24,6 +24,6 @@ __all__ = [
     "delete_file",
     "delete_shorten",
     "check_bans",
-    "get_domain_info",
+    "get_user_domain_info",
     "transform_wildcard",
 ]

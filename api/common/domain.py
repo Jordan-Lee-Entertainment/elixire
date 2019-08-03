@@ -2,18 +2,20 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+from typing import Optional
+
 # TODO replace by app and remove current app parameters
-from quart import current_app as app_
+from quart import current_app as app
 
 from api.common.utils import dict_
 
 
-async def _domain_file_stats(db, domain_id, *, ignore_consented: bool = False) -> tuple:
+async def _domain_file_stats(domain_id, *, ignore_consented: bool = False) -> tuple:
     """Get domain file stats (count and sum of all bytes)."""
 
     consented_clause = "" if ignore_consented else "AND users.consented = true"
 
-    row = await db.fetchrow(
+    row = await app.db.fetchrow(
         f"""
         SELECT COUNT(*), SUM(file_size)
         FROM files
@@ -29,9 +31,9 @@ async def _domain_file_stats(db, domain_id, *, ignore_consented: bool = False) -
     return row["count"], int(row["sum"] or 0)
 
 
-async def get_domain_info(db, domain_id) -> dict:
+async def get_domain_info(domain_id: int) -> Optional[dict]:
     """Get domain information."""
-    raw_info = await db.fetchrow(
+    raw_info = await app.db.fetchrow(
         """
         SELECT domain, official, admin_only, permissions
         FROM domains
@@ -40,13 +42,16 @@ async def get_domain_info(db, domain_id) -> dict:
         domain_id,
     )
 
-    dinfo = dict(raw_info)
+    dinfo = dict_(raw_info)
+    if dinfo is None:
+        return None
+
     dinfo["cf_enabled"] = False
 
     stats = {}
 
     # doing batch queries should help us speed up the overall request time
-    rows = await db.fetchrow(
+    rows = await app.db.fetchrow(
         """
         SELECT
             (SELECT COUNT(*) FROM users WHERE domain = $1),
@@ -58,10 +63,10 @@ async def get_domain_info(db, domain_id) -> dict:
     stats["users"] = rows[0]
     stats["shortens"] = rows[1]
 
-    filestats = await _domain_file_stats(db, domain_id, ignore_consented=True)
+    filestats = await _domain_file_stats(domain_id, ignore_consented=True)
     stats["files"], stats["size"] = filestats
 
-    owner_data = await db.fetchrow(
+    owner_data = await app.db.fetchrow(
         """
         SELECT user_id::text, username, active, consented, admin, paranoid
         FROM users
@@ -75,15 +80,15 @@ async def get_domain_info(db, domain_id) -> dict:
     return {
         "info": {**dinfo, **{"owner": dict_owner_data}},
         "stats": stats,
-        "public_stats": await get_domain_public(db, domain_id),
+        "public_stats": await get_domain_public(domain_id),
     }
 
 
-async def get_domain_public(db, domain_id) -> dict:
+async def get_domain_public(domain_id: int) -> Optional[dict]:
     """Get public information about a domain."""
     public_stats = {}
 
-    rows = await db.fetchrow(
+    rows = await app.db.fetchrow(
         """
         SELECT
             (SELECT COUNT(*) FROM users
@@ -95,18 +100,21 @@ async def get_domain_public(db, domain_id) -> dict:
         domain_id,
     )
 
+    if rows is None:
+        return None
+
     public_stats["users"] = rows[0]
     public_stats["shortens"] = rows[1]
 
-    filestats = await _domain_file_stats(db, domain_id)
+    filestats = await _domain_file_stats(domain_id)
     public_stats["files"], public_stats["size"] = filestats
 
     return public_stats
 
 
-async def set_domain_owner(domain_id: int, owner_id: int):
+async def set_domain_owner(domain_id: int, owner_id: int) -> None:
     """Set domain owner for the given domain."""
-    await app_.db.execute(
+    await app.db.execute(
         """
         INSERT INTO domain_owners (domain_id, user_id)
         VALUES ($1, $2)

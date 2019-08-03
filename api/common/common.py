@@ -324,7 +324,7 @@ async def check_bans(user_id: int):
         raise FailedAuth(f"IP address is banned. {ip_ban_reason}")
 
 
-async def get_domain_info(
+async def get_user_domain_info(
     user_id: int, dtype=FileNameType.FILE
 ) -> Tuple[int, str, str]:
     """Get information about a user's selected domain.

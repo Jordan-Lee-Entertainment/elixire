@@ -54,7 +54,7 @@ async def personal_domain_stats():
         dinfo = dict(domain_info)
         dinfo["cf_enabled"] = False
 
-        public = await get_domain_public(db, domain_id)
+        public = await get_domain_public(domain_id)
         res[domain_id] = {"info": dinfo, "stats": public}
 
     return jsonify(res)
