@@ -5,8 +5,6 @@
 import asyncio
 import secrets
 
-import bcrypt
-
 from api.bp.profile import delete_user
 from api.common.user import create_user
 from api.common.auth import pwd_hash
