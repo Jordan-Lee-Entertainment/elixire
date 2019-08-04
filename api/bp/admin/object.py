@@ -75,10 +75,10 @@ async def handle_modify(obj_type: str, obj_id: int):
         try:
             await app.db.execute(
                 f"""
-            UPDATE {table}
-            SET domain = $1
-            WHERE {field} = $2
-            """,
+                UPDATE {table}
+                SET domain = $1
+                WHERE {field} = $2
+                """,
                 new_domain,
                 obj_id,
             )
@@ -97,10 +97,10 @@ async def handle_modify(obj_type: str, obj_id: int):
         try:
             await app.db.execute(
                 f"""
-            UPDATE {table}
-            SET filename = $1
-            WHERE {field} = $2
-            """,
+                UPDATE {table}
+                SET filename = $1
+                WHERE {field} = $2
+                """,
                 new_shortname,
                 obj_id,
             )
@@ -147,10 +147,10 @@ async def delete_file_handler(file_id: int):
 
     row = await app.db.fetchrow(
         """
-    SELECT filename, uploader
-    FROM files
-    WHERE file_id = $1
-    """,
+        SELECT filename, uploader
+        FROM files
+        WHERE file_id = $1
+        """,
         file_id,
     )
 
@@ -177,10 +177,10 @@ async def delete_shorten_handler(shorten_id: int):
 
     row = await app.db.fetchrow(
         """
-    SELECT filename, uploader
-    FROM shortens
-    WHERE shorten_id = $1
-    """,
+        SELECT filename, uploader
+        FROM shortens
+        WHERE shorten_id = $1
+        """,
         shorten_id,
     )
 

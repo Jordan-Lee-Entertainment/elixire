@@ -32,10 +32,10 @@ async def test_admin():
 async def _do_broadcast(subject, body):
     uids = await app.db.fetch(
         """
-    SELECT user_id
-    FROM users
-    WHERE active = true
-    """
+        SELECT user_id
+        FROM users
+        WHERE active = true
+        """
     )
 
     async with BroadcastAction() as ctx:

@@ -14,19 +14,19 @@ async def get_admin_settings(conn, admin_id: int) -> dict:
     """Get admin settings for a user"""
     row = await conn.fetchrow(
         """
-    SELECT audit_log_emails
-    FROM admin_user_settings
-    WHERE user_id = $1
-    """,
+        SELECT audit_log_emails
+        FROM admin_user_settings
+        WHERE user_id = $1
+        """,
         admin_id,
     )
 
     if row is None:
         await conn.execute(
             """
-        INSERT INTO admin_user_settings (user_id)
-        VALUES ($1)
-        """,
+            INSERT INTO admin_user_settings (user_id)
+            VALUES ($1)
+            """,
             admin_id,
         )
 
@@ -59,14 +59,14 @@ async def change_admin_settings():
 
     await app.db.execute(
         """
-    INSERT INTO admin_user_settings (user_id, audit_log_emails)
-    VALUES ($1, $2)
+        INSERT INTO admin_user_settings (user_id, audit_log_emails)
+        VALUES ($1, $2)
 
-    ON CONFLICT ON CONSTRAINT admin_user_settings_pkey
-    DO UPDATE SET
-        audit_log_emails = $2
-    WHERE admin_user_settings.user_id = $1
-    """,
+        ON CONFLICT ON CONSTRAINT admin_user_settings_pkey
+        DO UPDATE SET
+            audit_log_emails = $2
+        WHERE admin_user_settings.user_id = $1
+        """,
         admin_id,
         audit_emails,
     )

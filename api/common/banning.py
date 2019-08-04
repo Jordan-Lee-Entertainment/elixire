@@ -15,9 +15,9 @@ async def ban_by_ip(ip_addr: str, reason: str) -> None:
     period = app.econfig.IP_BAN_PERIOD
     await app.db.execute(
         f"""
-    INSERT INTO ip_bans (ip_address, reason, end_timestamp)
-    VALUES ($1, $2, now()::timestamp + interval '{period}')
-    """,
+        INSERT INTO ip_bans (ip_address, reason, end_timestamp)
+        VALUES ($1, $2, now()::timestamp + interval '{period}')
+        """,
         ip_addr,
         reason,
     )
@@ -32,9 +32,9 @@ async def ban_user(user_id: int, reason: str) -> None:
 
     await app.db.execute(
         f"""
-    INSERT INTO bans (user_id, reason, end_timestamp)
-    VALUES ($1, $2, now()::timestamp + interval '{period}')
-    """,
+        INSERT INTO bans (user_id, reason, end_timestamp)
+        VALUES ($1, $2, now()::timestamp + interval '{period}')
+        """,
         user_id,
         reason,
     )

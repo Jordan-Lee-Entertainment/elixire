@@ -144,11 +144,11 @@ async def recover_username():
 
     row = await app.db.fetchrow(
         """
-    SELECT username, email
-    FROM users
-    WHERE email = $1
-    LIMIT 1
-    """,
+        SELECT username, email
+        FROM users
+        WHERE email = $1
+        LIMIT 1
+        """,
         email,
     )
 

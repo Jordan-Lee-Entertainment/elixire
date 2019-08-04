@@ -34,9 +34,9 @@ async def main():
     # expensive op
     all_files = await pool.fetch(
         """
-    SELECT filename, fspath, domain
-    FROM files
-    """
+        SELECT filename, fspath, domain
+        FROM files
+        """
     )
 
     print(f"checking {len(all_files)} files")
@@ -65,10 +65,10 @@ async def main():
 
             await pool.execute(
                 """
-            UPDATE files
-            SET fspath = $2
-            WHERE filename = $1
-            """,
+                UPDATE files
+                SET fspath = $2
+                WHERE filename = $1
+                """,
                 filename,
                 f"./{new_fspath}",
             )

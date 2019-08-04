@@ -54,10 +54,10 @@ async def revoke_handler():
 
     await app.db.execute(
         """
-    UPDATE users
-    SET password_hash = $1
-    WHERE user_id = $2
-    """,
+        UPDATE users
+        SET password_hash = $1
+        WHERE user_id = $2
+        """,
         hashed,
         user["user_id"],
     )

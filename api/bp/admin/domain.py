@@ -131,10 +131,10 @@ async def email_domain(domain_id: int):
 
     owner_id = await app.db.fetchval(
         """
-    SELECT user_id
-    FROM domain_owners
-    WHERE domain_id = $1
-    """,
+        SELECT user_id
+        FROM domain_owners
+        WHERE domain_id = $1
+        """,
         domain_id,
     )
 
@@ -170,9 +170,9 @@ async def add_owner(domain_id: int):
     async with DomainEditAction(request, domain_id):
         exec_out = await app.db.execute(
             """
-        INSERT INTO domain_owners (domain_id, user_id)
-        VALUES ($1, $2)
-        """,
+            INSERT INTO domain_owners (domain_id, user_id)
+            VALUES ($1, $2)
+            """,
             domain_id,
             owner_id,
         )
@@ -188,55 +188,55 @@ async def remove_domain(domain_id: int):
 
     domain_name = await app.db.fetchval(
         """
-    SELECT domain
-    FROM domains
-    WHERE domain_id = $1
-    """,
+        SELECT domain
+        FROM domains
+        WHERE domain_id = $1
+        """,
         domain_id,
     )
 
     files_count = await app.db.execute(
         """
-    UPDATE files set domain = 0 WHERE domain = $1
-    """,
+        UPDATE files set domain = 0 WHERE domain = $1
+        """,
         domain_id,
     )
 
     shorten_count = await app.db.execute(
         """
-    UPDATE shortens set domain = 0 WHERE domain = $1
-    """,
+        UPDATE shortens set domain = 0 WHERE domain = $1
+        """,
         domain_id,
     )
 
     users_count = await app.db.execute(
         """
-    UPDATE users set domain = 0 WHERE domain = $1
-    """,
+        UPDATE users set domain = 0 WHERE domain = $1
+        """,
         domain_id,
     )
 
     users_shorten_count = await app.db.execute(
         """
-    UPDATE users set shorten_domain = 0 WHERE shorten_domain = $1
-    """,
+        UPDATE users set shorten_domain = 0 WHERE shorten_domain = $1
+        """,
         domain_id,
     )
 
     async with DomainRemoveAction(request, domain_id):
         await app.db.execute(
             """
-        DELETE FROM domain_owners
-        WHERE domain_id = $1
-        """,
+            DELETE FROM domain_owners
+            WHERE domain_id = $1
+            """,
             domain_id,
         )
 
         result = await app.db.execute(
             """
-        DELETE FROM domains
-        WHERE domain_id = $1
-        """,
+            DELETE FROM domains
+            WHERE domain_id = $1
+            """,
             domain_id,
         )
 
@@ -282,22 +282,22 @@ async def get_domain_stats_all():
 
         domain_ids = await app.db.fetch(
             f"""
-        SELECT domain_id, COUNT(*) OVER() as total_count
-        FROM domains
-        ORDER BY domain_id ASC
-        LIMIT {per_page}
-        OFFSET ($1 * {per_page})
-        """,
+            SELECT domain_id, COUNT(*) OVER() as total_count
+            FROM domains
+            ORDER BY domain_id ASC
+            LIMIT {per_page}
+            OFFSET ($1 * {per_page})
+            """,
             page,
         )
     except KeyError:
         page = -1
         domain_ids = await app.db.fetch(
             """
-        SELECT domain_id, COUNT(*) OVER() as total_count
-        FROM domains
-        ORDER BY domain_id ASC
-        """
+            SELECT domain_id, COUNT(*) OVER() as total_count
+            FROM domains
+            ORDER BY domain_id ASC
+            """
         )
     except ValueError:
         raise BadInput("Invalid page number")
@@ -333,13 +333,13 @@ async def domains_search():
 
     domain_ids = await app.db.fetch(
         """
-    SELECT domain_id, COUNT(*) OVER () AS total_count
-    FROM domains
-    WHERE $3 = '' OR domain LIKE '%'||$3||'%'
-    ORDER BY domain_id ASC
-    LIMIT $2::integer
-    OFFSET ($1::integer * $2::integer)
-    """,
+        SELECT domain_id, COUNT(*) OVER () AS total_count
+        FROM domains
+        WHERE $3 = '' OR domain LIKE '%'||$3||'%'
+        ORDER BY domain_id ASC
+        LIMIT $2::integer
+        OFFSET ($1::integer * $2::integer)
+        """,
         pagination.page,
         pagination.per_page,
         query or "",

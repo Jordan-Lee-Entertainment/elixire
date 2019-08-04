@@ -33,18 +33,18 @@ async def file_total_counts(app):
     """Submit total file count."""
     total_files = await app.db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM files
-    """
+        SELECT COUNT(*)
+        FROM files
+        """
     )
 
     total_files_public = await app.db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM files
-    JOIN users on files.uploader = users.user_id
-    WHERE users.consented = true
-    """
+        SELECT COUNT(*)
+        FROM files
+        JOIN users on files.uploader = users.user_id
+        WHERE users.consented = true
+        """
     )
 
     metrics = app.metrics
@@ -85,26 +85,26 @@ async def user_counts(app):
     """Submit information related to our users."""
     active = await app.db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM users
-    WHERE active = true
-    """
+        SELECT COUNT(*)
+        FROM users
+        WHERE active = true
+        """
     )
 
     consented = await app.db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM users
-    WHERE active = true AND consented = true
-    """
+        SELECT COUNT(*)
+        FROM users
+        WHERE active = true AND consented = true
+        """
     )
 
     inactive = await app.db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM users
-    WHERE active = false
-    """
+        SELECT COUNT(*)
+        FROM users
+        WHERE active = false
+        """
     )
 
     metrics = app.metrics
@@ -128,22 +128,22 @@ async def upload_uniq_task(app):
 
     count = await app.db.fetchval(
         """
-    SELECT COUNT(DISTINCT uploader)
-    FROM files
-    WHERE file_id > time_snowflake(now() - interval '24 hours')
-    """
+        SELECT COUNT(DISTINCT uploader)
+        FROM files
+        WHERE file_id > time_snowflake(now() - interval '24 hours')
+        """
     )
 
     await metrics.submit("uniq_uploaders_day", count)
 
     countpub = await app.db.fetchval(
         """
-    SELECT COUNT(DISTINCT uploader)
-    FROM files
-    JOIN users ON users.user_id = files.uploader
-    WHERE file_id > time_snowflake(now() - interval '24 hours')
-        AND users.consented = true
-    """
+        SELECT COUNT(DISTINCT uploader)
+        FROM files
+        JOIN users ON users.user_id = files.uploader
+        WHERE file_id > time_snowflake(now() - interval '24 hours')
+            AND users.consented = true
+        """
     )
 
     await metrics.submit("uniq_uploaders_day_pub", countpub)

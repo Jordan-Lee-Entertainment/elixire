@@ -35,21 +35,21 @@ async def domainlist_handler():
     adm_string = "" if is_admin else "WHERE admin_only = false"
     domains = await app.db.fetch(
         f"""
-    SELECT domain_id, domain
-    FROM domains
-    {adm_string}
-    ORDER BY official DESC, domain_id ASC
-    """
+        SELECT domain_id, domain
+        FROM domains
+        {adm_string}
+        ORDER BY official DESC, domain_id ASC
+        """
     )
 
     adm_string_official = "" if is_admin else "AND admin_only = false"
     official_domains = await app.db.fetch(
         f"""
-    SELECT domain_id
-    FROM domains
-    WHERE official = true {adm_string_official}
-    ORDER BY domain_id ASC
-    """
+        SELECT domain_id
+        FROM domains
+        WHERE official = true {adm_string_official}
+        ORDER BY domain_id ASC
+        """
     )
 
     # dear god

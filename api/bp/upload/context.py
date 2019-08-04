@@ -113,20 +113,20 @@ class UploadContext(
         # check user's limits
         used = await app.db.fetchval(
             """
-        SELECT SUM(file_size)
-        FROM files
-        WHERE uploader = $1
-        AND file_id > time_snowflake(now() - interval '7 days')
-        """,
+            SELECT SUM(file_size)
+            FROM files
+            WHERE uploader = $1
+            AND file_id > time_snowflake(now() - interval '7 days')
+            """,
             user_id,
         )
 
         byte_limit = await app.db.fetchval(
             """
-        SELECT blimit
-        FROM limits
-        WHERE user_id = $1
-        """,
+            SELECT blimit
+            FROM limits
+            WHERE user_id = $1
+            """,
             user_id,
         )
 

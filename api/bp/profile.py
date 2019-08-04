@@ -34,7 +34,7 @@ async def _update_password(user_id, new_pwd):
         UPDATE users
         SET password_hash = $1
         WHERE user_id = $2
-    """,
+        """,
         new_hash,
         user_id,
     )
@@ -100,20 +100,20 @@ async def change_profile():
         # instead of relying in Storage
         old_username = await app.db.fetchval(
             """
-        SELECT username
-        FROM users
-        WHERE user_id = $1
-        """,
+            SELECT username
+            FROM users
+            WHERE user_id = $1
+            """,
             user_id,
         )
 
         try:
             await app.db.execute(
                 """
-            UPDATE users
-            SET username = $1
-            WHERE user_id = $2
-            """,
+                UPDATE users
+                SET username = $1
+                WHERE user_id = $2
+                """,
                 new_username,
                 user_id,
             )
@@ -145,7 +145,7 @@ async def change_profile():
             UPDATE users
             SET domain = $1
             WHERE user_id = $2
-        """,
+            """,
             new_domain,
             user_id,
         )
@@ -158,7 +158,7 @@ async def change_profile():
             UPDATE users
             SET subdomain = $1
             WHERE user_id = $2
-        """,
+            """,
             new_subdomain,
             user_id,
         )
@@ -175,7 +175,7 @@ async def change_profile():
             UPDATE users
             SET shorten_domain = $1
             WHERE user_id = $2
-        """,
+            """,
             new_shorten_domain,
             user_id,
         )
@@ -190,7 +190,7 @@ async def change_profile():
             UPDATE users
             SET shorten_subdomain = $1
             WHERE user_id = $2
-        """,
+            """,
             new_shorten_subdomain,
             user_id,
         )
@@ -203,7 +203,7 @@ async def change_profile():
             UPDATE users
             SET email = $1
             WHERE user_id = $2
-        """,
+            """,
             new_email,
             user_id,
         )
@@ -216,7 +216,7 @@ async def change_profile():
             UPDATE users
             SET paranoid = $1
             WHERE user_id = $2
-        """,
+            """,
             new_paranoid,
             user_id,
         )
@@ -231,7 +231,7 @@ async def change_profile():
             UPDATE users
             SET consented = $1
             WHERE user_id = $2
-        """,
+            """,
             new_consent_state,
             user_id,
         )
@@ -274,10 +274,10 @@ async def delete_own_user():
 
     user_email = await app.db.fetchval(
         """
-    SELECT email
-    FROM users
-    WHERE user_id = $1
-    """,
+        SELECT email
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -293,9 +293,9 @@ async def delete_own_user():
 
     await app.db.execute(
         """
-    INSERT INTO email_deletion_tokens(hash, user_id)
-    VALUES ($1, $2)
-    """,
+        INSERT INTO email_deletion_tokens(hash, user_id)
+        VALUES ($1, $2)
+        """,
         email_token,
         user_id,
     )
@@ -354,10 +354,10 @@ async def reset_password_req():
 
     udata = await app.db.fetchrow(
         """
-    SELECT email, user_id
-    FROM users
-    WHERE username = $1
-    """,
+        SELECT email, user_id
+        FROM users
+        WHERE username = $1
+        """,
         username,
     )
 
@@ -374,9 +374,9 @@ async def reset_password_req():
 
     await app.db.execute(
         """
-    INSERT INTO email_pwd_reset_tokens (hash, user_id)
-    VALUES ($1, $2)
-    """,
+        INSERT INTO email_pwd_reset_tokens (hash, user_id)
+        VALUES ($1, $2)
+        """,
         email_token,
         user_id,
     )

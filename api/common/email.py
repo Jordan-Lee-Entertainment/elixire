@@ -53,10 +53,10 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
     # check if hash already exists
     other_id = await app.db.fetchval(
         f"""
-    SELECT user_id
-    FROM {table}
-    WHERE hash = $1 AND now() < expiral
-    """,
+        SELECT user_id
+        FROM {table}
+        WHERE hash = $1 AND now() < expiral
+        """,
         possible,
     )
 
@@ -66,10 +66,10 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
 
     hashes = await app.db.fetchval(
         f"""
-    SELECT COUNT(*)
-    FROM {table}
-    WHERE user_id = $1 AND now() < expiral
-    """,
+        SELECT COUNT(*)
+        FROM {table}
+        WHERE user_id = $1 AND now() < expiral
+        """,
         user_id,
     )
 
@@ -106,10 +106,10 @@ async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
     """Send an email to a user, given user ID."""
     user_email = await app.db.fetchval(
         """
-    SELECT email
-    FROM users
-    WHERE user_id = $1
-    """,
+        SELECT email
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -141,10 +141,10 @@ async def uid_from_email(app, token: str, table: str, raise_err: bool = True) ->
     """Get user ID from email."""
     user_id = await app.db.fetchval(
         f"""
-    SELECT user_id
-    FROM {table}
-    WHERE hash=$1
-    """,
+        SELECT user_id
+        FROM {table}
+        WHERE hash=$1
+        """,
         token,
     )
 
@@ -157,10 +157,10 @@ async def uid_from_email(app, token: str, table: str, raise_err: bool = True) ->
 async def get_owner(app, domain_id: int) -> int:
     return await app.db.fetchval(
         """
-    SELECT user_id
-    FROM domain_owners
-    WHERE domain_id = $1
-    """,
+        SELECT user_id
+        FROM domain_owners
+        WHERE domain_id = $1
+        """,
         domain_id,
     )
 
@@ -168,9 +168,9 @@ async def get_owner(app, domain_id: int) -> int:
 async def clean_etoken(app, token: str, table: str) -> bool:
     res = await app.db.execute(
         f"""
-    DELETE FROM {table}
-    WHERE hash=$1
-    """,
+        DELETE FROM {table}
+        WHERE hash=$1
+        """,
         token,
     )
 
@@ -182,9 +182,9 @@ async def activate_email_send(app, user_id: int):
 
     await app.db.execute(
         """
-    INSERT INTO email_activation_tokens (hash, user_id)
-    VALUES ($1, $2)
-    """,
+        INSERT INTO email_activation_tokens (hash, user_id)
+        VALUES ($1, $2)
+        """,
         token,
         user_id,
     )
