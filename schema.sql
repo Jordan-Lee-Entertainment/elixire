@@ -123,8 +123,9 @@ CREATE TABLE IF NOT EXISTS files (
     -- files can be *marked* as deleted in the DB.
     deleted boolean DEFAULT false,
 
-    -- files are per domain.
-    domain bigint REFERENCES domains (domain_id) DEFAULT 0
+    -- files are per domain and subdomain
+    domain bigint REFERENCES domains (domain_id) DEFAULT 0,
+    subdomain text DEFAULT NULL
 );
 
 -- shortened URLs
@@ -140,7 +141,9 @@ CREATE TABLE IF NOT EXISTS shortens (
 
     uploader bigint REFERENCES users (user_id) ON DELETE CASCADE,
     deleted boolean DEFAULT false,
-    domain bigint REFERENCES domains (domain_id) DEFAULT 0
+
+    domain bigint REFERENCES domains (domain_id) DEFAULT 0,
+    subdomain text DEFAULT NULL
 );
 
 -- email stuff for account deletion confirmations
