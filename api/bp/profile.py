@@ -8,13 +8,7 @@ import asyncpg
 from quart import Blueprint, request, current_app as app, jsonify
 
 from api.errors import FailedAuth, FeatureDisabled, BadInput, APIError
-from api.common.auth import (
-    token_check,
-    password_check,
-    pwd_hash,
-    check_admin,
-    check_domain_id,
-)
+from api.common.auth import token_check, password_check, pwd_hash, check_admin
 from api.common.email import gen_email_token, send_email, uid_from_email, clean_etoken
 from api.schema import (
     validate,
@@ -25,6 +19,7 @@ from api.schema import (
 )
 from api.common.user import delete_user, get_basic_user
 from api.common.profile import get_limits, get_counts, get_dump_status
+from api.common.domain import get_basic_domain
 
 bp = Blueprint("profile", __name__)
 log = logging.getLogger(__name__)
@@ -135,7 +130,7 @@ async def change_profile():
 
     if new_domain is not None:
         # Check if domain exists
-        domain_info = await check_domain_id(new_domain)
+        domain_info = await get_basic_domain(new_domain)
 
         # Check if user has perms for getting that domain
         is_admin = await check_admin(user_id, False)

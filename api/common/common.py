@@ -44,15 +44,15 @@ def get_ip_addr() -> str:
     return request.headers["X-Forwarded-For"]
 
 
-def _gen_fname(length: int) -> str:
-    """Generate a random filename."""
+def _gen_sname(length: int) -> str:
+    """Generate a random shortname."""
     return "".join(secrets.choice(ALPHABET) for _ in range(length))
 
 
-async def gen_filename(
+async def gen_shortname(
     length: int = 3, table: str = "files", _curc: int = 0
 ) -> Tuple[str, int]:
-    """Generate a unique random filename.
+    """Generate a unique random shortname.
 
     To guarantee that the generated shortnames will
     be unique, we query our DB if the generated
@@ -80,14 +80,14 @@ async def gen_filename(
         If it tried to generate a shortname with more than 10 letters.
     """
     if length > 10:
-        raise RuntimeError("Failed to generate a filename")
+        raise RuntimeError("Failed to generate a shortname")
 
     try_count = 0
 
     field = "file_id" if table == "files" else "shorten_id"
 
     for try_count in range(10):
-        random_fname = _gen_fname(length)
+        random_fname = _gen_sname(length)
 
         filerow = await app.db.fetchrow(
             f"""
@@ -104,7 +104,7 @@ async def gen_filename(
             return random_fname, total
 
     # if 10 tries didnt work, try generating with length+1
-    return await gen_filename(length + 1, table, _curc + try_count + 1)
+    return await gen_shortname(length + 1, table, _curc + try_count + 1)
 
 
 def _calculate_hash(fhandler) -> str:

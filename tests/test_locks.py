@@ -2,9 +2,11 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import pytest
 import asyncio
 
 
+@pytest.mark.asyncio
 async def test_locks(test_cli):
     """Test LockStorage"""
     locks = test_cli.app.locks

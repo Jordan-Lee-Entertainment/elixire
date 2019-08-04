@@ -2,11 +2,12 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, Tuple
 
 from quart import current_app as app
 
 from api.common.utils import int_
+from api.common.common import gen_shortname
 
 
 async def get_limits(user_id: int) -> Dict[str, Optional[int]]:
@@ -128,3 +129,27 @@ async def get_dump_status(user_id: int) -> Dict[str, Union[str, int]]:
         "total_files": row["total_files"],
         "files_done": row["files_done"],
     }
+
+
+async def is_user_paranoid(user_id: int) -> Optional[bool]:
+    """If the user is in paranoid mode."""
+    # TODO maybe move to Storage.is_paranoid?
+    return await app.db.fetchval(
+        """
+        SELECT paranoid
+        FROM users
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+
+async def gen_user_shortname(user_id: int, table: str = "files") -> Tuple[str, int]:
+    """Generate a shortname for a file.
+
+    Checks if the user is in paranoid mode and acts accordingly
+    """
+
+    paranoid = await is_user_paranoid(user_id)
+    shortname_len = 8 if paranoid else app.econfig.SHORTNAME_LEN
+    return await gen_shortname(shortname_len, table)

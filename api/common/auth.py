@@ -7,30 +7,18 @@ elixi.re - common auth
     Common authentication-related functions.
 """
 import logging
-from typing import Tuple, Union
+from typing import Union
 
 import bcrypt
 import itsdangerous
 
 from quart import request, current_app as app
 
-from api.errors import FailedAuth, NotFound
+from api.errors import FailedAuth
 from api.schema import validate, LOGIN_SCHEMA
-from .common import TokenType, check_bans, gen_filename
+from .common import TokenType, check_bans
 
 log = logging.getLogger(__name__)
-
-
-async def gen_shortname(user_id: int, table: str = "files") -> Tuple[str, int]:
-    """Generate a shortname for a file.
-
-    Checks if the user is in paranoid mode.
-    """
-    is_paranoid = await check_paranoid(user_id)
-
-    # TODO config
-    shortname_len = 8 if is_paranoid else app.econfig.SHORTNAME_LEN
-    return await gen_filename(shortname_len, table)
 
 
 def get_token() -> str:
@@ -73,10 +61,10 @@ async def password_check(user_id: int, password: str):
     """
     stored = await app.db.fetchval(
         """
-        select password_hash
-        from users
-        where user_id = $1
-    """,
+        SELECT password_hash
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -100,10 +88,10 @@ async def check_admin(user_id: int, error_on_nonadmin: bool = True) -> bool:
     """
     is_admin = await app.db.fetchval(
         """
-        select admin
-        from users
-        where user_id = $1
-    """,
+        SELECT admin
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -111,72 +99,6 @@ async def check_admin(user_id: int, error_on_nonadmin: bool = True) -> bool:
         raise FailedAuth("User is not an admin.")
 
     return is_admin
-
-
-async def check_paranoid(user_id: int) -> bool:
-    """If the user is in paranoid mode.
-
-    Returns None if user does not exist.
-    """
-    is_paranoid = await app.db.fetchval(
-        """
-        select paranoid
-        from users
-        where user_id = $1
-    """,
-        user_id,
-    )
-
-    return is_paranoid
-
-
-async def check_domain(domain_name: str, error_on_nodomain=True) -> dict:
-    """Checks if a domain exists, by domain
-
-    returns its record it if does, returns None if it doesn't"""
-
-    # This is hacky but it works so you can't really blame me
-    # Unless you send a fix first, then you can blame me :)
-    subd_wildcard_name = domain_name.replace(domain_name.split(".")[0], "*")
-    domain_wildcard_name = "*." + domain_name
-
-    domain_info = await app.db.fetchrow(
-        """
-        SELECT *
-        FROM domains
-        WHERE domain = $1
-        OR domain = $2
-        OR domain = $3
-    """,
-        domain_name,
-        subd_wildcard_name,
-        domain_wildcard_name,
-    )
-
-    if error_on_nodomain and not domain_info:
-        raise NotFound("This domain does not exist in this elixire instance.")
-
-    return domain_info
-
-
-# TODO: reduce code repetition
-async def check_domain_id(domain_id: int, error_on_nodomain=True):
-    """Checks if a domain exists, by id
-
-    returns its record it if does, returns None if it doesn't"""
-    domain_info = await app.db.fetchrow(
-        """
-        SELECT *
-        FROM domains
-        WHERE domain_id = $1
-    """,
-        domain_id,
-    )
-
-    if error_on_nodomain and not domain_info:
-        raise NotFound("This domain does not exist in this elixire instance.")
-
-    return domain_info
 
 
 async def login_user() -> dict:

@@ -10,9 +10,10 @@ from typing import Any, Dict, Optional, Tuple
 from quart import Blueprint, jsonify, current_app as app, request
 
 from api.common import get_user_domain_info, transform_wildcard
-from api.common.auth import check_admin, gen_shortname, token_check
+from api.common.auth import check_admin, token_check
 from api.permissions import Permissions, domain_permissions
 from api.snowflake import get_snowflake
+from api.common.profile import gen_user_shortname
 from .context import UploadContext
 from .file import UploadFile
 
@@ -121,7 +122,7 @@ async def upload_handler():
 
     # generate a filename so we can identify later when removing it
     # because of virus scanning.
-    shortname, tries = await gen_shortname(user_id)
+    shortname, tries = await gen_user_shortname(user_id)
     await app.metrics.submit("shortname_gen_tries", tries)
 
     # construct an upload context, which holds the file and other data about

@@ -7,11 +7,12 @@ import urllib.parse
 
 from quart import Blueprint, jsonify, redirect, current_app as app, request
 
-from api.common.auth import gen_shortname, token_check, check_admin
+from api.common.auth import token_check, check_admin
 from api.errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
 from api.common import get_user_domain_info, transform_wildcard, FileNameType
 from api.snowflake import get_snowflake
 from api.permissions import Permissions, domain_permissions
+from api.common.profile import gen_user_shortname
 
 bp = Blueprint("shorten", __name__)
 
@@ -100,7 +101,7 @@ async def shorten_handler():
                 f"This shorten blows the weekly limit of {shorten_limit} shortens"
             )
 
-    redir_rname, tries = await gen_shortname(user_id, "shortens")
+    redir_rname, tries = await gen_user_shortname(user_id, "shortens")
     await app.metrics.submit("shortname_gen_tries", tries)
 
     redir_id = get_snowflake()

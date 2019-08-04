@@ -8,6 +8,7 @@ from typing import Optional
 from quart import current_app as app
 
 from api.common.utils import dict_
+from api.errors import NotFound
 
 
 async def _domain_file_stats(domain_id, *, ignore_consented: bool = False) -> tuple:
@@ -126,3 +127,57 @@ async def set_domain_owner(domain_id: int, owner_id: int) -> None:
         domain_id,
         owner_id,
     )
+
+
+async def get_basic_domain(
+    domain_id: int, *, raise_notfound: bool = False
+) -> Optional[dict]:
+    """Fetch a domain by ID."""
+    domain_info = await app.db.fetchrow(
+        """
+        SELECT *
+        FROM domains
+        WHERE domain_id = $1
+        """,
+        domain_id,
+    )
+
+    if raise_notfound and domain_info is None:
+        raise NotFound("This domain does not exist.")
+
+    return domain_info
+
+
+async def get_basic_domain_by_domain(
+    domain: str, *, raise_notfound: bool = False
+) -> Optional[dict]:
+    """Fetch a domain's info by the string representing it."""
+
+    # there can be three types of inputs
+    #  - just the domain (a.tld)
+    #  - the domain with a subdomain (b.a.tld)
+    #  - the wildcard domain (*.a.tld)
+    # all three can exist inside the domains table.
+    # since we don't know which domain we're given, we transform
+    # it into all three, then give a search.
+
+    subd_wildcard_name = domain.replace(domain.split(".")[0], "*")
+    domain_wildcard_name = "*." + domain
+
+    domain_info = await app.db.fetchrow(
+        """
+        SELECT *
+        FROM domains
+        WHERE domain = $1
+        OR domain = $2
+        OR domain = $3
+        """,
+        domain,
+        subd_wildcard_name,
+        domain_wildcard_name,
+    )
+
+    if raise_notfound and not domain_info:
+        raise NotFound("This domain does not exist in this elixire instance.")
+
+    return domain_info
