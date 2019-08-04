@@ -24,7 +24,12 @@ async def filecheck(filename):
     shortname, ext = os.path.splitext(filename)
 
     filepath = await app.storage.get_fspath(shortname, domain_id, subdomain)
-    if not filepath:
+
+    if filepath is None:
+        # try again without subdomain
+        filepath = await app.storage.get_fspath(shortname, domain_id)
+
+    if filepath is None:
         raise NotFound("No files with this name on this domain.")
 
     # If we don't do this, there's a tiny chance of someone uploading an .exe
