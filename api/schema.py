@@ -34,7 +34,7 @@ class ElixireValidator(Validator):
          - Equal to or less than 72 bytes.
         """
         # TODO: Would it be interesting to measure entropy?
-        return len(value) >= 8 and len(value.encode("utf-8")) <= 72
+        return len(value) >= 8 and len(value.encode()) <= 72
 
     def _validate_type_subdomain(self, value) -> bool:
         """Validate subdomains."""
