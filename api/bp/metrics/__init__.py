@@ -14,6 +14,6 @@ solution to that), all metrics are published to InfluxDB.
 In production, you should use Grafana to visualize the data,
 or anything that connects with InfluxDB, really.
 """
-__all__ = ["bp", "is_consenting"]
+__all__ = ["bp"]
 
-from .blueprint import bp, is_consenting
+from .blueprint import bp
