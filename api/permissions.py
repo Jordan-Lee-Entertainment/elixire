@@ -25,10 +25,10 @@ async def domain_permissions(
     """
     perm = await app.db.fetchval(
         """
-    SELECT permissions
-    FROM domains
-    WHERE domain_id = $1
-    """,
+        SELECT permissions
+        FROM domains
+        WHERE domain_id = $1
+        """,
         domain_id,
     )
 

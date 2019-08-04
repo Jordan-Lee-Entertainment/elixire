@@ -72,11 +72,11 @@ async def shorten_handler():
         # TODO quota calculations in full sql? is that possible?
         shortens_used = await app.db.fetch(
             """
-        SELECT shorten_id
-        FROM shortens
-        WHERE uploader = $1
-        AND shorten_id > time_snowflake(now() - interval '7 days')
-        """,
+            SELECT shorten_id
+            FROM shortens
+            WHERE uploader = $1
+            AND shorten_id > time_snowflake(now() - interval '7 days')
+            """,
             user_id,
         )
 
@@ -84,10 +84,10 @@ async def shorten_handler():
 
         shorten_limit = await app.db.fetchval(
             """
-        SELECT shlimit
-        FROM limits
-        WHERE user_id = $1
-        """,
+            SELECT shlimit
+            FROM limits
+            WHERE user_id = $1
+            """,
             user_id,
         )
 
@@ -117,10 +117,10 @@ async def shorten_handler():
 
     await app.db.execute(
         """
-    INSERT INTO shortens (shorten_id, filename,
-        uploader, redirto, domain)
-    VALUES ($1, $2, $3, $4, $5)
-    """,
+        INSERT INTO shortens (shorten_id, filename,
+            uploader, redirto, domain)
+        VALUES ($1, $2, $3, $4, $5)
+        """,
         redir_id,
         redir_rname,
         user_id,

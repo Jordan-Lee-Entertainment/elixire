@@ -107,8 +107,8 @@ async def test_cli_admin(test_cli):
 
     await app.db.execute(
         """
-    UPDATE users SET admin = true WHERE user_id = $1
-    """,
+        UPDATE users SET admin = true WHERE user_id = $1
+        """,
         user_id,
     )
 

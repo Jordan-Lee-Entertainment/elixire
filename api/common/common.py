@@ -146,8 +146,7 @@ async def calculate_hash(fhandle) -> str:
     Uses run_in_executor to do the job asynchronously so
     the application doesn't lock up on large files.
     """
-    fut = app.loop.run_in_executor(None, _calculate_hash, fhandle)
-    return await fut
+    return await app.loop.run_in_executor(None, _calculate_hash, fhandle)
 
 
 async def remove_fspath(shortname: str):

@@ -72,8 +72,7 @@ class UploadContext(
         chunk = self.file.stream.read(512)
         self.file.stream.seek(0)
 
-        mimetype_future = app.loop.run_in_executor(None, self.get_mime, chunk)
-        mimetype = await mimetype_future
+        mimetype = await app.loop.run_in_executor(None, self.get_mime, chunk)
 
         # Check if file's mimetype is in allowed mimetypes
         if mimetype not in app.econfig.ACCEPTED_MIMES:
@@ -114,20 +113,20 @@ class UploadContext(
         # check user's limits
         used = await app.db.fetchval(
             """
-        SELECT SUM(file_size)
-        FROM files
-        WHERE uploader = $1
-        AND file_id > time_snowflake(now() - interval '7 days')
-        """,
+            SELECT SUM(file_size)
+            FROM files
+            WHERE uploader = $1
+            AND file_id > time_snowflake(now() - interval '7 days')
+            """,
             user_id,
         )
 
         byte_limit = await app.db.fetchval(
             """
-        SELECT blimit
-        FROM limits
-        WHERE user_id = $1
-        """,
+            SELECT blimit
+            FROM limits
+            WHERE user_id = $1
+            """,
             user_id,
         )
 

@@ -32,10 +32,10 @@ async def open_zipdump(
     """Open the zip file relating to your dump."""
     user_name = await app.db.fetchval(
         """
-    SELECT username
-    FROM users
-    WHERE user_id = $1
-    """,
+        SELECT username
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -57,11 +57,11 @@ async def dump_user_data(app, zipdump, user_id) -> None:
     """Insert user information into the dump."""
     udata = await app.db.fetchrow(
         """
-    SELECT user_id, username, active, password_hash, email,
-           consented, admin, subdomain, domain
-    FROM users
-    WHERE user_id = $1
-    """,
+        SELECT user_id, username, active, password_hash, email,
+               consented, admin, subdomain, domain
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -72,10 +72,10 @@ async def dump_user_bans(app, zipdump: zipfile.ZipFile, user_id: int) -> None:
     """Insert user bans, if any, into the dump."""
     bans = await app.db.fetch(
         """
-    SELECT user_id, reason, end_timestamp
-    FROM bans
-    WHERE user_id = $1
-    """,
+        SELECT user_id, reason, end_timestamp
+        FROM bans
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -96,10 +96,10 @@ async def dump_user_limits(app, zipdump: zipfile.ZipFile, user_id: int) -> None:
     """Write the current limits for the user in the dump."""
     limits = await app.db.fetchrow(
         """
-    SELECT user_id, blimit, shlimit
-    FROM limits
-    WHERE user_id = $1
-    """,
+        SELECT user_id, blimit, shlimit
+        FROM limits
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -110,10 +110,10 @@ async def dump_user_files(app, zipdump: zipfile.ZipFile, user_id: int) -> None:
     """Dump all information about the user's files."""
     all_files = await app.db.fetch(
         """
-    SELECT file_id, mimetype, filename, file_size, uploader, domain
-    FROM files
-    WHERE uploader = $1
-    """,
+        SELECT file_id, mimetype, filename, file_size, uploader, domain
+        FROM files
+        WHERE uploader = $1
+        """,
         user_id,
     )
 
@@ -128,10 +128,10 @@ async def dump_user_shortens(app, zipdump: zipfile.ZipFile, user_id: int) -> Non
     """Dump all information about the user's shortens."""
     all_shortens = await app.db.fetch(
         """
-    SELECT shorten_id, filename, redirto, domain
-    FROM shortens
-    WHERE uploader = $1
-    """,
+        SELECT shorten_id, filename, redirto, domain
+        FROM shortens
+        WHERE uploader = $1
+        """,
         user_id,
     )
 
@@ -161,10 +161,10 @@ async def dump_files(
         # add current file to dump
         fdata = await app.db.fetchrow(
             """
-        SELECT fspath, filename
-        FROM files
-        WHERE file_id = $1
-        """,
+            SELECT fspath, filename
+            FROM files
+            WHERE file_id = $1
+            """,
             current_id,
         )
 
@@ -174,9 +174,7 @@ async def dump_files(
 
         filepath = f"./files/{current_id}_{filename}{ext}"
         try:
-            fut = app.loop.run_in_executor(None, zipdump.write, fspath, filepath)
-
-            await fut
+            await app.loop.run_in_executor(None, zipdump.write, fspath, filepath)
         except FileNotFoundError:
             log.warning(f"File not found: {current_id} {filename}")
 
@@ -185,10 +183,10 @@ async def dump_files(
         # update current_dump_state
         await app.db.execute(
             """
-        UPDATE current_dump_state
-        SET current_id = $1, files_done = $2
-        WHERE user_id = $3
-        """,
+            UPDATE current_dump_state
+            SET current_id = $1, files_done = $2
+            WHERE user_id = $3
+            """,
             current_id,
             files_done,
             user_id,
@@ -197,14 +195,14 @@ async def dump_files(
         # fetch next id
         current_id = await app.db.fetchval(
             """
-        SELECT file_id
-        FROM files
-        WHERE uploader = $1
-        AND   file_id > $2
+            SELECT file_id
+            FROM files
+            WHERE uploader = $1
+            AND   file_id > $2
 
-        ORDER BY file_id ASC
-        LIMIT 1
-        """,
+            ORDER BY file_id ASC
+            LIMIT 1
+            """,
             user_id,
             current_id,
         )
@@ -221,9 +219,9 @@ async def dispatch_dump(app, user_id: int, user_name: str) -> None:
 
     await app.db.execute(
         """
-    INSERT INTO email_dump_tokens (hash, user_id)
-    VALUES ($1, $2)
-    """,
+        INSERT INTO email_dump_tokens (hash, user_id)
+        VALUES ($1, $2)
+        """,
         dump_token,
         user_id,
     )
@@ -255,9 +253,9 @@ Do not reply to this automated email.
         # remove from current state
         await app.db.execute(
             """
-        DELETE FROM current_dump_state
-        WHERE user_id = $1
-        """,
+            DELETE FROM current_dump_state
+            WHERE user_id = $1
+            """,
             user_id,
         )
     else:
@@ -279,10 +277,10 @@ async def do_dump(app, user_id: int) -> None:
     # insert user in current dump state
     row = await app.db.fetchrow(
         """
-    SELECT MIN(file_id), COUNT(*)
-    FROM files
-    WHERE uploader = $1
-    """,
+        SELECT MIN(file_id), COUNT(*)
+        FROM files
+        WHERE uploader = $1
+        """,
         user_id,
     )
 
@@ -298,11 +296,11 @@ async def do_dump(app, user_id: int) -> None:
 
     await app.db.execute(
         """
-    INSERT INTO current_dump_state
-        (user_id, current_id, total_files, files_done)
-    VALUES
-        ($1, $2, $3, 0)
-    """,
+        INSERT INTO current_dump_state
+            (user_id, current_id, total_files, files_done)
+        VALUES
+            ($1, $2, $3, 0)
+        """,
         user_id,
         minid,
         total_files,
@@ -337,10 +335,10 @@ async def resume_dump(app, user_id: int) -> None:
     # check the current state
     row = await app.db.fetchrow(
         """
-    SELECT current_id, files_done
-    FROM current_dump_state
-    WHERE user_id = $1
-    """,
+        SELECT current_id, files_done
+        FROM current_dump_state
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -372,10 +370,10 @@ async def dump_worker() -> None:
     # fetch state, if there is, resume
     user_id = await app.db.fetchval(
         """
-    SELECT user_id
-    FROM current_dump_state
-    ORDER BY start_timestamp ASC
-    """
+        SELECT user_id
+        FROM current_dump_state
+        ORDER BY start_timestamp ASC
+        """
     )
 
     if user_id:
@@ -384,19 +382,19 @@ async def dump_worker() -> None:
     # get from queue
     next_id = await app.db.fetchval(
         """
-    SELECT user_id
-    FROM dump_queue
-    ORDER BY request_timestamp ASC
-    """
+        SELECT user_id
+        FROM dump_queue
+        ORDER BY request_timestamp ASC
+        """
     )
 
     if next_id:
         # remove from the queue
         await app.db.execute(
             """
-        DELETE FROM dump_queue
-        WHERE user_id = $1
-        """,
+            DELETE FROM dump_queue
+            WHERE user_id = $1
+            """,
             next_id,
         )
 

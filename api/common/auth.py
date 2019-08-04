@@ -35,22 +35,22 @@ def get_token() -> str:
 
 async def pwd_hash(password: str) -> str:
     """Generate a hash for any given password"""
-    password_bytes = password.encode("utf-8")
-    hashed = app.loop.run_in_executor(
+    password_bytes = password.encode()
+    hashed = await app.loop.run_in_executor(
         None, bcrypt.hashpw, password_bytes, bcrypt.gensalt(14)
     )
 
-    return (await hashed).decode("utf-8")
+    return hashed.decode()
 
 
 async def pwd_check(stored: str, password: str):
     """Raw version of password_check."""
-    pwd_bytes = password.encode("utf-8")
-    pwd_orig = stored.encode("utf-8")
+    pwd_bytes = password.encode()
+    pwd_orig = stored.encode()
 
-    future = app.loop.run_in_executor(None, bcrypt.checkpw, pwd_bytes, pwd_orig)
+    matches = await app.loop.run_in_executor(None, bcrypt.checkpw, pwd_bytes, pwd_orig)
 
-    if not await future:
+    if not matches:
         raise FailedAuth("User or password invalid")
 
 
@@ -222,7 +222,7 @@ async def token_check() -> int:
 
         # itsdangerous.Signer does not like
         # strings, only bytes.
-        token_bytes = token.encode("utf-8")
+        token_bytes = token.encode()
         _try_unsign(signer, token_bytes)
         return user_id
 
@@ -266,4 +266,4 @@ def gen_token(user: dict, token_type=TokenType.TIMED) -> str:
         # treated as an API token
         uid = f"u{uid}"
 
-    return signer.sign(uid).decode("utf-8")
+    return signer.sign(uid).decode()

@@ -80,19 +80,19 @@ async def main():
 
         domain = await pool.fetchval(
             """
-        SELECT domain
-        FROM files
-        WHERE filename = $1
-        """,
+            SELECT domain
+            FROM files
+            WHERE filename = $1
+            """,
             shortname,
         )
 
         execout = await pool.execute(
             """
-        UPDATE files
-        SET fspath = $2
-        WHERE filename = $1
-        """,
+            UPDATE files
+            SET fspath = $2
+            WHERE filename = $1
+            """,
             shortname,
             f"./{target!s}",
         )

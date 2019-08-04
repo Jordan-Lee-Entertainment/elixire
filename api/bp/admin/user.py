@@ -47,11 +47,11 @@ async def get_user_handler(user_id: int):
 
     row = await app.db.fetchrow(
         """
-    SELECT user_id, username, active, admin, domain, subdomain,
-      consented, email, paranoid
-    FROM users
-    WHERE user_id=$1
-    """,
+        SELECT user_id, username, active, admin, domain, subdomain,
+          consented, email, paranoid
+        FROM users
+        WHERE user_id=$1
+        """,
         user_id,
     )
 
@@ -66,11 +66,11 @@ async def get_user_by_username(username: str):
 
     row = await app.db.fetchrow(
         """
-    SELECT user_id, username, active, admin, domain, subdomain,
-      consented, email, paranoid
-    FROM users
-    WHERE username = $1
-    """,
+        SELECT user_id, username, active, admin, domain, subdomain,
+          consented, email, paranoid
+        FROM users
+        WHERE username = $1
+        """,
         username,
     )
 
@@ -121,10 +121,10 @@ async def activate_user(user_id: int):
     async with UserEditAction(request, user_id):
         result = await app.db.execute(
             """
-        UPDATE users
-        SET active = true
-        WHERE user_id = $1
-        """,
+            UPDATE users
+            SET active = true
+            WHERE user_id = $1
+            """,
             user_id,
         )
 
@@ -147,10 +147,10 @@ async def activation_email(user_id):
 
     active = await app.db.fetchval(
         """
-    SELECT active
-    FROM users
-    WHERE user_id = $1
-    """,
+        SELECT active
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -182,10 +182,10 @@ async def activate_user_from_email():
 
     res = await app.db.execute(
         """
-    UPDATE users
-    SET active = true
-    WHERE user_id = $1
-    """,
+        UPDATE users
+        SET active = true
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -205,10 +205,10 @@ async def deactivate_user(user_id: int):
     async with UserEditAction(request, user_id):
         result = await app.db.execute(
             """
-        UPDATE users
-        SET active = false
-        WHERE user_id = $1
-        """,
+            UPDATE users
+            SET active = false
+            WHERE user_id = $1
+            """,
             user_id,
         )
 
@@ -243,19 +243,19 @@ async def users_search():
 
     users = await app.db.fetch(
         f"""
-    SELECT user_id, username, active, admin, consented,
-           COUNT(*) OVER() as total_count
-    FROM users
-    WHERE
-    {active_query}
-    AND (
-            $2 = ''
-            OR (username LIKE '%'||$2||'%' OR user_id::text LIKE '%'||$2||'%')
-        )
-    ORDER BY user_id ASC
-    LIMIT $3
-    OFFSET ($1::integer * $3::integer)
-    """,
+        SELECT user_id, username, active, admin, consented,
+               COUNT(*) OVER() as total_count
+        FROM users
+        WHERE
+        {active_query}
+        AND (
+                $2 = ''
+                OR (username LIKE '%'||$2||'%' OR user_id::text LIKE '%'||$2||'%')
+            )
+        ORDER BY user_id ASC
+        LIMIT $3
+        OFFSET ($1::integer * $3::integer)
+        """,
         pagination.page,
         query or "",
         pagination.per_page,
@@ -313,10 +313,10 @@ async def _pu_check(db, db_name, user_id, payload, updated_fields, field, col=No
         # if it does exist, update on database
         await db.execute(
             f"""
-        UPDATE {db_name}
-        SET {col} = $1
-        WHERE user_id = $2
-        """,
+            UPDATE {db_name}
+            SET {col} = $1
+            WHERE user_id = $2
+            """,
             val,
             user_id,
         )
@@ -365,10 +365,10 @@ async def del_user(user_id):
 
     active = await app.db.fetchval(
         """
-    SELECT active
-    FROM users
-    WHERE user_id = $1
-    """,
+        SELECT active
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 

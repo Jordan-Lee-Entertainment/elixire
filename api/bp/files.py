@@ -22,9 +22,9 @@ async def domain_list():
     return dict(
         await app.db.fetch(
             """
-        SELECT domain_id, domain
-        FROM domains
-    """
+            SELECT domain_id, domain
+            FROM domains
+            """
         )
     )
 
@@ -43,30 +43,30 @@ async def list_handler():
 
     user_files = await app.db.fetch(
         """
-    SELECT file_id, filename, file_size, fspath, domain, mimetype
-    FROM files
-    WHERE uploader = $1
-    AND deleted = false
-    ORDER BY file_id DESC
+        SELECT file_id, filename, file_size, fspath, domain, mimetype
+        FROM files
+        WHERE uploader = $1
+        AND deleted = false
+        ORDER BY file_id DESC
 
-    LIMIT 100
-    OFFSET ($2 * 100)
-    """,
+        LIMIT 100
+        OFFSET ($2 * 100)
+        """,
         user_id,
         page,
     )
 
     user_shortens = await app.db.fetch(
         """
-    SELECT shorten_id, filename, redirto, domain
-    FROM shortens
-    WHERE uploader = $1
-    AND deleted = false
-    ORDER BY shorten_id DESC
+        SELECT shorten_id, filename, redirto, domain
+        FROM shortens
+        WHERE uploader = $1
+        AND deleted = false
+        ORDER BY shorten_id DESC
 
-    LIMIT 100
-    OFFSET ($2 * 100)
-    """,
+        LIMIT 100
+        OFFSET ($2 * 100)
+        """,
         user_id,
         page,
     )
