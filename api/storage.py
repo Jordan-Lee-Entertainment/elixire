@@ -121,7 +121,7 @@ class StorageValue:
         self.value = value
 
     def __bool__(self) -> bool:
-        return self.flag in STORAGE_FLAG_NOT_FOUND
+        return self.flag not in STORAGE_FLAG_NOT_FOUND
 
 
 def _wrap(value) -> StorageValue:
@@ -395,15 +395,14 @@ class Storage:
 
     async def get_fspath(
         self, shortname: str, domain_id: int, subdomain: Optional[str] = None
-    ) -> Optional[str]:
+    ) -> Optional[StorageValue]:
         """Get the filesystem path of an image."""
         key = f"fspath:{domain_id}:{subdomain}:{shortname}"
 
         storage_value = await self.get(key, str)
-        value = storage_value.value
 
         if storage_value.flag == StorageFlag.PostgresNotFound:
-            return None
+            return storage_value
 
         query = """
             SELECT fspath
@@ -420,14 +419,22 @@ class Storage:
         if subdomain is not None:
             query += "AND subdomain = $3"
             args.append(subdomain)
+        else:
+            query += "AND subdomain IS NULL"
 
-        query += "LIMIT 1"
+        query += " LIMIT 1"
+
+        log.debug("%r %s %d %r", query, shortname, domain_id, args)
 
         if storage_value.flag == StorageFlag.NotFound:
             value = await self.db.fetchval(query, shortname, domain_id, *args)
             await self.set_with_ttl(key, value or "false", 600)
+            return StorageValue(
+                StorageFlag.PostgresNotFound if value is None else StorageFlag.Found,
+                value,
+            )
 
-        return value
+        return storage_value
 
     async def get_urlredir(
         self, shortname: str, domain_id: int, subdomain: Optional[str] = None

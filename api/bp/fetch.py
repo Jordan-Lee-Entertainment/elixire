@@ -12,9 +12,25 @@ from quart import Blueprint, current_app as app, request, send_file
 from PIL import Image
 
 from api.errors import NotFound
+from api.storage import StorageValue
 
 bp = Blueprint("fetch", __name__)
 log = logging.getLogger(__name__)
+
+
+async def _get_fspath(
+    shortname: str, domain_id: int, subdomain: Optional[str]
+) -> StorageValue:
+    if subdomain is None:
+        filepath = await app.storage.get_fspath(shortname, domain_id)
+        return filepath
+    else:
+        filepath = await app.storage.get_fspath(shortname, domain_id, subdomain)
+
+        if not filepath:
+            filepath = await app.storage.get_fspath(shortname, domain_id)
+
+        return filepath
 
 
 async def filecheck(filename):
@@ -23,14 +39,11 @@ async def filecheck(filename):
 
     shortname, ext = os.path.splitext(filename)
 
-    filepath = await app.storage.get_fspath(shortname, domain_id, subdomain)
-
-    if filepath is None:
-        # try again without subdomain
-        filepath = await app.storage.get_fspath(shortname, domain_id)
-
-    if filepath is None:
+    filepath_val = await _get_fspath(shortname, domain_id, subdomain)
+    if not filepath_val:
         raise NotFound("No files with this name on this domain.")
+
+    filepath = filepath_val.value
 
     # If we don't do this, there's a tiny chance of someone uploading an .exe
     # with extension of .png or whatever and slipping through ClamAV
