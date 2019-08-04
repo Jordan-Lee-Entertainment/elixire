@@ -79,6 +79,16 @@ def solve_domain(domain_name: str, *, redis: bool = False) -> List[str]:
     return domains
 
 
+def _get_subdomain(domain: str) -> str:
+    """Very simple function (not robust) to extract the
+    subdomain of a given domain.
+
+    Note that yes, feeding "elixi.re" to this will return "elixi"
+    """
+    period_index = domain.index(".")
+    return domain[:period_index]
+
+
 class StorageFlag(enum.Enum):
     """Flags for the result of Storage.get
 
@@ -510,17 +520,21 @@ class Storage:
         return ban_reason
 
     async def get_domain_id(
-        self, domain_name: str, err_flag: bool = True
-    ) -> Optional[int]:
-        """Get a domain ID, given the domain.
+        self, domain_name: str, *, raise_notfound: bool = True
+    ) -> Optional[Tuple[int, Optional[str]]]:
+        """Get a tuple containing the domain ID and the subdomain, given the
+        full domain of a given request.
 
-        Raises NotFound if ``err_flag`` is true.
+        Raises NotFound by default.
         """
 
-        keys = solve_domain(domain_name, redis=True)
+        keys = solve_domain(domain_name)
+        assert len(keys) == 3
+
+        subdomain = _get_subdomain(domain_name)
 
         for key in keys:
-            possible_id = await self.get(key, int)
+            possible_id = await self.get(f"domain_id:{key}", int)
 
             # as soon as we get a key that is valid,
             # return it
@@ -528,7 +542,7 @@ class Storage:
                 not isinstance(possible_id, bool)
                 and possible_id.flag == StorageFlag.Found
             ):
-                return possible_id.value
+                return possible_id.value, subdomain
 
         # if no keys solve to any domain,
         # query from db and set those keys
@@ -539,32 +553,27 @@ class Storage:
         # an actual domain id, but since we use domain_name
         # first, it shouldn't become a problem.
 
-        keys_db = solve_domain(domain_name, False)
-
         row = await self.db.fetchrow(
             """
-        SELECT domain, domain_id
-        FROM domains
-        WHERE domain = $1
-            OR domain = $2
-            OR domain = $3
-        """,
-            *keys_db,
+            SELECT domain, domain_id
+            FROM domains
+            WHERE domain = $1
+                OR domain = $2
+                OR domain = $3
+            """,
+            *keys,
         )
 
         if row is None:
-            # maybe we set only f'domain_id:{domain_name}' to false
-            # instead of all 3 keys? dunno
             await self.set_multi_one(keys, "false")
-
-            if err_flag:
+            if raise_notfound:
                 raise NotFound("This domain does not exist in this elixire instance.")
 
             return None
 
         domain_name, domain_id = row
         await self.set(f"domain_id:{domain_name}", domain_id)
-        return domain_id
+        return domain_id, subdomain
 
     async def get_domain_shorten(self, shortname: str) -> Optional[int]:
         """Get a domain ID for a shorten."""
