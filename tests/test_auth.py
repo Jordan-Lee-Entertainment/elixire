@@ -21,6 +21,21 @@ async def test_login(test_cli_user):
 
 
 @pytest.mark.asyncio
+async def test_apikey(test_cli_user):
+    resp = await test_cli_user.post(
+        "/api/apikey",
+        do_token=False,
+        json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
+    )
+
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["api_key"], str)
+    assert rjson["api_key"].startswith("u")
+
+
+@pytest.mark.asyncio
 async def test_login_badinput(test_cli_user):
     resp = await test_cli_user.post(
         "/api/login", do_token=False, json={"user": test_cli_user["username"]}
@@ -82,4 +97,25 @@ async def test_revoke(test_cli, test_cli_user):
     assert resp.status_code == 204
 
     resp = await test_cli_user.get("/api/profile")
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_login_deactivated(test_cli_user):
+    """Test logging in with a deactivated user."""
+    await test_cli_user.app.db.execute(
+        """
+        UPDATE users
+        SET active = false
+        WHERE user_id = $1
+        """,
+        test_cli_user["user_id"],
+    )
+
+    resp = await test_cli_user.post(
+        "/api/login",
+        do_token=False,
+        json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
+    )
+
     assert resp.status_code == 403
