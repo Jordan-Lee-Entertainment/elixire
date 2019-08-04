@@ -54,24 +54,24 @@ def prefix(user_id: Union[str, int]) -> str:
     return f"uid:{user_id}"
 
 
-def solve_domain(domain_name: str, redis: bool = True) -> List[str]:
+def solve_domain(domain_name: str, *, redis: bool = False) -> List[str]:
     """Solve a domain into its Redis keys.
 
     Returns a prefixed namespace when ``redis`` is true.
     """
-    k = domain_name.find(".")
-    raw_wildcard = f"*.{domain_name}"
-    wildcard_name = f"*.{domain_name[k + 1:]}"
 
-    domains = [
-        # example: domain_name = elixi.re
-        # wildcard_name = *.elixi.re
-        # example 2: domain_name = pretty.please-yiff.me
-        # wildcard_name = *.please-yiff.me
-        raw_wildcard,
-        domain_name,
-        wildcard_name,
-    ]
+    # when given a domain, such as b.a.tld, there could be three
+    # keys we should check, in order:
+    #  *.b.a.tld
+    #  b.a.tld
+    #  *.a.tld
+
+    domain_as_wildcard = f"*.{domain_name}"
+
+    period_index = domain_name.find(".")
+    subdomain_wildcarded = f"*.{domain_name[period_index + 1:]}"
+
+    domains = [domain_as_wildcard, domain_name, subdomain_wildcarded]
 
     if redis:
         return list(map(lambda d: f"domain_id:{d}", domains))
@@ -484,7 +484,7 @@ class Storage:
         Raises NotFound if ``err_flag`` is true.
         """
 
-        keys = solve_domain(domain_name, True)
+        keys = solve_domain(domain_name, redis=True)
 
         for key in keys:
             possible_id = await self.get(key, int)

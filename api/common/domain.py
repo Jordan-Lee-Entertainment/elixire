@@ -9,6 +9,7 @@ from quart import current_app as app
 
 from api.common.utils import dict_
 from api.errors import NotFound
+from api.storage import solve_domain
 
 
 async def _domain_file_stats(domain_id, *, ignore_consented: bool = False) -> tuple:
@@ -153,16 +154,8 @@ async def get_basic_domain_by_domain(
 ) -> Optional[dict]:
     """Fetch a domain's info by the string representing it."""
 
-    # there can be three types of inputs
-    #  - just the domain (a.tld)
-    #  - the domain with a subdomain (b.a.tld)
-    #  - the wildcard domain (*.a.tld)
-    # all three can exist inside the domains table.
-    # since we don't know which domain we're given, we transform
-    # it into all three, then give a search.
-
-    subd_wildcard_name = domain.replace(domain.split(".")[0], "*")
-    domain_wildcard_name = "*." + domain
+    domains_to_check = solve_domain(domain)
+    assert len(domains_to_check) == 3
 
     domain_info = await app.db.fetchrow(
         """
@@ -172,9 +165,7 @@ async def get_basic_domain_by_domain(
         OR domain = $2
         OR domain = $3
         """,
-        domain,
-        subd_wildcard_name,
-        domain_wildcard_name,
+        *domains_to_check,
     )
 
     if raise_notfound and not domain_info:
