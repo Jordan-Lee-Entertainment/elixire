@@ -13,12 +13,9 @@ from api.common import get_user_domain_info, transform_wildcard
 from api.common.auth import check_admin, token_check
 from api.permissions import Permissions, domain_permissions
 from api.snowflake import get_snowflake
-from api.common.profile import gen_user_shortname
+from api.common.profile import gen_user_shortname, is_metrics_consenting
 from .context import UploadContext
 from .file import UploadFile
-
-# TODO move to api.common
-from ..metrics import is_consenting
 
 bp = Blueprint("upload", __name__)
 log = logging.getLogger(__name__)
@@ -181,7 +178,7 @@ async def upload_handler():
     app.counters.inc("file_upload_hour")
 
     # TODO maybe push this to a background task
-    if await is_consenting(user_id):
+    if await is_metrics_consenting(user_id):
         app.counters.inc("file_upload_hour_pub")
 
     # calculate the new file size, with the dupe decrease factor multiplied in
