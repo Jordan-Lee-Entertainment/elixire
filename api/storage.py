@@ -79,17 +79,21 @@ def solve_domain(domain_name: str, *, redis: bool = False) -> List[str]:
     return domains
 
 
-def _get_subdomain(domain: str) -> str:
+def _get_subdomain(domain: str) -> Optional[str]:
     """Very simple function (not robust) to extract the
     subdomain of a given domain.
 
     Note that yes, feeding "elixi.re" to this will return "elixi"
     """
-    period_index = domain.index(".")
+    try:
+        period_index = domain.index(".")
+    except ValueError:
+        return None
+
     return domain[:period_index]
 
 
-def _subdomain_valid(subdomain: str, domain: str) -> Optional[str]:
+def _subdomain_valid(subdomain: Optional[str], domain: str) -> Optional[str]:
     return subdomain if domain.startswith("*.") else None
 
 
