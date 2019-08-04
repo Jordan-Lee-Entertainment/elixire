@@ -191,9 +191,9 @@ async def upload_handler():
         """
         INSERT INTO files (
             file_id, mimetype, filename,
-            file_size, uploader, fspath, domain
+            file_size, uploader, fspath, domain, subdomain
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         """,
         file_id,
         ctx.file.mime,
@@ -202,6 +202,7 @@ async def upload_handler():
         user_id,
         file.raw_path,
         domain_id,
+        subdomain_name or None,
     )
 
     # TODO UploadFile.cache_key property
