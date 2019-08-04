@@ -7,15 +7,8 @@ import logging
 import asyncpg
 from quart import Blueprint, request, current_app as app, jsonify
 
-from api.response import resp_empty
-from api.errors import FailedAuth, FeatureDisabled, BadInput
-from api.common.auth import (
-    token_check,
-    password_check,
-    pwd_hash,
-    check_admin,
-    check_domain_id,
-)
+from api.errors import FailedAuth, FeatureDisabled, BadInput, APIError
+from api.common.auth import token_check, password_check, pwd_hash, check_admin
 from api.common.email import gen_email_token, send_email, uid_from_email, clean_etoken
 from api.schema import (
     validate,
@@ -24,11 +17,9 @@ from api.schema import (
     PASSWORD_RESET_SCHEMA,
     PASSWORD_RESET_CONFIRM_SCHEMA,
 )
-from api.common.utils import int_
-from api.common.user import delete_user
-
-from api.bp.personal_stats import get_counts
-from api.bp.datadump.bp import get_dump_status
+from api.common.user import delete_user, get_basic_user
+from api.common.profile import get_limits, get_counts, get_dump_status
+from api.common.domain import get_basic_domain
 
 bp = Blueprint("profile", __name__)
 log = logging.getLogger(__name__)
@@ -51,81 +42,28 @@ async def _update_password(user_id, new_pwd):
     await app.storage.invalidate(user_id, "password_hash")
 
 
-async def get_limits(db, user_id) -> dict:
-    """Get a user's limit information."""
-    limits = await db.fetchrow(
-        """
-    SELECT blimit, shlimit
-    FROM limits
-    WHERE user_id = $1
-    """,
-        user_id,
-    )
-
-    if not limits:
-        return {"limit": None, "used": None, "shortenlimit": None, "shortenused": None}
-
-    bytes_used = await db.fetchval(
-        """
-    SELECT SUM(file_size)
-    FROM files
-    WHERE uploader = $1
-    AND file_id > time_snowflake(now() - interval '7 days')
-    """,
-        user_id,
-    )
-
-    shortens_used = await db.fetchval(
-        """
-    SELECT COUNT(*)
-    FROM shortens
-    WHERE uploader = $1
-    AND shorten_id > time_snowflake(now() - interval '7 days')
-    """,
-        user_id,
-    )
-
-    return {
-        "limit": limits["blimit"],
-        "used": int_(bytes_used, 0),
-        "shortenlimit": limits["shlimit"],
-        "shortenused": shortens_used,
-    }
-
-
 @bp.route("/profile", methods=["GET"])
 async def profile_handler():
     """Get your basic information as a user."""
     user_id = await token_check()
 
-    # TODO storage.get_user
-    user = await app.db.fetchrow(
-        """
-    SELECT user_id, username, active, email,
-           consented, admin, subdomain, domain, paranoid,
-           shorten_domain, shorten_subdomain
-    FROM users
-    WHERE user_id = $1
-    """,
-        user_id,
-    )
+    user = await get_basic_user(user_id)
+    if user is None:
+        raise FailedAuth("Unknown user")
 
-    if not user:
-        raise FailedAuth("unknown user")
+    limits = await get_limits(user_id)
+    if limits is None:
+        raise APIError("Failed to fetch limits")
 
-    limits = await get_limits(app.db, user_id)
+    user["limits"] = limits
 
-    duser = dict(user)
-    duser["user_id"] = str(duser["user_id"])
-    duser["limits"] = limits
+    counts = await get_counts(user_id)
+    user["stats"] = counts
 
-    counts = await get_counts(app.db, user_id)
-    duser["stats"] = counts
+    dump_status = await get_dump_status(user_id)
+    user["dump_status"] = dump_status
 
-    dump_status = await get_dump_status(app.db, user_id)
-    duser["dump_status"] = dump_status
-
-    return jsonify(duser)
+    return jsonify(user)
 
 
 @bp.route("/profile", methods=["PATCH"])
@@ -192,7 +130,7 @@ async def change_profile():
 
     if new_domain is not None:
         # Check if domain exists
-        domain_info = await check_domain_id(new_domain)
+        domain_info = await get_basic_domain(new_domain)
 
         # Check if user has perms for getting that domain
         is_admin = await check_admin(user_id, False)
@@ -314,7 +252,7 @@ async def change_profile():
 async def limits_handler():
     """Query a user's limits."""
     user_id = await token_check()
-    limits = await get_limits(app.db, user_id)
+    limits = await get_limits(user_id)
     return jsonify(limits)
 
 
@@ -405,7 +343,7 @@ async def deactivate_user_from_email():
 
     log.warning(f"Deactivated user ID {user_id} by request.")
 
-    return resp_empty()
+    return "", 204
 
 
 @bp.route("/reset_password", methods=["POST"])
@@ -480,5 +418,4 @@ async def password_reset_confirmation():
     await _update_password(user_id, new_pwd)
     await clean_etoken(app, token, "email_pwd_reset_tokens")
 
-    # TODO return '', 204
-    return resp_empty()
+    return "", 204

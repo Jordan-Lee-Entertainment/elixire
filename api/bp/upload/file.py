@@ -3,8 +3,11 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import os
+import io
 from pathlib import Path
 from typing import Optional
+
+from quart import request, current_app as app
 
 from api.common import calculate_hash
 from api.errors import BadUpload
@@ -13,18 +16,13 @@ from api.errors import BadUpload
 class UploadFile:
     def __init__(self, data):
         self.name: str = data.filename
-
-        # TODO this is inefficient as we load the
-        # entire file into memory.
-        self.body = data.stream.read()
-        data.stream.seek(0)
-        self.size: int = len(self.body)
-        self.io = data.stream
-
+        self.size: int = data.stream.getbuffer().nbytes
+        self.stream: io.BytesIO = data.stream
         self.mime: str = data.mimetype
 
         self.hash: Optional[str] = None
         self.path: Optional[Path] = None
+        self.id: Optional[int] = None
 
     @property
     def given_extension(self):
@@ -38,6 +36,9 @@ class UploadFile:
         """
         Returns the path to this file on the filesystem as a str.
         """
+        if self.path is None:
+            raise ValueError("path not initialized")
+
         return str(self.path.resolve())
 
     def calculate_size(self, multiplier) -> int:
@@ -46,17 +47,17 @@ class UploadFile:
         necessary.
         """
         file_size = self.size
-        if self.path.exists():
+
+        if self.path is not None and self.path.exists():
             file_size *= multiplier
+
         return file_size
 
     @classmethod
-    async def from_request(cls, request):
+    async def from_request(cls):
+        """Make an UploadFile from the current request context."""
         # get the first file in the request
         files = await request.files
-
-        print(files)
-        print(await request.form)
 
         try:
             key = next(iter(files.keys()))
@@ -65,12 +66,15 @@ class UploadFile:
 
         return cls(files[key])
 
-    async def hash_file(self, app):
-        self.hash = await calculate_hash(self.io)
-        self.io.seek(0)
+    async def _gen_hash(self):
+        """Hash the given file. The output hash is given via the
+        :attr:`hash` attribute."""
+        self.hash = await calculate_hash(self.stream)
+        self.stream.seek(0)
 
-    async def resolve(self, app, extension):
+    async def resolve(self, extension):
+        """Resolve the file's path. It is inserted into :attr:`path`."""
+        await self._gen_hash()
         folder = app.econfig.IMAGE_FOLDER
-
         raw_path = f"{folder}/{self.hash[0]}/{self.hash}{extension}"
         self.path = Path(raw_path)

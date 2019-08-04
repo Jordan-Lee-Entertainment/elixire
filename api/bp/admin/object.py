@@ -22,14 +22,11 @@ async def _handler_object(obj_type: str, obj_fname: str):
     """Handler for fetching files/shortens."""
     id_handler, obj_handler = OBJ_MAPPING[obj_type]
 
-    conn = app.db
-
-    obj_id = await id_handler(conn, obj_fname)
-
+    obj_id = await id_handler(obj_fname)
     if obj_id is None:
         raise NotFound("Object not found")
 
-    return jsonify(await obj_handler(conn, obj_id))
+    return jsonify(await obj_handler(obj_id))
 
 
 @bp.route("/file/<shortname>")
@@ -64,10 +61,10 @@ async def handle_modify(obj_type: str, obj_id: int):
 
     row = await app.db.fetchrow(
         f"""
-    SELECT filename, domain
-    FROM {table}
-    WHERE {field} = $1
-    """,
+        SELECT filename, domain
+        FROM {table}
+        WHERE {field} = $1
+        """,
         obj_id,
     )
 

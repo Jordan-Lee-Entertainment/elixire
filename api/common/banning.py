@@ -10,7 +10,7 @@ from api.common.webhook import ban_webhook, ip_ban_webhook
 log = logging.getLogger(__name__)
 
 
-async def ban_by_ip(ip_addr: str, reason: str):
+async def ban_by_ip(ip_addr: str, reason: str) -> None:
     """Ban a given IP address."""
     period = app.econfig.IP_BAN_PERIOD
     await app.db.execute(
@@ -26,7 +26,7 @@ async def ban_by_ip(ip_addr: str, reason: str):
     await ip_ban_webhook(app, ip_addr, f"[ip ban] {reason}", period)
 
 
-async def ban_user(user_id: int, reason: str):
+async def ban_user(user_id: int, reason: str) -> None:
     """Ban a given user."""
     period = app.econfig.BAN_PERIOD
 
@@ -43,7 +43,7 @@ async def ban_user(user_id: int, reason: str):
     await ban_webhook(app, user_id, reason, period)
 
 
-async def ban_request(reason: str):
+async def ban_request(reason: str) -> None:
     """Ban the given request. Favors user banning when possible, and falls
     back to IP address banning."""
     if "ctx" in request:

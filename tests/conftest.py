@@ -13,6 +13,7 @@ sys.path.append(os.getcwd())
 
 from api.common.user import create_user, delete_user
 from api.common.auth import gen_token
+from api.common.domain import set_domain_owner
 from run import app as app_
 from .mock import MockAuditLog
 from .common import email, TestClient
@@ -111,17 +112,8 @@ async def test_cli_admin(test_cli):
         user_id,
     )
 
-    await app.db.execute(
-        """
-    INSERT INTO domain_owners (domain_id, user_id)
-    VALUES (0, $1)
-    ON CONFLICT ON CONSTRAINT domain_owners_pkey
-    DO UPDATE
-        SET user_id = $1
-        WHERE domain_owners.domain_id = 0
-    """,
-        test_user["user_id"],
-    )
+    async with app.app_context():
+        await set_domain_owner(0, test_user["user_id"])
 
     yield TestClient(test_cli, test_user)
 

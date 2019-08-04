@@ -3,10 +3,16 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from math import ceil
+from typing import List
 
 from quart import Blueprint, jsonify, current_app as app, request
 
-from api.schema import validate, ADMIN_MODIFY_DOMAIN, ADMIN_SEND_DOMAIN_EMAIL
+from api.schema import (
+    validate,
+    ADMIN_MODIFY_DOMAIN,
+    ADMIN_SEND_DOMAIN_EMAIL,
+    ADMIN_PUT_DOMAIN,
+)
 from api.common.auth import token_check, check_admin
 from api.common.email import send_user_email
 from api.common.pagination import Pagination
@@ -21,7 +27,7 @@ from api.bp.admin.audit_log_actions.domain import (
 
 from api.bp.admin.audit_log_actions.email import DomainOwnerNotifyAction
 
-from api.common.domain import get_domain_info
+from api.common.domain import get_domain_info, set_domain_owner
 
 bp = Blueprint("admin_domain", __name__)
 
@@ -34,76 +40,72 @@ async def add_domain():
 
     j = await request.get_json()
 
-    # TODO use validate()
-    domain_name = str(j["domain"])
-    is_adminonly = bool(j["admin_only"])
-    is_official = bool(j["official"])
-    permissions = int(j.get("permissions", 3))
+    j = validate(await request.get_json(), ADMIN_PUT_DOMAIN)
+    domain = j["domain"]
 
-    db = app.db
-
-    result = await db.execute(
+    result = await app.db.execute(
         """
-    INSERT INTO domains
-        (domain, admin_only, official, permissions)
-    VALUES
-        ($1, $2, $3, $4)
-    """,
-        domain_name,
-        is_adminonly,
-        is_official,
-        permissions,
+        INSERT INTO domains
+            (domain, admin_only, official, permissions)
+        VALUES
+            ($1, $2, $3, $4)
+        """,
+        domain,
+        j["admin_only"],
+        j["official"],
+        j["permissions"],
     )
 
-    domain_id = await db.fetchval(
+    domain_id = await app.db.fetchval(
         """
-    SELECT domain_id
-    FROM domains
-    WHERE domain = $1
-    """,
-        domain_name,
+        SELECT domain_id
+        FROM domains
+        WHERE domain = $1
+        """,
+        domain,
     )
 
     async with DomainAddAction() as action:
         action.update(domain_id=domain_id)
 
-        if "owner_id" in j:
-            owner_id = int(j["owner_id"])
+        try:
+            owner_id = j["owner_id"]
             action.update(owner_id=owner_id)
+            await set_domain_owner(domain_id, owner_id)
+        except KeyError:
+            pass
 
-            await db.execute(
-                """
-            INSERT INTO domain_owners (domain_id, user_id)
-            VALUES ($1, $2)
-            """,
-                domain_id,
-                owner_id,
-            )
-
-    keys = solve_domain(domain_name)
+    keys = solve_domain(domain)
     await app.storage.raw_invalidate(*keys)
 
     return jsonify({"success": True, "result": result, "new_id": domain_id})
 
 
-# TODO remove this macro-like shit
-async def _dp_check(
-    db, domain_id: int, payload: dict, updated_fields: list, field: str
-):
-    """Check a field inside the payload and update it if it exists."""
+async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
+    fields: List[str] = []
 
-    if field in payload:
-        await db.execute(
+    if "owner_id" in j:
+        await set_domain_owner(domain_id, j["owner_id"])
+        fields.append("owner_id")
+        j.pop("owner_id")
+
+    # the other available fields are admin_only, official, and permissions.
+    # all of those follow the same sql query, so we can just write a for loop
+    # to process them
+    for field, value in j.items():
+        await app.db.execute(
             f"""
-        UPDATE domains
-        SET {field} = $1
-        WHERE domain_id = $2
-        """,
-            payload[field],
+            UPDATE domains
+            SET {field} = $1
+            WHERE domain_id = $2
+            """,
+            value,
             domain_id,
         )
 
-        updated_fields.append(field)
+        fields.append(field)
+
+    return fields
 
 
 @bp.route("/api/admin/domains/<int:domain_id>", methods=["PATCH"])
@@ -112,33 +114,11 @@ async def patch_domain(domain_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    payload = validate(await request.get_json(), ADMIN_MODIFY_DOMAIN)
-
-    updated_fields = []
-    db = app.db
+    j = validate(await request.get_json(), ADMIN_MODIFY_DOMAIN)
 
     async with DomainEditAction(request, domain_id):
-        if "owner_id" in payload:
-            exec_out = await db.execute(
-                """
-            UPDATE domain_owners
-            SET user_id = $1
-            WHERE domain_id = $2
-            """,
-                int(payload["owner_id"]),
-                domain_id,
-            )
-
-            if exec_out != "UPDATE 0":
-                updated_fields.append("owner_id")
-
-        # since we're passing updated_fields which is a reference to the
-        # list, it can be mutaded and it will propagate into this function.
-        await _dp_check(db, domain_id, payload, updated_fields, "admin_only")
-        await _dp_check(db, domain_id, payload, updated_fields, "official")
-        await _dp_check(db, domain_id, payload, updated_fields, "permissions")
-
-    return jsonify({"updated": updated_fields})
+        fields = await _patch_domain_handler(domain_id, j)
+        return jsonify({"updated": fields})
 
 
 @bp.route("/api/admin/email_domain/<int:domain_id>", methods=["POST"])
@@ -281,7 +261,8 @@ async def get_domain_stats(domain_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    return jsonify(await get_domain_info(app.db, domain_id))
+    # TODO return 404 when not found instead of null
+    return jsonify(await get_domain_info(domain_id))
 
 
 @bp.route("/api/admin/domains")
@@ -325,7 +306,7 @@ async def get_domain_stats_all():
 
     for row in domain_ids:
         domain_id = row["domain_id"]
-        info = await get_domain_info(app.db, domain_id)
+        info = await get_domain_info(domain_id)
         res[domain_id] = info
 
     total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
@@ -368,7 +349,7 @@ async def domains_search():
 
     for row in domain_ids:
         domain_id = row["domain_id"]
-        results[domain_id] = await get_domain_info(app.db, domain_id)
+        results[domain_id] = await get_domain_info(domain_id)
 
     total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
     return jsonify(pagination.response(results, total_count=total_count))

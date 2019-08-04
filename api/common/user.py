@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
 import asyncio
+from typing import Dict, Union, Any, Optional
 
 from quart import current_app as app
 
@@ -15,7 +16,7 @@ log = logging.getLogger(__name__)
 
 async def create_user(
     username: str, password: str, email: str, *, active: bool = True
-) -> dict:
+) -> Dict[str, Union[str, int]]:
     """Creates a single user. Outputs a dictionary containing the user's
     newly generated ID and password hash."""
     user_id = get_snowflake()
@@ -23,9 +24,9 @@ async def create_user(
 
     await app.db.execute(
         """
-    INSERT INTO users (user_id, username, password_hash, email, active)
-    VALUES ($1, $2, $3, $4, $5)
-    """,
+        INSERT INTO users (user_id, username, password_hash, email, active)
+        VALUES ($1, $2, $3, $4, $5)
+        """,
         user_id,
         username,
         password_hash,
@@ -35,9 +36,9 @@ async def create_user(
 
     await app.db.execute(
         """
-    INSERT INTO limits (user_id)
-    VALUES ($1)
-    """,
+        INSERT INTO limits (user_id)
+        VALUES ($1)
+        """,
         user_id,
     )
 
@@ -70,10 +71,10 @@ async def mass_file_delete(user_id: int, delete=False):
     """
     file_shortnames = await app.db.fetch(
         """
-    SELECT filename
-    FROM files
-    WHERE uploader = $1
-    """,
+        SELECT filename
+        FROM files
+        WHERE uploader = $1
+        """,
         user_id,
     )
 
@@ -96,9 +97,9 @@ async def mass_file_delete(user_id: int, delete=False):
         log.info(f"Deleting user id {user_id}")
         await app.db.execute(
             """
-        DELETE FROM users
-        WHERE user_id = $1
-        """,
+            DELETE FROM users
+            WHERE user_id = $1
+            """,
             user_id,
         )
 
@@ -126,28 +127,28 @@ async def delete_user(user_id: int, delete: bool = False):
 
     await app.db.execute(
         """
-    UPDATE users
-    SET active = false
-    WHERE user_id = $1
-    """,
+        UPDATE users
+        SET active = false
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
     await app.db.execute(
         """
-    UPDATE files
-    SET deleted = true
-    WHERE uploader = $1
-    """,
+        UPDATE files
+        SET deleted = true
+        WHERE uploader = $1
+        """,
         user_id,
     )
 
     await app.db.execute(
         """
-    UPDATE shortens
-    SET deleted = true
-    WHERE uploader = $1
-    """,
+        UPDATE shortens
+        SET deleted = true
+        WHERE uploader = $1
+        """,
         user_id,
     )
 
@@ -157,3 +158,23 @@ async def delete_user(user_id: int, delete: bool = False):
     # when calling delete_file, we create a task that deletes them.
 
     return app.sched.spawn(mass_file_delete(user_id, delete), f"delete_files_{user_id}")
+
+
+# TODO better typing
+async def get_basic_user(user_id: int) -> Optional[Dict[str, Any]]:
+    """Get a basic user dictionary from the users table."""
+    user = await app.db.fetchrow(
+        """
+        SELECT user_id::text, username, active, email,
+            consented, admin, subdomain, domain, paranoid,
+            shorten_domain, shorten_subdomain
+        FROM users
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+    if user is None:
+        return None
+
+    return dict(user)

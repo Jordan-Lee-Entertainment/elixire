@@ -18,9 +18,9 @@ async def unban_user(ctx, args):
 
     exec_out = await ctx.db.execute(
         """
-    DELETE FROM bans
-    WHERE user_id = $1
-    """,
+        DELETE FROM bans
+        WHERE user_id = $1
+        """,
         user_id,
     )
 

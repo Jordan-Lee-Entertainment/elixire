@@ -4,7 +4,6 @@
 
 from quart import Blueprint, jsonify, current_app as app, request
 
-from api.response import resp_empty
 from api.common import TokenType
 from api.common.auth import login_user, gen_token, pwd_hash
 from api.schema import validate, REVOKE_SCHEMA
@@ -65,4 +64,4 @@ async def revoke_handler():
 
     await app.storage.invalidate(user["user_id"], "password_hash")
 
-    return resp_empty()
+    return "", 204

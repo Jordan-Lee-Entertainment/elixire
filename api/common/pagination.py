@@ -4,6 +4,8 @@
 
 import math
 
+from typing import List, Any
+
 from quart import request
 
 from api.errors import BadInput
@@ -22,7 +24,7 @@ class Pagination:
         if self.per_page < 0:
             raise BadInput("Invalid per_page number")
 
-    def response(self, results, *, total_count):
+    def response(self, results: List[Any], *, total_count: int):
         """Return the resulting JSON object that the request should return."""
         return {
             "results": results,
@@ -32,5 +34,5 @@ class Pagination:
             },
         }
 
-    def _int_arg(self, name, default=0):
+    def _int_arg(self, name: str, default: int = 0) -> int:
         return int(self._args.get(name, default))

@@ -2,9 +2,6 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-"""
-elixi.re - manage.py main code
-"""
 import argparse
 import asyncio
 import logging
@@ -14,8 +11,6 @@ import aiohttp
 import asyncpg
 import aioredis
 
-# import stuff from api for our Context.
-# more info on Context @ manage/utils.py
 from api.storage import Storage
 from api.common.utils import LockStorage
 from api.jobs import JobManager
@@ -38,7 +33,7 @@ async def connect_db(config, loop):
     return pool, redis
 
 
-async def close_ctx(ctx):
+async def close_ctx(ctx: Context) -> None:
     """Close database connections."""
     await ctx.db.close()
     ctx.redis.close()
@@ -46,7 +41,7 @@ async def close_ctx(ctx):
     await ctx.session.close()
 
 
-def set_parser():
+def set_parser() -> argparse.ArgumentParser:
     """Initialize parser."""
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(help="operations")
@@ -61,21 +56,19 @@ def set_parser():
     return parser
 
 
-async def _make_sess(ctx):
+async def _make_sess(ctx: Context) -> None:
     ctx.session = aiohttp.ClientSession()
 
 
 def main(config):
     loop = asyncio.get_event_loop()
-    conn, redis = loop.run_until_complete(connect_db(config, loop))
 
-    # construct our context
+    conn, redis = loop.run_until_complete(connect_db(config, loop))
     ctx = Context(conn, redis, loop, LockStorage())
 
     # this needs an actual connection to the database and redis
     # so we first instantiate Context, then set the attribute
     ctx.storage = Storage(ctx)
-
     ctx.sched = JobManager(loop)
 
     # aiohttp warns us when making ClientSession out of

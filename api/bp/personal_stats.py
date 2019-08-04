@@ -8,58 +8,18 @@ from quart import Blueprint, current_app as app, jsonify
 
 from api.common.auth import token_check
 from api.common.domain import get_domain_public
+from api.common.profile import get_counts
 
 
 bp = Blueprint("personal_stats", __name__)
 log = logging.getLogger(__name__)
 
 
-async def _get_counts(conn, table: str, user_id: int, extra: str = "") -> int:
-    return (
-        await conn.fetchval(
-            f"""
-    SELECT COUNT(*)
-    FROM {table}
-    WHERE uploader = $1
-    {extra}
-    """,
-            user_id,
-        )
-        or 0
-    )
-
-
-async def get_counts(conn, user_id: int) -> dict:
-    """Get count information about a user."""
-    total_files = await _get_counts(conn, "files", user_id)
-    total_shortens = await _get_counts(conn, "shortens", user_id)
-    total_deleted = await _get_counts(conn, "files", user_id, "AND deleted = true")
-
-    total_bytes = (
-        await conn.fetchval(
-            """
-    SELECT SUM(file_size)::bigint
-    FROM files
-    WHERE uploader = $1
-    """,
-            user_id,
-        )
-        or 0
-    )
-
-    return {
-        "total_files": total_files,
-        "total_deleted_files": total_deleted,
-        "total_bytes": total_bytes,
-        "total_shortens": total_shortens,
-    }
-
-
 @bp.route("")
 async def personal_stats_handler():
     """Personal statistics for users."""
     user_id = await token_check()
-    return jsonify(await get_counts(app.db, user_id))
+    return jsonify(await get_counts(user_id))
 
 
 @bp.route("/my_domains")
@@ -94,7 +54,7 @@ async def personal_domain_stats():
         dinfo = dict(domain_info)
         dinfo["cf_enabled"] = False
 
-        public = await get_domain_public(db, domain_id)
+        public = await get_domain_public(domain_id)
         res[domain_id] = {"info": dinfo, "stats": public}
 
     return jsonify(res)

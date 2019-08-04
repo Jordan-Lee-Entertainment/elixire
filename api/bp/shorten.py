@@ -7,11 +7,12 @@ import urllib.parse
 
 from quart import Blueprint, jsonify, redirect, current_app as app, request
 
-from api.common.auth import gen_shortname, token_check, check_admin
+from api.common.auth import token_check, check_admin
 from api.errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
-from api.common import get_domain_info, transform_wildcard, FileNameType
+from api.common import get_user_domain_info, transform_wildcard, FileNameType
 from api.snowflake import get_snowflake
 from api.permissions import Permissions, domain_permissions
+from api.common.profile import gen_user_shortname
 
 bp = Blueprint("shorten", __name__)
 
@@ -21,7 +22,6 @@ async def shorten_serve_handler(filename):
     """Handles serving of shortened links."""
     storage = app.storage
 
-    # TODO check if request.host is the right one
     domain_id = await storage.get_domain_id(request.host)
     url_toredir = await storage.get_urlredir(filename, domain_id)
 
@@ -93,19 +93,19 @@ async def shorten_handler():
 
         if shortens_used and shortens_used > shorten_limit:
             raise QuotaExploded(
-                "You already blew your weekly" f" limit of {shorten_limit} shortens"
+                f"You already blew your weekly limit of {shorten_limit} shortens"
             )
 
         if shortens_used and shortens_used + 1 > shorten_limit:
             raise QuotaExploded(
-                "This shorten blows the weekly limit of" f" {shorten_limit} shortens"
+                f"This shorten blows the weekly limit of {shorten_limit} shortens"
             )
 
-    redir_rname, tries = await gen_shortname(user_id, "shortens")
+    redir_rname, tries = await gen_user_shortname(user_id, "shortens")
     await app.metrics.submit("shortname_gen_tries", tries)
 
     redir_id = get_snowflake()
-    domain_id, subdomain_name, domain = await get_domain_info(
+    domain_id, subdomain_name, domain = await get_user_domain_info(
         user_id, FileNameType.SHORTEN
     )
 

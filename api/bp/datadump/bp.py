@@ -10,6 +10,7 @@ from quart import Blueprint, jsonify, request, current_app as app, send_file
 from api.errors import BadInput, FeatureDisabled
 from api.common.auth import token_check, check_admin
 from api.bp.datadump.tasks import start_janitor, start_worker
+from api.common.profile import get_dump_status
 
 log = logging.getLogger(__name__)
 bp = Blueprint("datadump", __name__)
@@ -55,10 +56,10 @@ async def request_data_dump():
     # check if user is already underway
     current_work = await app.db.fetchval(
         """
-    SELECT start_timestamp
-    FROM current_dump_state
-    WHERE user_id = $1
-    """,
+        SELECT start_timestamp
+        FROM current_dump_state
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -68,10 +69,10 @@ async def request_data_dump():
     # so that intellectual users don't queue themselves twice.
     in_queue = await app.db.fetchval(
         """
-    SELECT request_timestamp
-    FROM dump_queue
-    WHERE user_id = $1
-    """,
+        SELECT request_timestamp
+        FROM dump_queue
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -81,54 +82,14 @@ async def request_data_dump():
     # insert into queue
     await app.db.execute(
         """
-    INSERT INTO dump_queue (user_id)
-    VALUES ($1)
-    """,
+        INSERT INTO dump_queue (user_id)
+        VALUES ($1)
+        """,
         user_id,
     )
 
     start_worker()
-
-    # TODO return '', 204
-    return jsonify({"success": True})
-
-
-# TODO move to api.common.profile?
-async def get_dump_status(db, user_id: int):
-    """Get datadump status."""
-    row = await db.fetchrow(
-        """
-    SELECT user_id, start_timestamp, current_id, total_files, files_done
-    FROM current_dump_state
-    WHERE user_id = $1
-    """,
-        user_id,
-    )
-
-    if not row:
-        queue = await db.fetch(
-            """
-        SELECT user_id
-        FROM dump_queue
-        ORDER BY request_timestamp ASC
-        """
-        )
-
-        queue = [r["user_id"] for r in queue]
-
-        try:
-            pos = queue.index(user_id)
-            return {"state": "in_queue", "position": pos + 1}
-        except ValueError:
-            return {"state": "not_in_queue"}
-
-    return {
-        "state": "processing",
-        "start_timestamp": row["start_timestamp"].isoformat(),
-        "current_id": str(row["current_id"]),
-        "total_files": row["total_files"],
-        "files_done": row["files_done"],
-    }
+    return "", 204
 
 
 @bp.route("/status")
@@ -136,7 +97,7 @@ async def data_dump_user_status():
     """Give information about the current dump for the user,
     if one exists."""
     user_id = await token_check()
-    return jsonify(await get_dump_status(app.db, user_id))
+    return jsonify(await get_dump_status(user_id))
 
 
 # TODO move to its own admin blueprint?
@@ -148,19 +109,19 @@ async def data_dump_global_status():
 
     queue = await app.db.fetch(
         """
-    SELECT user_id
-    FROM dump_queue
-    ORDER BY request_timestamp ASC
-    """
+        SELECT user_id
+        FROM dump_queue
+        ORDER BY request_timestamp ASC
+        """
     )
 
     queue = [str(el["user_id"]) for el in queue]
 
     current = await app.db.fetchrow(
         """
-    SELECT user_id, total_files, files_done
-    FROM current_dump_state
-    """
+        SELECT user_id, total_files, files_done
+        FROM current_dump_state
+        """
     )
 
     return jsonify({"queue": queue, "current": dict(current or {})})
@@ -176,10 +137,10 @@ async def get_dump():
 
     user_id = await app.db.fetchval(
         """
-    SELECT user_id
-    FROM email_dump_tokens
-    WHERE hash = $1 AND now() < expiral
-    """,
+        SELECT user_id
+        FROM email_dump_tokens
+        WHERE hash = $1 AND now() < expiral
+        """,
         dump_token,
     )
 
@@ -188,10 +149,10 @@ async def get_dump():
 
     user_name = await app.db.fetchval(
         """
-    SELECT username
-    FROM users
-    WHERE user_id = $1
-    """,
+        SELECT username
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 

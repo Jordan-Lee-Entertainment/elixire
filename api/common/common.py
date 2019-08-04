@@ -44,13 +44,15 @@ def get_ip_addr() -> str:
     return request.headers["X-Forwarded-For"]
 
 
-def _gen_fname(length) -> str:
-    """Generate a random filename."""
+def _gen_sname(length: int) -> str:
+    """Generate a random shortname."""
     return "".join(secrets.choice(ALPHABET) for _ in range(length))
 
 
-async def gen_filename(length=3, table="files", _curc=0) -> Tuple[str, int]:
-    """Generate a unique random filename.
+async def gen_shortname(
+    length: int = 3, table: str = "files", _curc: int = 0
+) -> Tuple[str, int]:
+    """Generate a unique random shortname.
 
     To guarantee that the generated shortnames will
     be unique, we query our DB if the generated
@@ -78,21 +80,21 @@ async def gen_filename(length=3, table="files", _curc=0) -> Tuple[str, int]:
         If it tried to generate a shortname with more than 10 letters.
     """
     if length > 10:
-        raise RuntimeError("Failed to generate a filename")
+        raise RuntimeError("Failed to generate a shortname")
 
     try_count = 0
 
     field = "file_id" if table == "files" else "shorten_id"
 
     for try_count in range(10):
-        random_fname = _gen_fname(length)
+        random_fname = _gen_sname(length)
 
         filerow = await app.db.fetchrow(
             f"""
-        SELECT {field}
-        FROM {table}
-        WHERE filename = $1
-        """,
+            SELECT {field}
+            FROM {table}
+            WHERE filename = $1
+            """,
             random_fname,
         )
 
@@ -102,7 +104,7 @@ async def gen_filename(length=3, table="files", _curc=0) -> Tuple[str, int]:
             return random_fname, total
 
     # if 10 tries didnt work, try generating with length+1
-    return await gen_filename(length + 1, table, _curc + try_count + 1)
+    return await gen_shortname(length + 1, table, _curc + try_count + 1)
 
 
 def _calculate_hash(fhandler) -> str:
@@ -159,10 +161,10 @@ async def remove_fspath(shortname: str):
 
     fspath = await app.db.fetchval(
         """
-    SELECT fspath
-    FROM files
-    WHERE filename = $1
-    """,
+        SELECT fspath
+        FROM files
+        WHERE filename = $1
+        """,
         shortname,
     )
 
@@ -173,10 +175,10 @@ async def remove_fspath(shortname: str):
     # and on the hash system, means the same hash
     same_fspath = await app.db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM files
-    WHERE fspath = $1 AND deleted = false
-    """,
+        SELECT COUNT(*)
+        FROM files
+        WHERE fspath = $1 AND deleted = false
+        """,
         fspath,
     )
 
@@ -218,9 +220,9 @@ async def delete_file(file_name: str, user_id, set_delete=True):
     try:
         await app.db.execute(
             """
-        INSERT INTO users (user_id, username, active, password_hash, email)
-        VALUES (0, 'dummy', false, 'blah', 'd u m m y')
-        """
+            INSERT INTO users (user_id, username, active, password_hash, email)
+            VALUES (0, 'dummy', false, 'blah', 'd u m m y')
+            """
         )
     except asyncpg.UniqueViolationError:
         pass
@@ -228,12 +230,12 @@ async def delete_file(file_name: str, user_id, set_delete=True):
     if set_delete:
         exec_out = await app.db.execute(
             """
-        UPDATE files
-        SET deleted = true
-        WHERE uploader = $1
-          AND filename = $2
-          AND deleted = false
-        """,
+            UPDATE files
+            SET deleted = true
+            WHERE uploader = $1
+            AND filename = $2
+            AND deleted = false
+            """,
             user_id,
             file_name,
         )
@@ -248,30 +250,30 @@ async def delete_file(file_name: str, user_id, set_delete=True):
         if user_id:
             await app.db.execute(
                 """
-            UPDATE files
-            SET uploader = 0,
-                file_size = 0,
-                fspath = '',
-                deleted = true,
-                domain = 0
-            WHERE
-                filename = $1
-            AND uploader = $2
-            """,
+                UPDATE files
+                SET uploader = 0,
+                    file_size = 0,
+                    fspath = '',
+                    deleted = true,
+                    domain = 0
+                WHERE
+                    filename = $1
+                AND uploader = $2
+                """,
                 file_name,
                 user_id,
             )
         else:
             await app.db.execute(
                 """
-            UPDATE files
-            SET uploader = 0,
-                file_size = 0,
-                fspath = '',
-                deleted = true,
-                domain = 0
-            WHERE filename = $1
-            """,
+                UPDATE files
+                SET uploader = 0,
+                    file_size = 0,
+                    fspath = '',
+                    deleted = true,
+                    domain = 0
+                WHERE filename = $1
+                """,
                 file_name,
             )
 
@@ -282,12 +284,12 @@ async def delete_shorten(shortname: str, user_id: int):
     """Remove a shorten from the system"""
     exec_out = await app.db.execute(
         """
-    UPDATE shortens
-    SET deleted = true
-    WHERE uploader = $1
-    AND filename = $2
-    AND deleted = false
-    """,
+        UPDATE shortens
+        SET deleted = true
+        WHERE uploader = $1
+        AND filename = $2
+        AND deleted = false
+        """,
         user_id,
         shortname,
     )
@@ -322,7 +324,7 @@ async def check_bans(user_id: int):
         raise FailedAuth(f"IP address is banned. {ip_ban_reason}")
 
 
-async def get_domain_info(
+async def get_user_domain_info(
     user_id: int, dtype=FileNameType.FILE
 ) -> Tuple[int, str, str]:
     """Get information about a user's selected domain.
@@ -344,39 +346,39 @@ async def get_domain_info(
     """
     domain_id, subdomain_name = await app.db.fetchrow(
         """
-    SELECT domain, subdomain
-    FROM users
-    WHERE user_id = $1
-    """,
+        SELECT domain, subdomain
+        FROM users
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
     domain = await app.db.fetchval(
         """
-    SELECT domain
-    FROM domains
-    WHERE domain_id = $1
-    """,
+        SELECT domain
+        FROM domains
+        WHERE domain_id = $1
+        """,
         domain_id,
     )
 
     if dtype == FileNameType.SHORTEN:
         shorten_domain_id, shorten_subdomain = await app.db.fetchrow(
             """
-        SELECT shorten_domain, shorten_subdomain
-        FROM users
-        WHERE user_id = $1
-        """,
+            SELECT shorten_domain, shorten_subdomain
+            FROM users
+            WHERE user_id = $1
+            """,
             user_id,
         )
 
         if shorten_domain_id is not None:
             shorten_domain = await app.db.fetchval(
                 """
-            SELECT domain
-            FROM domains
-            WHERE domain_id = $1
-            """,
+                SELECT domain
+                FROM domains
+                WHERE domain_id = $1
+                """,
                 shorten_domain_id,
             )
 
@@ -384,17 +386,6 @@ async def get_domain_info(
             return shorten_domain_id, shorten_subdomain, shorten_domain
 
     return domain_id, subdomain_name, domain
-
-
-async def get_random_domain() -> int:
-    """Get a random domain from the table."""
-    return await app.db.fetchval(
-        """
-    SELECT domain_id FROM domains
-    ORDER BY RANDOM()
-    LIMIT 1
-    """
-    )
 
 
 def transform_wildcard(domain: str, subdomain_name: str) -> str:

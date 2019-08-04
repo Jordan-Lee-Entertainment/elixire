@@ -18,8 +18,8 @@ def byte_to_mibstring(bytecount: int) -> str:
     if not bytecount:
         return "N/A"
 
-    bytecount = Decimal(bytecount)
-    mib = Decimal(bytecount / 1024 / 1024)
+    byte_count = Decimal(bytecount)
+    mib = Decimal(byte_count / 1024 / 1024)
     return f"{round(mib, 2)}MiB"
 
 
@@ -27,10 +27,10 @@ async def deletefiles(ctx, _args):
     """Clean files marked as deleted on the db."""
     to_delete = await ctx.db.fetch(
         """
-    SELECT fspath
-    FROM files
-    WHERE files.deleted = true
-    """
+        SELECT fspath
+        FROM files
+        WHERE files.deleted = true
+        """
     )
 
     print(f"deleting {len(to_delete)} files")
@@ -60,10 +60,10 @@ async def rename_file(ctx, args):
 
     domain = await ctx.db.fetchval(
         """
-    SELECT domain
-    FROM files
-    WHERE filename = $1 AND deleted = false
-    """,
+        SELECT domain
+        FROM files
+        WHERE filename = $1 AND deleted = false
+        """,
         shortname,
     )
 
@@ -72,10 +72,10 @@ async def rename_file(ctx, args):
 
     existing_id = await ctx.db.fetchval(
         """
-    SELECT file_id
-    FROM files
-    WHERE filename = $1
-    """,
+        SELECT file_id
+        FROM files
+        WHERE filename = $1
+        """,
         renamed,
     )
 
@@ -84,11 +84,11 @@ async def rename_file(ctx, args):
 
     exec_out = await ctx.db.execute(
         """
-    UPDATE files
-    SET filename = $1
-    WHERE filename = $2
-    AND deleted = false
-    """,
+        UPDATE files
+        SET filename = $1
+        WHERE filename = $2
+        AND deleted = false
+        """,
         renamed,
         shortname,
     )
@@ -103,145 +103,106 @@ async def rename_file(ctx, args):
 async def show_stats(ctx, _args):
     db = ctx.db
 
-    # Total non-deleted file count
-    nd_file_count = await db.fetchval(
+    nd_file_count, d_file_count = await db.fetchrow(
         """
-    SELECT COUNT(*)
-    FROM files
-    WHERE deleted = false
-    """
+        SELECT
+            (SELECT COUNT(*) FROM files WHERE deleted = false),
+            (SELECT COUNT(*) FROM files WHERE deleted = true)
+        """
     )
 
-    # Total deleted file count
-    d_file_count = await db.fetchval(
+    nd_shorten_count, d_shorten_count = await db.fetchrow(
         """
-    SELECT COUNT(*)
-    FROM files
-    WHERE deleted = true
-    """
+        SELECT
+            (SELECT COUNT(*) FROM shortens WHERE deleted = false),
+            (SELECT COUNT(*) FROM shortens WHERE deleted = true)
+        """
     )
 
-    # Total non-deleted shortens
-    nd_shorten_count = await db.fetchval(
+    total_nd_file_size, total_d_file_size = await db.fetchrow(
         """
-    SELECT COUNT(*)
-    FROM shortens
-    WHERE deleted = false
-    """
-    )
-
-    # Total deleted shortens
-    d_shorten_count = await db.fetchval(
+        SELECT
+            (SELECT SUM(file_size) FROM files WHERE deleted = false),
+            (SELECT SUM(file_size) FROM files WHERE deleted = true)
         """
-    SELECT COUNT(*)
-    FROM shortens
-    WHERE deleted = true
-    """
-    )
-
-    # Total non-deleted file size
-    total_nd_file_size = await db.fetchval(
-        """
-    SELECT SUM(file_size)
-    FROM files
-    WHERE deleted = false
-    """
-    )
-
-    # Total deleted file size
-    total_d_file_size = await db.fetchval(
-        """
-    SELECT SUM(file_size)
-    FROM files
-    WHERE deleted = true
-    """
     )
 
     # Total non-deleted file uploads in last week
     nd_file_count_week = await db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM files
-    WHERE file_id > time_snowflake(now() - interval '7 days')
-    AND deleted = false
-    """
+        SELECT COUNT(*)
+        FROM files
+        WHERE file_id > time_snowflake(now() - interval '7 days')
+        AND deleted = false
+        """
     )
 
     # Total deleted file uploads in last week
     d_file_count_week = await db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM files
-    WHERE file_id > time_snowflake(now() - interval '7 days')
-    AND deleted = true
-    """
+        SELECT COUNT(*)
+        FROM files
+        WHERE file_id > time_snowflake(now() - interval '7 days')
+        AND deleted = true
+        """
     )
 
     # Total size of non-deleted file uploads in last week
     total_nd_file_size_week = await db.fetchval(
         """
-    SELECT SUM(file_size)
-    FROM files
-    WHERE file_id > time_snowflake(now() - interval '7 days')
-    AND deleted = false
-    """
+        SELECT SUM(file_size)
+        FROM files
+        WHERE file_id > time_snowflake(now() - interval '7 days')
+        AND deleted = false
+        """
     )
 
     # Total size of deleted file uploads in last week
     total_d_file_size_week = await db.fetchval(
         """
-    SELECT SUM(file_size)
-    FROM files
-    WHERE file_id > time_snowflake(now() - interval '7 days')
-    AND deleted = true
-    """
+        SELECT SUM(file_size)
+        FROM files
+        WHERE file_id > time_snowflake(now() - interval '7 days')
+        AND deleted = true
+        """
     )
 
     # Total non-deleted shortens in last week
     nd_shorten_count_week = await db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM shortens
-    WHERE shorten_id > time_snowflake(now() - interval '7 days')
-    AND deleted = false
-    """
+        SELECT COUNT(*)
+        FROM shortens
+        WHERE shorten_id > time_snowflake(now() - interval '7 days')
+        AND deleted = false
+        """
     )
 
     # Total deleted shortens in last week
     d_shorten_count_week = await db.fetchval(
         """
-    SELECT COUNT(*)
-    FROM shortens
-    WHERE shorten_id > time_snowflake(now() - interval '7 days')
-    AND deleted = true
-    """
+        SELECT COUNT(*)
+        FROM shortens
+        WHERE shorten_id > time_snowflake(now() - interval '7 days')
+        AND deleted = true
+        """
     )
 
     # Total active user count
-    total_active_user_count = await db.fetchval(
+    total_active_user_count, total_inactive_user_count = await db.fetchrow(
         """
-    SELECT COUNT(*)
-    FROM users
-    WHERE active = true
-    """
-    )
-
-    # Total inactive user count
-    total_inactive_user_count = await db.fetchval(
+        SELECT
+            (SELECT COUNT(*) FROM users WHERE active = true),
+            (SELECT COUNT(*) FROM users WHERE active = false)
         """
-    SELECT COUNT(*)
-    FROM users
-    WHERE active = false
-    """
     )
 
     # Biggest file
     biggest_file = await db.fetchrow(
         """
-    SELECT filename, file_size, fspath
-    FROM files
-    ORDER BY file_size DESC
-    """
+        SELECT filename, file_size, fspath
+        FROM files
+        ORDER BY file_size DESC
+        """
     )
     biggest_ext = splitext(biggest_file["fspath"])[-1]
 
@@ -278,10 +239,10 @@ async def _extract_file_info(ctx, shortname) -> int:
     """
     row = await ctx.db.fetchrow(
         """
-    SELECT uploader, domain
-    FROM files
-    WHERE filename = $1
-    """,
+        SELECT uploader, domain
+        FROM files
+        WHERE filename = $1
+        """,
         shortname,
     )
 
@@ -302,10 +263,10 @@ async def delete_file_cmd(ctx, args):
 
     await ctx.db.execute(
         """
-    UPDATE files
-    SET deleted = true
-    WHERE filename = $1
-    """,
+        UPDATE files
+        SET deleted = true
+        WHERE filename = $1
+        """,
         shortname,
     )
 
@@ -320,10 +281,10 @@ async def undelete_file_cmd(ctx, args):
 
     await ctx.db.execute(
         """
-    UPDATE files
-    SET deleted = false
-    WHERE filename = $1
-    """,
+        UPDATE files
+        SET deleted = false
+        WHERE filename = $1
+        """,
         shortname,
     )
 

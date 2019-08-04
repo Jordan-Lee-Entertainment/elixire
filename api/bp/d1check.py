@@ -35,6 +35,6 @@ async def d1_check():
     ipaddr = get_ip_addr()
     data2 = f"{data},{ipaddr}"
 
-    ciphertext_res = fernet.encrypt(data2.encode())
+    ciphertext_res = fernet.encrypt(data2.encode()).decode()
 
     return jsonify({"data": ciphertext_res})

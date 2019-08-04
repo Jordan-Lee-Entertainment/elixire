@@ -5,12 +5,13 @@
 import pytest
 
 
-def _extract_uid(token) -> str:
+def _extract_uid(token: str) -> str:
     split = token.split(".")
     try:
         uid, _ = split
     except ValueError:
         uid, _, _, = split
+
     return uid
 
 
@@ -172,6 +173,17 @@ async def test_domain_stats(test_cli_admin):
         assert isinstance(domain["info"], dict)
         assert isinstance(domain["stats"], dict)
         assert isinstance(domain["public_stats"], dict)
+
+
+@pytest.mark.asyncio
+async def test_domain_get(test_cli_admin):
+    resp = await test_cli_admin.get("/api/admin/domains/38918583")
+
+    # TODO return 404
+    assert resp.status_code == 200
+
+    rjson = await resp.json
+    assert rjson is None
 
 
 @pytest.mark.asyncio

@@ -6,7 +6,9 @@ import io
 import logging
 import mimetypes
 from collections import namedtuple
+
 import magic
+from quart import current_app as app
 
 from api.bp.upload.exif import clear_exif
 from api.bp.upload.virus import scan_file
@@ -29,15 +31,17 @@ class UploadContext(
         ],
     )
 ):
-    async def strip_exif(self, app) -> io.BytesIO:
+    async def strip_exif(self) -> io.BytesIO:
+        """Strip EXIF information from a given file."""
+        stream = self.file.stream
         if not app.econfig.CLEAR_EXIF or self.file.mime != "image/jpeg":
             log.debug("not stripping exif, disabled or not jpeg")
-            return self.file.io
+            return stream
 
         log.debug("going to clear exif now")
         ratio_limit = app.econfig.EXIF_INCREASELIMIT
-        noexif_body = await clear_exif(self.file.io, loop=app.loop)
 
+        noexif_body = await clear_exif(stream, loop=app.loop)
         noexif_len = len(noexif_body.getvalue())
         ratio = noexif_len / self.file.size
 
@@ -63,8 +67,12 @@ class UploadContext(
         if not app.econfig.UPLOADS_ENABLED:
             raise FeatureDisabled("Uploads are currently disabled")
 
-        # Get file's mimetype
-        mimetype_future = app.loop.run_in_executor(None, self.get_mime, self.file.body)
+        # to get the mime we extract only the first 512 bytes
+        self.file.stream.seek(0)
+        chunk = self.file.stream.read(512)
+        self.file.stream.seek(0)
+
+        mimetype_future = app.loop.run_in_executor(None, self.get_mime, chunk)
         mimetype = await mimetype_future
 
         # Check if file's mimetype is in allowed mimetypes
@@ -75,7 +83,7 @@ class UploadContext(
         await self.check_limits(app)
 
         # check the file for viruses
-        await scan_file(app, self)
+        await scan_file(self)
 
         # default to last part of mimetype
         extension = f".{self.file.mime.split('/')[-1]}"

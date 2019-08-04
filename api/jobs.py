@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import asyncio
+from typing import List, Any, Optional
 
 import logging
 
@@ -19,19 +20,25 @@ class JobManager:
         self.loop = loop or asyncio.get_event_loop()
         self.jobs = {}
 
-    async def _wrapper(self, job_name, coro):
+    async def _wrapper(self, job_name: str, coro, **kwargs: bool) -> Any:
+        """Wrapper for spawn()."""
         try:
             log.debug("running job: %r", job_name)
-            await coro
+            result = await coro
             log.debug("job finish: %r", job_name)
+            return result
         except asyncio.CancelledError:
             log.warning("cancelled job: %r", job_name)
-        except Exception:
-            log.exception("Error while running job %r", job_name)
+        except Exception as err:
+            if kwargs.get("raise_underlying_error", False):
+                raise err
+            else:
+                log.exception("Error while running job %r", job_name)
         finally:
             self.jobs.pop(job_name)
 
-    async def _wrapper_bg(self, job_name, func, args, period: int):
+    async def _wrapper_bg(self, job_name: str, func, args: List[Any], period: int):
+        """Wrapper for spawn_periodic()."""
         log.debug("wrapped %r in periodic %dsec", job_name, period)
 
         try:
@@ -49,20 +56,30 @@ class JobManager:
             except KeyError:
                 pass
 
-    def spawn(self, coro, name: str = None):
-        """Spawn a backgrund task once.
+    def spawn(self, coro, name: Optional[str] = None, **kwargs: bool):
+        """Spawn a backgrund task.
 
-        This is meant for relatively short-lived tasks.
+        This is meant for one-shot tasks.
+        It copies the current app context into the given task.
+
+        If you wish to catch the coroutine's exception instead of quieting it,
+        you must assign the raise_underlying_error kwarg to true.
         """
-        name = name or coro.__name__
+        task_name = name or coro.__name__
 
         @copy_current_app_context
-        async def _ctx_wrapper_bg():
-            await coro
+        async def _ctx_wrapper_bg() -> Any:
+            return await coro
 
-        task = self.loop.create_task(self._wrapper(name, _ctx_wrapper_bg()))
+        # we have two wrappers for the given task:
+        #  - one is _ctx_wrapper_bg() to catch and use the current app context
+        #  - that runs inside a self._wrapper() that gives basic logging on the
+        #     task, handles exceptions, etc.
+        task = self.loop.create_task(
+            self._wrapper(task_name, _ctx_wrapper_bg(), **kwargs)
+        )
 
-        self.jobs[name] = task
+        self.jobs[task_name] = task
         return task
 
     def spawn_periodic(self, func, args, period: int, name: str = None):
@@ -71,22 +88,23 @@ class JobManager:
         name = name or func.__name__
 
         @copy_current_app_context
-        async def _ctx_wrapper_bg(*args, **kwargs):
-            await self._wrapper_bg(*args, **kwargs)
+        async def _ctx_wrapper_bg(*args, **kwargs) -> Any:
+            return await self._wrapper_bg(*args, **kwargs)
 
         task = self.loop.create_task(_ctx_wrapper_bg(name, func, args, period))
 
         self.jobs[name] = task
         return task
 
-    def exists(self, job_name: str):
+    def exists(self, job_name: str) -> bool:
         """Return if a given job name exists
         in the job manager."""
         return job_name in self.jobs
 
-    def stop_job(self, job_name: str):
+    def stop_job(self, job_name: str) -> None:
         """Stop a single job."""
         log.debug("stopping job %r", job_name)
+
         try:
             job = self.jobs[job_name]
             job.cancel()
@@ -101,9 +119,8 @@ class JobManager:
             except KeyError:
                 pass
 
-    def stop(self):
-        """Stop the job manager by
-        cancelling all jobs."""
+    def stop(self) -> None:
+        """Stop the job manager by cancelling all jobs."""
         log.debug("cancelling %d jobs", len(self.jobs))
 
         for job_name in list(self.jobs.keys()):

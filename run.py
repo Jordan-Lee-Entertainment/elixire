@@ -10,6 +10,7 @@ import asyncpg
 import aiohttp
 import aioredis
 
+import quart
 from quart import Quart, jsonify, request, send_file
 
 from dns import resolver
@@ -112,7 +113,7 @@ def set_blueprints(app_):
 app = make_app()
 
 
-def _wrap_err_in_json(err: APIError) -> Tuple[dict, int]:
+def _wrap_err_in_json(err: APIError) -> Tuple[quart.wrappers.Response, int]:
     res = {"error": True, "message": err.args[0]}
     res.update(err.get_payload())
     return jsonify(res), err.status_code
@@ -155,7 +156,7 @@ def handle_api_error(err: APIError):
     return _wrap_err_in_json(err)
 
 
-@app.errorhandler(FileNotFoundError)
+@app.errorhandler(404)
 async def handle_notfound(_err):
     """Give specific pages/behavior when reaching files that aren't found."""
     has_frontend = app.econfig.ENABLE_FRONTEND

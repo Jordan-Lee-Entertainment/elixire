@@ -64,7 +64,7 @@ def validate(document, schema):
     if not validator.validate(document):
         raise BadInput("Bad payload", validator.errors)
 
-    return document
+    return validator.document
 
 
 PROFILE_SCHEMA = {
@@ -118,6 +118,14 @@ PASSWORD_RESET_CONFIRM_SCHEMA = {
     "new_password": {"type": "password", "required": True},
 }
 
+ADMIN_PUT_DOMAIN = {
+    "domain": {"type": "string", "required": True},
+    "admin_only": {"type": "boolean", "required": True},
+    "official": {"type": "boolean", "required": True},
+    "permissions": {"coerce": int, "required": False, "default": 3},
+    "owner_id": {"coerce": int, "required": False},
+}
+
 ADMIN_MODIFY_FILE = {
     "domain_id": {"type": "integer", "required": False},
     "shortname": {"type": "string", "required": False},
@@ -130,10 +138,10 @@ ADMIN_MODIFY_USER = {
 }
 
 ADMIN_MODIFY_DOMAIN = {
-    "owner_id": {"type": "snowflake", "required": False},
+    "owner_id": {"coerce": int, "required": False},
     "admin_only": {"type": "boolean", "required": False},
     "official": {"type": "boolean", "required": False},
-    "permissions": {"type": "integer", "required": False},
+    "permissions": {"coerce": int, "required": False},
 }
 
 ADMIN_SEND_DOMAIN_EMAIL = {

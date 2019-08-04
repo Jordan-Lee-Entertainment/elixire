@@ -14,18 +14,6 @@ bp = Blueprint("metrics", __name__)
 log = logging.getLogger(__name__)
 
 
-async def is_consenting(user_id: int) -> bool:
-    """Return if a user consented to data processing."""
-    return await app.db.fetchval(
-        """
-    SELECT consented
-    FROM users
-    WHERE user_id = $1
-    """,
-        user_id,
-    )
-
-
 async def create_db():
     """Create InfluxDB database"""
     app.metrics = MetricsManager(app, app.loop)

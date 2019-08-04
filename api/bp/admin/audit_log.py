@@ -5,6 +5,7 @@
 import copy
 import logging
 import asyncio
+from typing import Optional
 
 from quart import current_app as app, request
 
@@ -30,7 +31,7 @@ class Action:
         """Update values of the context of this action."""
         self.context.update(kwargs)
 
-    async def render(self) -> str:
+    async def render(self) -> Optional[str]:
         """Return the full textual representation of this action."""
 
         try:
@@ -41,7 +42,7 @@ class Action:
         # actions can decide to "cancel themselves" if they return False
         # (this allows actions to only count as actions under certain conditions)
         if action_text is False:
-            return
+            return None
 
         if isinstance(action_text, list):
             action_text = "\n".join(action_text)
