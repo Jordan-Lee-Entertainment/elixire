@@ -174,9 +174,7 @@ async def dump_files(
 
         filepath = f"./files/{current_id}_{filename}{ext}"
         try:
-            fut = app.loop.run_in_executor(None, zipdump.write, fspath, filepath)
-
-            await fut
+            await app.loop.run_in_executor(None, zipdump.write, fspath, filepath)
         except FileNotFoundError:
             log.warning(f"File not found: {current_id} {filename}")
 

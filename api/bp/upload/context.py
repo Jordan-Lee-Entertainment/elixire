@@ -72,8 +72,7 @@ class UploadContext(
         chunk = self.file.stream.read(512)
         self.file.stream.seek(0)
 
-        mimetype_future = app.loop.run_in_executor(None, self.get_mime, chunk)
-        mimetype = await mimetype_future
+        mimetype = await app.loop.run_in_executor(None, self.get_mime, chunk)
 
         # Check if file's mimetype is in allowed mimetypes
         if mimetype not in app.econfig.ACCEPTED_MIMES:

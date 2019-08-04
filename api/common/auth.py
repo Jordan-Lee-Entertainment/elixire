@@ -35,12 +35,12 @@ def get_token() -> str:
 
 async def pwd_hash(password: str) -> str:
     """Generate a hash for any given password"""
-    password_bytes = password.encode("utf-8")
-    hashed = app.loop.run_in_executor(
+    password_bytes = password.encode()
+    hashed = await app.loop.run_in_executor(
         None, bcrypt.hashpw, password_bytes, bcrypt.gensalt(14)
     )
 
-    return (await hashed).decode("utf-8")
+    return hashed.decode()
 
 
 async def pwd_check(stored: str, password: str):
@@ -48,9 +48,9 @@ async def pwd_check(stored: str, password: str):
     pwd_bytes = password.encode("utf-8")
     pwd_orig = stored.encode("utf-8")
 
-    future = app.loop.run_in_executor(None, bcrypt.checkpw, pwd_bytes, pwd_orig)
+    matches = await app.loop.run_in_executor(None, bcrypt.checkpw, pwd_bytes, pwd_orig)
 
-    if not await future:
+    if not matches:
         raise FailedAuth("User or password invalid")
 
 
