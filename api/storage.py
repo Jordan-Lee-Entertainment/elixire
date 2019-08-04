@@ -424,8 +424,6 @@ class Storage:
 
         query += " LIMIT 1"
 
-        log.debug("%r %s %d %r", query, shortname, domain_id, args)
-
         if storage_value.flag == StorageFlag.NotFound:
             value = await self.db.fetchval(query, shortname, domain_id, *args)
             await self.set_with_ttl(key, value or "false", 600)

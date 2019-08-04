@@ -5,7 +5,7 @@
 import logging
 import os
 import time
-from typing import Optional
+from typing import Optional, Tuple
 
 from quart import Blueprint, current_app as app, request, send_file
 
@@ -33,7 +33,7 @@ async def _get_fspath(
         return filepath
 
 
-async def filecheck(filename):
+async def filecheck(filename) -> Tuple[str, Optional[str]]:
     """Check if the given file exists on the domain."""
     domain_id, subdomain = await app.storage.get_domain_id(request.host)
 
