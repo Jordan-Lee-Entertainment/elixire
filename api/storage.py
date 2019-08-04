@@ -89,6 +89,10 @@ def _get_subdomain(domain: str) -> str:
     return domain[:period_index]
 
 
+def _subdomain_valid(subdomain: str, domain: str) -> Optional[str]:
+    return subdomain if domain.startswith("*.") else None
+
+
 class StorageFlag(enum.Enum):
     """Flags for the result of Storage.get
 
@@ -520,7 +524,7 @@ class Storage:
         return ban_reason
 
     async def get_domain_id(
-        self, domain_name: str, *, raise_notfound: bool = True
+        self, given_domain: str, *, raise_notfound: bool = True
     ) -> Optional[Tuple[int, Optional[str]]]:
         """Get a tuple containing the domain ID and the subdomain, given the
         full domain of a given request.
@@ -528,10 +532,10 @@ class Storage:
         Raises NotFound by default.
         """
 
-        keys = solve_domain(domain_name)
+        keys = solve_domain(given_domain)
         assert len(keys) == 3
 
-        subdomain = _get_subdomain(domain_name)
+        subdomain = _get_subdomain(given_domain)
 
         for key in keys:
             possible_id = await self.get(f"domain_id:{key}", int)
@@ -542,7 +546,7 @@ class Storage:
                 not isinstance(possible_id, bool)
                 and possible_id.flag == StorageFlag.Found
             ):
-                return possible_id.value, subdomain
+                return possible_id.value, _subdomain_valid(subdomain, key)
 
         # if no keys solve to any domain,
         # query from db and set those keys
@@ -573,7 +577,7 @@ class Storage:
 
         domain_name, domain_id = row
         await self.set(f"domain_id:{domain_name}", domain_id)
-        return domain_id, subdomain
+        return domain_id, _subdomain_valid(subdomain, domain_name)
 
     async def get_domain_shorten(self, shortname: str) -> Optional[int]:
         """Get a domain ID for a shorten."""
