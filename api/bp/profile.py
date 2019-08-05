@@ -12,7 +12,7 @@ from api.common.auth import token_check, password_check, pwd_hash, check_admin
 from api.common.email import gen_email_token, send_email, uid_from_email, clean_etoken
 from api.schema import (
     validate,
-    PROFILE_SCHEMA,
+    PATCH_PROFILE,
     DEACTIVATE_USER_SCHEMA,
     PASSWORD_RESET_SCHEMA,
     PASSWORD_RESET_CONFIRM_SCHEMA,
@@ -67,13 +67,87 @@ async def profile_handler():
 
 
 @bp.route("/profile", methods=["PATCH"])
+async def change_profile_handler():
+    if not app.econfig.PATCH_API_PROFILE_ENABLED:
+        raise FeatureDisabled("changes on profile are currently disabled")
+
+    user_id = await token_check()
+    payload = validate(await request.get_json(), PATCH_PROFILE)
+
+    # TODO
+    # if "username" in payload:
+    #    await _check_password(user_id, payload)
+    #    await _try_username_patch(user_id, payload["username"])
+
+    # if "email" in payload:
+    #    await _check_password(user_id, payload)
+    #    await _try_email_patch(user_id, payload["email"])
+
+    # if "domain" in payload:
+    #    await _try_domain_patch(user_id, payload["domain"])
+
+    if "subdomain" in payload:
+        await app.db.execute(
+            """
+            UPDATE users
+            SET subdomain = $1
+            WHERE user_id = $2
+            """,
+            payload["subdomain"],
+            user_id,
+        )
+
+    if "shorten_domain" in payload:
+        # TODO check validity of domain id inside payload.shorten_domain
+        await app.db.execute(
+            """
+            UPDATE users
+            SET shorten_domain = $1
+            WHERE user_id = $2
+            """,
+            payload["shorten_domain"],
+            user_id,
+        )
+
+    if "shorten_subdomain" in payload:
+        await app.db.execute(
+            """
+            UPDATE users
+            SET shorten_subdomain = $1
+            WHERE user_id = $2
+            """,
+            payload["shorten_subdomain"],
+            user_id,
+        )
+
+    if "paranoid" in payload:
+        await app.db.execute(
+            """
+            UPDATE users
+            SET paranoid = $1
+            WHERE user_id = $2
+            """,
+            payload["paranoid"],
+            user_id,
+        )
+
+    # TODO
+    # if "consented" in payload:
+    #    await _check_password(user_id, payload)
+    #    await _try_consented_patch(user_id, payload["consented"])
+
+    user = await get_basic_user(user_id)
+    return jsonify(user)
+
+
+# TODO remove
 async def change_profile():
     """Change a user's profile."""
     if not app.econfig.PATCH_API_PROFILE_ENABLED:
         raise FeatureDisabled("changes on profile are currently disabled")
 
     user_id = await token_check()
-    payload = validate(await request.get_json(), PROFILE_SCHEMA)
+    payload = validate(await request.get_json(), PATCH_PROFILE)
 
     updated = []
 
