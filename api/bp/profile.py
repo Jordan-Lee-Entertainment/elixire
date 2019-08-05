@@ -119,16 +119,10 @@ async def _try_email_patch(user_id: int, email: str) -> None:
 async def _try_username_patch(user_id: int, username: str) -> None:
     username = username.lower()
 
-    # query the old username from database
-    # instead of relying in Storage
-    old_username = await app.db.fetchval(
-        """
-        SELECT username
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
+    # the old username is queried because we need to invalidate the respective
+    # uid:<old_username> key in storage. just in case some other user wants the
+    # username in the next 600 seconds
+    old_username = await app.storage.get_username(user_id)
 
     try:
         await app.db.execute(
