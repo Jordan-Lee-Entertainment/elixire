@@ -395,7 +395,7 @@ class Storage:
 
     async def get_fspath(
         self, shortname: str, domain_id: int, subdomain: Optional[str] = None
-    ) -> Optional[StorageValue]:
+    ) -> StorageValue:
         """Get the filesystem path of an image."""
         key = f"fspath:{domain_id}:{subdomain}:{shortname}"
 
@@ -436,7 +436,7 @@ class Storage:
 
     async def get_urlredir(
         self, shortname: str, domain_id: int, subdomain: Optional[str] = None
-    ) -> Optional[StorageValue]:
+    ) -> StorageValue:
         """Get a redirection of an URL."""
         # NOTE copied from get_fspath()
         key = f"redir:{domain_id}:{subdomain}:{shortname}"
