@@ -88,13 +88,19 @@ async def _try_domain_patch(user_id: int, domain_id: int) -> None:
 
 
 async def _check_password(user_id: int, payload: dict) -> None:
-    """Check password."""
+    """Check the password given in the request payload.
+
+    Can raise:
+     - BadInput if payload.password isn't provided
+     - FailedAuth if the password isn't correct
+     - ValueError when the given user isn't found
+    """
     if "password" not in payload:
         raise BadInput("Password not provided")
 
     partial = await app.storage.auth_user_from_user_id(user_id)
 
-    # NOTE that this shouldn't happen
+    # NOTE that this shouldn't happen if your user_id comes off token_check()
     if partial is None:
         raise ValueError("Unknown user ID")
 
