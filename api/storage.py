@@ -98,48 +98,54 @@ def _subdomain_valid(subdomain: Optional[str], domain: str) -> Optional[str]:
 
 
 class StorageFlag(enum.Enum):
-    """Flags for the result of Storage.get
+    """An enum representing how something from :class:`Storage` was resolved."""
 
-     - Found means the key was found on the cache.
-     - NotFound means the key was not found on cache.
-     - PostgresNotFound means the cache said postgres does not have the data.
-    """
+    #: The value was found.
+    FOUND = 1
 
-    Found = 1
-    NotFound = 2
-    PostgresNotFound = 3
+    #: The value was not found in Redis, but it might exist in Postgres.
+    NOT_CACHED = 2
 
-
-STORAGE_FLAG_NOT_FOUND = (StorageFlag.NotFound, StorageFlag.PostgresNotFound)
+    #: The value doesn't exist, cached or not.
+    NOT_FOUND = 3
 
 
 class StorageValue:
-    """Represents a value from Redis."""
+    """A class representing a value returned by :class:`Storage`."""
 
-    def __init__(self, flag: StorageFlag, value: Any):
+    def __init__(self, value: Any, *, flag: StorageFlag = StorageFlag.FOUND) -> None:
         self.flag = flag
         self.value = value
 
+    @property
+    def was_found(self) -> bool:
+        return self.flag is StorageFlag.FOUND
+
+    @property
+    def was_cached(self) -> bool:
+        return self.flag is not StorageFlag.NOT_CACHED
+
     def __bool__(self) -> bool:
-        return self.flag not in STORAGE_FLAG_NOT_FOUND
-
-
-def _wrap(value) -> StorageValue:
-    return StorageValue(StorageFlag.Found, value)
+        return self.was_found
 
 
 class Storage:
-    """Storage subsystem.
+    """The storage subsystem.
 
-    This is used by to provide caching with Redis.
+    This class provides an abstraction over the caching with Redis mechanism.
 
-    When storing a given key to redis, it can be of any value, however,
-    internally, the value is *always* stored as a string. This requires typing
-    check code that is implemented in get() and set().
+    When storing a given key to Redis, it can be of any value, however,
+    internally, the value is *always* casted to a string. This requires type
+    checking code that is implemented in :meth:`get` and :meth:`set`.
 
-    A note on the inernal storage is that the string "false", when dealing
-    with keys that aren't boolean, represents that PostgreSQL returned None.
+    A note on the internal storage is that the special sentinel string "false"
+    (kept in :prop:`_NOTHING`) represents a cached instance of Postgres not
+    returning any rows. (This only applies to non-boolean keys.)
     """
+
+    #: A sentinel value used in Redis as a cached value to signal that Postgres
+    #: returned no rows.
+    _NOTHING = "false"
 
     def __init__(self, app):
         self.app = app
@@ -147,7 +153,7 @@ class Storage:
         self.redis = app.redis
 
     async def get(self, key: str, typ: type = str) -> StorageValue:
-        """Get one key from Redis.
+        """Get a key from Redis.
 
         Parameters
         ----------
@@ -165,20 +171,19 @@ class Storage:
         log.debug(f"get {key!r}, type {typ!r}, value {val!r}")
         if typ == bool:
             if val == "True":
-                return _wrap(True)
+                return StorageValue(True)
             elif val == "False":
-                return _wrap(False)
+                return StorageValue(False)
 
-        # always use "false" to show when the db
-        # didnt give us anything
-        if val == "false":
-            return StorageValue(StorageFlag.PostgresNotFound, None)
+        # test for the sentinel value that means a cached absence of value
+        if val == self._NOTHING:
+            return StorageValue(None, flag=StorageFlag.NOT_FOUND)
 
-        # key does not exist
+        # key does not exist in redis, but it might be in postgres
         elif val is None:
-            return StorageValue(StorageFlag.NotFound, None)
+            return StorageValue(None, flag=StorageFlag.NOT_CACHED)
 
-        return StorageValue(StorageFlag.Found, typ(val))
+        return StorageValue(typ(val), flag=StorageFlag.FOUND)
 
     async def get_multi(self, keys: List[str], typ: type = str) -> List[StorageValue]:
         """Fetch multiple keys."""
@@ -209,7 +214,7 @@ class Storage:
 
             # the string false tells that whatever
             # query the db did returned None.
-            value = "false" if value is None else value
+            value = self._NOTHING if value is None else value
             await conn.set(key, value)
 
     async def set_with_ttl(self, key: str, value: Optional[Any], ttl: int) -> None:
@@ -290,12 +295,12 @@ class Storage:
         storage_value = await self.get(key, key_type)
         value = storage_value.value
 
-        if storage_value.flag == StorageFlag.PostgresNotFound:
+        if storage_value.flag is StorageFlag.NOT_FOUND:
             return None
 
-        if storage_value.flag == StorageFlag.NotFound:
+        if storage_value.flag is StorageFlag.NOT_CACHED:
             value = await self.db.fetchval(query, *query_args)
-            await self.set_with_ttl(key, value or "false", ttl)
+            await self.set_with_ttl(key, value or self._NOTHING, ttl)
 
         return value
 
@@ -363,26 +368,26 @@ class Storage:
         active_val = await self.get(f"{ukey}:active", bool)
         active = active_val.value
 
-        if pwd_hash_val.flag in STORAGE_FLAG_NOT_FOUND:
+        if not pwd_hash_val.was_found:
             password_hash = await self.db.fetchval(
                 """
-            SELECT password_hash
-            FROM users
-            WHERE user_id = $1
-            """,
+                SELECT password_hash
+                FROM users
+                WHERE user_id = $1
+                """,
                 user_id,
             )
 
             # keep this cached for 10 minutes
             await self.set_with_ttl(f"{ukey}:password_hash", password_hash, 600)
 
-        if active_val.flag in STORAGE_FLAG_NOT_FOUND:
+        if not active_val.was_found:
             active = await self.db.fetchval(
                 """
-            SELECT active
-            FROM users
-            WHERE user_id = $1
-            """,
+                SELECT active
+                FROM users
+                WHERE user_id = $1
+                """,
                 user_id,
             )
 
@@ -401,7 +406,7 @@ class Storage:
 
         storage_value = await self.get(key, str)
 
-        if storage_value.flag == StorageFlag.PostgresNotFound:
+        if storage_value.was_cached:
             return storage_value
 
         query = """
@@ -424,15 +429,11 @@ class Storage:
 
         query += " LIMIT 1"
 
-        if storage_value.flag == StorageFlag.NotFound:
-            value = await self.db.fetchval(query, shortname, domain_id, *args)
-            await self.set_with_ttl(key, value or "false", 600)
-            return StorageValue(
-                StorageFlag.PostgresNotFound if value is None else StorageFlag.Found,
-                value,
-            )
+        value = await self.db.fetchval(query, shortname, domain_id, *args)
+        await self.set_with_ttl(key, value or self._NOTHING, 600)
 
-        return storage_value
+        flag = StorageFlag.NOT_FOUND if value is None else StorageFlag.FOUND
+        return StorageValue(value, flag=flag)
 
     async def get_urlredir(
         self, shortname: str, domain_id: int, subdomain: Optional[str] = None
@@ -442,7 +443,7 @@ class Storage:
         key = f"redir:{domain_id}:{subdomain}:{shortname}"
         storage_value = await self.get(key, str)
 
-        if storage_value.flag == StorageFlag.PostgresNotFound:
+        if storage_value.was_cached:
             return storage_value
 
         query = """
@@ -465,15 +466,11 @@ class Storage:
 
         query += " LIMIT 1"
 
-        if storage_value.flag == StorageFlag.NotFound:
-            value = await self.db.fetchval(query, shortname, domain_id, *args)
-            await self.set_with_ttl(key, value or "false", 600)
-            return StorageValue(
-                StorageFlag.PostgresNotFound if value is None else StorageFlag.Found,
-                value,
-            )
+        value = await self.db.fetchval(query, shortname, domain_id, *args)
+        await self.set_with_ttl(key, value or self._NOTHING, 600)
 
-        return storage_value
+        flag = StorageFlag.NOT_FOUND if value is None else StorageFlag.FOUND
+        return StorageValue(value, flag=flag)
 
     async def get_ipban(self, ip_address: str) -> Optional[str]:
         """Get the reason for a specific IP ban."""
@@ -481,16 +478,17 @@ class Storage:
         ban_reason_val = await self.get(key, str)
         ban_reason = ban_reason_val.value
 
-        if ban_reason_val.flag == StorageFlag.PostgresNotFound:
+        if ban_reason_val.flag is StorageFlag.NOT_FOUND:
             return None
-        elif ban_reason_val.flag == StorageFlag.NotFound:
+
+        if ban_reason_val.flag is StorageFlag.NOT_CACHED:
             row = await self.db.fetchrow(
                 """
-            SELECT reason, end_timestamp
-            FROM ip_bans
-            WHERE ip_address = $1 AND end_timestamp > now()
-            LIMIT 1
-            """,
+                SELECT reason, end_timestamp
+                FROM ip_bans
+                WHERE ip_address = $1 AND end_timestamp > now()
+                LIMIT 1
+                """,
                 ip_address,
             )
 
@@ -513,9 +511,10 @@ class Storage:
         ban_reason_val = await self.get(key, str)
         ban_reason = ban_reason_val.value
 
-        if ban_reason_val.flag == StorageFlag.PostgresNotFound:
+        if ban_reason_val.flag is StorageFlag.NOT_FOUND:
             return None
-        elif ban_reason_val.flag == StorageFlag.NotFound:
+
+        if ban_reason_val.flag is StorageFlag.NOT_CACHED:
             row = await self.db.fetchrow(
                 """
             SELECT reason, end_timestamp
@@ -560,7 +559,7 @@ class Storage:
             # return it
             if (
                 not isinstance(possible_id, bool)
-                and possible_id.flag == StorageFlag.Found
+                and possible_id.flag is StorageFlag.FOUND
             ):
                 return possible_id.value, _subdomain_valid(subdomain, key)
 
@@ -585,7 +584,7 @@ class Storage:
         )
 
         if row is None:
-            await self.set_multi_one(keys, "false")
+            await self.set_multi_one(keys, self._NOTHING)
             if raise_notfound:
                 raise NotFound("This domain does not exist in this elixire instance.")
 
@@ -599,10 +598,10 @@ class Storage:
         """Get a domain ID for a shorten."""
         return await self.db.fetchval(
             """
-        SELECT domain
-        FROM shortens
-        WHERE filename = $1
-        """,
+            SELECT domain
+            FROM shortens
+            WHERE filename = $1
+            """,
             shortname,
         )
 
@@ -610,10 +609,10 @@ class Storage:
         """Get a domain ID for a file."""
         return await self.db.fetchval(
             """
-        SELECT domain
-        FROM files
-        WHERE filename = $1
-        """,
+            SELECT domain
+            FROM files
+            WHERE filename = $1
+            """,
             shortname,
         )
 
@@ -631,6 +630,6 @@ class Storage:
             WHERE filename = $1
               AND deleted = false
             LIMIT 1
-        """,
+            """,
             shortname,
         )
