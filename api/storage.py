@@ -213,7 +213,7 @@ class Storage:
 
             # the string false tells that whatever
             # query the db did returned None.
-            value = "false" if value is None else value
+            value = self._NOTHING if value is None else value
             await conn.set(key, value)
 
     async def set_with_ttl(self, key: str, value: Optional[Any], ttl: int) -> None:
@@ -299,7 +299,7 @@ class Storage:
 
         if storage_value.flag is StorageFlag.NOT_CACHED:
             value = await self.db.fetchval(query, *query_args)
-            await self.set_with_ttl(key, value or "false", ttl)
+            await self.set_with_ttl(key, value or self._NOTHING, ttl)
 
         return value
 
@@ -429,7 +429,7 @@ class Storage:
         query += " LIMIT 1"
 
         value = await self.db.fetchval(query, shortname, domain_id, *args)
-        await self.set_with_ttl(key, value or "false", 600)
+        await self.set_with_ttl(key, value or self._NOTHING, 600)
 
         flag = StorageFlag.NOT_FOUND if value is None else StorageFlag.FOUND
         return StorageValue(value, flag=flag)
@@ -466,7 +466,7 @@ class Storage:
         query += " LIMIT 1"
 
         value = await self.db.fetchval(query, shortname, domain_id, *args)
-        await self.set_with_ttl(key, value or "false", 600)
+        await self.set_with_ttl(key, value or self._NOTHING, 600)
 
         flag = StorageFlag.NOT_FOUND if value is None else StorageFlag.FOUND
         return StorageValue(value, flag=flag)
@@ -583,7 +583,7 @@ class Storage:
         )
 
         if row is None:
-            await self.set_multi_one(keys, "false")
+            await self.set_multi_one(keys, self._NOTHING)
             if raise_notfound:
                 raise NotFound("This domain does not exist in this elixire instance.")
 
