@@ -20,6 +20,7 @@ from api.schema import (
 from api.common.user import delete_user, get_basic_user
 from api.common.profile import get_limits, get_counts, get_dump_status
 from api.common.domain import get_basic_domain
+from api.common.auth import pwd_check
 
 bp = Blueprint("profile", __name__)
 log = logging.getLogger(__name__)
@@ -66,6 +67,88 @@ async def profile_handler():
     return jsonify(user)
 
 
+async def _try_domain_patch(user_id: int, domain_id: int) -> None:
+    domain = await get_basic_domain(domain_id)
+
+    if domain is None:
+        raise BadInput("Unknown domain")
+
+    if domain["admin_only"] and not await check_admin(user_id):
+        raise FailedAuth(
+            "You're not an admin but you're "
+            "trying to switch to an admin-only domain."
+        )
+
+    await app.db.execute(
+        """
+        UPDATE users
+        SET domain = $1
+        WHERE user_id = $2
+        """,
+        domain_id,
+        user_id,
+    )
+
+
+async def _check_password(user_id: int, payload: dict) -> None:
+    """Check password."""
+    if "password" not in payload:
+        raise BadInput("Password not provided")
+
+    partial = await app.storage.auth_user_from_user_id(user_id)
+    if partial is None:
+        raise ValueError()
+
+    await pwd_check(partial["password_hash"], payload["password"])
+
+
+async def _try_email_patch(user_id: int, email: str) -> None:
+    try:
+        await app.db.execute(
+            """
+            UPDATE users
+            SET email = $1
+            WHERE user_id = $2
+            """,
+            email,
+            user_id,
+        )
+    except asyncpg.UniqueViolationError:
+        raise BadInput("Email already used.")
+
+
+async def _try_username_patch(user_id: int, username: str) -> None:
+    username = username.lower()
+
+    # query the old username from database
+    # instead of relying in Storage
+    old_username = await app.db.fetchval(
+        """
+        SELECT username
+        FROM users
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+    try:
+        await app.db.execute(
+            """
+            UPDATE users
+            SET username = $1
+            WHERE user_id = $2
+            """,
+            username,
+            user_id,
+        )
+    except asyncpg.exceptions.UniqueViolationError:
+        raise BadInput("Username already used")
+
+    await app.storage.raw_invalidate(
+        f"uid:{old_username}", f"uname:{user_id}", f"uid:{username}"
+    )
+
+
 @bp.route("/profile", methods=["PATCH"])
 async def change_profile_handler():
     if not app.econfig.PATCH_API_PROFILE_ENABLED:
@@ -74,17 +157,16 @@ async def change_profile_handler():
     user_id = await token_check()
     payload = validate(await request.get_json(), PATCH_PROFILE)
 
-    # TODO
-    # if "username" in payload:
-    #    await _check_password(user_id, payload)
-    #    await _try_username_patch(user_id, payload["username"])
+    if "username" in payload:
+        await _check_password(user_id, payload)
+        await _try_username_patch(user_id, payload["username"])
 
-    # if "email" in payload:
-    #    await _check_password(user_id, payload)
-    #    await _try_email_patch(user_id, payload["email"])
+    if "email" in payload:
+        await _check_password(user_id, payload)
+        await _try_email_patch(user_id, payload["email"])
 
-    # if "domain" in payload:
-    #    await _try_domain_patch(user_id, payload["domain"])
+    if "domain" in payload:
+        await _try_domain_patch(user_id, payload["domain"])
 
     if "subdomain" in payload:
         await app.db.execute(
@@ -131,10 +213,20 @@ async def change_profile_handler():
             user_id,
         )
 
-    # TODO
-    # if "consented" in payload:
-    #    await _check_password(user_id, payload)
-    #    await _try_consented_patch(user_id, payload["consented"])
+    if "consented" in payload:
+        await app.db.execute(
+            """
+            UPDATE users
+            SET consented= $1
+            WHERE user_id = $2
+            """,
+            payload["consented"],
+            user_id,
+        )
+
+    if "new_password" in payload:
+        await _check_password(user_id, payload)
+        await _update_password(user_id, payload["new_password"])
 
     user = await get_basic_user(user_id)
     return jsonify(user)
@@ -213,16 +305,6 @@ async def change_profile():
                 "You're not an admin but you're "
                 "trying to switch to an admin-only domain."
             )
-
-        await app.db.execute(
-            """
-            UPDATE users
-            SET domain = $1
-            WHERE user_id = $2
-            """,
-            new_domain,
-            user_id,
-        )
 
         updated.append("domain")
 
