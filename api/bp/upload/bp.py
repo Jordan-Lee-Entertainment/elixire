@@ -220,15 +220,7 @@ async def upload_handler():
 
             output.write(chunk)
 
-    # upload file latency metrics
     await upload_metrics(ctx)
-
-    instance_url = app.econfig.MAIN_URL
-
     return jsonify(
-        {
-            "url": _construct_url(domain, shortname, extension),
-            "shortname": shortname,
-            "delete_url": f"{instance_url}/api/files/{shortname}/delete",
-        }
+        {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
     )
