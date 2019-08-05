@@ -77,7 +77,7 @@ PATCH_PROFILE = {
     "shorten_subdomain": {"type": "subdomain", "required": False, "nullable": True},
     "new_password": {"type": "password", "required": False, "nullable": True},
     "consented": {"type": "boolean", "required": False, "nullable": True},
-    "paranoid": {"type": "boolean", "required": False, "nullable": True},
+    "paranoid": {"type": "boolean", "required": False},
 }
 
 REGISTRATION_SCHEMA = {
