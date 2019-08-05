@@ -74,10 +74,7 @@ async def _try_domain_patch(user_id: int, domain_id: int) -> None:
         raise BadInput("Unknown domain")
 
     if domain["admin_only"] and not await check_admin(user_id):
-        raise FailedAuth(
-            "You're not an admin but you're "
-            "trying to switch to an admin-only domain."
-        )
+        raise FailedAuth("You can't use admin-only domains")
 
     await app.db.execute(
         """
@@ -116,7 +113,7 @@ async def _try_email_patch(user_id: int, email: str) -> None:
             user_id,
         )
     except asyncpg.UniqueViolationError:
-        raise BadInput("Email already used.")
+        raise BadInput("Email is already being used by another user")
 
 
 async def _try_username_patch(user_id: int, username: str) -> None:
@@ -154,7 +151,7 @@ async def _try_username_patch(user_id: int, username: str) -> None:
 @bp.route("/profile", methods=["PATCH"])
 async def change_profile_handler():
     if not app.econfig.PATCH_API_PROFILE_ENABLED:
-        raise FeatureDisabled("changes on profile are currently disabled")
+        raise FeatureDisabled("Changing your profile is currently disabled")
 
     user_id = await token_check()
     payload = validate(await request.get_json(), PATCH_PROFILE)
