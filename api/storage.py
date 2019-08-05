@@ -98,7 +98,7 @@ def _subdomain_valid(subdomain: Optional[str], domain: str) -> Optional[str]:
 
 
 class StorageFlag(enum.Enum):
-    """An enum representing how something from storage was resolved."""
+    """An enum representing how something from :class:`Storage` was resolved."""
 
     #: The value was found.
     FOUND = 1
@@ -132,14 +132,15 @@ class StorageValue:
 class Storage:
     """The storage subsystem.
 
-    This is used by to provide caching with Redis.
+    This class provides an abstraction over the caching with Redis mechanism.
 
-    When storing a given key to redis, it can be of any value, however,
-    internally, the value is *always* stored as a string. This requires typing
-    check code that is implemented in get() and set().
+    When storing a given key to Redis, it can be of any value, however,
+    internally, the value is *always* casted to a string. This requires type
+    checking code that is implemented in :meth:`get` and :meth:`set`.
 
-    A note on the inernal storage is that the string "false", when dealing
-    with keys that aren't boolean, represents that PostgreSQL returned None.
+    A note on the internal storage is that the special sentinel string "false"
+    (kept in :prop:`_NOTHING`) represents a cached instance of Postgres not
+    returning any rows. (This only applies to non-boolean keys.)
     """
 
     #: A sentinel value used in Redis as a cached value to signal that Postgres
