@@ -29,6 +29,18 @@ async def domain_list():
     )
 
 
+def construct_domain(domains: dict, obj: dict) -> str:
+    """Construct a full domain, given the list of domains and the object to
+    put subdomains on. the default is "wildcard"."""
+    domain = domains[obj["domain"]]
+    subdomain = obj["subdomain"]
+
+    if domain.startswith("*."):
+        domain = domain.replace("*", subdomain or "wildcard")
+
+    return domain
+
+
 @bp.route("/list")
 async def list_handler():
     """Get list of files."""
@@ -43,7 +55,7 @@ async def list_handler():
 
     user_files = await app.db.fetch(
         """
-        SELECT file_id, filename, file_size, fspath, domain, mimetype
+        SELECT file_id, filename, file_size, fspath, mimetype, domain, subdomain
         FROM files
         WHERE uploader = $1
         AND deleted = false
@@ -58,7 +70,7 @@ async def list_handler():
 
     user_shortens = await app.db.fetch(
         """
-        SELECT shorten_id, filename, redirto, domain
+        SELECT shorten_id, filename, redirto, domain, subdomain
         FROM shortens
         WHERE uploader = $1
         AND deleted = false
@@ -78,7 +90,7 @@ async def list_handler():
     for ufile in user_files:
         filename = ufile["filename"]
         mime = ufile["mimetype"]
-        domain = domains[ufile["domain"]].replace("*.", "wildcard.")
+        domain = construct_domain(domains, ufile)
 
         basename = os.path.basename(ufile["fspath"])
         ext = basename.split(".")[-1]
@@ -103,7 +115,7 @@ async def list_handler():
     shortens = {}
     for ushorten in user_shortens:
         filename = ushorten["filename"]
-        domain = domains[ushorten["domain"]].replace("*.", "wildcard.")
+        domain = construct_domain(domains, ushorten)
 
         shorten_url = f"{prefix}{domain}/s/{filename}"
 
