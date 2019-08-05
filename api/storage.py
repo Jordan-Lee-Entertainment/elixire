@@ -436,16 +436,14 @@ class Storage:
 
     async def get_urlredir(
         self, shortname: str, domain_id: int, subdomain: Optional[str] = None
-    ) -> Optional[str]:
+    ) -> Optional[StorageValue]:
         """Get a redirection of an URL."""
         # NOTE copied from get_fspath()
         key = f"redir:{domain_id}:{subdomain}:{shortname}"
-
         storage_value = await self.get(key, str)
-        value = storage_value.value
 
         if storage_value.flag == StorageFlag.PostgresNotFound:
-            return None
+            return storage_value
 
         query = """
             SELECT redirto
@@ -455,18 +453,27 @@ class Storage:
             AND domain = $2
         """
 
+        # i'd say this is a pretty ugly way to synthetize the query
+        # since when we don't have a subdomain we shouldn't do any searches
+        # on it to start with.
         args = []
         if subdomain is not None:
             query += "AND subdomain = $3"
             args.append(subdomain)
+        else:
+            query += "AND subdomain IS NULL"
 
-        query += "LIMIT 1"
+        query += " LIMIT 1"
 
         if storage_value.flag == StorageFlag.NotFound:
             value = await self.db.fetchval(query, shortname, domain_id, *args)
             await self.set_with_ttl(key, value or "false", 600)
+            return StorageValue(
+                StorageFlag.PostgresNotFound if value is None else StorageFlag.Found,
+                value,
+            )
 
-        return value
+        return storage_value
 
     async def get_ipban(self, ip_address: str) -> Optional[str]:
         """Get the reason for a specific IP ban."""

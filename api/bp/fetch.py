@@ -24,13 +24,13 @@ async def _get_fspath(
     if subdomain is None:
         filepath = await app.storage.get_fspath(shortname, domain_id)
         return filepath
-    else:
-        filepath = await app.storage.get_fspath(shortname, domain_id, subdomain)
 
-        if not filepath:
-            filepath = await app.storage.get_fspath(shortname, domain_id)
+    filepath = await app.storage.get_fspath(shortname, domain_id, subdomain)
 
-        return filepath
+    if not filepath:
+        filepath = await app.storage.get_fspath(shortname, domain_id)
+
+    return filepath
 
 
 async def filecheck(filename) -> Tuple[str, Optional[str]]:

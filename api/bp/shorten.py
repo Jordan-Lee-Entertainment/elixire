@@ -4,6 +4,7 @@
 
 import pathlib
 import urllib.parse
+from typing import Optional
 
 from quart import Blueprint, jsonify, redirect, current_app as app, request
 
@@ -13,8 +14,24 @@ from api.common import get_user_domain_info, transform_wildcard, FileNameType
 from api.snowflake import get_snowflake
 from api.permissions import Permissions, domain_permissions
 from api.common.profile import gen_user_shortname
+from api.storage import StorageValue
 
 bp = Blueprint("shorten", __name__)
+
+
+async def _get_urlredir(
+    shortname: str, domain_id: str, subdomain: Optional[str]
+) -> StorageValue:
+    if subdomain is None:
+        url_toredir = await app.storage.get_urlredir(shortname, domain_id)
+        return url_toredir
+
+    url_toredir = await app.storage.get_urlredir(shortname, domain_id, subdomain)
+
+    if not url_toredir:
+        url_toredir = await app.storage.get_urlredir(shortname, domain_id)
+
+    return url_toredir
 
 
 @bp.route("/s/<filename>")
@@ -22,11 +39,12 @@ async def shorten_serve_handler(filename):
     """Handles serving of shortened links."""
     storage = app.storage
 
-    domain_id = await storage.get_domain_id(request.host)
-    url_toredir = await storage.get_urlredir(filename, domain_id)
+    domain_id, subdomain = await storage.get_domain_id(request.host)
+    url_toredir_value = await _get_urlredir(filename, domain_id, subdomain)
+    url_toredir = url_toredir_value.value
 
     if not url_toredir:
-        raise NotFound("No shortened links found with this name " "on this domain.")
+        raise NotFound("No shortened links found with this name on this domain.")
 
     return redirect(url_toredir)
 
@@ -105,27 +123,28 @@ async def shorten_handler():
     await app.metrics.submit("shortname_gen_tries", tries)
 
     redir_id = get_snowflake()
-    domain_id, subdomain_name, domain = await get_user_domain_info(
+    domain_id, subdomain, domain = await get_user_domain_info(
         user_id, FileNameType.SHORTEN
     )
 
     await domain_permissions(app, domain_id, Permissions.SHORTEN)
-    domain = transform_wildcard(domain, subdomain_name)
+    domain = transform_wildcard(domain, subdomain)
 
     # make sure cache doesn't fuck up
-    await app.storage.raw_invalidate(f"redir:{domain_id}:{redir_rname}")
+    await app.storage.raw_invalidate(f"redir:{domain_id}:{subdomain}:{redir_rname}")
 
     await app.db.execute(
         """
         INSERT INTO shortens (shorten_id, filename,
-            uploader, redirto, domain)
-        VALUES ($1, $2, $3, $4, $5)
+            uploader, redirto, domain, subdomain)
+        VALUES ($1, $2, $3, $4, $5, $6)
         """,
         redir_id,
         redir_rname,
         user_id,
         url_toredir,
         domain_id,
+        subdomain or None,
     )
 
     # appended to generated filename
