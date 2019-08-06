@@ -25,17 +25,21 @@ def png_data() -> io.BytesIO:
     )
 
 
-def token():
+def token() -> str:
     return secrets.token_urlsafe(random.randint(100, 300))
 
 
-def username():
-    return secrets.token_hex(5)
+def hexs(len: int = 5) -> str:
+    return secrets.token_hex(len)
+
+
+def username() -> str:
+    return hexs(6)
 
 
 def email():
-    name = username()
-    domain = username()
+    name = hexs()
+    domain = hexs()
 
     return f"{name}@{domain}.com"
 
