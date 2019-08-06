@@ -19,31 +19,47 @@ log = logging.getLogger(__name__)
 
 
 async def _get_fspath(
-    shortname: str, domain_id: int, subdomain: Optional[str]
+    *, shortname: str, domain_id: int, subdomain: Optional[str]
 ) -> StorageValue:
+    """Return the path to a image (or other file) on disk."""
+
+    # TODO: we still need to handle `subdomain == ''` for when the file lives
+    #       on both a wildcard and the root domain (which is the case for v2
+    #       files)
+
     if subdomain is None:
-        filepath = await app.storage.get_fspath(shortname, domain_id)
+        # file lives on the root domain
+        filepath = await app.storage.get_fspath(
+            shortname=shortname, domain_id=domain_id
+        )
         return filepath
 
-    filepath = await app.storage.get_fspath(shortname, domain_id, subdomain)
-
-    if not filepath:
-        filepath = await app.storage.get_fspath(shortname, domain_id)
+    # file lives on the root domain
+    filepath = await app.storage.get_fspath(
+        shortname=shortname, domain_id=domain_id, subdomain=subdomain
+    )
 
     return filepath
 
 
-async def filecheck(filename) -> Tuple[str, Optional[str]]:
-    """Check if the given file exists on the domain."""
+async def resolve_file(filename) -> Tuple[str, Optional[str]]:
+    """Resolve a file according to its filename (shortname plus an extension).
+
+    If the file doesn't exist, a :class:`NotFound` exception will be raised.
+    Returns a tuple of the path to the file and an optional shortname.
+    """
     domain_id, subdomain = await app.storage.get_domain_id(request.host)
 
     shortname, ext = os.path.splitext(filename)
 
-    filepath_val = await _get_fspath(shortname, domain_id, subdomain)
-    if not filepath_val:
-        raise NotFound("No files with this name on this domain.")
+    # resolve the path to this file on the filesystem from its shortname and
+    # domain
+    file_path = (
+        await _get_fspath(shortname=shortname, domain_id=domain_id, subdomain=subdomain)
+    ).value
 
-    filepath = filepath_val.value
+    if not file_path:
+        raise NotFound("No files with this name on this domain.")
 
     # If we don't do this, there's a tiny chance of someone uploading an .exe
     # with extension of .png or whatever and slipping through ClamAV
@@ -51,11 +67,11 @@ async def filecheck(filename) -> Tuple[str, Optional[str]]:
     # Theoretically I could compare mime types but this works better IMO
     # as it prevents someone from uploading asd.jpg and linking asd.jpeg
     # and due to that, it makes cf cache revokes MUCH less painful
-    db_ext = os.path.splitext(filepath)[-1]
+    db_ext = os.path.splitext(file_path)[-1]
     if db_ext != ext:
         raise NotFound("No files with this name on this domain.")
 
-    return filepath, shortname
+    return file_path, shortname
 
 
 async def _send_file(fspath: str, mimetype: Optional[str] = None):
@@ -67,7 +83,7 @@ async def _send_file(fspath: str, mimetype: Optional[str] = None):
 @bp.route("/i/<filename>")
 async def file_handler(filename):
     """Handles file serves."""
-    filepath, shortname = await filecheck(filename)
+    filepath, shortname = await resolve_file(filename)
 
     # fetch the file's mimetype from the database
     # which should be way more reliable than sanic
@@ -85,7 +101,7 @@ async def thumbnail_handler(filename):
     """Handles thumbnail serves."""
     appcfg = app.econfig
     thumbtype, filename = filename[0], filename[1:]
-    fspath, _shortname = await filecheck(filename)
+    fspath, _shortname = await resolve_file(filename)
 
     # if thumbnails are disabled, just return
     # the same file
