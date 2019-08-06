@@ -74,8 +74,9 @@ CREATE TABLE IF NOT EXISTS admin_user_settings (
 -- users.domain and users.shorten_domain already referencing
 -- domains.
 CREATE TABLE IF NOT EXISTS domain_owners (
-    domain_id bigint REFERENCES domains (domain_id) PRIMARY KEY,
-    user_id bigint REFERENCES users (user_id)
+    domain_id bigint REFERENCES domains ON DELETE CASCADE,
+    user_id bigint REFERENCES users ON DELETE CASCADE NOT NULL,
+    PRIMARY KEY (domain_id)
 );
 
 -- user and IP bans, usually automatically managed by
