@@ -13,10 +13,10 @@ from api.schema import (
     ADMIN_SEND_DOMAIN_EMAIL,
     ADMIN_PUT_DOMAIN,
 )
+from api.common.domain import create_domain, delete_domain
 from api.common.auth import token_check, check_admin
 from api.common.email import send_user_email
 from api.common.pagination import Pagination
-from api.storage import solve_domain
 from api.errors import BadInput
 
 from api.bp.admin.audit_log_actions.domain import (
@@ -43,27 +43,14 @@ async def add_domain():
     j = validate(await request.get_json(), ADMIN_PUT_DOMAIN)
     domain = j["domain"]
 
-    result = await app.db.execute(
-        """
-        INSERT INTO domains
-            (domain, admin_only, official, permissions)
-        VALUES
-            ($1, $2, $3, $4)
-        """,
-        domain,
-        j["admin_only"],
-        j["official"],
-        j["permissions"],
+    kwargs = dict(
+        admin_only=j["admin_only"], official=j["official"], permissions=j["permissions"]
     )
 
-    domain_id = await app.db.fetchval(
-        """
-        SELECT domain_id
-        FROM domains
-        WHERE domain = $1
-        """,
-        domain,
-    )
+    if "owner_id" in j:
+        kwargs.update(owner_id=j["owner_id"])
+
+    domain_id = await create_domain(domain, **kwargs)
 
     async with DomainAddAction() as action:
         action.update(domain_id=domain_id)
@@ -71,14 +58,10 @@ async def add_domain():
         try:
             owner_id = j["owner_id"]
             action.update(owner_id=owner_id)
-            await set_domain_owner(domain_id, owner_id)
         except KeyError:
             pass
 
-    keys = solve_domain(domain)
-    await app.storage.raw_invalidate(*keys)
-
-    return jsonify({"success": True, "result": result, "new_id": domain_id})
+    return jsonify({"success": True, "new_id": domain_id})
 
 
 async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
@@ -186,73 +169,10 @@ async def remove_domain(domain_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    domain_name = await app.db.fetchval(
-        """
-        SELECT domain
-        FROM domains
-        WHERE domain_id = $1
-        """,
-        domain_id,
-    )
-
-    files_count = await app.db.execute(
-        """
-        UPDATE files set domain = 0 WHERE domain = $1
-        """,
-        domain_id,
-    )
-
-    shorten_count = await app.db.execute(
-        """
-        UPDATE shortens set domain = 0 WHERE domain = $1
-        """,
-        domain_id,
-    )
-
-    users_count = await app.db.execute(
-        """
-        UPDATE users set domain = 0 WHERE domain = $1
-        """,
-        domain_id,
-    )
-
-    users_shorten_count = await app.db.execute(
-        """
-        UPDATE users set shorten_domain = 0 WHERE shorten_domain = $1
-        """,
-        domain_id,
-    )
-
     async with DomainRemoveAction(request, domain_id):
-        await app.db.execute(
-            """
-            DELETE FROM domain_owners
-            WHERE domain_id = $1
-            """,
-            domain_id,
-        )
+        results = await delete_domain(domain_id)
 
-        result = await app.db.execute(
-            """
-            DELETE FROM domains
-            WHERE domain_id = $1
-            """,
-            domain_id,
-        )
-
-    keys = solve_domain(domain_name)
-    await app.storage.raw_invalidate(*keys)
-
-    return jsonify(
-        {
-            "success": True,
-            "file_move_result": files_count,
-            "shorten_move_result": shorten_count,
-            "users_move_result": users_count,
-            "users_shorten_move_result": users_shorten_count,
-            "result": result,
-        }
-    )
+    return jsonify({"success": True, **results})
 
 
 @bp.route("/api/admin/domains/<int:domain_id>")

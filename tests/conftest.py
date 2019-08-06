@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import asyncio
-import secrets
 import sys
 import os
 
@@ -16,7 +15,7 @@ from api.common.auth import gen_token
 from api.common.domain import set_domain_owner
 from run import app as app_
 from .mock import MockAuditLog
-from .common import email, TestClient
+from .common import hexs, email, TestClient
 
 
 @pytest.fixture(name="app")
@@ -50,8 +49,8 @@ def test_cli_fixture(app):
 # now its being redone with that code + litecord code
 # https://gitlab.com/litecord/litecord/merge_requests/42
 async def _user_fixture_setup():
-    username = secrets.token_hex(6)
-    password = secrets.token_hex(6)
+    username = hexs(6)
+    password = hexs(6)
     user_email = email()
 
     user = await create_user(username, password, user_email)
