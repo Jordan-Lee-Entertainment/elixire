@@ -4,8 +4,9 @@
 
 import pytest
 
+pytestmark = pytest.mark.asyncio
 
-@pytest.mark.asyncio
+
 async def test_stats(test_cli_user):
     resp = await test_cli_user.get("/api/stats")
 
@@ -19,7 +20,6 @@ async def test_stats(test_cli_user):
     assert isinstance(rjson["total_shortens"], int)
 
 
-@pytest.mark.asyncio
 async def test_domains(test_cli_admin):
     # admins always own at least domain 0
     resp = await test_cli_admin.get("/api/stats/my_domains")

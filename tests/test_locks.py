@@ -5,8 +5,9 @@
 import pytest
 import asyncio
 
+pytestmark = pytest.mark.asyncio
 
-@pytest.mark.asyncio
+
 async def test_locks(test_cli):
     """Test LockStorage"""
     locks = test_cli.app.locks

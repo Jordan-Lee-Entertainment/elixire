@@ -18,7 +18,14 @@ from .mock import MockAuditLog
 from .common import hexs, email, TestClient
 
 
-@pytest.fixture(name="app")
+@pytest.yield_fixture(name="event_loop", scope="session")
+def event_loop_fixture():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture(name="app", scope="session")
 async def app_fixture(event_loop):
     app_._test = True
     app_.loop = event_loop

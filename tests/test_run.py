@@ -4,8 +4,9 @@
 
 import pytest
 
+pytestmark = pytest.mark.asyncio
 
-@pytest.mark.asyncio
+
 async def test_hello(test_cli):
     """Test basic route"""
     response = await test_cli.get("/api/hello")

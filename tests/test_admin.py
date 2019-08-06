@@ -4,6 +4,8 @@
 
 import pytest
 
+pytestmark = pytest.mark.asyncio
+
 
 def _extract_uid(token: str) -> str:
     split = token.split(".")
@@ -15,14 +17,12 @@ def _extract_uid(token: str) -> str:
     return uid
 
 
-@pytest.mark.asyncio
 async def test_non_admin(test_cli_user):
     resp = await test_cli_user.get("/api/admin/test")
     assert resp.status_code != 200
     assert resp.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_admin(test_cli_admin):
     resp = await test_cli_admin.get("/api/admin/test")
     assert resp.status_code == 200
@@ -32,7 +32,6 @@ async def test_admin(test_cli_admin):
     assert data["admin"]
 
 
-@pytest.mark.asyncio
 async def test_user_fetch(test_cli_admin):
     uid = test_cli_admin["user_id"]
     resp = await test_cli_admin.get(f"/api/admin/users/{uid}")
@@ -66,7 +65,6 @@ async def test_user_fetch(test_cli_admin):
     assert rjson["user_id"] == user_id
 
 
-@pytest.mark.asyncio
 async def test_user_activate_cycle(test_cli_user, test_cli_admin):
     """
     logic here is to:
@@ -102,7 +100,6 @@ async def test_user_activate_cycle(test_cli_user, test_cli_admin):
     assert rjson["active"]
 
 
-@pytest.mark.asyncio
 async def test_user_search(test_cli_admin):
     """Test seaching of users."""
     # there isnt much other testing than calling the route
@@ -124,7 +121,6 @@ async def test_user_search(test_cli_admin):
     assert isinstance(pag["current"], int)
 
 
-@pytest.mark.asyncio
 async def test_domain_search(test_cli_admin):
     def assert_standard_response(json):
         assert isinstance(json, dict)
@@ -158,7 +154,6 @@ async def test_domain_search(test_cli_admin):
     )
 
 
-@pytest.mark.asyncio
 async def test_domain_stats(test_cli_admin):
     """Get instance-wide domain stats."""
     resp = await test_cli_admin.get("/api/admin/domains")
@@ -175,7 +170,6 @@ async def test_domain_stats(test_cli_admin):
         assert isinstance(domain["public_stats"], dict)
 
 
-@pytest.mark.asyncio
 async def test_domain_get(test_cli_admin):
     resp = await test_cli_admin.get("/api/admin/domains/38918583")
 
@@ -186,7 +180,6 @@ async def test_domain_get(test_cli_admin):
     assert rjson is None
 
 
-@pytest.mark.asyncio
 async def test_domain_patch(test_cli_user, test_cli_admin):
     """Test editing of a single domain."""
     user_id = str(test_cli_user.user["user_id"])
@@ -265,7 +258,6 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     assert dinfo["permissions"] == 3
 
 
-@pytest.mark.asyncio
 async def test_user_patch(test_cli_user, test_cli_admin):
     user_id = test_cli_user.user["user_id"]
 
@@ -295,7 +287,7 @@ async def test_user_patch(test_cli_user, test_cli_admin):
     # request 3: changing it back
     resp = await test_cli_admin.patch(
         f"/api/admin/users/{user_id}",
-        json={"upload_limit": 104857600, "shorten_limit": 100},
+        json={"upload_limit": 104_857_600, "shorten_limit": 100},
     )
 
     assert resp.status_code == 200
@@ -307,7 +299,6 @@ async def test_user_patch(test_cli_user, test_cli_admin):
     # TODO check the set values here
 
 
-@pytest.mark.asyncio
 async def test_my_stats_as_admin(test_cli_admin):
     """Test the personal domain stats route but as an admin."""
     resp = await test_cli_admin.get("/api/stats/my_domains")
