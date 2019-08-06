@@ -20,16 +20,20 @@ bp = Blueprint("shorten", __name__)
 
 
 async def _get_urlredir(
-    shortname: str, domain_id: str, subdomain: Optional[str]
+    *, shortname: str, domain_id: str, subdomain: Optional[str]
 ) -> StorageValue:
+    """Return the target URL (``toredir``) for a shorten."""
+
+    # TODO: we still need to handle `subdomain == ''` for when the file lives
+    #       on both a wildcard and the root domain
+
     if subdomain is None:
+        # shorten lives on a subdomain
         url_toredir = await app.storage.get_urlredir(shortname, domain_id)
         return url_toredir
 
+    # shorten lives on the root domain
     url_toredir = await app.storage.get_urlredir(shortname, domain_id, subdomain)
-
-    if not url_toredir:
-        url_toredir = await app.storage.get_urlredir(shortname, domain_id)
 
     return url_toredir
 
