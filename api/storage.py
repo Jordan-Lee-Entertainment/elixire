@@ -593,7 +593,10 @@ class Storage:
         # an actual domain wasn't found from the possibilities
         if resolved_domain is None:
             # cache all of the possible domains as not existing
-            await self.set_multi_one(possibilities, self._NOTHING)
+            await self.set_multi_one(
+                [f"domain_id:{possible_domain}" for possible_domain in possibilities],
+                self._NOTHING,
+            )
 
             if raise_notfound:
                 raise NotFound("This domain does not exist in this elixire instance.")
