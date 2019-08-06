@@ -141,7 +141,7 @@ async def _try_username_patch(user_id: int, username: str) -> None:
             user_id,
         )
     except asyncpg.exceptions.UniqueViolationError:
-        raise BadInput("Username already used")
+        raise BadInput("Username is already taken")
 
     await app.storage.raw_invalidate(
         f"uid:{old_username}", f"uname:{user_id}", f"uid:{username}"
