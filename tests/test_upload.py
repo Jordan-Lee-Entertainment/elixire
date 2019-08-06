@@ -6,6 +6,8 @@ import pytest
 import secrets
 from .common import png_data
 
+pytestmark = pytest.mark.asyncio
+
 
 async def check_exists(test_cli, shortname, not_exists=False):
     """Check if a file exists, given the shortname, token, etc."""
@@ -40,7 +42,6 @@ async def _test_upload_png(test_cli_user):
     await check_exists(test_cli_user, respjson["shortname"])
 
 
-@pytest.mark.asyncio
 async def _test_delete_file(test_cli_user):
     # TODO file
     resp = await test_cli_user.post("/api/upload")
@@ -59,7 +60,6 @@ async def _test_delete_file(test_cli_user):
     await check_exists(test_cli_user, respjson["shortname"], True)
 
 
-@pytest.mark.asyncio
 async def test_delete_nonexist(test_cli_user):
     """Test deletions of files that don't exist."""
     rand_file = secrets.token_hex(20)

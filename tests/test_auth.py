@@ -5,8 +5,9 @@
 import pytest
 from .common import token, username
 
+pytestmark = pytest.mark.asyncio
 
-@pytest.mark.asyncio
+
 async def test_login(test_cli_user):
     resp = await test_cli_user.post(
         "/api/login",
@@ -20,7 +21,6 @@ async def test_login(test_cli_user):
     assert isinstance(rjson["token"], str)
 
 
-@pytest.mark.asyncio
 async def test_apikey(test_cli_user):
     resp = await test_cli_user.post(
         "/api/apikey",
@@ -35,7 +35,6 @@ async def test_apikey(test_cli_user):
     assert rjson["api_key"].startswith("u")
 
 
-@pytest.mark.asyncio
 async def test_login_badinput(test_cli_user):
     resp = await test_cli_user.post(
         "/api/login", do_token=False, json={"user": test_cli_user["username"]}
@@ -44,7 +43,6 @@ async def test_login_badinput(test_cli_user):
     assert resp.status_code == 400
 
 
-@pytest.mark.asyncio
 async def test_login_badpwd(test_cli_user):
     response = await test_cli_user.post(
         "/api/login",
@@ -55,7 +53,6 @@ async def test_login_badpwd(test_cli_user):
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_login_baduser(test_cli_user):
     resp = await test_cli_user.post(
         "/api/login", json={"user": username(), "password": test_cli_user["password"]}
@@ -64,27 +61,23 @@ async def test_login_baduser(test_cli_user):
     assert resp.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_no_token(test_cli):
     """Test no token request."""
     resp = await test_cli.get("/api/profile")
     assert resp.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_invalid_token(test_cli):
     """Test invalid token."""
     resp = await test_cli.get("/api/profile", headers={"Authorization": token()})
     assert resp.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_valid_token(test_cli_user):
     resp = await test_cli_user.get("/api/profile")
     assert resp.status_code == 200
 
 
-@pytest.mark.asyncio
 async def test_revoke(test_cli, test_cli_user):
     resp = await test_cli_user.get("/api/profile")
     assert resp.status_code == 200
@@ -100,7 +93,6 @@ async def test_revoke(test_cli, test_cli_user):
     assert resp.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_login_deactivated(test_cli_user):
     """Test logging in with a deactivated user."""
     await test_cli_user.app.db.execute(

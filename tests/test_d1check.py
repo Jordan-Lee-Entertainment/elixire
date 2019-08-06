@@ -6,8 +6,9 @@ import pytest
 
 from cryptography.fernet import Fernet
 
+pytestmark = pytest.mark.asyncio
 
-@pytest.mark.asyncio
+
 async def test_d1check(test_cli):
     """Test the /api/check route."""
     test_cli.app.econfig.SECRET_KEY = Fernet.generate_key()

@@ -1,11 +1,13 @@
 # elixire: Image Host software
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+
 import pytest
 from .common import token, username
 
+pytestmark = pytest.mark.asyncio
 
-@pytest.mark.asyncio
+
 async def test_invalid_shorten(test_cli):
     invalid_shit = [f"{username()}" for _ in range(100)]
 
@@ -14,7 +16,6 @@ async def test_invalid_shorten(test_cli):
         assert resp.status_code == 404
 
 
-@pytest.mark.asyncio
 async def test_shorten(test_cli_user):
     resp = await test_cli_user.post("/api/shorten", json={"url": "https://elixi.re"})
 
@@ -24,7 +25,6 @@ async def test_shorten(test_cli_user):
     assert isinstance(data["url"], str)
 
 
-@pytest.mark.asyncio
 async def test_shorten_complete(test_cli_user):
     url = "https://elixi.re"
 
@@ -58,7 +58,6 @@ async def test_shorten_complete(test_cli_user):
     assert shorten["redirto"] == url
 
 
-@pytest.mark.asyncio
 async def test_shorten_wrong_scheme(test_cli_user):
     some_schemes = ["ftp://", "mailto:", "laksjdkj::", token()]
 

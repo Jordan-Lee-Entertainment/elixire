@@ -7,8 +7,9 @@ import random
 
 from .common import username
 
+pytestmark = pytest.mark.asyncio
 
-@pytest.mark.asyncio
+
 async def test_invalid_path(test_cli):
     fmts = ["jpg", "png", "jpeg", "gif"]
     invalid_shit = [f"{username()}.{random.choice(fmts)}" for _ in range(100)]
@@ -18,7 +19,6 @@ async def test_invalid_path(test_cli):
         assert resp.status_code == 404
 
 
-@pytest.mark.asyncio
 async def test_invalid_path_thumbnail(test_cli):
     fmts = ["jpg", "png", "jpeg", "gif"]
     invalid_shit = [f"{username()}.{random.choice(fmts)}" for _ in range(100)]

@@ -5,8 +5,9 @@
 import pytest
 from .common import token, username, email
 
+pytestmark = pytest.mark.asyncio
 
-@pytest.mark.asyncio
+
 async def test_profile_work(test_cli_user):
     """Test the profile user, just getting data."""
     resp = await test_cli_user.get("/api/profile")
@@ -36,7 +37,6 @@ async def test_profile_work(test_cli_user):
     assert isinstance(dstatus["state"], str)
 
 
-@pytest.mark.asyncio
 async def test_limits_work(test_cli_user):
     resp = await test_cli_user.get("/api/limits")
 
@@ -53,7 +53,6 @@ async def test_limits_work(test_cli_user):
     assert rjson["shortenused"] <= rjson["shortenlimit"]
 
 
-@pytest.mark.asyncio
 async def test_patch_profile(test_cli_user):
     # request 1: getting profile info to
     # change back to later
@@ -114,7 +113,6 @@ async def test_patch_profile(test_cli_user):
     assert "paranoid" in rjson["updated_fields"]
 
 
-@pytest.mark.asyncio
 async def test_profile_wrong_token(test_cli):
     """Test the profile route with wrong tokens."""
     resp = await test_cli.get("/api/profile", headers={"Authorization": token()})
