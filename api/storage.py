@@ -396,9 +396,11 @@ class Storage:
         )
 
     async def get_fspath(
-        self, shortname: str, domain_id: int, subdomain: Optional[str] = None
+        self, *, shortname: str, domain_id: int, subdomain: Optional[str] = None
     ) -> StorageValue:
-        """Get the filesystem path of an image."""
+        """Get the path to an uploaded file by its shortname, domain ID, and
+        optional subdomain.
+        """
         key = f"fspath:{domain_id}:{subdomain}:{shortname}"
 
         storage_value = await self.get(key, str)
@@ -544,32 +546,40 @@ class Storage:
         Raises NotFound by default.
         """
 
-        keys = solve_domain(given_domain)
-        assert len(keys) == 3
+        def _subdomain_valid(subdomain: Optional[str], domain: str) -> Optional[str]:
+            return subdomain if domain.startswith("*.") else None
+
+        # now we need to solve the domain.
+        #
+        # the `solve_domain` function returns a list of all of the possible
+        # domain names that could be in the database that matches up to the host
+        # that the user typed. it's necessary to resolve ambiguities.
+        #
+        # for example, if a user navigated to a.elixi.re, there are 3 possible
+        # domains that that could be referring to:
+        #
+        #   1) *.a.elixi.re (the root of the wildcard domain)
+        #   2) a.elixi.re   (a plain domain on a subdomain)
+        #   3) *.elixi.re   (a subdomain of a wildcard domain)
+        #
+        # (not necessarily returned in that order.)
+        possibilities = solve_domain(given_domain)
+        assert len(possibilities) == 3
 
         subdomain = _get_subdomain(given_domain)
 
-        for key in keys:
-            possible_id = await self.get(f"domain_id:{key}", int)
+        # check for cached mappings from domain to domain id
+        for possible_domain in possibilities:
+            possible_id = await self.get(f"domain_id:{possible_domain}", int)
 
-            # as soon as we get a key that is valid,
-            # return it
-            if (
-                not isinstance(possible_id, bool)
-                and possible_id.flag is StorageFlag.FOUND
-            ):
-                return possible_id.value, _subdomain_valid(subdomain, key)
+            # return as soon as we get a valid domain id
+            if possible_id.was_found:
+                return possible_id.value, _subdomain_valid(subdomain, possible_domain)
 
-        # if no keys solve to any domain,
-        # query from db and set those keys
-        # to the found id
+        # if no cached mappings were found, query the db for each possibility
+        # and cache the result of the real domain that the host resolves to.
 
-        # This causes some problems since we might
-        # set *.re (in the case of domain_name = 'elixi.re') to
-        # an actual domain id, but since we use domain_name
-        # first, it shouldn't become a problem.
-
-        row = await self.db.fetchrow(
+        resolved_domain = await self.db.fetchrow(
             """
             SELECT domain, domain_id
             FROM domains
@@ -577,18 +587,23 @@ class Storage:
                 OR domain = $2
                 OR domain = $3
             """,
-            *keys,
+            *possibilities,
         )
 
-        if row is None:
-            await self.set_multi_one(keys, self._NOTHING)
+        # an actual domain wasn't found from the possibilities
+        if resolved_domain is None:
+            # cache all of the possible domains as not existing
+            await self.set_multi_one(possibilities, self._NOTHING)
+
             if raise_notfound:
                 raise NotFound("This domain does not exist in this elixire instance.")
 
             return None
 
-        domain_name, domain_id = row
+        # map the actual domain name to the domain_id in cache
+        domain_name, domain_id = resolved_domain
         await self.set(f"domain_id:{domain_name}", domain_id)
+
         return domain_id, _subdomain_valid(subdomain, domain_name)
 
     async def get_domain_shorten(self, shortname: str) -> Optional[int]:
