@@ -8,7 +8,7 @@
 storage_filehash.py
 
     Change current image directory structure to account for
-    file hashing patches in 
+    file hashing patches in
 """
 
 import sys
@@ -19,9 +19,9 @@ from pathlib import Path
 import asyncpg
 import aioredis
 
-p = Path(".")
-sys.path.append(str(p.cwd()))
-import config
+sys.path.append(str(Path.cwd()))
+
+import config  # noqa: E402
 
 
 async def open_db():

@@ -8,7 +8,8 @@ import asyncpg
 import aioredis
 
 sys.path.append("..")
-import config
+
+import config  # noqa: E402
 
 
 async def open_db():

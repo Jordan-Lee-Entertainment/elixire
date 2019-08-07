@@ -16,13 +16,12 @@ import sys
 
 from pathlib import Path
 
-p = Path(".")
-sys.path.append(str(p.cwd()))
+sys.path.append(str(Path.cwd()))
 
-import asyncpg
-import aioredis
+import asyncpg  # noqa: E402
+import aioredis  # noqa: E402
 
-import config
+import config  # noqa: E402
 
 
 async def main():
