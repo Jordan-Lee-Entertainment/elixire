@@ -19,25 +19,25 @@ log = logging.getLogger(__name__)
 
 
 async def _get_fspath(
-    *, shortname: str, domain_id: int, subdomain: Optional[str]
+    *, shortname: str, domain_id: int, subdomain: str
 ) -> StorageValue:
     """Return the path to a image (or other file) on disk."""
 
-    # TODO: we still need to handle `subdomain == ''` for when the file lives
-    #       on both a wildcard and the root domain (which is the case for v2
-    #       files)
+    # when searching for the file, the subdomain can be applicable
+    # or NOT while searching. which means that when we're searching with it,
+    # if it fails, we MUST search with subdomain=None. that only happens for
+    # legacy files that have subdomain as NULL on the database.
 
-    if subdomain is None:
-        # file lives on the root domain
-        filepath = await app.storage.get_fspath(
-            shortname=shortname, domain_id=domain_id
-        )
-        return filepath
-
-    # file lives on the root domain
+    # for files uploaded as root, the subdomain becomes "" (empty string)
+    # which is completly valid to put on the search.
     filepath = await app.storage.get_fspath(
         shortname=shortname, domain_id=domain_id, subdomain=subdomain
     )
+
+    if not filepath:
+        filepath = await app.storage.get_fspath(
+            shortname=shortname, domain_id=domain_id, subdomain=None
+        )
 
     return filepath
 

@@ -202,7 +202,7 @@ async def upload_handler():
         user_id,
         file.raw_path,
         domain_id,
-        subdomain_name or None,
+        subdomain_name,
     )
 
     # TODO UploadFile.cache_key property

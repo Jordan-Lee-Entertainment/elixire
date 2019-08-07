@@ -79,7 +79,7 @@ def solve_domain(domain_name: str, *, redis: bool = False) -> List[str]:
     return domains
 
 
-def _get_subdomain(domain: str) -> Optional[str]:
+def _get_subdomain(domain: str) -> str:
     """Return the subdomain of a domain.
 
     Because this function does not notice TLDs, passing "elixi.re" will yield
@@ -89,7 +89,7 @@ def _get_subdomain(domain: str) -> Optional[str]:
     try:
         period_index = domain.index(".")
     except ValueError:
-        return None
+        return ""
 
     return domain[:period_index]
 
@@ -399,7 +399,7 @@ class Storage:
         self, *, shortname: str, domain_id: int, subdomain: Optional[str] = None
     ) -> StorageValue:
         """Get the path to an uploaded file by its shortname, domain ID, and
-        optional subdomain.
+        optional subdomain (empty string means root, None means any subdomain).
         """
         key = f"fspath:{domain_id}:{subdomain}:{shortname}"
 
@@ -539,15 +539,15 @@ class Storage:
 
     async def get_domain_id(
         self, given_domain: str, *, raise_notfound: bool = True
-    ) -> Optional[Tuple[int, Optional[str]]]:
+    ) -> Optional[Tuple[int, str]]:
         """Get a tuple containing the domain ID and the subdomain, given the
         full domain of a given request.
 
         Raises NotFound by default.
         """
 
-        def _subdomain_valid(subdomain: Optional[str], domain: str) -> Optional[str]:
-            return subdomain if domain.startswith("*.") else None
+        def _subdomain_valid(subdomain: str, domain: str) -> str:
+            return subdomain if domain.startswith("*.") else ""
 
         # now we need to solve the domain.
         #
