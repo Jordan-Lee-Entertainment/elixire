@@ -12,10 +12,10 @@ sys.path.append(os.getcwd())
 
 from api.common.user import create_user, delete_user
 from api.common.auth import gen_token
-from api.common.domain import set_domain_owner
+from api.common.domain import create_domain, delete_domain, set_domain_owner
 from run import app as app_
 from .mock import MockAuditLog
-from .common import hexs, email, TestClient
+from .common import Domain, hexs, email, TestClient
 
 
 @pytest.yield_fixture(name="event_loop", scope="session")
@@ -44,6 +44,19 @@ async def app_fixture(event_loop):
 
     # event_loop.run_until_complete(app_.shutdown())
     await app_.shutdown()
+
+
+@pytest.fixture(name="test_domain")
+async def test_domain_fixture(app):
+    domain_name = f"*.test-{hexs(10)}.tld"
+
+    async with app.app_context():
+        domain_id = await create_domain(domain_name)
+
+    yield Domain(domain_name, domain_id)
+
+    async with app.app_context():
+        await delete_domain(domain_id)
 
 
 @pytest.fixture(name="test_cli")
