@@ -12,7 +12,7 @@ from api.common.auth import token_check, password_check, pwd_hash, check_admin
 from api.common.email import gen_email_token, send_email, uid_from_email, clean_etoken
 from api.schema import (
     validate,
-    PROFILE_SCHEMA,
+    PATCH_PROFILE,
     DEACTIVATE_USER_SCHEMA,
     PASSWORD_RESET_SCHEMA,
     PASSWORD_RESET_CONFIRM_SCHEMA,
@@ -20,6 +20,7 @@ from api.schema import (
 from api.common.user import delete_user, get_basic_user
 from api.common.profile import get_limits, get_counts, get_dump_status
 from api.common.domain import get_basic_domain
+from api.common.auth import pwd_check
 
 bp = Blueprint("profile", __name__)
 log = logging.getLogger(__name__)
@@ -66,186 +67,168 @@ async def profile_handler():
     return jsonify(user)
 
 
-@bp.route("/profile", methods=["PATCH"])
-async def change_profile():
-    """Change a user's profile."""
-    if not app.econfig.PATCH_API_PROFILE_ENABLED:
-        raise FeatureDisabled("changes on profile are currently disabled")
+async def _try_domain_patch(user_id: int, domain_id: int) -> None:
+    domain = await get_basic_domain(domain_id)
 
-    user_id = await token_check()
-    payload = validate(await request.get_json(), PROFILE_SCHEMA)
+    if domain is None:
+        raise BadInput("Unknown domain")
 
-    updated = []
+    if domain["admin_only"] and not await check_admin(user_id):
+        raise FailedAuth("You can't use admin-only domains")
 
-    password = payload.get("password")
-    new_pwd = payload.get("new_password")
-    new_username = payload.get("username")
+    await app.db.execute(
+        """
+        UPDATE users
+        SET domain = $1
+        WHERE user_id = $2
+        """,
+        domain_id,
+        user_id,
+    )
 
-    new_domain = payload.get("domain")
-    new_subdomain = payload.get("subdomain")
 
-    new_shorten_subdomain = payload.get("shorten_subdomain")
+async def _check_password(user_id: int, payload: dict) -> None:
+    """Check the password given in the request payload.
 
-    new_email = payload.get("email")
-    new_paranoid = payload.get("paranoid")
+    Can raise:
+     - BadInput if payload.password isn't provided
+     - FailedAuth if the password isn't correct
+     - ValueError when the given user isn't found
+    """
+    if "password" not in payload:
+        raise BadInput("Password not provided")
 
-    # TODO simplify this code
-    if password:
-        await password_check(user_id, password)
+    partial = await app.storage.auth_user_from_user_id(user_id)
 
-    if password and new_username is not None:
-        new_username = new_username.lower()
+    # NOTE that this shouldn't happen if your user_id comes off token_check()
+    if partial is None:
+        raise ValueError("Unknown user ID")
 
-        # query the old username from database
-        # instead of relying in Storage
-        old_username = await app.db.fetchval(
-            """
-            SELECT username
-            FROM users
-            WHERE user_id = $1
-            """,
-            user_id,
-        )
+    await pwd_check(partial["password_hash"], payload["password"])
 
-        try:
-            await app.db.execute(
-                """
-                UPDATE users
-                SET username = $1
-                WHERE user_id = $2
-                """,
-                new_username,
-                user_id,
-            )
-        except asyncpg.exceptions.UniqueViolationError:
-            raise BadInput("Username already selected")
 
-        # if this worked, we should invalidate the old keys
-        await app.storage.raw_invalidate(f"uid:{old_username}", f"uname:{user_id}")
-
-        # also invalidate the new one representing the future username
-        await app.storage.raw_invalidate(f"uid:{new_username}")
-
-        updated.append("username")
-
-    if new_domain is not None:
-        # Check if domain exists
-        domain_info = await get_basic_domain(new_domain)
-
-        # Check if user has perms for getting that domain
-        is_admin = await check_admin(user_id, False)
-        if domain_info["admin_only"] and not is_admin:
-            raise FailedAuth(
-                "You're not an admin but you're "
-                "trying to switch to an admin-only domain."
-            )
-
-        await app.db.execute(
-            """
-            UPDATE users
-            SET domain = $1
-            WHERE user_id = $2
-            """,
-            new_domain,
-            user_id,
-        )
-
-        updated.append("domain")
-
-    if new_subdomain is not None:
-        await app.db.execute(
-            """
-            UPDATE users
-            SET subdomain = $1
-            WHERE user_id = $2
-            """,
-            new_subdomain,
-            user_id,
-        )
-
-        updated.append("subdomain")
-
-    # shorten_subdomain CAN be None.
-    # when it is None, backend will assume the user wants the same domain
-    # for both uploads and shortens
+async def _try_email_patch(user_id: int, email: str) -> None:
     try:
-        new_shorten_domain = payload["shorten_domain"]
-        await app.db.execute(
-            """
-            UPDATE users
-            SET shorten_domain = $1
-            WHERE user_id = $2
-            """,
-            new_shorten_domain,
-            user_id,
-        )
-
-        updated.append("shorten_domain")
-    except KeyError:
-        pass
-
-    if new_shorten_subdomain is not None:
-        await app.db.execute(
-            """
-            UPDATE users
-            SET shorten_subdomain = $1
-            WHERE user_id = $2
-            """,
-            new_shorten_subdomain,
-            user_id,
-        )
-
-        updated.append("shorten_subdomain")
-
-    if password and new_email is not None:
         await app.db.execute(
             """
             UPDATE users
             SET email = $1
             WHERE user_id = $2
             """,
-            new_email,
+            email,
+            user_id,
+        )
+    except asyncpg.UniqueViolationError:
+        raise BadInput("Email is already being used by another user")
+
+
+async def _try_username_patch(user_id: int, username: str) -> None:
+    username = username.lower()
+
+    # the old username is queried because we need to invalidate the respective
+    # uid:<old_username> key in storage. just in case some other user wants the
+    # username in the next 600 seconds
+    old_username = await app.storage.get_username(user_id)
+
+    try:
+        await app.db.execute(
+            """
+            UPDATE users
+            SET username = $1
+            WHERE user_id = $2
+            """,
+            username,
+            user_id,
+        )
+    except asyncpg.exceptions.UniqueViolationError:
+        raise BadInput("Username is already taken")
+
+    await app.storage.raw_invalidate(
+        f"uid:{old_username}", f"uname:{user_id}", f"uid:{username}"
+    )
+
+
+@bp.route("/profile", methods=["PATCH"])
+async def change_profile_handler():
+    if not app.econfig.PATCH_API_PROFILE_ENABLED:
+        raise FeatureDisabled("Changing your profile is currently disabled")
+
+    user_id = await token_check()
+    payload = validate(await request.get_json(), PATCH_PROFILE)
+
+    if "username" in payload:
+        await _check_password(user_id, payload)
+        await _try_username_patch(user_id, payload["username"])
+
+    if "email" in payload:
+        await _check_password(user_id, payload)
+        await _try_email_patch(user_id, payload["email"])
+
+    if "domain" in payload:
+        await _try_domain_patch(user_id, payload["domain"])
+
+    if "subdomain" in payload:
+        await app.db.execute(
+            """
+            UPDATE users
+            SET subdomain = $1
+            WHERE user_id = $2
+            """,
+            payload["subdomain"],
             user_id,
         )
 
-        updated.append("email")
+    if "shorten_domain" in payload:
+        # TODO check validity of domain id inside payload.shorten_domain
+        await app.db.execute(
+            """
+            UPDATE users
+            SET shorten_domain = $1
+            WHERE user_id = $2
+            """,
+            payload["shorten_domain"],
+            user_id,
+        )
 
-    if new_paranoid is not None:
+    if "shorten_subdomain" in payload:
+        await app.db.execute(
+            """
+            UPDATE users
+            SET shorten_subdomain = $1
+            WHERE user_id = $2
+            """,
+            payload["shorten_subdomain"],
+            user_id,
+        )
+
+    if "paranoid" in payload:
         await app.db.execute(
             """
             UPDATE users
             SET paranoid = $1
             WHERE user_id = $2
             """,
-            new_paranoid,
+            payload["paranoid"],
             user_id,
         )
 
-        updated.append("paranoid")
-
-    try:
-        new_consent_state = payload["consented"]
-
+    if "consented" in payload:
         await app.db.execute(
             """
             UPDATE users
-            SET consented = $1
+            SET consented= $1
             WHERE user_id = $2
             """,
-            new_consent_state,
+            payload["consented"],
             user_id,
         )
 
-        updated.append("consented")
-    except KeyError:
-        pass
+    if "new_password" in payload:
+        await _check_password(user_id, payload)
+        await _update_password(user_id, payload["new_password"])
 
-    if password and new_pwd and new_pwd != password:
-        # we are already good from password_check call
-        await _update_password(user_id, new_pwd)
-        updated.append("password")
-
-    return jsonify({"updated_fields": updated})
+    user = await get_basic_user(user_id)
+    return jsonify(user)
 
 
 @bp.route("/limits", methods=["GET"])

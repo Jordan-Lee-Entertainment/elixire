@@ -22,7 +22,7 @@ import aioredis
 p = Path(".")
 sys.path.append(str(p.cwd()))
 
-import config
+import config  # noqa: E402
 
 
 # if alphabet changes in /api/common.py

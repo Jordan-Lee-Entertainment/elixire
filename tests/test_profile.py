@@ -63,13 +63,14 @@ async def test_patch_profile(test_cli_user):
     assert isinstance(profile, dict)
 
     # request 2: updating profile
-    new_uname = username()
+    new_uname = f"test{username()}"
+    new_email = email()
 
     resp = await test_cli_user.patch(
         "/api/profile",
         json={
-            "username": f"test{new_uname}",
-            "email": email(),
+            "username": new_uname,
+            "email": new_email,
             # users dont have paranoid by default, so
             # change that too. the more we change,
             # the better
@@ -83,12 +84,9 @@ async def test_patch_profile(test_cli_user):
     rjson = await resp.json
 
     assert isinstance(rjson, dict)
-    assert isinstance(rjson["updated_fields"], list)
-
-    # check if api acknowledged our updates
-    assert "username" in rjson["updated_fields"]
-    assert "email" in rjson["updated_fields"]
-    assert "paranoid" in rjson["updated_fields"]
+    assert rjson["username"] == new_uname
+    assert rjson["email"] == new_email
+    assert rjson["paranoid"]
 
     # request 3: changing profile info back
     resp = await test_cli_user.patch(
@@ -106,11 +104,9 @@ async def test_patch_profile(test_cli_user):
     rjson = await resp.json
 
     assert isinstance(rjson, dict)
-    assert isinstance(rjson["updated_fields"], list)
-
-    assert "username" in rjson["updated_fields"]
-    assert "email" in rjson["updated_fields"]
-    assert "paranoid" in rjson["updated_fields"]
+    assert rjson["username"] == test_cli_user["username"]
+    assert rjson["email"] == test_cli_user["email"]
+    assert not rjson["paranoid"]
 
 
 async def test_profile_wrong_token(test_cli):

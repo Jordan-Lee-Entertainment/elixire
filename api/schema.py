@@ -67,17 +67,17 @@ def validate(document, schema):
     return validator.document
 
 
-PROFILE_SCHEMA = {
+PATCH_PROFILE = {
     "username": {"type": "username", "required": False, "coerce": str.lower},
     "password": {"type": "password", "required": False},
-    "domain": {"type": "integer", "nullable": True},
-    "subdomain": {"type": "subdomain", "nullable": True},
-    "shorten_domain": {"type": "integer", "nullable": True},
-    "shorten_subdomain": {"type": "subdomain", "nullable": True},
-    "new_password": {"type": "password", "nullable": True},
-    "email": {"type": "email", "nullable": True},
-    "consented": {"type": "boolean", "nullable": True, "required": False},
-    "paranoid": {"type": "boolean", "nullable": True},
+    "email": {"type": "email", "required": False},
+    "domain": {"type": "integer", "required": False},
+    "subdomain": {"type": "subdomain", "required": False, "nullable": True},
+    "shorten_domain": {"type": "integer", "required": False, "nullable": True},
+    "shorten_subdomain": {"type": "subdomain", "required": False, "nullable": True},
+    "new_password": {"type": "password", "required": False, "nullable": True},
+    "consented": {"type": "boolean", "required": False, "nullable": True},
+    "paranoid": {"type": "boolean", "required": False},
 }
 
 REGISTRATION_SCHEMA = {

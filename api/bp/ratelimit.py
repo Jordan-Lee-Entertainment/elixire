@@ -2,6 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import logging
 from dataclasses import dataclass
 from typing import Optional
 
@@ -12,9 +13,6 @@ from api.common import get_ip_addr
 from api.common.auth import token_check
 
 bp = Blueprint("ratelimit", __name__)
-
-import logging
-
 log = logging.getLogger(__name__)
 
 # force ip based ratelimiting on those rules.

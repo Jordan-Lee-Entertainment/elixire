@@ -10,12 +10,12 @@ import pytest
 
 sys.path.append(os.getcwd())
 
-from api.common.user import create_user, delete_user
-from api.common.auth import gen_token
-from api.common.domain import create_domain, delete_domain, set_domain_owner
-from run import app as app_
-from .mock import MockAuditLog
-from .common import Domain, hexs, email, TestClient
+from api.common.user import create_user, delete_user  # noqa: E402
+from api.common.auth import gen_token  # noqa: E402
+from api.common.domain import set_domain_owner  # noqa: E402
+from run import app as app_  # noqa: E402
+from .mock import MockAuditLog  # noqa: E402
+from .common import email, TestClient  # noqa: E402
 
 
 @pytest.yield_fixture(name="event_loop", scope="session")
