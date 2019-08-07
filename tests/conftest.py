@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import asyncio
-import sys
 import os
+import sys
 
 import pytest
 
