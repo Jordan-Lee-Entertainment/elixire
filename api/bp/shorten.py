@@ -38,14 +38,17 @@ async def _get_urlredir(
     return url_toredir
 
 
-@bp.route("/s/<filename>")
-async def shorten_serve_handler(filename):
+@bp.route("/s/<shortname>")
+async def shorten_serve_handler(shortname):
     """Handles serving of shortened links."""
     storage = app.storage
 
     domain_id, subdomain = await storage.get_domain_id(request.host)
-    url_toredir_value = await _get_urlredir(filename, domain_id, subdomain)
-    url_toredir = url_toredir_value.value
+    url_toredir = (
+        await _get_urlredir(
+            shortname=shortname, domain_id=domain_id, subdomain=subdomain
+        )
+    ).value
 
     if not url_toredir:
         raise NotFound("No shortened links found with this name on this domain.")
