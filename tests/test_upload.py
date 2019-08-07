@@ -6,7 +6,7 @@ import io
 import secrets
 import pytest
 import aiohttp
-from .common import png_data
+from .common import png_request
 
 pytestmark = pytest.mark.asyncio
 
@@ -26,7 +26,15 @@ async def check_exists(test_cli, shortname, not_exists=False):
         assert shortname in rjson["files"]
 
 
-async def _test_upload_png(test_cli_user):
+class _AsyncBytesIO:
+    def __init__(self):
+        self.stream = io.BytesIO()
+
+    async def write(self, data):
+        self.stream.write(data)
+
+
+async def test_upload_png(test_cli_user):
     """Test that the upload route works given test data"""
     # file uploads aren't natively available under QuartClient, see:
     # https://gitlab.com/pgjones/quart/issues/147
@@ -34,29 +42,19 @@ async def _test_upload_png(test_cli_user):
     # instead we use aiohttp.FormData to generate a body that is valid
     # for the post() call
 
-    data = aiohttp.FormData()
-
-    data.add_field("file", png_data(), filename="random.png", content_type="image/png")
-
-    payload = data._gen_form_data()
-    body = io.BytesIO()
-    payload.write(body)
-
-    resp = await test_cli_user.post(
-        "/api/upload", headers={"content-type": "multipart/form-data"}, data=body
-    )
+    headers, data = await png_request()
+    resp = await test_cli_user.post("/api/upload", headers=headers, data=data)
 
     assert resp.status_code == 200
     respjson = await resp.json
     assert isinstance(respjson, dict)
     assert isinstance(respjson["url"], str)
-    assert isinstance(respjson["delete_url"], str)
     await check_exists(test_cli_user, respjson["shortname"])
 
 
-async def _test_delete_file(test_cli_user):
-    # TODO file
-    resp = await test_cli_user.post("/api/upload")
+async def test_delete_file(test_cli_user):
+    headers, data = await png_request()
+    resp = await test_cli_user.post("/api/upload", headers=headers, data=data)
 
     assert resp.status_code == 200
     respjson = await resp.json
