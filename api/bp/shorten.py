@@ -4,7 +4,6 @@
 
 import pathlib
 import urllib.parse
-from typing import Optional
 
 from quart import Blueprint, jsonify, redirect, current_app as app, request
 
