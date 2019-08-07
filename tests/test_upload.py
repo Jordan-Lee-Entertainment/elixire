@@ -26,14 +26,6 @@ async def check_exists(test_cli, shortname, not_exists=False):
         assert shortname in rjson["files"]
 
 
-class _AsyncBytesIO:
-    def __init__(self):
-        self.stream = io.BytesIO()
-
-    async def write(self, data):
-        self.stream.write(data)
-
-
 async def test_upload_png(test_cli_user):
     """Test that the upload route works given test data"""
     # file uploads aren't natively available under QuartClient, see:
