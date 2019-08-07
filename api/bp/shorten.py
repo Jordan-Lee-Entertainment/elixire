@@ -20,20 +20,28 @@ bp = Blueprint("shorten", __name__)
 
 
 async def _get_urlredir(
-    *, shortname: str, domain_id: str, subdomain: Optional[str]
+    *, shortname: str, domain_id: str, subdomain: str
 ) -> StorageValue:
     """Return the target URL (``toredir``) for a shorten."""
 
-    # TODO: we still need to handle `subdomain == ''` for when the file lives
-    #       on both a wildcard and the root domain
+    # NOTE this is a copy from the internal _get_fspath
+    # function in api.bp.fetch.
 
-    if subdomain is None:
-        # shorten lives on a subdomain
-        url_toredir = await app.storage.get_urlredir(shortname, domain_id)
-        return url_toredir
+    # when searching for the file, the subdomain can be applicable
+    # or NOT while searching. which means that when we're searching with it,
+    # if it fails, we MUST search with subdomain=None. that only happens for
+    # legacy files that have subdomain as NULL on the database.
 
-    # shorten lives on the root domain
-    url_toredir = await app.storage.get_urlredir(shortname, domain_id, subdomain)
+    # for shortens uploaded as root, the subdomain becomes "" (empty string)
+    # which is completly valid to put on the search.
+    url_toredir = await app.storage.get_urlredir(
+        shortname=shortname, domain_id=domain_id, subdomain=subdomain
+    )
+
+    if not url_toredir:
+        url_toredir = await app.storage.get_urlredir(
+            shortname=shortname, domain_id=domain_id, subdomain=None
+        )
 
     return url_toredir
 
@@ -151,7 +159,7 @@ async def shorten_handler():
         user_id,
         url_toredir,
         domain_id,
-        subdomain or None,
+        subdomain,
     )
 
     # appended to generated filename
