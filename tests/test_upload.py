@@ -2,8 +2,10 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import pytest
+import io
 import secrets
+import pytest
+import aiohttp
 from .common import png_data
 
 pytestmark = pytest.mark.asyncio
@@ -26,12 +28,22 @@ async def check_exists(test_cli, shortname, not_exists=False):
 
 async def _test_upload_png(test_cli_user):
     """Test that the upload route works given test data"""
-    # file uploads not available yet.
+    # file uploads aren't natively available under QuartClient, see:
     # https://gitlab.com/pgjones/quart/issues/147
+
+    # instead we use aiohttp.FormData to generate a body that is valid
+    # for the post() call
+
+    data = aiohttp.FormData()
+
+    data.add_field("file", png_data(), filename="random.png", content_type="image/png")
+
+    payload = data._gen_form_data()
+    body = io.BytesIO()
+    payload.write(body)
+
     resp = await test_cli_user.post(
-        "/api/upload",
-        headers={"content-type": "multipart/form-data"},
-        form={"file": (png_data(), "random.png"), "content-type": "image/png"},
+        "/api/upload", headers={"content-type": "multipart/form-data"}, data=body
     )
 
     assert resp.status_code == 200
