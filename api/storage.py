@@ -401,6 +401,8 @@ class Storage:
         """Get the path to an uploaded file by its shortname, domain ID, and
         optional subdomain (empty string means root, None means any subdomain).
         """
+
+        # NOTE keep in mind get_fspath and get_urlredir must be in sync.
         key = f"fspath:{domain_id}:{subdomain}:{shortname}"
 
         storage_value = await self.get(key, str)
