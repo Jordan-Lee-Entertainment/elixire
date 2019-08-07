@@ -5,6 +5,7 @@
 import pytest
 from .common import hexs
 
+from api.storage import solve_domain
 from api.common.domain import create_domain, delete_domain
 
 pytestmark = pytest.mark.asyncio
@@ -68,6 +69,12 @@ async def test_domains_common_functions(test_cli_admin):
     )
 
     assert row is None
+
+
+async def test_domains_solving():
+    possibilities = solve_domain("sample.domain.tld")
+    assert len(possibilities) == 3
+    assert possibilities == ["*.sample.domain.tld", "sample.domain.tld", "*.domain.tld"]
 
 
 async def assert_domains(resp):
