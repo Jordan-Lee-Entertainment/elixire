@@ -57,7 +57,7 @@ async def test_domain_fixture(app):
     async with app.app_context():
         domain_id = await create_domain(domain_name)
 
-    yield Domain(domain_name, domain_id)
+    yield Domain(domain_id, domain_name)
 
     async with app.app_context():
         await delete_domain(domain_id)
