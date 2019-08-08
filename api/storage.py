@@ -611,22 +611,26 @@ class Storage:
 
         return domain_id, _subdomain_valid(subdomain, domain_name)
 
-    async def get_domain_shorten(self, shortname: str) -> Optional[int]:
+    async def get_domain_shorten(
+        self, shortname: str
+    ) -> Optional[Tuple[int, Optional[str]]]:
         """Get a domain ID for a shorten."""
-        return await self.db.fetchval(
+        return await self.db.fetchrow(
             """
-            SELECT domain
+            SELECT domain, subdomain
             FROM shortens
             WHERE filename = $1
             """,
             shortname,
         )
 
-    async def get_domain_file(self, shortname: str) -> Optional[int]:
-        """Get a domain ID for a file."""
-        return await self.db.fetchval(
+    async def get_domain_file(
+        self, shortname: str
+    ) -> Optional[Tuple[int, Optional[str]]]:
+        """Get a tuple of domain id and subdomain for a file."""
+        return await self.db.fetchrow(
             """
-            SELECT domain
+            SELECT domain, subdomain
             FROM files
             WHERE filename = $1
             """,
