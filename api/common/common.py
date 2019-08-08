@@ -13,7 +13,8 @@ from typing import Tuple
 import asyncpg
 from quart import current_app as app, request
 
-from ..errors import FailedAuth, NotFound
+from api.errors import FailedAuth, NotFound
+from api.storage import object_key
 
 ALPHABET = string.ascii_lowercase + string.digits
 log = logging.getLogger(__name__)
@@ -282,7 +283,9 @@ async def delete_file(file_name: str, user_id, set_delete=True):
                 file_name,
             )
 
-    await app.storage.raw_invalidate(f"fspath:{domain_id}:{subdomain}:{file_name}")
+    await app.storage.raw_invalidate(
+        object_key("fspath", domain_id, subdomain, file_name)
+    )
 
 
 async def delete_shorten(shortname: str, user_id: int):
@@ -308,7 +311,9 @@ async def delete_shorten(shortname: str, user_id: int):
         shortname,
     )
 
-    await app.storage.raw_invalidate(f"redir:{domain_id}:{subdomain}:{shortname}")
+    await app.storage.raw_invalidate(
+        object_key("redir", domain_id, subdomain, shortname)
+    )
 
 
 async def check_bans(user_id: int):

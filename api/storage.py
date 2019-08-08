@@ -54,6 +54,15 @@ def prefix(user_id: Union[str, int]) -> str:
     return f"uid:{user_id}"
 
 
+def object_key(
+    prefix: str, domain_id: int, subdomain: Optional[str], shortname: str
+) -> str:
+    """Make a key for a given object."""
+    # protect against people with subdomains of "None"
+    subdomain = subdomain or "@none@"
+    return f"{prefix}:{domain_id}:{subdomain}:{shortname}"
+
+
 def solve_domain(domain_name: str, *, redis: bool = False) -> List[str]:
     """Solve a domain into its Redis keys.
 
@@ -403,7 +412,7 @@ class Storage:
         """
 
         # NOTE keep in mind get_fspath and get_urlredir must be in sync.
-        key = f"fspath:{domain_id}:{subdomain}:{shortname}"
+        key = object_key("fspath", domain_id, subdomain, shortname)
 
         storage_value = await self.get(key, str)
 
@@ -441,7 +450,7 @@ class Storage:
     ) -> StorageValue:
         """Get a redirection of an URL."""
         # NOTE copied from get_fspath()
-        key = f"redir:{domain_id}:{subdomain}:{shortname}"
+        key = object_key("redir", domain_id, subdomain, shortname)
         storage_value = await self.get(key, str)
 
         if storage_value.was_cached:
