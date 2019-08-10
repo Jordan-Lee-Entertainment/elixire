@@ -2,6 +2,8 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import pathlib
+import os.path
 import secrets
 import pytest
 from .common import png_request
@@ -22,6 +24,20 @@ async def check_exists(test_cli, shortname, not_exists=False):
         assert shortname not in rjson["files"]
     else:
         assert shortname in rjson["files"]
+        filedata = rjson["files"][shortname]
+        url = pathlib.Path(filedata["url"])
+        _, extension = os.path.splitext(url.parts[-1])
+
+        # check the file is available on the domain+subdomain it was uplaoded on
+        resp = await test_cli.get(
+            f"/i/{shortname}{extension}", headers={"host": url.parts[1]}
+        )
+        assert resp.status_code == 200
+
+        resp = await test_cli.get(
+            f"/i/{shortname}{extension}", headers={"host": "undefined.com"}
+        )
+        assert resp.status_code == 404
 
 
 async def test_upload_png(test_cli_user):
@@ -31,6 +47,8 @@ async def test_upload_png(test_cli_user):
 
     # instead we use aiohttp.FormData to generate a body that is valid
     # for the post() call
+
+    # TODO set to some random domain_id and subdomain for nicer testing
 
     headers, data = await png_request()
     resp = await test_cli_user.post("/api/upload", headers=headers, data=data)
