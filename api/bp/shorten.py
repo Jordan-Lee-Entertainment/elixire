@@ -13,7 +13,7 @@ from api.common import get_user_domain_info, transform_wildcard, FileNameType
 from api.snowflake import get_snowflake
 from api.permissions import Permissions, domain_permissions
 from api.common.profile import gen_user_shortname
-from api.storage import StorageValue
+from api.storage import StorageValue, object_key
 
 bp = Blueprint("shorten", __name__)
 
@@ -144,9 +144,6 @@ async def shorten_handler():
     await domain_permissions(app, domain_id, Permissions.SHORTEN)
     domain = transform_wildcard(domain, subdomain)
 
-    # make sure cache doesn't fuck up
-    await app.storage.raw_invalidate(f"redir:{domain_id}:{subdomain}:{redir_rname}")
-
     await app.db.execute(
         """
         INSERT INTO shortens (shorten_id, filename,
@@ -161,8 +158,12 @@ async def shorten_handler():
         subdomain,
     )
 
+    await app.storage.raw_invalidate(
+        object_key("redir", domain_id, subdomain, redir_rname)
+    )
+
     # appended to generated filename
     dpath = pathlib.Path(domain)
-    fpath = dpath / "s" / f"{redir_rname}"
+    fpath = dpath / "s" / redir_rname
 
     return jsonify({"url": f"https://{str(fpath)}"})
