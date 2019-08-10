@@ -3,8 +3,26 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
+import secrets
 
 pytestmark = pytest.mark.asyncio
+
+
+async def test_basic_storage_operations(app):
+    key = secrets.token_hex(8)
+    value = secrets.token_hex(8)
+
+    try:
+        upstream_value = await app.storage.get(key)
+        assert not upstream_value
+
+        await app.storage.set(key, value)
+
+        upstream_value = await app.storage.get(key)
+        assert upstream_value
+        assert upstream_value.value == value
+    finally:
+        await app.storage.raw_invalidate(key)
 
 
 async def test_user_storage(test_cli_user):
