@@ -27,7 +27,6 @@ async def test_shorten(test_cli_user):
 
 async def test_shorten_complete(test_cli_user):
     url = "https://elixi.re"
-
     resp = await test_cli_user.post("/api/shorten", json={"url": url})
 
     assert resp.status_code == 200
@@ -37,23 +36,14 @@ async def test_shorten_complete(test_cli_user):
 
     given_shorten = data["url"].split("/")[-1]
 
-    # No, we can't call GET /s/whatever to test this route.
-    # and probably that won't happen to GET /i/whatever too.
-    # because since this is a test server, it runs in an entirely
-    # different domain (127.0.0.1:random_port), instead of
-    # localhost:8081.
-    listdata = await test_cli_user.get("/api/list?page=0")
+    resp = await test_cli_user.get("/api/list?page=0")
+    assert resp.status_code == 200
+    rjson = await resp.json
 
-    assert listdata.status_code == 200
-
-    listdata = await listdata.json
-
-    shortens = listdata["shortens"]
     try:
-        key = next(k for k in shortens if k == given_shorten)
-        shorten = shortens[key]
-    except StopIteration:
-        raise RuntimeError("shorten not found")
+        shorten = rjson["shortens"][given_shorten]
+    except KeyError:
+        raise AssertionError("shorten not found")
 
     assert shorten["redirto"] == url
 
