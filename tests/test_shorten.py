@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
+from pathlib import Path
 from .common import token, username
 
 pytestmark = pytest.mark.asyncio
@@ -34,18 +35,25 @@ async def test_shorten_complete(test_cli_user):
     assert isinstance(data, dict)
     assert isinstance(data["url"], str)
 
-    given_shorten = data["url"].split("/")[-1]
+    shorten_url = Path(data["url"])
+    domain = shorten_url.parts[1]
+    shorten = shorten_url.parts[-1]
 
     resp = await test_cli_user.get("/api/list?page=0")
     assert resp.status_code == 200
     rjson = await resp.json
 
     try:
-        shorten = rjson["shortens"][given_shorten]
+        shorten_data = rjson["shortens"][shorten]
     except KeyError:
         raise AssertionError("shorten not found")
 
-    assert shorten["redirto"] == url
+    assert shorten_data["redirto"] == url
+    resp = await test_cli_user.get(f"/s/{shorten}", headers={"host": domain})
+    assert resp.status_code == 302
+
+    resp = await test_cli_user.get(f"/s/{shorten}", headers={"host": "undefined.com"})
+    assert resp.status_code == 404
 
 
 async def test_shorten_wrong_scheme(test_cli_user):
