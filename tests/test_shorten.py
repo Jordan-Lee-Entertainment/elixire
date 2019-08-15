@@ -51,6 +51,7 @@ async def test_shorten_complete(test_cli_user):
     assert shorten_data["redirto"] == url
     resp = await test_cli_user.get(f"/s/{shorten}", headers={"host": domain})
     assert resp.status_code == 302
+    assert resp.headers["location"] == url
 
     resp = await test_cli_user.get(f"/s/{shorten}", headers={"host": "undefined.com"})
     assert resp.status_code == 404
