@@ -3,11 +3,10 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-import secrets
 import os.path
 from urllib.parse import urlparse
 
-from .common import png_request
+from .common import png_request, hexs
 
 pytestmark = pytest.mark.asyncio
 
@@ -80,7 +79,7 @@ async def test_upload_png(test_cli_user):
 
 async def test_delete_nonexist(test_cli_user):
     """Test deletions of files that don't exist."""
-    rand_file = secrets.token_hex(20)
+    rand_file = hexs(20)
 
     resp_del = await test_cli_user.delete(f"/api/files/{rand_file}")
     assert resp_del.status_code == 404
