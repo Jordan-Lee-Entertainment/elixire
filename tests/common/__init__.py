@@ -4,8 +4,8 @@
 
 import collections
 
-from .generators import *
-from .client import *
+from .generators import *  # NOQA
+from .client import *  # NOQA
 
 
 Domain = collections.namedtuple("Domain", ["id", "name"])
