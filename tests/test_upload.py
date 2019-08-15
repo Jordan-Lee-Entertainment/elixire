@@ -90,6 +90,42 @@ async def test_upload_png(test_cli_user, test_domain):
     assert resp.status_code == 404
 
 
+async def test_legacy_file_resolution(test_cli_user, test_domain):
+    resp = await test_cli_user.post(
+        "/api/upload", **(await png_request()), query_string={"domain": test_domain.id}
+    )
+
+    assert resp.status_code == 200
+    json = await resp.json
+    shortname = json["shortname"]
+
+    # manually set the subdomain column to NULL, which means v2 behavior
+    # (accessible on both root and subdomain)
+    resp = await test_cli_user.app.db.execute(
+        """
+        UPDATE files
+        SET subdomain = NULL
+        WHERE filename = $1 AND subdomain = ''
+        """,
+        shortname,
+    )
+    assert resp == "UPDATE 1"
+
+    host_without_wildcard = test_domain.name.replace("*.", "")
+    url = f"/i/{shortname}.png"
+
+    resp = await test_cli_user.get(url, headers={"host": host_without_wildcard})
+    assert resp.status_code == 200
+
+    resp = await test_cli_user.get(
+        url, headers={"host": f"subdomain.{host_without_wildcard}"}
+    )
+    assert resp.status_code == 200
+
+    resp = await test_cli_user.get(url, headers={"host": "undefined.com"})
+    assert resp.status_code == 404
+
+
 async def test_delete_file(test_cli_user):
     resp = await test_cli_user.post("/api/upload", **(await png_request()))
 
