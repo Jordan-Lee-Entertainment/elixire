@@ -17,7 +17,6 @@ import io
 import random
 import secrets
 import string
-from typing import Tuple
 
 import aiohttp
 
@@ -49,21 +48,6 @@ def png_data() -> io.BytesIO:
     )
 
 
-async def png_request() -> Tuple[dict, bytes]:
-    """Generate headers and a body to send containing a PNG file."""
-    form = aiohttp.FormData()
-    form.add_field("file", png_data(), filename="random.png", content_type="image/png")
-    writer = form._gen_form_data()
-
-    body = _AsyncBytesIO()
-    await writer.write(body)
-
-    return (
-        {"content-type": f"multipart/form-data; boundary={writer._boundary_value}"},
-        body.stream.getvalue(),
-    )
-
-
 def token() -> str:
     return secrets.token_urlsafe(random.randint(100, 300))
 
@@ -81,3 +65,48 @@ def email() -> str:
     domain = hexs()
 
     return f"{name}@{domain}.com"
+
+
+class FormData:
+    """An abstraction over handling the creation of raw multipart form data.
+
+    This is needed because Quart doesn't provide a facility to use multipart
+    form data in its test client yet.
+
+    To use it, construct it and use :meth:`add_field` to attach data. Then
+    call :meth:`write` to generate the form data, then unpack the value of
+    :attr:`request` into an HTTP method call on the test client.
+    """
+
+    def __init__(self):
+        self.form = aiohttp.FormData()
+        self.body = _AsyncBytesIO()
+        self.writer = None
+
+    def add_field(self, *args, **kwargs):
+        return self.form.add_field(*args, **kwargs)
+
+    async def write(self):
+        self.writer = self.form._gen_form_data()
+        await self.writer.write(self.body)
+
+    @property
+    def request(self):
+        return {
+            "headers": {
+                "content-type": f"multipart/form-data; boundary={self.writer._boundary_value}"
+            },
+            "data": self.body.stream.getvalue(),
+        }
+
+
+async def png_request() -> dict:
+    """Generate keyword arguments to pass to an HTTP method function that would
+    specify a multipart form body to upload a random PNG file.
+    """
+    fd = FormData()
+    fd.add_field(
+        "file", png_data(), filename=f"{hexs(10)}.png", content_type="image/png"
+    )
+    await fd.write()
+    return fd.request

@@ -2,17 +2,18 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import pathlib
-import os.path
-import secrets
 import pytest
+import secrets
+import os.path
+from urllib.parse import urlparse
+
 from .common import png_request
 
 pytestmark = pytest.mark.asyncio
 
 
-async def check_exists(test_cli, shortname, not_exists=False):
-    """Check if a file exists, given the shortname, token, etc."""
+async def check_exists(test_cli, shortname, *, reverse=False):
+    """Check if a file exists (or not) given the shortname."""
     resp = await test_cli.get("/api/list?page=0")
 
     assert resp.status_code == 200
@@ -20,24 +21,27 @@ async def check_exists(test_cli, shortname, not_exists=False):
 
     assert isinstance(rjson["files"], dict)
 
-    if not_exists:
+    if reverse:
         assert shortname not in rjson["files"]
-    else:
-        assert shortname in rjson["files"]
-        filedata = rjson["files"][shortname]
-        url = pathlib.Path(filedata["url"])
-        _, extension = os.path.splitext(url.parts[-1])
+        return
 
-        # check the file is available on the domain+subdomain it was uplaoded on
-        resp = await test_cli.get(
-            f"/i/{shortname}{extension}", headers={"host": url.parts[1]}
-        )
-        assert resp.status_code == 200
+    assert shortname in rjson["files"]
 
-        resp = await test_cli.get(
-            f"/i/{shortname}{extension}", headers={"host": "undefined.com"}
-        )
-        assert resp.status_code == 404
+    file = rjson["files"][shortname]
+    url = urlparse(file["url"])
+    _, extension = os.path.splitext(url.path.split("/")[-1])
+
+    # check the file is available on the domain+subdomain it was uploaded on
+    resp = await test_cli.get(
+        f"/i/{shortname}{extension}", headers={"host": url.netloc}
+    )
+    assert resp.status_code == 200
+
+    # check the file isn't available on other domains
+    resp = await test_cli.get(
+        f"/i/{shortname}{extension}", headers={"host": "undefined.com"}
+    )
+    assert resp.status_code == 404
 
 
 async def test_upload_png(test_cli_user):
@@ -50,8 +54,7 @@ async def test_upload_png(test_cli_user):
 
     # TODO set to some random domain_id and subdomain for nicer testing
 
-    headers, data = await png_request()
-    resp = await test_cli_user.post("/api/upload", headers=headers, data=data)
+    resp = await test_cli_user.post("/api/upload", **(await png_request()))
 
     assert resp.status_code == 200
     respjson = await resp.json
@@ -59,10 +62,7 @@ async def test_upload_png(test_cli_user):
     assert isinstance(respjson["url"], str)
     await check_exists(test_cli_user, respjson["shortname"])
 
-
-async def test_delete_file(test_cli_user):
-    headers, data = await png_request()
-    resp = await test_cli_user.post("/api/upload", headers=headers, data=data)
+    resp = await test_cli_user.post("/api/upload", **(await png_request()))
 
     assert resp.status_code == 200
     respjson = await resp.json
@@ -75,7 +75,7 @@ async def test_delete_file(test_cli_user):
 
     resp_del = await test_cli_user.delete(f"/api/files/{short}")
     assert resp_del.status_code == 204
-    await check_exists(test_cli_user, respjson["shortname"], True)
+    await check_exists(test_cli_user, respjson["shortname"], reverse=True)
 
 
 async def test_delete_nonexist(test_cli_user):
