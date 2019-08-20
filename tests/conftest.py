@@ -3,9 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import asyncio
-import secrets
-import sys
 import os
+import sys
 
 import pytest
 
@@ -13,10 +12,14 @@ sys.path.append(os.getcwd())
 
 from api.common.user import create_user, delete_user  # noqa: E402
 from api.common.auth import gen_token  # noqa: E402
-from api.common.domain import set_domain_owner  # noqa: E402
+from api.common.domain import (
+    create_domain,
+    delete_domain,
+    set_domain_owner,
+)  # noqa: E402
 from run import app as app_  # noqa: E402
 from .mock import MockAuditLog  # noqa: E402
-from .common import email, TestClient  # noqa: E402
+from .common import Domain, hexs, email, TestClient  # noqa: E402
 
 
 @pytest.yield_fixture(name="event_loop", scope="session")
@@ -47,6 +50,19 @@ async def app_fixture(event_loop):
     await app_.shutdown()
 
 
+@pytest.fixture(name="test_domain")
+async def test_domain_fixture(app):
+    domain_name = f"*.test-{hexs(10)}.tld"
+
+    async with app.app_context():
+        domain_id = await create_domain(domain_name)
+
+    yield Domain(domain_id, domain_name)
+
+    async with app.app_context():
+        await delete_domain(domain_id)
+
+
 @pytest.fixture(name="test_cli")
 def test_cli_fixture(app):
     return app.test_client()
@@ -57,8 +73,8 @@ def test_cli_fixture(app):
 # now its being redone with that code + litecord code
 # https://gitlab.com/litecord/litecord/merge_requests/42
 async def _user_fixture_setup():
-    username = secrets.token_hex(6)
-    password = secrets.token_hex(6)
+    username = hexs(6)
+    password = hexs(6)
     user_email = email()
 
     user = await create_user(username, password, user_email)

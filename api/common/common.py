@@ -13,7 +13,8 @@ from typing import Tuple
 import asyncpg
 from quart import current_app as app, request
 
-from ..errors import FailedAuth, NotFound
+from api.errors import FailedAuth, NotFound
+from api.storage import object_key
 
 ALPHABET = string.ascii_lowercase + string.digits
 log = logging.getLogger(__name__)
@@ -214,8 +215,14 @@ async def delete_file(file_name: str, user_id, set_delete=True):
     NotFound
         If no file is found.
     """
-    domain_id = await app.storage.get_domain_file(file_name)
+    domain_data = await app.storage.get_domain_file(file_name)
 
+    if domain_data is None:
+        raise NotFound("You have no files with this name.")
+
+    domain_id, subdomain = domain_data
+
+    # TODO maybe move this to app start instead of on every delete_file()
     try:
         await app.db.execute(
             """
@@ -276,30 +283,37 @@ async def delete_file(file_name: str, user_id, set_delete=True):
                 file_name,
             )
 
-    await app.storage.raw_invalidate(f"fspath:{domain_id}:{file_name}")
+    await app.storage.raw_invalidate(
+        object_key("fspath", domain_id, subdomain, file_name)
+    )
 
 
 async def delete_shorten(shortname: str, user_id: int):
     """Remove a shorten from the system"""
-    exec_out = await app.db.execute(
+    domain_data = await app.storage.get_domain_shorten(shortname)
+
+    # By doing this, we're cutting down DB calls by half
+    # and it still checks for user
+    if domain_data is None:
+        raise NotFound("You have no shortens with this name.")
+
+    domain_id, subdomain = domain_data
+
+    await app.db.execute(
         """
         UPDATE shortens
         SET deleted = true
         WHERE uploader = $1
-        AND filename = $2
-        AND deleted = false
+          AND filename = $2
+          AND deleted = false
         """,
         user_id,
         shortname,
     )
 
-    # By doing this, we're cutting down DB calls by half
-    # and it still checks for user
-    if exec_out == "UPDATE 0":
-        raise NotFound("You have no shortens with this name.")
-
-    domain_id = await app.storage.get_domain_shorten(shortname)
-    await app.storage.raw_invalidate(f"redir:{domain_id}:{shortname}")
+    await app.storage.raw_invalidate(
+        object_key("redir", domain_id, subdomain, shortname)
+    )
 
 
 async def check_bans(user_id: int):

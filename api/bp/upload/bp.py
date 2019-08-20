@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from quart import Blueprint, jsonify, current_app as app, request
 
+from api.storage import object_key
 from api.common import get_user_domain_info, transform_wildcard
 from api.common.auth import check_admin, token_check
 from api.permissions import Permissions, domain_permissions
@@ -191,9 +192,9 @@ async def upload_handler():
         """
         INSERT INTO files (
             file_id, mimetype, filename,
-            file_size, uploader, fspath, domain
+            file_size, uploader, fspath, domain, subdomain
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         """,
         file_id,
         ctx.file.mime,
@@ -202,10 +203,12 @@ async def upload_handler():
         user_id,
         file.raw_path,
         domain_id,
+        subdomain_name,
     )
 
-    # TODO UploadFile.cache_key property
-    await app.storage.raw_invalidate(f"fspath:{domain_id}:{shortname}")
+    await app.storage.raw_invalidate(
+        object_key("fspath", domain_id, subdomain_name, shortname)
+    )
 
     # write the file to filesystem
     stream = await ctx.strip_exif()

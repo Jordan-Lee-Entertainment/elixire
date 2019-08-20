@@ -7,8 +7,116 @@ from typing import Optional
 # TODO replace by app and remove current app parameters
 from quart import current_app as app
 
+from api.storage import solve_domain
 from api.common.utils import dict_
 from api.errors import NotFound
+
+
+async def create_domain(
+    domain: str,
+    *,
+    admin_only: bool = False,
+    official: bool = False,
+    permissions: int = 3,
+    owner_id: int = None,
+) -> int:
+    """Create a domain.
+
+    The related cache keys will be invalidated for you.
+    """
+    domain_id = await app.db.fetchval(
+        """
+        INSERT INTO domains
+            (domain, admin_only, official, permissions)
+        VALUES
+            ($1, $2, $3, $4)
+        RETURNING domain_id
+        """,
+        domain,
+        admin_only,
+        official,
+        permissions,
+    )
+
+    if owner_id:
+        await set_domain_owner(domain_id, owner_id)
+
+    # invalidate cache
+    possibilities = solve_domain(domain)
+    await app.storage.raw_invalidate(*possibilities)
+
+    return domain_id
+
+
+async def delete_domain(domain_id: int) -> dict:
+    """Delete a domain.
+
+    The related cache keys will be invalidated for you.
+    """
+    domain_name = await app.db.fetchval(
+        """
+        SELECT domain
+        FROM domains
+        WHERE domain_id = $1
+        """,
+        domain_id,
+    )
+
+    files_count = await app.db.execute(
+        """
+        UPDATE files set domain = 0 WHERE domain = $1
+        """,
+        domain_id,
+    )
+
+    shorten_count = await app.db.execute(
+        """
+        UPDATE shortens set domain = 0 WHERE domain = $1
+        """,
+        domain_id,
+    )
+
+    users_count = await app.db.execute(
+        """
+        UPDATE users set domain = 0 WHERE domain = $1
+        """,
+        domain_id,
+    )
+
+    users_shorten_count = await app.db.execute(
+        """
+        UPDATE users set shorten_domain = 0 WHERE shorten_domain = $1
+        """,
+        domain_id,
+    )
+
+    await app.db.execute(
+        """
+        DELETE FROM domain_owners
+        WHERE domain_id = $1
+        """,
+        domain_id,
+    )
+
+    result = await app.db.execute(
+        """
+        DELETE FROM domains
+        WHERE domain_id = $1
+        """,
+        domain_id,
+    )
+
+    # invalidate cache
+    keys = solve_domain(domain_name)
+    await app.storage.raw_invalidate(*keys)
+
+    return {
+        "file_move_result": files_count,
+        "shorten_move_result": shorten_count,
+        "users_move_result": users_count,
+        "users_shorten_move_result": users_shorten_count,
+        "result": result,
+    }
 
 
 async def _domain_file_stats(domain_id, *, ignore_consented: bool = False) -> tuple:
@@ -153,16 +261,8 @@ async def get_basic_domain_by_domain(
 ) -> Optional[dict]:
     """Fetch a domain's info by the string representing it."""
 
-    # there can be three types of inputs
-    #  - just the domain (a.tld)
-    #  - the domain with a subdomain (b.a.tld)
-    #  - the wildcard domain (*.a.tld)
-    # all three can exist inside the domains table.
-    # since we don't know which domain we're given, we transform
-    # it into all three, then give a search.
-
-    subd_wildcard_name = domain.replace(domain.split(".")[0], "*")
-    domain_wildcard_name = "*." + domain
+    domains_to_check = solve_domain(domain)
+    assert len(domains_to_check) == 3
 
     domain_info = await app.db.fetchrow(
         """
@@ -172,9 +272,7 @@ async def get_basic_domain_by_domain(
         OR domain = $2
         OR domain = $3
         """,
-        domain,
-        subd_wildcard_name,
-        domain_wildcard_name,
+        *domains_to_check,
     )
 
     if raise_notfound and not domain_info:

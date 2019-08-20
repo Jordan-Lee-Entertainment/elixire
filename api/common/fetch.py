@@ -37,7 +37,7 @@ async def get_file(file_id: int) -> Optional[dict]:
     row = await app.db.fetchrow(
         """
         SELECT file_id, mimetype, filename, file_size,
-            uploader, fspath, deleted, domain
+            uploader, fspath, deleted, domain, subdomain
         FROM files
         WHERE file_id = $1
         """,
@@ -64,7 +64,7 @@ async def get_shorten(shorten_id: int) -> Optional[dict]:
     row = await app.db.fetchrow(
         """
         SELECT shorten_id, filename, redirto, uploader,
-            deleted, domain
+            deleted, domain, subdomain
         FROM shortens
         WHERE shorten_id = $1
         """,

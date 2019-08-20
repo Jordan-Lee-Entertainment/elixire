@@ -54,24 +54,33 @@ def prefix(user_id: Union[str, int]) -> str:
     return f"uid:{user_id}"
 
 
-def solve_domain(domain_name: str, redis: bool = True) -> List[str]:
+def object_key(
+    prefix: str, domain_id: int, subdomain: Optional[str], shortname: str
+) -> str:
+    """Make a key for a given object."""
+    # protect against people with subdomains of "None"
+    subdomain = subdomain or "@none@"
+    return f"{prefix}:{domain_id}:{subdomain}:{shortname}"
+
+
+def solve_domain(domain_name: str, *, redis: bool = False) -> List[str]:
     """Solve a domain into its Redis keys.
 
     Returns a prefixed namespace when ``redis`` is true.
     """
-    k = domain_name.find(".")
-    raw_wildcard = f"*.{domain_name}"
-    wildcard_name = f"*.{domain_name[k + 1:]}"
 
-    domains = [
-        # example: domain_name = elixi.re
-        # wildcard_name = *.elixi.re
-        # example 2: domain_name = pretty.please-yiff.me
-        # wildcard_name = *.please-yiff.me
-        raw_wildcard,
-        domain_name,
-        wildcard_name,
-    ]
+    # when given a domain, such as b.a.tld, there could be three
+    # keys we should check, in order:
+    #  *.b.a.tld
+    #  b.a.tld
+    #  *.a.tld
+
+    domain_as_wildcard = f"*.{domain_name}"
+
+    period_index = domain_name.find(".")
+    subdomain_wildcarded = f"*.{domain_name[period_index + 1:]}"
+
+    domains = [domain_as_wildcard, domain_name, subdomain_wildcarded]
 
     if redis:
         return list(map(lambda d: f"domain_id:{d}", domains))
@@ -79,49 +88,70 @@ def solve_domain(domain_name: str, redis: bool = True) -> List[str]:
     return domains
 
 
-class StorageFlag(enum.Enum):
-    """Flags for the result of Storage.get
+def _get_subdomain(domain: str) -> str:
+    """Return the subdomain of a domain.
 
-     - Found means the key was found on the cache.
-     - NotFound means the key was not found on cache.
-     - PostgresNotFound means the cache said postgres does not have the data.
+    Because this function does not notice TLDs, passing "elixi.re" will yield
+    "elixi" as the subdomain. So, you must only use this function on domains
+    that you are sure have a subdomain.
     """
+    try:
+        period_index = domain.index(".")
+    except ValueError:
+        return ""
 
-    Found = 1
-    NotFound = 2
-    PostgresNotFound = 3
+    return domain[:period_index]
 
 
-STORAGE_FLAG_NOT_FOUND = (StorageFlag.NotFound, StorageFlag.PostgresNotFound)
+class StorageFlag(enum.Enum):
+    """An enum representing how something from :class:`Storage` was resolved."""
+
+    #: The value was found.
+    FOUND = 1
+
+    #: The value was not found in Redis, but it might exist in Postgres.
+    NOT_CACHED = 2
+
+    #: The value doesn't exist, cached or not.
+    NOT_FOUND = 3
 
 
 class StorageValue:
-    """Represents a value from Redis."""
+    """A class representing a value returned by :class:`Storage`."""
 
-    def __init__(self, flag: StorageFlag, value: Any):
+    def __init__(self, value: Any, *, flag: StorageFlag = StorageFlag.FOUND) -> None:
         self.flag = flag
         self.value = value
 
+    @property
+    def was_found(self) -> bool:
+        return self.flag is StorageFlag.FOUND
+
+    @property
+    def was_cached(self) -> bool:
+        return self.flag is not StorageFlag.NOT_CACHED
+
     def __bool__(self) -> bool:
-        return self.flag in STORAGE_FLAG_NOT_FOUND
-
-
-def _wrap(value) -> StorageValue:
-    return StorageValue(StorageFlag.Found, value)
+        return self.was_found
 
 
 class Storage:
-    """Storage subsystem.
+    """The storage subsystem.
 
-    This is used by to provide caching with Redis.
+    This class provides an abstraction over the caching with Redis mechanism.
 
-    When storing a given key to redis, it can be of any value, however,
-    internally, the value is *always* stored as a string. This requires typing
-    check code that is implemented in get() and set().
+    When storing a given key to Redis, it can be of any value, however,
+    internally, the value is *always* casted to a string. This requires type
+    checking code that is implemented in :meth:`get` and :meth:`set`.
 
-    A note on the inernal storage is that the string "false", when dealing
-    with keys that aren't boolean, represents that PostgreSQL returned None.
+    A note on the internal storage is that the special sentinel string "false"
+    (kept in :prop:`_NOTHING`) represents a cached instance of Postgres not
+    returning any rows. (This only applies to non-boolean keys.)
     """
+
+    #: A sentinel value used in Redis as a cached value to signal that Postgres
+    #: returned no rows.
+    _NOTHING = "false"
 
     def __init__(self, app):
         self.app = app
@@ -129,7 +159,7 @@ class Storage:
         self.redis = app.redis
 
     async def get(self, key: str, typ: type = str) -> StorageValue:
-        """Get one key from Redis.
+        """Get a key from Redis.
 
         Parameters
         ----------
@@ -147,20 +177,19 @@ class Storage:
         log.debug(f"get {key!r}, type {typ!r}, value {val!r}")
         if typ == bool:
             if val == "True":
-                return _wrap(True)
+                return StorageValue(True)
             elif val == "False":
-                return _wrap(False)
+                return StorageValue(False)
 
-        # always use "false" to show when the db
-        # didnt give us anything
-        if val == "false":
-            return StorageValue(StorageFlag.PostgresNotFound, None)
+        # test for the sentinel value that means a cached absence of value
+        if val == self._NOTHING:
+            return StorageValue(None, flag=StorageFlag.NOT_FOUND)
 
-        # key does not exist
+        # key does not exist in redis, but it might be in postgres
         elif val is None:
-            return StorageValue(StorageFlag.NotFound, None)
+            return StorageValue(None, flag=StorageFlag.NOT_CACHED)
 
-        return StorageValue(StorageFlag.Found, typ(val))
+        return StorageValue(typ(val), flag=StorageFlag.FOUND)
 
     async def get_multi(self, keys: List[str], typ: type = str) -> List[StorageValue]:
         """Fetch multiple keys."""
@@ -191,7 +220,7 @@ class Storage:
 
             # the string false tells that whatever
             # query the db did returned None.
-            value = "false" if value is None else value
+            value = self._NOTHING if value is None else value
             await conn.set(key, value)
 
     async def set_with_ttl(self, key: str, value: Optional[Any], ttl: int) -> None:
@@ -272,12 +301,12 @@ class Storage:
         storage_value = await self.get(key, key_type)
         value = storage_value.value
 
-        if storage_value.flag == StorageFlag.PostgresNotFound:
+        if storage_value.flag is StorageFlag.NOT_FOUND:
             return None
 
-        if storage_value.flag == StorageFlag.NotFound:
+        if storage_value.flag is StorageFlag.NOT_CACHED:
             value = await self.db.fetchval(query, *query_args)
-            await self.set_with_ttl(key, value or "false", ttl)
+            await self.set_with_ttl(key, value or self._NOTHING, ttl)
 
         return value
 
@@ -345,26 +374,26 @@ class Storage:
         active_val = await self.get(f"{ukey}:active", bool)
         active = active_val.value
 
-        if pwd_hash_val.flag in STORAGE_FLAG_NOT_FOUND:
+        if not pwd_hash_val.was_found:
             password_hash = await self.db.fetchval(
                 """
-            SELECT password_hash
-            FROM users
-            WHERE user_id = $1
-            """,
+                SELECT password_hash
+                FROM users
+                WHERE user_id = $1
+                """,
                 user_id,
             )
 
             # keep this cached for 10 minutes
             await self.set_with_ttl(f"{ukey}:password_hash", password_hash, 600)
 
-        if active_val.flag in STORAGE_FLAG_NOT_FOUND:
+        if not active_val.was_found:
             active = await self.db.fetchval(
                 """
-            SELECT active
-            FROM users
-            WHERE user_id = $1
-            """,
+                SELECT active
+                FROM users
+                WHERE user_id = $1
+                """,
                 user_id,
             )
 
@@ -375,42 +404,83 @@ class Storage:
             {"user_id": user_id, "password_hash": password_hash, "active": active}
         )
 
-    async def get_fspath(self, shortname: str, domain_id: int) -> Optional[str]:
-        """Get the filesystem path of an image."""
-        key = f"fspath:{domain_id}:{shortname}"
-        return await self._generic_1(
-            key,
-            str,
-            600,
-            """
+    async def get_fspath(
+        self, *, shortname: str, domain_id: int, subdomain: Optional[str] = None
+    ) -> StorageValue:
+        """Get the path to an uploaded file by its shortname, domain ID, and
+        optional subdomain (empty string means root, None means any subdomain).
+        """
+
+        # NOTE keep in mind get_fspath and get_urlredir must be in sync.
+        key = object_key("fspath", domain_id, subdomain, shortname)
+
+        storage_value = await self.get(key, str)
+
+        if storage_value.was_cached:
+            return storage_value
+
+        query = """
             SELECT fspath
             FROM files
             WHERE filename = $1
               AND deleted = false
               AND domain = $2
-            LIMIT 1
-        """,
-            shortname,
-            domain_id,
-        )
+        """
 
-    async def get_urlredir(self, filename: str, domain_id: int) -> Optional[str]:
+        # i'd say this is a pretty ugly way to synthetize the query
+        # since when we don't have a subdomain we shouldn't do any searches
+        # on it to start with.
+        args = []
+        if subdomain is not None:
+            query += "AND subdomain = $3"
+            args.append(subdomain)
+        else:
+            query += "AND subdomain IS NULL"
+
+        query += " LIMIT 1"
+
+        value = await self.db.fetchval(query, shortname, domain_id, *args)
+        await self.set_with_ttl(key, value or self._NOTHING, 600)
+
+        flag = StorageFlag.NOT_FOUND if value is None else StorageFlag.FOUND
+        return StorageValue(value, flag=flag)
+
+    async def get_urlredir(
+        self, shortname: str, domain_id: int, subdomain: Optional[str] = None
+    ) -> StorageValue:
         """Get a redirection of an URL."""
-        key = f"redir:{domain_id}:{filename}"
-        return await self._generic_1(
-            key,
-            str,
-            600,
-            """
+        # NOTE copied from get_fspath()
+        key = object_key("redir", domain_id, subdomain, shortname)
+        storage_value = await self.get(key, str)
+
+        if storage_value.was_cached:
+            return storage_value
+
+        query = """
             SELECT redirto
             FROM shortens
             WHERE filename = $1
             AND deleted = false
             AND domain = $2
-        """,
-            filename,
-            domain_id,
-        )
+        """
+
+        # i'd say this is a pretty ugly way to synthetize the query
+        # since when we don't have a subdomain we shouldn't do any searches
+        # on it to start with.
+        args = []
+        if subdomain is not None:
+            query += "AND subdomain = $3"
+            args.append(subdomain)
+        else:
+            query += "AND subdomain IS NULL"
+
+        query += " LIMIT 1"
+
+        value = await self.db.fetchval(query, shortname, domain_id, *args)
+        await self.set_with_ttl(key, value or self._NOTHING, 600)
+
+        flag = StorageFlag.NOT_FOUND if value is None else StorageFlag.FOUND
+        return StorageValue(value, flag=flag)
 
     async def get_ipban(self, ip_address: str) -> Optional[str]:
         """Get the reason for a specific IP ban."""
@@ -418,16 +488,17 @@ class Storage:
         ban_reason_val = await self.get(key, str)
         ban_reason = ban_reason_val.value
 
-        if ban_reason_val.flag == StorageFlag.PostgresNotFound:
+        if ban_reason_val.flag is StorageFlag.NOT_FOUND:
             return None
-        elif ban_reason_val.flag == StorageFlag.NotFound:
+
+        if ban_reason_val.flag is StorageFlag.NOT_CACHED:
             row = await self.db.fetchrow(
                 """
-            SELECT reason, end_timestamp
-            FROM ip_bans
-            WHERE ip_address = $1 AND end_timestamp > now()
-            LIMIT 1
-            """,
+                SELECT reason, end_timestamp
+                FROM ip_bans
+                WHERE ip_address = $1 AND end_timestamp > now()
+                LIMIT 1
+                """,
                 ip_address,
             )
 
@@ -450,9 +521,10 @@ class Storage:
         ban_reason_val = await self.get(key, str)
         ban_reason = ban_reason_val.value
 
-        if ban_reason_val.flag == StorageFlag.PostgresNotFound:
+        if ban_reason_val.flag is StorageFlag.NOT_FOUND:
             return None
-        elif ban_reason_val.flag == StorageFlag.NotFound:
+
+        if ban_reason_val.flag is StorageFlag.NOT_CACHED:
             row = await self.db.fetchrow(
                 """
             SELECT reason, end_timestamp
@@ -477,81 +549,100 @@ class Storage:
         return ban_reason
 
     async def get_domain_id(
-        self, domain_name: str, err_flag: bool = True
-    ) -> Optional[int]:
-        """Get a domain ID, given the domain.
+        self, given_domain: str, *, raise_notfound: bool = True
+    ) -> Optional[Tuple[int, str]]:
+        """Get a tuple containing the domain ID and the subdomain, given the
+        full domain of a given request.
 
-        Raises NotFound if ``err_flag`` is true.
+        Raises NotFound by default.
         """
 
-        keys = solve_domain(domain_name, True)
+        def _subdomain_valid(subdomain: str, domain: str) -> str:
+            return subdomain if domain.startswith("*.") else ""
 
-        for key in keys:
-            possible_id = await self.get(key, int)
+        # now we need to solve the domain.
+        #
+        # the `solve_domain` function returns a list of all of the possible
+        # domain names that could be in the database that matches up to the host
+        # that the user typed. it's necessary to resolve ambiguities.
+        #
+        # for example, if a user navigated to a.elixi.re, there are 3 possible
+        # domains that that could be referring to:
+        #
+        #   1) *.a.elixi.re (the root of the wildcard domain)
+        #   2) a.elixi.re   (a plain domain on a subdomain)
+        #   3) *.elixi.re   (a subdomain of a wildcard domain)
+        #
+        # (not necessarily returned in that order.)
+        possibilities = solve_domain(given_domain)
+        assert len(possibilities) == 3
 
-            # as soon as we get a key that is valid,
-            # return it
-            if (
-                not isinstance(possible_id, bool)
-                and possible_id.flag == StorageFlag.Found
-            ):
-                return possible_id.value
+        subdomain = _get_subdomain(given_domain)
 
-        # if no keys solve to any domain,
-        # query from db and set those keys
-        # to the found id
+        # check for cached mappings from domain to domain id
+        for possible_domain in possibilities:
+            possible_id = await self.get(f"domain_id:{possible_domain}", int)
 
-        # This causes some problems since we might
-        # set *.re (in the case of domain_name = 'elixi.re') to
-        # an actual domain id, but since we use domain_name
-        # first, it shouldn't become a problem.
+            # return as soon as we get a valid domain id
+            if possible_id.was_found:
+                return possible_id.value, _subdomain_valid(subdomain, possible_domain)
 
-        keys_db = solve_domain(domain_name, False)
+        # if no cached mappings were found, query the db for each possibility
+        # and cache the result of the real domain that the host resolves to.
 
-        row = await self.db.fetchrow(
+        resolved_domain = await self.db.fetchrow(
             """
-        SELECT domain, domain_id
-        FROM domains
-        WHERE domain = $1
-            OR domain = $2
-            OR domain = $3
-        """,
-            *keys_db,
+            SELECT domain, domain_id
+            FROM domains
+            WHERE domain = $1
+                OR domain = $2
+                OR domain = $3
+            """,
+            *possibilities,
         )
 
-        if row is None:
-            # maybe we set only f'domain_id:{domain_name}' to false
-            # instead of all 3 keys? dunno
-            await self.set_multi_one(keys, "false")
+        # an actual domain wasn't found from the possibilities
+        if resolved_domain is None:
+            # cache all of the possible domains as not existing
+            await self.set_multi_one(
+                [f"domain_id:{possible_domain}" for possible_domain in possibilities],
+                self._NOTHING,
+            )
 
-            if err_flag:
+            if raise_notfound:
                 raise NotFound("This domain does not exist in this elixire instance.")
 
             return None
 
-        domain_name, domain_id = row
+        # map the actual domain name to the domain_id in cache
+        domain_name, domain_id = resolved_domain
         await self.set(f"domain_id:{domain_name}", domain_id)
-        return domain_id
 
-    async def get_domain_shorten(self, shortname: str) -> Optional[int]:
+        return domain_id, _subdomain_valid(subdomain, domain_name)
+
+    async def get_domain_shorten(
+        self, shortname: str
+    ) -> Optional[Tuple[int, Optional[str]]]:
         """Get a domain ID for a shorten."""
-        return await self.db.fetchval(
+        return await self.db.fetchrow(
             """
-        SELECT domain
-        FROM shortens
-        WHERE filename = $1
-        """,
+            SELECT domain, subdomain
+            FROM shortens
+            WHERE filename = $1
+            """,
             shortname,
         )
 
-    async def get_domain_file(self, shortname: str) -> Optional[int]:
-        """Get a domain ID for a file."""
-        return await self.db.fetchval(
+    async def get_domain_file(
+        self, shortname: str
+    ) -> Optional[Tuple[int, Optional[str]]]:
+        """Get a tuple of domain id and subdomain for a file."""
+        return await self.db.fetchrow(
             """
-        SELECT domain
-        FROM files
-        WHERE filename = $1
-        """,
+            SELECT domain, subdomain
+            FROM files
+            WHERE filename = $1
+            """,
             shortname,
         )
 
@@ -569,6 +660,6 @@ class Storage:
             WHERE filename = $1
               AND deleted = false
             LIMIT 1
-        """,
+            """,
             shortname,
         )

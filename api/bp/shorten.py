@@ -13,20 +13,52 @@ from api.common import get_user_domain_info, transform_wildcard, FileNameType
 from api.snowflake import get_snowflake
 from api.permissions import Permissions, domain_permissions
 from api.common.profile import gen_user_shortname
+from api.storage import StorageValue, object_key
 
 bp = Blueprint("shorten", __name__)
 
 
-@bp.route("/s/<filename>")
-async def shorten_serve_handler(filename):
+async def _get_urlredir(
+    *, shortname: str, domain_id: str, subdomain: str
+) -> StorageValue:
+    """Return the target URL (``toredir``) for a shorten."""
+
+    # NOTE this is a copy from the internal _get_fspath
+    # function in api.bp.fetch.
+
+    # when searching for the file, the subdomain can be applicable
+    # or NOT while searching. which means that when we're searching with it,
+    # if it fails, we MUST search with subdomain=None. that only happens for
+    # legacy files that have subdomain as NULL on the database.
+
+    # for shortens uploaded as root, the subdomain becomes "" (empty string)
+    # which is completly valid to put on the search.
+    url_toredir = await app.storage.get_urlredir(
+        shortname=shortname, domain_id=domain_id, subdomain=subdomain
+    )
+
+    if not url_toredir:
+        url_toredir = await app.storage.get_urlredir(
+            shortname=shortname, domain_id=domain_id, subdomain=None
+        )
+
+    return url_toredir
+
+
+@bp.route("/s/<shortname>")
+async def shorten_serve_handler(shortname):
     """Handles serving of shortened links."""
     storage = app.storage
 
-    domain_id = await storage.get_domain_id(request.host)
-    url_toredir = await storage.get_urlredir(filename, domain_id)
+    domain_id, subdomain = await storage.get_domain_id(request.host)
+    url_toredir = (
+        await _get_urlredir(
+            shortname=shortname, domain_id=domain_id, subdomain=subdomain
+        )
+    ).value
 
     if not url_toredir:
-        raise NotFound("No shortened links found with this name " "on this domain.")
+        raise NotFound("No shortened links found with this name on this domain.")
 
     return redirect(url_toredir)
 
@@ -105,31 +137,33 @@ async def shorten_handler():
     await app.metrics.submit("shortname_gen_tries", tries)
 
     redir_id = get_snowflake()
-    domain_id, subdomain_name, domain = await get_user_domain_info(
+    domain_id, subdomain, domain = await get_user_domain_info(
         user_id, FileNameType.SHORTEN
     )
 
     await domain_permissions(app, domain_id, Permissions.SHORTEN)
-    domain = transform_wildcard(domain, subdomain_name)
-
-    # make sure cache doesn't fuck up
-    await app.storage.raw_invalidate(f"redir:{domain_id}:{redir_rname}")
+    domain = transform_wildcard(domain, subdomain)
 
     await app.db.execute(
         """
         INSERT INTO shortens (shorten_id, filename,
-            uploader, redirto, domain)
-        VALUES ($1, $2, $3, $4, $5)
+            uploader, redirto, domain, subdomain)
+        VALUES ($1, $2, $3, $4, $5, $6)
         """,
         redir_id,
         redir_rname,
         user_id,
         url_toredir,
         domain_id,
+        subdomain,
+    )
+
+    await app.storage.raw_invalidate(
+        object_key("redir", domain_id, subdomain, redir_rname)
     )
 
     # appended to generated filename
     dpath = pathlib.Path(domain)
-    fpath = dpath / "s" / f"{redir_rname}"
+    fpath = dpath / "s" / redir_rname
 
     return jsonify({"url": f"https://{str(fpath)}"})
