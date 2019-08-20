@@ -12,9 +12,6 @@ edits were done to make it faster via bitwise operators. 3x faster now. the
 API is still the same, so nothing breaks
 """
 import time
-import hashlib
-import os
-import base64
 
 # encoded in ms
 EPOCH = 1420070400000
