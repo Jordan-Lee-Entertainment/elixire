@@ -46,6 +46,7 @@ from api.jobs import JobManager
 from api.bp.metrics.counters import MetricsCounters
 from api.bp.admin.audit_log import AuditLog
 from api.common.banning import ban_request
+from api.mode import ElixireMode
 
 import config
 
@@ -58,7 +59,7 @@ def make_app() -> Quart:
 
     # TODO better config under app.cfg. check #112
     app.econfig = config
-    app.mode = os.getenv("ELIXIRE_ENV") or "local"
+    app.mode = ElixireMode()
 
     level = getattr(config, "LOGGING_LEVEL", "INFO")
     logging.basicConfig(level=level)

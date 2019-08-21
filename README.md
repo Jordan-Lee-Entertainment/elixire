@@ -121,7 +121,7 @@ Run the app:
 hypercorn --access-log - run:app --bind 0.0.0.0:8081
 
 # when running in production, set the ELIXIRE_ENV variable to prod
-env ELIXIRE_ENV=prod hypercorn --access-log - run:app --bind 0.0.0.0:8081
+env ELIXIRE_ENV=production hypercorn --access-log - run:app --bind 0.0.0.0:8081
 ```
 
 ## Operator's Manual
