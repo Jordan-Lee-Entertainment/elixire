@@ -118,10 +118,10 @@ Run the app:
 
 ```bash
 # bind to any wanted address
-env/bin/hypercorn --access-log - run:app --bind 0.0.0.0:8081
+hypercorn --access-log - run:app --bind 0.0.0.0:8081
 
 # when running in production, set the ELIXIRE_ENV variable to prod
-env ELIXIRE_ENV=prod env/bin/hypercorn --access-log - run:app --bind 0.0.0.0:8081
+env ELIXIRE_ENV=prod hypercorn --access-log - run:app --bind 0.0.0.0:8081
 ```
 
 ## Operator's Manual
