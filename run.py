@@ -129,7 +129,11 @@ async def handle_ban(err: Banned):
 
     # the lock is user-based when possible, fallsback to the IP address being
     # banned.
-    lock_key = request["ctx"][0] if "ctx" in request else get_ip_addr()
+    try:
+        lock_key = request.ctx[0]
+    except AttributeError:
+        lock_key = get_ip_addr()
+
     ban_lock = app.locks["bans"][lock_key]
 
     # return value

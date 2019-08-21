@@ -9,7 +9,7 @@ from typing import Optional
 from quart import Blueprint, request, current_app as app
 from api.ratelimit import RatelimitManager, RatelimitBucket
 from api.errors import Ratelimited, Banned, FailedAuth
-from api.common import get_ip_addr
+from api.common import get_ip_addr, check_bans
 from api.common.auth import token_check
 
 bp = Blueprint("ratelimit", __name__)
@@ -55,6 +55,9 @@ async def _handle_ratelimit(
         _username, user_id = request.ctx
     except AttributeError:
         user_id = get_ip_addr()
+        # check_bans for user ids is already called when we're checking
+        # the token.
+        await check_bans()
 
     if is_global:
         ctx = request.ratelimit_ctx

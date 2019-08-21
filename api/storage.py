@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 PartialAuthUser = Optional[Dict[str, Union[int, str]]]
 
 
-def calc_ttl(dtime: datetime.datetime) -> float:
+def calc_ttl(dtime: datetime.datetime) -> int:
     """Calculate how many seconds remain
     from now to the given timestamp.
 
@@ -29,12 +29,12 @@ def calc_ttl(dtime: datetime.datetime) -> float:
 
     Retruns
     -------
-    float
+    int
         The amount of seconds from now to reach the
         given timestamp.
     """
-    now = datetime.datetime.now()
-    return (dtime - now).total_seconds()
+    now = datetime.datetime.utcnow()
+    return int((dtime - now).total_seconds())
 
 
 def ensure_non_null(map_data: Dict[Any, Any]) -> Optional[Dict[Any, Any]]:

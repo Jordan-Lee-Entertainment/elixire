@@ -8,7 +8,7 @@ import hashlib
 import logging
 import time
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 
 import asyncpg
 from quart import current_app as app, request
@@ -316,7 +316,7 @@ async def delete_shorten(shortname: str, user_id: int):
     )
 
 
-async def check_bans(user_id: int):
+async def check_bans(user_id: Optional[int] = None):
     """Check if the current user is already banned.
 
     Raises

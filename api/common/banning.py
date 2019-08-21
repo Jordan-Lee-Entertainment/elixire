@@ -51,11 +51,11 @@ async def ban_user(user_id: int, reason: str) -> None:
 async def ban_request(reason: str) -> None:
     """Ban the given request. Favors user banning when possible, and falls
     back to IP address banning."""
-    if "ctx" in request:
-        username, user_id = request["ctx"]
+    try:
+        username, user_id = request.ctx
         log.warning(f"Banning {username} {user_id} with reason {reason!r}")
         await ban_user(user_id, reason)
-    else:
+    except AttributeError:
         ip_addr = get_ip_addr()
         log.warning(f"Banning ip address {ip_addr} with reason {reason!r}")
         await ban_by_ip(ip_addr, reason)
