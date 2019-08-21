@@ -2,7 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from quart import Blueprint, request, current_app as app
+from quart import Blueprint, current_app as app
 
 bp = Blueprint("cors", __name__)
 
