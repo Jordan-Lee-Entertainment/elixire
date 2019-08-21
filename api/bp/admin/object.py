@@ -85,11 +85,12 @@ async def handle_modify(obj_type: str, obj_id: int):
         except asyncpg.ForeignKeyViolationError:
             raise BadInput("Unknown domain ID")
 
-        # Invalidate based on the query
-        to_invalidate = "fspath" if obj_type == "file" else "redir"
-        to_invalidate = f"{to_invalidate}:{old_domain}:{obj_name}"
-
+        # we're invalidating instead of set_with_ttl because it is supposed
+        # to be used on hot paths. this is not a hot path
+        prefix = "fspath" if obj_type == "file" else "redir"
+        to_invalidate = f"{prefix}:{old_domain}:{obj_name}"
         await app.storage.raw_invalidate(to_invalidate)
+
         updated.append("domain")
 
     if new_shortname is not None:

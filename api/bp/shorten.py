@@ -158,8 +158,8 @@ async def shorten_handler():
         subdomain,
     )
 
-    await app.storage.raw_invalidate(
-        object_key("redir", domain_id, subdomain, redir_rname)
+    await app.storage.set_with_ttl(
+        object_key("redir", domain_id, subdomain, redir_rname), url_toredir, 600
     )
 
     # appended to generated filename

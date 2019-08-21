@@ -206,8 +206,8 @@ async def upload_handler():
         subdomain_name,
     )
 
-    await app.storage.raw_invalidate(
-        object_key("fspath", domain_id, subdomain_name, shortname)
+    await app.storage.set_with_ttl(
+        object_key("fspath", domain_id, subdomain_name, shortname), file.raw_path, 600
     )
 
     # write the file to filesystem
