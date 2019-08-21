@@ -4,6 +4,7 @@
 
 import logging
 import asyncio
+import os
 from typing import Tuple
 
 import asyncpg
@@ -57,6 +58,7 @@ def make_app() -> Quart:
 
     # TODO better config under app.cfg. check #112
     app.econfig = config
+    app.mode = os.getenv("ELIXIRE_ENV") or "local"
 
     level = getattr(config, "LOGGING_LEVEL", "INFO")
     logging.basicConfig(level=level)

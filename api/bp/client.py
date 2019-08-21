@@ -18,5 +18,5 @@ async def before_request():
         client = request.headers["x-elixire-client"]
         app.logger.info("request client: %r", client)
     except KeyError:
-        if app.econfig.MODE != "local":
+        if app.mode == "prod":
             raise BadInput("X-Elixire-Client header not found")
