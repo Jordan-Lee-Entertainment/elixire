@@ -233,6 +233,7 @@ async def app_before_serving():
         app.audit_log = AuditLog(app)
 
     await api.bp.datadump.start_dump_worker_ss()
+    await api.bp.cors.setup()
 
 
 @app.after_serving
