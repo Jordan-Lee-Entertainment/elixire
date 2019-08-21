@@ -11,6 +11,10 @@
 HOST = 'localhost'
 PORT = 8080
 
+# mode can be local or prod, default is local
+# prod mode enforces the x-elixire-agent header
+MODE = 'local'
+
 # basic configuration about the instance
 INSTANCE_NAME = 'elixi.re'
 MAIN_URL = 'https://elixi.re'

@@ -35,6 +35,7 @@ import api.bp.ratelimit
 import api.bp.frontend
 import api.bp.metrics.blueprint
 import api.bp.cors
+import api.bp.client
 
 from api.errors import APIError, Banned
 from api.common import get_ip_addr
@@ -96,6 +97,7 @@ def set_blueprints(app_):
         api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,
         api.bp.wpadmin.bp: -1,
+        api.bp.client.bp: -1,
     }
 
     for blueprint, api_prefix in blueprints.items():
