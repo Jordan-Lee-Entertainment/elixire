@@ -223,7 +223,9 @@ class Storage:
             value = self._NOTHING if value is None else value
             await conn.set(key, value)
 
-    async def set_with_ttl(self, key: str, value: Optional[Any], ttl: int) -> None:
+    async def set_with_ttl(
+        self, key: str, value: Optional[Any], ttl: int = 600
+    ) -> None:
         """Set a key and set its TTL afterwards.
 
         This works better than the expire and pexpire
