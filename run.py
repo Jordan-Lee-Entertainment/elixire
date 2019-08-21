@@ -4,7 +4,6 @@
 
 import logging
 import asyncio
-import os
 from typing import Tuple
 
 import asyncpg
