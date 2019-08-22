@@ -40,7 +40,7 @@ class ObjectDeleteAction(DeleteAction):
         super().__init__(request, object_id)
         self.type = object_type
 
-    async def get_objects(self, object_id):
+    async def get_object(self, object_id):
         return await _generic_get(self, object_id)
 
     async def details(self) -> list:
