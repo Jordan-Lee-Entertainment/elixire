@@ -76,7 +76,7 @@ def set_blueprints(app_):
     blueprints = {
         api.bp.cors.bp: -1,
         api.bp.ratelimit.bp: "",
-        api.bp.auth.bp: "",
+        api.bp.auth.bp: "/auth",
         api.bp.misc.bp: "",
         api.bp.index.bp: "",
         api.bp.profile.bp: "",

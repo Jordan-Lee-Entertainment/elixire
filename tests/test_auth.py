@@ -10,7 +10,7 @@ pytestmark = pytest.mark.asyncio
 
 async def test_login(test_cli_user):
     resp = await test_cli_user.post(
-        "/api/login",
+        "/api/auth/login",
         do_token=False,
         json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
     )
@@ -23,7 +23,7 @@ async def test_login(test_cli_user):
 
 async def test_apikey(test_cli_user):
     resp = await test_cli_user.post(
-        "/api/apikey",
+        "/api/auth/apikey",
         do_token=False,
         json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
     )
@@ -37,7 +37,7 @@ async def test_apikey(test_cli_user):
 
 async def test_login_badinput(test_cli_user):
     resp = await test_cli_user.post(
-        "/api/login", do_token=False, json={"user": test_cli_user["username"]}
+        "/api/auth/login", do_token=False, json={"user": test_cli_user["username"]}
     )
 
     assert resp.status_code == 400
@@ -45,7 +45,7 @@ async def test_login_badinput(test_cli_user):
 
 async def test_login_badpwd(test_cli_user):
     response = await test_cli_user.post(
-        "/api/login",
+        "/api/auth/login",
         do_token=False,
         json={"user": test_cli_user["username"], "password": token()},
     )
@@ -55,7 +55,8 @@ async def test_login_badpwd(test_cli_user):
 
 async def test_login_baduser(test_cli_user):
     resp = await test_cli_user.post(
-        "/api/login", json={"user": username(), "password": test_cli_user["password"]}
+        "/api/auth/login",
+        json={"user": username(), "password": test_cli_user["password"]},
     )
 
     assert resp.status_code == 403
@@ -83,7 +84,7 @@ async def test_revoke(test_cli, test_cli_user):
     assert resp.status_code == 200
 
     resp = await test_cli.post(
-        "/api/revoke",
+        "/api/auth/revoke",
         json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
     )
 
@@ -105,7 +106,7 @@ async def test_login_deactivated(test_cli_user):
     )
 
     resp = await test_cli_user.post(
-        "/api/login",
+        "/api/auth/login",
         do_token=False,
         json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
     )
