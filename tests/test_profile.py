@@ -26,10 +26,7 @@ async def test_profile_work(test_cli_user):
     assert isinstance(rjson["subdomain"], str)
     assert isinstance(rjson["domain"], int)
 
-    # dict checking is over the test_limits_work function
-    assert isinstance(rjson["limits"], dict)
-
-    # test_stats already checks data
+    assert_limits(rjson["limits"])
     assert isinstance(rjson["stats"], dict)
 
     dstatus = rjson["dump_status"]
@@ -37,20 +34,16 @@ async def test_profile_work(test_cli_user):
     assert isinstance(dstatus["state"], str)
 
 
-async def test_limits_work(test_cli_user):
-    resp = await test_cli_user.get("/api/limits")
+def assert_limits(limits: dict):
+    assert isinstance(limits, dict)
 
-    assert resp.status_code == 200
-    rjson = await resp.json
-    assert isinstance(rjson, dict)
+    assert isinstance(limits["limit"], int)
+    assert isinstance(limits["used"], int)
+    assert limits["used"] <= limits["limit"]
 
-    assert isinstance(rjson["limit"], int)
-    assert isinstance(rjson["used"], int)
-    assert rjson["used"] <= rjson["limit"]
-
-    assert isinstance(rjson["shortenlimit"], int)
-    assert isinstance(rjson["shortenused"], int)
-    assert rjson["shortenused"] <= rjson["shortenlimit"]
+    assert isinstance(limits["shortenlimit"], int)
+    assert isinstance(limits["shortenused"], int)
+    assert limits["shortenused"] <= limits["shortenlimit"]
 
 
 async def test_patch_profile(test_cli_user):
