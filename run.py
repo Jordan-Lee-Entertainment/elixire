@@ -91,7 +91,7 @@ def set_blueprints(app_):
         # TODO namespace those admin blueprints
         api.bp.admin.domain_bp: "/admin/domains",
         api.bp.admin.settings_bp: "/admin/settings",
-        api.bp.admin.misc_bp: -1,
+        api.bp.admin.misc_bp: "/admin",
         api.bp.shorten.bp: -1,
         api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,
