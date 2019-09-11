@@ -100,13 +100,14 @@ def set_blueprints(app_):
 
     for blueprint, api_prefix in blueprints.items():
         root_prefixes = ["/api", "/api/v3"]
-        route_prefixes = [f'{root}/{api_prefix or ""}' for root in root_prefixes]
+        route_prefixes = [f'{root}{api_prefix or ""}' for root in root_prefixes]
 
         if api_prefix == -1:
             route_prefixes = [""]
 
-        log.debug("loading blueprint '%s' with prefix %r", blueprint, api_prefix)
+        log.debug("loading blueprint %r", blueprint.name)
         for route in route_prefixes:
+            log.debug("with url_prefix %r", route)
             app_.register_blueprint(blueprint, url_prefix=route)
 
 
