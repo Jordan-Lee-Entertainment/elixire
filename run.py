@@ -80,7 +80,7 @@ def set_blueprints(app_):
         api.bp.misc.bp: "",
         api.bp.index.bp: "",
         api.bp.profile.bp: "/profile",
-        api.bp.d1check.bp: "",
+        api.bp.d1check.bp: "/d1",
         api.bp.upload.bp: "",
         api.bp.personal_stats.bp: "/stats",
         api.bp.register.bp: "",

@@ -15,7 +15,7 @@ async def test_d1check(test_cli):
     fernet = Fernet(test_cli.app.econfig.SECRET_KEY)
     encrypted = fernet.encrypt("awoo".encode()).decode()
 
-    resp = await test_cli.post("/api/check", json={"data": encrypted})
+    resp = await test_cli.post("/api/d1/check", json={"data": encrypted})
     assert resp.status_code == 200
 
     rjson = await resp.json
