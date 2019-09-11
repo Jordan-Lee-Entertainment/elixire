@@ -103,11 +103,11 @@ def set_blueprints(app_):
         route_prefixes = [f'{root}/{api_prefix or ""}' for root in root_prefixes]
 
         if api_prefix == -1:
-            route_prefix = ""
+            route_prefixes = [""]
 
         log.debug("loading blueprint '%s' with prefix %r", blueprint, api_prefix)
         for route in route_prefixes:
-            app_.register_blueprint(blueprint, url_prefix=route_prefix)
+            app_.register_blueprint(blueprint, url_prefix=route)
 
 
 # blueprints are set at the end of the file after declaration of the main
