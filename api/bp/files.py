@@ -129,8 +129,7 @@ async def list_handler():
     return jsonify({"success": True, "files": filenames, "shortens": shortens})
 
 
-# TODO finish and rename to POST /api/files/delete_all
-@bp.route("/delete_all", methods=["POST"])
+@bp.route("/files/delete_all", methods=["POST"])
 async def delete_all():
     """Delete all files for the user"""
     user_id = await token_check()
