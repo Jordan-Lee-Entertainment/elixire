@@ -9,7 +9,7 @@ from quart import current_app as app
 
 from api.storage import solve_domain
 from api.common.utils import dict_
-from api.errors import NotFound
+from api.errors import NotFound, BadInput
 
 
 async def create_domain(
@@ -53,6 +53,9 @@ async def delete_domain(domain_id: int) -> dict:
 
     The related cache keys will be invalidated for you.
     """
+    if domain_id == 0:
+        raise BadInput("The root domain can not be deleted")
+
     domain_name = await app.db.fetchval(
         """
         SELECT domain
