@@ -6,14 +6,14 @@ import os
 
 
 class ElixireMode:
-    """Wrapper class for the ELIXIRE_ENV variable."""
+    """Wrapper class for the PYTHON_ENV variable."""
 
     def __init__(self):
-        self._env = os.getenv("ELIXIRE_ENV") or "dev"
+        self._env = os.getenv("PYTHON_ENV") or "dev"
 
         if not self.is_dev and not self.is_prod:
             raise ValueError(
-                "Invalid ELIXIRE_ENV value "
+                "Invalid PYTHON_ENV value "
                 "(can be dev, development, prod, production)"
             )
 
