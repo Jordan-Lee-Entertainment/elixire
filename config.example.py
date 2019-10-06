@@ -8,32 +8,28 @@
 # take your time going through each one of them
 
 # === BASIC SETTINGS ===
-HOST = 'localhost'
-PORT = 8080
-
-# basic configuration about the instance
-INSTANCE_NAME = 'elixi.re'
-MAIN_URL = 'https://elixi.re'
-MAIN_INVITE = 'https://discord.gg/123456'
-SUPPORT_EMAIL = 'support@elixi.re'
+INSTANCE_NAME = "elixi.re"
+MAIN_URL = "https://elixi.re"
+MAIN_INVITE = "https://discord.gg/123456"
+SUPPORT_EMAIL = "support@elixi.re"
 
 # If URLs over the API show http or https by default.
 USE_HTTPS = True
 
 # Mailgun API credentials for instance emails.
 # (Account deletion, Data Dump, etc.)
-MAILGUN_DOMAIN = ''
-MAILGUN_API_KEY = ''
+MAILGUN_DOMAIN = ""
+MAILGUN_API_KEY = ""
 
 # Link / to ./frontend and /admin to ./admin-panel ?
 ENABLE_FRONTEND = True
 
 # Which folder to store uploaded images to?
-IMAGE_FOLDER = './images'
+IMAGE_FOLDER = "./images"
 
 # Folder to store data dumps.
 DUMP_ENABLED = True
-DUMP_FOLDER = './dumps'
+DUMP_FOLDER = "./dumps"
 
 # The dump janitor checks the directory
 # for files that are over 6 hours long and deletes them
@@ -44,14 +40,14 @@ DUMP_JANITOR_PERIOD = 600
 
 # Postgres credentials
 db = {
-    'host': 'localhost',
-    'user': 'postgres',
-    'password': '',
+    "host": "localhost",
+    "user": "postgres",
+    "password": "",
     # 'database': 'dab'
 }
 
 # Redis URL
-redis = 'redis://localhost'
+redis = "redis://localhost"
 
 # d1 configuration, generate a key with:
 #  >>> from cryptography.fernet import Fernet
@@ -71,7 +67,7 @@ SECRET_KEY = None
 #  >>> from os import urandom
 #  >>> urandom(48)
 #  b'<some random results here>'
-TOKEN_SECRET = b''
+TOKEN_SECRET = b""
 
 # How many seconds to keep timed tokens valid?
 # default value is 72 hours = 3 days.
@@ -82,14 +78,14 @@ TIMED_TOKEN_AGE = 259200
 # Enable metrics?
 # uses InfluxDB and aioinflux to send data.
 ENABLE_METRICS = False
-METRICS_DATABASE = 'elixire'
+METRICS_DATABASE = "elixire"
 
 # InfluxDB Authentication, if any
 INFLUXDB_AUTH = False
-INFLUX_HOST = ('localhost', 8086)
+INFLUX_HOST = ("localhost", 8086)
 INFLUX_SSL = False
-INFLUX_USER = 'admin'
-INFLUX_PASSWORD = '123'
+INFLUX_USER = "admin"
+INFLUX_PASSWORD = "123"
 
 # ADVANCED:
 # This defines the limits for the main metrics worker.
@@ -130,8 +126,8 @@ METRICS_COMPACT_KEEP_POINTS = 10 * 86400
 
 # change this to your wanted ban period
 # valid: '1 day', '6 hours', '10 seconds', etc.
-BAN_PERIOD = '6 hours'
-IP_BAN_PERIOD = '5 minutes'
+BAN_PERIOD = "6 hours"
+IP_BAN_PERIOD = "5 minutes"
 
 # How many ratelimits can be triggered by
 # a client before they get banned?
@@ -173,13 +169,13 @@ EXIF_INCREASELIMIT = 2
 # Accepted MIME types for uploading.
 # NOTE: MIME type checking is ignored for admins.
 ACCEPTED_MIMES = [
-    'image/png',
-    'image/jpeg',
-    'image/gif',
-    'image/webp',
-    'image/svg+xml',
-    'audio/webm',
-    'video/webm'
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+    "audio/webm",
+    "video/webm",
 ]
 
 
@@ -219,30 +215,27 @@ USER_REGISTER_WEBHOOK = ""
 # === RATELIMIT SETTINGS ===
 
 RATELIMITS = {
-    '*': (15, 5),
-    'fetch.file_handler': (50, 6),
-    'fetch.thumbnail_handler': (80, 10),
+    "*": (15, 5),
+    "fetch.file_handler": (50, 6),
+    "fetch.thumbnail_handler": (80, 10),
 }
 
 # === THUMBNAIL SETTINGS ===
 
 # Enable thumbnails?
 THUMBNAILS = True
-THUMBNAIL_FOLDER = './thumbnails'
+THUMBNAIL_FOLDER = "./thumbnails"
 
 # Thumbnail sizing
 THUMBNAIL_SIZES = {
     # large (5000x5000)
-    'l': (5000, 5000),
-
+    "l": (5000, 5000),
     # medium (1000x1000)
-    'm': (1000, 1000),
-
+    "m": (1000, 1000),
     # small (500x500)
-    's': (500, 500),
-
+    "s": (500, 500),
     # tiny (250x250)
-    't': (250, 250),
+    "t": (250, 250),
 }
 
 # === FEATURE SETTINGS ===

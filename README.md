@@ -117,7 +117,11 @@ $EDITOR config.py
 Run the app:
 
 ```bash
-python3 run.py
+# bind to any wanted address
+hypercorn --access-log - run:app --bind 0.0.0.0:8081
+
+# when running in production, set the PYTHON_ENV variable to prod
+env PYTHON_ENV=production hypercorn --access-log - run:app --bind 0.0.0.0:8081
 ```
 
 ## Operator's Manual

@@ -35,6 +35,7 @@ import api.bp.ratelimit
 import api.bp.frontend
 import api.bp.metrics.blueprint
 import api.bp.cors
+import api.bp.client
 
 from api.errors import APIError, Banned
 from api.common import get_ip_addr
@@ -44,6 +45,7 @@ from api.jobs import JobManager
 from api.bp.metrics.counters import MetricsCounters
 from api.bp.admin.audit_log import AuditLog
 from api.common.banning import ban_request
+from api.mode import ElixireMode
 
 import config
 
@@ -56,6 +58,7 @@ def make_app() -> Quart:
 
     # TODO better config under app.cfg. check #112
     app.econfig = config
+    app.mode = ElixireMode()
 
     level = getattr(config, "LOGGING_LEVEL", "INFO")
     logging.basicConfig(level=level)
@@ -96,6 +99,7 @@ def set_blueprints(app_):
         api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,
         api.bp.wpadmin.bp: -1,
+        api.bp.client.bp: -1,
     }
 
     for blueprint, api_prefix in blueprints.items():
