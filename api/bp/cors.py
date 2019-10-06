@@ -14,7 +14,22 @@ async def set_cors_headers(resp):
     # /api/, /i/, /s/ and /t/. i took the liberty of making it applied to
     # all the routes
 
-    resp.headers["Access-Control-Allow-Origin"] = app._root_domain
+    root_domain = app._root_domain
+
+    # TODO: This is a really clumsy way to check for localhost.
+    if root_domain.startswith("localhost") and "." not in root_domain:
+        # If the root domain of the instance is localhost, allow all origins to
+        # make requests. We are assuming a development environment here.
+        #
+        # This is useful because if the root domain of the instance is named
+        # `localhost:3000`, then requests coming from `localhost:3000` wouldn't
+        # work -- the `Access-Control-Allow-Origin` isn't supposed to have a
+        # port number.
+        allowed_origin = "*"
+    else:
+        allowed_origin = root_domain
+
+    resp.headers["Access-Control-Allow-Origin"] = allowed_origin
 
     resp.headers[
         "Access-Control-Allow-Headers"
