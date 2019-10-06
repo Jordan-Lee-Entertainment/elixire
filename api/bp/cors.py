@@ -14,7 +14,7 @@ async def set_cors_headers(resp):
     # /api/, /i/, /s/ and /t/. i took the liberty of making it applied to
     # all the routes
 
-    if app.mode.is_prod:
+    if app.mode.is_dev:
         # If we are in a development environment, allow all origins to
         # make requests.
         #
