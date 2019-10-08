@@ -7,7 +7,7 @@ import os
 import time
 from typing import Optional, Tuple
 
-from quart import Blueprint, current_app as app, request, send_file
+from quart import Blueprint, current_app as app, request, send_file, redirect
 
 from PIL import Image
 
@@ -128,3 +128,48 @@ async def thumbnail_handler(filename):
     # yes, we are doing more I/O by using response.file
     # and not sending the bytes ourselves.
     return await _send_file(thumbpath)
+
+
+async def _get_urlredir(
+    *, shortname: str, domain_id: str, subdomain: str
+) -> StorageValue:
+    """Return the target URL (``toredir``) for a shorten."""
+
+    # NOTE this is a copy from the internal _get_fspath
+    # function in api.bp.fetch.
+
+    # when searching for the file, the subdomain can be applicable
+    # or NOT while searching. which means that when we're searching with it,
+    # if it fails, we MUST search with subdomain=None. that only happens for
+    # legacy files that have subdomain as NULL on the database.
+
+    # for shortens uploaded as root, the subdomain becomes "" (empty string)
+    # which is completly valid to put on the search.
+    url_toredir = await app.storage.get_urlredir(
+        shortname=shortname, domain_id=domain_id, subdomain=subdomain
+    )
+
+    if not url_toredir:
+        url_toredir = await app.storage.get_urlredir(
+            shortname=shortname, domain_id=domain_id, subdomain=None
+        )
+
+    return url_toredir
+
+
+@bp.route("/s/<shortname>")
+async def shorten_serve_handler(shortname):
+    """Handles serving of shortened links."""
+    storage = app.storage
+
+    domain_id, subdomain = await storage.get_domain_id(request.host)
+    url_toredir = (
+        await _get_urlredir(
+            shortname=shortname, domain_id=domain_id, subdomain=subdomain
+        )
+    ).value
+
+    if not url_toredir:
+        raise NotFound("No shortened links found with this name on this domain.")
+
+    return redirect(url_toredir)
