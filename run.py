@@ -79,22 +79,21 @@ def set_blueprints(app_):
     blueprints = {
         api.bp.cors.bp: -1,
         api.bp.ratelimit.bp: "",
-        api.bp.auth.bp: "",
+        api.bp.auth.bp: "/auth",
         api.bp.misc.bp: "",
         api.bp.index.bp: "",
-        api.bp.profile.bp: "",
-        api.bp.d1check.bp: "",
+        api.bp.profile.bp: "/profile",
+        api.bp.d1check.bp: "/d1",
         api.bp.upload.bp: "",
         api.bp.personal_stats.bp: "/stats",
-        api.bp.register.bp: "",
+        api.bp.register.bp: "/auth",
         api.bp.files.bp: "",
         api.bp.datadump.bp: "/dump",
         api.bp.admin.user_bp: "/admin/users",
         api.bp.admin.object_bp: "/admin",
-        # TODO namespace those admin blueprints
-        api.bp.admin.domain_bp: -1,
-        api.bp.admin.settings_bp: -1,
-        api.bp.admin.misc_bp: -1,
+        api.bp.admin.domain_bp: "/admin/domains",
+        api.bp.admin.settings_bp: "/admin/settings",
+        api.bp.admin.misc_bp: "/admin",
         api.bp.shorten.bp: -1,
         api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,
@@ -103,13 +102,16 @@ def set_blueprints(app_):
     }
 
     for blueprint, api_prefix in blueprints.items():
-        route_prefix = f'/api{api_prefix or ""}'
+        root_prefixes = ["/api", "/api/v3"]
+        route_prefixes = [f'{root}{api_prefix or ""}' for root in root_prefixes]
 
         if api_prefix == -1:
-            route_prefix = ""
+            route_prefixes = [""]
 
-        log.debug("loading blueprint %s", blueprint)
-        app_.register_blueprint(blueprint, url_prefix=route_prefix)
+        log.debug("loading blueprint %r", blueprint.name)
+        for route in route_prefixes:
+            log.debug("with url_prefix %r", route)
+            app_.register_blueprint(blueprint, url_prefix=route)
 
 
 # blueprints are set at the end of the file after declaration of the main

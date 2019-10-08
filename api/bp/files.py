@@ -41,6 +41,7 @@ def construct_domain(domains: dict, obj: dict) -> str:
     return domain
 
 
+# TODO: see https://gitlab.com/elixire/elixire/issues/121
 @bp.route("/list")
 async def list_handler():
     """Get list of files."""
@@ -129,7 +130,6 @@ async def list_handler():
     return jsonify({"success": True, "files": filenames, "shortens": shortens})
 
 
-# TODO finish and rename to POST /api/files/delete_all
 @bp.route("/delete_all", methods=["POST"])
 async def delete_all():
     """Delete all files for the user"""

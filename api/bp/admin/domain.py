@@ -32,7 +32,7 @@ from api.common.domain import get_domain_info, set_domain_owner
 bp = Blueprint("admin_domain", __name__)
 
 
-@bp.route("/api/admin/domains", methods=["PUT"])
+@bp.route("", methods=["PUT"])
 async def add_domain():
     """Add a domain."""
     admin_id = await token_check()
@@ -91,7 +91,7 @@ async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
     return fields
 
 
-@bp.route("/api/admin/domains/<int:domain_id>", methods=["PATCH"])
+@bp.route("/<int:domain_id>", methods=["PATCH"])
 async def patch_domain(domain_id: int):
     """Patch a domain's information"""
     admin_id = await token_check()
@@ -104,7 +104,7 @@ async def patch_domain(domain_id: int):
         return jsonify({"updated": fields})
 
 
-@bp.route("/api/admin/email_domain/<int:domain_id>", methods=["POST"])
+@bp.route("/email/<int:domain_id>", methods=["POST"])
 async def email_domain(domain_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
@@ -138,7 +138,7 @@ async def email_domain(domain_id: int):
     )
 
 
-@bp.route("/api/admin/domains/<int:domain_id>/owner", methods=["PUT"])
+@bp.route("/<int:domain_id>/owner", methods=["PUT"])
 async def add_owner(domain_id: int):
     """Add an owner to a single domain."""
     admin_id = await token_check()
@@ -163,7 +163,7 @@ async def add_owner(domain_id: int):
     return jsonify({"success": True, "output": exec_out})
 
 
-@bp.route("/api/admin/domains/<int:domain_id>", methods=["DELETE"])
+@bp.route("/<int:domain_id>", methods=["DELETE"])
 async def remove_domain(domain_id: int):
     """Remove a domain."""
     admin_id = await token_check()
@@ -175,7 +175,7 @@ async def remove_domain(domain_id: int):
     return jsonify({"success": True, **results})
 
 
-@bp.route("/api/admin/domains/<int:domain_id>")
+@bp.route("/<int:domain_id>", methods=["GET"])
 async def get_domain_stats(domain_id: int):
     """Get information about a domain."""
     admin_id = await token_check()
@@ -185,7 +185,7 @@ async def get_domain_stats(domain_id: int):
     return jsonify(await get_domain_info(domain_id))
 
 
-@bp.route("/api/admin/domains")
+@bp.route("", methods=["GET"])
 async def get_domain_stats_all():
     """Request information about all domains"""
     admin_id = await token_check()
@@ -243,7 +243,7 @@ async def get_domain_stats_all():
     return jsonify({**res, **extra})
 
 
-@bp.route("/api/admin/domains/search")
+@bp.route("/search", methods=["GET"])
 async def domains_search():
     """Search for domains"""
     args = request.args

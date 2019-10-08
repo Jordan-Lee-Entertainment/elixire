@@ -35,7 +35,7 @@ async def get_admin_settings(conn, admin_id: int) -> dict:
     return dict(row)
 
 
-@bp.route("/api/admin/settings")
+@bp.route("")
 async def _admin_settings():
     """Get own admin settings."""
     admin_id = await token_check()
@@ -44,7 +44,7 @@ async def _admin_settings():
     return jsonify(await get_admin_settings(app.db, admin_id))
 
 
-@bp.route("/api/admin/settings", methods=["PATCH"])
+@bp.route("", methods=["PATCH"])
 async def change_admin_settings():
     """Change own admin settings."""
     admin_id = await token_check()

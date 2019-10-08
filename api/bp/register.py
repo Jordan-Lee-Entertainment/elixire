@@ -72,7 +72,7 @@ async def check_email(loop, email: str):
         raise BadInput("Email domain resolution failed" "(timeout or does not exist)")
 
 
-@bp.route("/api/register", methods=["POST"])
+@bp.route("/register", methods=["POST"])
 async def register_user():
     """Send an 'account registration request' to a certain
     discord webhook.
@@ -137,7 +137,7 @@ Your username is {uname}.
     return resp.status == 200
 
 
-@bp.route("/api/recover_username", methods=["POST"])
+@bp.route("/recover_username", methods=["POST"])
 async def recover_username():
     payload = validate(await request.get_json(), RECOVER_USERNAME)
     email = payload["email"]

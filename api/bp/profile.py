@@ -43,7 +43,7 @@ async def _update_password(user_id, new_pwd):
     await app.storage.invalidate(user_id, "password_hash")
 
 
-@bp.route("/profile", methods=["GET"])
+@bp.route("", methods=["GET"])
 async def profile_handler():
     """Get your basic information as a user."""
     user_id = await token_check()
@@ -148,7 +148,7 @@ async def _try_username_patch(user_id: int, username: str) -> None:
     )
 
 
-@bp.route("/profile", methods=["PATCH"])
+@bp.route("", methods=["PATCH"])
 async def change_profile_handler():
     if not app.econfig.PATCH_API_PROFILE_ENABLED:
         raise FeatureDisabled("Changing your profile is currently disabled")
@@ -231,15 +231,7 @@ async def change_profile_handler():
     return jsonify(user)
 
 
-@bp.route("/limits", methods=["GET"])
-async def limits_handler():
-    """Query a user's limits."""
-    user_id = await token_check()
-    limits = await get_limits(user_id)
-    return jsonify(limits)
-
-
-@bp.route("/account", methods=["DELETE"])
+@bp.route("", methods=["DELETE"])
 async def delete_own_user():
     """Deactivate the current user.
 

@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 bp = Blueprint("admin_misc", __name__)
 
 
-@bp.route("/api/admin/test")
+@bp.route("/test")
 async def test_admin():
     """Get a json payload for admin users.
 
@@ -64,7 +64,7 @@ async def _do_broadcast(subject, body):
     log.info(f"Dispatched to {len(uids)} users")
 
 
-@bp.route("/api/admin/broadcast", methods=["POST"])
+@bp.route("/broadcast", methods=["POST"])
 async def email_broadcast():
     admin_id = await token_check()
     await check_admin(admin_id, True)
