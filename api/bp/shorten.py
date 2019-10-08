@@ -5,62 +5,17 @@
 import pathlib
 import urllib.parse
 
-from quart import Blueprint, jsonify, redirect, current_app as app, request
+from quart import Blueprint, jsonify, current_app as app, request
 
 from api.common.auth import token_check, check_admin
-from api.errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
+from api.errors import QuotaExploded, BadInput, FeatureDisabled
 from api.common import get_user_domain_info, transform_wildcard, FileNameType
 from api.snowflake import get_snowflake
 from api.permissions import Permissions, domain_permissions
 from api.common.profile import gen_user_shortname
-from api.storage import StorageValue, object_key
+from api.storage import object_key
 
 bp = Blueprint("shorten", __name__)
-
-
-async def _get_urlredir(
-    *, shortname: str, domain_id: str, subdomain: str
-) -> StorageValue:
-    """Return the target URL (``toredir``) for a shorten."""
-
-    # NOTE this is a copy from the internal _get_fspath
-    # function in api.bp.fetch.
-
-    # when searching for the file, the subdomain can be applicable
-    # or NOT while searching. which means that when we're searching with it,
-    # if it fails, we MUST search with subdomain=None. that only happens for
-    # legacy files that have subdomain as NULL on the database.
-
-    # for shortens uploaded as root, the subdomain becomes "" (empty string)
-    # which is completly valid to put on the search.
-    url_toredir = await app.storage.get_urlredir(
-        shortname=shortname, domain_id=domain_id, subdomain=subdomain
-    )
-
-    if not url_toredir:
-        url_toredir = await app.storage.get_urlredir(
-            shortname=shortname, domain_id=domain_id, subdomain=None
-        )
-
-    return url_toredir
-
-
-@bp.route("/s/<shortname>")
-async def shorten_serve_handler(shortname):
-    """Handles serving of shortened links."""
-    storage = app.storage
-
-    domain_id, subdomain = await storage.get_domain_id(request.host)
-    url_toredir = (
-        await _get_urlredir(
-            shortname=shortname, domain_id=domain_id, subdomain=subdomain
-        )
-    ).value
-
-    if not url_toredir:
-        raise NotFound("No shortened links found with this name on this domain.")
-
-    return redirect(url_toredir)
 
 
 @bp.route("/api/shorten", methods=["POST"])
