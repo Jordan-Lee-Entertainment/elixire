@@ -125,3 +125,17 @@ async def list_handler():
         }
 
     return jsonify({"success": True, "files": filenames, "shortens": shortens})
+
+
+@bp.route("/files")
+async def list_files():
+    """List user files"""
+    # TODO
+    user_id = await token_check()
+
+
+@bp.route("/shortens")
+async def list_shortens():
+    """List user shortens"""
+    # TODO
+    user_id = await token_check()
