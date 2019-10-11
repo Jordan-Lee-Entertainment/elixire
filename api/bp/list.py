@@ -7,13 +7,10 @@ import logging
 
 from quart import Blueprint, jsonify, request, current_app as app
 
-from api.common import delete_file, delete_shorten
-from api.common.auth import token_check, password_check
+from api.common.auth import token_check
 from api.errors import BadInput
 
-from api.common.user import mass_file_delete
-
-bp = Blueprint("files", __name__)
+bp = Blueprint("list", __name__)
 log = logging.getLogger(__name__)
 
 
@@ -128,46 +125,3 @@ async def list_handler():
         }
 
     return jsonify({"success": True, "files": filenames, "shortens": shortens})
-
-
-@bp.route("/delete_all", methods=["POST"])
-async def delete_all():
-    """Delete all files for the user"""
-    user_id = await token_check()
-
-    j = await request.get_json()
-
-    try:
-        password = j["password"]
-    except KeyError:
-        raise BadInput("password not provided")
-
-    await password_check(user_id, password)
-
-    task_name = f"delete_files_{user_id}"
-    if app.sched.exists(task_name):
-        return (
-            jsonify({"error": True, "message": "background task already running"}),
-            409,
-        )
-
-    # create task to delete all files in the background
-    app.sched.spawn(mass_file_delete(user_id, False), task_name)
-    return "", 204
-
-
-@bp.route("/files/<shortname>", methods=["DELETE"])
-@bp.route("/files/<shortname>/delete", methods=["GET"])
-async def delete_single(shortname):
-    """Delete a single file."""
-    user_id = await token_check()
-    await delete_file(shortname, user_id)
-    return "", 204
-
-
-@bp.route("/shortens/<shorten_name>", methods=["DELETE"])
-async def shortendelete_handler(user_id, shorten_name):
-    """Invalidate a shorten."""
-    user_id = await token_check()
-    await delete_shorten(shorten_name, user_id)
-    return "", 204
