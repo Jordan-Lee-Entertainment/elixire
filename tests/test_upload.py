@@ -13,20 +13,35 @@ pytestmark = pytest.mark.asyncio
 
 async def check_exists(test_cli, shortname, *, reverse=False):
     """Check if a file exists (or not) given the shortname."""
-    resp = await test_cli.get("/api/list?page=0")
+    resp = await test_cli.get("/api/files?page=0")
 
     assert resp.status_code == 200
     rjson = await resp.json
 
-    assert isinstance(rjson["files"], dict)
+    assert isinstance(rjson["files"], list)
 
-    if reverse:
-        assert shortname not in rjson["files"]
+    try:
+        file = next(
+            filter(
+                lambda file_data: file_data["shortname"] == shortname, rjson["files"]
+            )
+        )
+
+        # if we don't want the file to exist but we found it,
+        # that's an assertion error
+        if reverse:
+            raise AssertionError()
+    except StopIteration:
+        # if we want the file to exist but we DIDN't find it,
+        # that's an assertion error
+        if not reverse:
+            raise AssertionError()
+
+        # if we don't want the file to exist and we just found out it
+        # actually doesn't exist, we return since the rest of the code
+        # isn't for that
         return
 
-    assert shortname in rjson["files"]
-
-    file = rjson["files"][shortname]
     url = urlparse(file["url"])
     _, extension = os.path.splitext(url.path.split("/")[-1])
 
