@@ -38,16 +38,25 @@ def construct_domain(domains: dict, obj: dict) -> str:
     return domain
 
 
-# TODO: see https://gitlab.com/elixire/elixire/issues/121
-@bp.route("/list")
-async def list_handler():
-    """Get list of files."""
-    # TODO: simplify this code
+def construct_url(domain: str, url_basename: str, *, scope: str = "i") -> str:
+    """Create an URL for the given object."""
+
+    # http is allowed for local testing
+    prefix = "https://" if app.econfig.USE_HTTPS else "http://"
+    return f"{prefix}{domain}/{scope}/{url_basename}"
+
+
+def _get_page():
     try:
-        page = int(request.args["page"])
+        return int(request.args["page"])
     except (ValueError, KeyError):
         raise BadInput("Page parameter needs to be supplied correctly.")
 
+
+@bp.route("/files")
+async def list_files():
+    """List user files"""
+    page = _get_page()
     user_id = await token_check()
     domains = await domain_list()
 
@@ -66,7 +75,48 @@ async def list_handler():
         page,
     )
 
-    user_shortens = await app.db.fetch(
+    files = []
+
+    for file_row in user_files:
+        shortname = file_row["filename"]
+        mime = file_row["mimetype"]
+
+        # files *can* have subdomains for them (as of !58) so
+        # we construct a domain based off the given file row
+        domain = construct_domain(domains, file_row)
+
+        # create file + extension as the urls require extensions
+        basename = os.path.basename(file_row["fspath"])
+        ext = basename.split(".")[-1]
+        file_in_url = f"{shortname}.{ext}"
+        file_url = construct_url(domain, file_in_url)
+
+        file_object = {
+            "id": str(file_row["file_id"]),
+            "shortname": shortname,
+            "size": file_row["file_size"],
+            "mimetype": mime,
+            "url": file_url,
+        }
+
+        # only images have thumbnails, and, by default, we give
+        # the small thumbnail url for them while listing
+        if mime.startswith("image/"):
+            file_object["thumbnail"] = construct_url(domain, f"s{shortname}", scope="t")
+
+        files.append(file_object)
+
+    return jsonify({"files": files})
+
+
+@bp.route("/shortens")
+async def list_shortens():
+    """List user shortens"""
+    page = _get_page()
+    user_id = await token_check()
+    domains = await domain_list()
+
+    shortens = await app.db.fetch(
         """
         SELECT shorten_id, filename, redirto, domain, subdomain
         FROM shortens
@@ -81,61 +131,22 @@ async def list_handler():
         page,
     )
 
-    use_https = app.econfig.USE_HTTPS
-    prefix = "https://" if use_https else "http://"
+    shortens = []
+    # some of the things commented in /files also apply here
+    # e.g subdomain (!58)
 
-    filenames = {}
-    for ufile in user_files:
-        filename = ufile["filename"]
-        mime = ufile["mimetype"]
-        domain = construct_domain(domains, ufile)
+    for shorten in shortens:
+        shortname = shorten["filename"]
+        domain = construct_domain(domains, shorten)
+        shorten_url = construct_url(domain, shortname, scope="s")
 
-        basename = os.path.basename(ufile["fspath"])
-        ext = basename.split(".")[-1]
-
-        fullname = f"{filename}.{ext}"
-        file_url = f"{prefix}{domain}/i/{fullname}"
-
-        # default thumb size is small
-        file_url_thumb = (
-            f"{prefix}{domain}/t/s{fullname}" if mime.startswith("image/") else file_url
-        )
-
-        filenames[filename] = {
-            "snowflake": str(ufile["file_id"]),
-            "shortname": filename,
-            "size": ufile["file_size"],
-            "mimetype": mime,
-            "url": file_url,
-            "thumbnail": file_url_thumb,
-        }
-
-    shortens = {}
-    for ushorten in user_shortens:
-        filename = ushorten["filename"]
-        domain = construct_domain(domains, ushorten)
-
-        shorten_url = f"{prefix}{domain}/s/{filename}"
-
-        shortens[filename] = {
-            "snowflake": str(ushorten["shorten_id"]),
-            "shortname": filename,
-            "redirto": ushorten["redirto"],
+        shorten_obj = {
+            "id": str(shorten["shorten_id"]),
+            "shortname": shortname,
+            "redirto": shorten["redirto"],
             "url": shorten_url,
         }
 
-    return jsonify({"success": True, "files": filenames, "shortens": shortens})
+        shortens.append(shorten_obj)
 
-
-@bp.route("/files")
-async def list_files():
-    """List user files"""
-    # TODO
-    user_id = await token_check()
-
-
-@bp.route("/shortens")
-async def list_shortens():
-    """List user shortens"""
-    # TODO
-    user_id = await token_check()
+    return jsonify({"shortens": shortens})
