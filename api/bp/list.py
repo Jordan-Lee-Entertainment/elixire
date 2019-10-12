@@ -116,7 +116,7 @@ async def list_shortens():
     user_id = await token_check()
     domains = await domain_list()
 
-    shortens = await app.db.fetch(
+    user_shortens = await app.db.fetch(
         """
         SELECT shorten_id, filename, redirto, domain, subdomain
         FROM shortens
@@ -135,7 +135,7 @@ async def list_shortens():
     # some of the things commented in /files also apply here
     # e.g subdomain (!58)
 
-    for shorten in shortens:
+    for shorten in user_shortens:
         shortname = shorten["filename"]
         domain = construct_domain(domains, shorten)
         shorten_url = construct_url(domain, shortname, scope="s")
