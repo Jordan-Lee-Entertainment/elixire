@@ -148,35 +148,22 @@ async def jpeg_toobig_webhook(ctx, size_after):
     )
 
 
-async def scan_webhook(app, ctx, scan_out: str):
+async def scan_webhook(ctx, scan_out: str):
     """Execute a discord webhook with information about the virus scan."""
-    uname = await app.db.fetchval(
-        """
-        SELECT username
-        FROM users
-        WHERE user_id = $1
-    """,
-        ctx.user_id,
+    username = await current_app.storage.get_username(ctx.user_id)
+
+    return await _post_webhook(
+        current_app.econfig.UPLOAD_SCAN_WEBHOOK,
+        embed={
+            "title": "Elixire Virus Scanning",
+            "color": 0xFF0000,
+            "fields": [
+                {"name": "user", "value": f"id: {ctx.user_id}, username: {username}"},
+                {
+                    "name": "file info",
+                    "value": f"filename: `{ctx.file.name}`, {ctx.file.size} bytes",
+                },
+                {"name": "clamdscan out", "value": f"```\n{scan_out}\n```"},
+            ],
+        },
     )
-
-    webhook_payload = {
-        "embeds": [
-            {
-                "title": "Elixire Virus Scanning",
-                "color": 0xFF0000,
-                "fields": [
-                    {"name": "user", "value": f"id: {ctx.user_id}, username: {uname}"},
-                    {
-                        "name": "file info",
-                        "value": f"filename: `{ctx.file.name}`, {ctx.file.size} bytes",
-                    },
-                    {"name": "clamdscan out", "value": f"```\n{scan_out}\n```"},
-                ],
-            }
-        ]
-    }
-
-    async with app.session.post(
-        app.econfig.UPLOAD_SCAN_WEBHOOK, json=webhook_payload
-    ) as resp:
-        return resp

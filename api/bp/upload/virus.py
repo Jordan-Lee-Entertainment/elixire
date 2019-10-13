@@ -75,7 +75,7 @@ async def run_scan(ctx) -> None:
         return
     elif process.returncode == 1:
         log.warning("user id %d got caught in virus scan", ctx.user_id)
-        await scan_webhook(app, ctx, total_out)
+        await scan_webhook(ctx, total_out)
         raise BadImage("Image contains a virus.")
     else:
         raise APIError("clamdscan returned unknown error code")
