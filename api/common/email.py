@@ -7,6 +7,7 @@ import logging
 from collections import namedtuple
 from smtplib import SMTP, SMTP_SSL
 from email.message import EmailMessage
+from typing import Tuple
 
 from quart import current_app
 
@@ -15,7 +16,6 @@ import aiohttp
 from ..errors import BadInput
 
 log = logging.getLogger(__name__)
-Error = namedtuple("Error", "status")
 
 
 async def gen_email_token(user_id, table: str, _count: int = 0) -> str:
@@ -108,13 +108,12 @@ def raw_send_email(cfg: dict, to: str, subject: str, content: str):
     log.debug("smtp done")
 
 
-# TODO
-async def send_email_2(app, user_email: str, subject: str, content: str) -> bool:
+async def send_email(user_email: str, subject: str, content: str) -> bool:
     try:
-        await app.loop.run_in_executor(
+        await current_app.loop.run_in_executor(
             None,
             raw_send_email,
-            app.econfig.SMTP_CONFIG,
+            current_app.econfig.SMTP_CONFIG,
             user_email,
             fmt_email(current_app, subject),
             fmt_email(current_app, content),
@@ -125,30 +124,12 @@ async def send_email_2(app, user_email: str, subject: str, content: str) -> bool
         return False
 
 
-async def send_email(app, user_email: str, subject: str, email_body: str) -> tuple:
-    """Send an email to a user using the Mailgun API."""
-    econfig = app.econfig
-    mailgun_url = f"https://api.mailgun.net/v3/{econfig.MAILGUN_DOMAIN}/messages"
+async def send_email_to_user(user_id: int, subject: str, body: str) -> Tuple[bool, str]:
+    """Send an email to a user, given user ID.
 
-    _inst_name = econfig.INSTANCE_NAME
-
-    auth = aiohttp.BasicAuth("api", econfig.MAILGUN_API_KEY)
-    data = {
-        "from": f"{_inst_name} <automated@{econfig.MAILGUN_DOMAIN}>",
-        "to": [user_email],
-        # make sure everything passes through fmt_email
-        # before sending
-        "subject": fmt_email(app, subject),
-        "text": fmt_email(app, email_body),
-    }
-
-    async with app.session.post(mailgun_url, auth=auth, data=data) as resp:
-        return resp, await resp.text()
-
-
-async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
-    """Send an email to a user, given user ID."""
-    user_email = await app.db.fetchval(
+    Returns the success status of the email and the actual user email.
+    """
+    user_email = await current_app.db.fetchval(
         """
         SELECT email
         FROM users
@@ -157,14 +138,10 @@ async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
         user_id,
     )
 
-    if not user_email:
-        return (Error(6969), None), None
+    email_ok = await send_email(user_email, subject, body)
+    log.info("sent %d bytes email to %d %r %r", len(body), user_id, user_email, subject)
 
-    resp = await send_email(app, user_email, subject, body)
-
-    log.info(f"Sent {len(body)} bytes email to {user_id} " f"{user_email} {subject!r}")
-
-    return resp, user_email
+    return email_ok, user_email
 
 
 def fmt_email(app, string, **kwargs):
@@ -181,9 +158,9 @@ def fmt_email(app, string, **kwargs):
     return string.replace("{}", "{{}}").format(**base)
 
 
-async def uid_from_email(app, token: str, table: str, raise_err: bool = True) -> int:
-    """Get user ID from email."""
-    user_id = await app.db.fetchval(
+async def uid_from_email_token(token: str, table: str, raise_err: bool = True) -> int:
+    """Get user ID from a random email token."""
+    user_id = await current_app.db.fetchval(
         f"""
         SELECT user_id
         FROM {table}
@@ -209,8 +186,9 @@ async def get_owner(app, domain_id: int) -> int:
     )
 
 
-async def clean_etoken(app, token: str, table: str) -> bool:
-    res = await app.db.execute(
+async def clean_etoken(token: str, table: str) -> bool:
+    """Delete the given token from the given table."""
+    res = await current_app.db.execute(
         f"""
         DELETE FROM {table}
         WHERE hash=$1

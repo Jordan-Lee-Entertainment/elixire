@@ -9,7 +9,12 @@ from quart import Blueprint, request, current_app as app, jsonify
 
 from api.errors import FailedAuth, FeatureDisabled, BadInput, APIError
 from api.common.auth import token_check, password_check, pwd_hash, check_admin
-from api.common.email import gen_email_token, send_email, uid_from_email, clean_etoken
+from api.common.email import (
+    gen_email_token,
+    send_email,
+    uid_from_email_token,
+    clean_etoken,
+)
 from api.schema import (
     validate,
     PATCH_PROFILE,
@@ -310,11 +315,10 @@ async def deactivate_user_from_email():
     except KeyError:
         raise BadInput("No valid token provided.")
 
-    # TODO rewrite email facilities
-    user_id = await uid_from_email(app, cli_hash, "email_deletion_tokens")
+    user_id = await uid_from_email_token(cli_hash, "email_deletion_tokens")
 
     await delete_user(user_id, True)
-    await clean_etoken(app, cli_hash, "email_deletion_tokens")
+    await clean_etoken(cli_hash, "email_deletion_tokens")
 
     log.warning(f"Deactivated user ID {user_id} by request.")
 
@@ -387,10 +391,10 @@ async def password_reset_confirmation():
     token = payload["token"]
     new_pwd = payload["new_password"]
 
-    user_id = await uid_from_email(app, token, "email_pwd_reset_tokens")
+    user_id = await uid_from_email_token(token, "email_pwd_reset_tokens")
 
     # reset password
     await _update_password(user_id, new_pwd)
-    await clean_etoken(app, token, "email_pwd_reset_tokens")
+    await clean_etoken(token, "email_pwd_reset_tokens")
 
     return "", 204

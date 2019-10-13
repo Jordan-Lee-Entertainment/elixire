@@ -13,7 +13,7 @@ from api.common.email import (
     fmt_email,
     send_user_email,
     activate_email_send,
-    uid_from_email,
+    uid_from_email_token,
     clean_etoken,
 )
 from api.common.auth import token_check, check_admin
@@ -178,7 +178,7 @@ async def activate_user_from_email():
     except KeyError:
         raise BadInput("no key provided")
 
-    user_id = await uid_from_email(app, email_token, "email_activation_tokens")
+    user_id = await uid_from_email_token(app, email_token, "email_activation_tokens")
 
     res = await app.db.execute(
         """
@@ -190,8 +190,8 @@ async def activate_user_from_email():
     )
 
     await app.storage.invalidate(user_id, "active")
-    await clean_etoken(app, email_token, "email_activation_tokens")
-    log.info(f"Activated user id {user_id}")
+    await clean_etoken(email_token, "email_activation_tokens")
+    log.info("Activated user id %d", user_id)
 
     return jsonify({"success": res == "UPDATE 1"})
 
