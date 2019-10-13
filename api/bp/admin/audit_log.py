@@ -9,7 +9,7 @@ from typing import Optional
 
 from quart import current_app as app, request
 
-from api.common.email import send_user_email
+from api.common.email import send_email_to_user
 from api.common.utils import find_different_keys
 
 log = logging.getLogger(__name__)
@@ -222,4 +222,5 @@ class AuditLog:
         log.info("sending audit log event to %d admins", len(admins))
 
         for admin_id in admins:
-            await send_user_email(self.app, admin_id, subject, full_text)
+            # TODO fix app context
+            await send_email_to_user(admin_id, subject, full_text)

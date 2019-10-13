@@ -16,7 +16,7 @@ from typing import Tuple, Optional
 
 from quart import current_app as app
 
-from api.common.email import gen_email_token, send_user_email
+from api.common.email import gen_email_token, send_email_to_user
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ def _dump_json(zipdump, filepath, obj) -> None:
 
 
 async def open_zipdump(
-    app, user_id, resume=False
+    user_id, *, resume=False
 ) -> Tuple[zipfile.ZipFile, Optional[str]]:
     """Open the zip file relating to your dump."""
     user_name = await app.db.fetchval(
@@ -143,7 +143,7 @@ async def dump_user_shortens(app, zipdump: zipfile.ZipFile, user_id: int) -> Non
 
 
 async def dump_files(
-    app, zipdump: zipfile.ZipFile, user_id: int, minid: int, files_done: int
+    zipdump: zipfile.ZipFile, user_id: int, minid: int, files_done: int
 ) -> None:
     """Dump files into the data dump zip."""
 
@@ -208,14 +208,14 @@ async def dump_files(
         )
 
 
-async def dispatch_dump(app, user_id: int, user_name: str) -> None:
+async def dispatch_dump(user_id: int, user_name: str) -> None:
     """Dispatch the data dump to a user."""
     log.info(f"Dispatching dump for {user_id} {user_name!r}")
 
     _inst_name = app.econfig.INSTANCE_NAME
     _support = app.econfig.SUPPORT_EMAIL
 
-    dump_token = await gen_email_token(app, user_id, "email_dump_tokens")
+    dump_token = await gen_email_token(user_id, "email_dump_tokens")
 
     await app.db.execute(
         """
@@ -225,6 +225,8 @@ async def dispatch_dump(app, user_id: int, user_name: str) -> None:
         dump_token,
         user_id,
     )
+
+    # TODO move this to own function
 
     email_body = f"""This is an automated email from {_inst_name}
 about your data dump.
@@ -241,13 +243,11 @@ Do not reply to this automated email.
 - {_inst_name}, {app.econfig.MAIN_URL}
     """
 
-    resp_tup, user_email = await send_user_email(
-        app, user_id, f"{_inst_name} - Your data dump is here!", email_body
+    email_ok, user_email = await send_email_to_user(
+        user_id, "{inst_name} - Your data dump is here!", email_body
     )
 
-    resp, _ = resp_tup
-
-    if resp.status == 200:
+    if email_ok:
         log.info(f"Sent email to {user_id} {user_email}")
 
         # remove from current state
@@ -262,9 +262,11 @@ Do not reply to this automated email.
         log.error(f"Failed to send email to {user_id} {user_email}")
 
 
-async def dump_static(app, zipdump: zipfile.ZipFile, user_id: int) -> None:
+async def dump_static(zipdump: zipfile.ZipFile, user_id: int) -> None:
     """Dump static files. Those files are JSON encoded
     with the required information."""
+
+    # TODO rm app param
     await dump_user_data(app, zipdump, user_id)
     await dump_user_bans(app, zipdump, user_id)
     await dump_user_limits(app, zipdump, user_id)
@@ -272,7 +274,7 @@ async def dump_static(app, zipdump: zipfile.ZipFile, user_id: int) -> None:
     await dump_user_shortens(app, zipdump, user_id)
 
 
-async def do_dump(app, user_id: int) -> None:
+async def do_dump(user_id: int) -> None:
     """Make a data dump for the user."""
     # insert user in current dump state
     row = await app.db.fetchrow(
@@ -306,7 +308,7 @@ async def do_dump(app, user_id: int) -> None:
         total_files,
     )
 
-    zipdump, user_name = await open_zipdump(app, user_id)
+    zipdump, user_name = await open_zipdump(user_id)
 
     try:
         if user_name is None:
@@ -314,16 +316,16 @@ async def do_dump(app, user_id: int) -> None:
 
         # those dumps just get stuff from DB
         # and write them into JSON files insize the zip
-        await dump_static(app, zipdump, user_id)
+        await dump_static(zipdump, user_id)
 
         # this is the longest operation for a dump
         # and because of that, it is resumable, so in the case
         # of an application failure, the system should be able to
         # know where it left off and continue writing to the zip file.
-        await dump_files(app, zipdump, user_id, minid, 0)
+        await dump_files(zipdump, user_id, minid, 0)
 
         # Finally, dispatch the ZIP file via email to the user.
-        await dispatch_dump(app, user_id, user_name)
+        await dispatch_dump(user_id, user_name)
     except Exception:
         log.exception("Error on dumping")
     finally:
@@ -344,18 +346,18 @@ async def resume_dump(app, user_id: int) -> None:
 
     log.info(f'Resuming for {user_id} files_done: {row["files_done"]}')
 
-    zipdump, user_name = await open_zipdump(app, user_id, True)
+    zipdump, user_name = await open_zipdump(user_id, resume=True)
 
     try:
         if user_name is None:
             return
 
         # Redump static files.
-        await dump_static(app, zipdump, user_id)
+        await dump_static(zipdump, user_id)
 
-        await dump_files(app, zipdump, user_id, row["current_id"], row["files_done"])
+        await dump_files(zipdump, user_id, row["current_id"], row["files_done"])
 
-        await dispatch_dump(app, user_id, user_name)
+        await dispatch_dump(user_id, user_name)
     except Exception:
         log.exception("error on dump files resume")
     finally:
@@ -398,7 +400,7 @@ async def dump_worker() -> None:
             next_id,
         )
 
-        await do_dump(app, next_id)
+        await do_dump(next_id)
 
         # use recursion so that
         # in the next call, we will fetch
@@ -411,7 +413,7 @@ async def dump_worker() -> None:
 
 def start_worker() -> None:
     """Start the dump worker, but not start more than 1 of them."""
-    if app.sched.exists("dump_worker_wrapper"):
+    if app.sched.exists("dd_worker"):
         log.info("worker exists, skipping")
         return
 

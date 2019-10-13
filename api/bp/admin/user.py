@@ -11,7 +11,7 @@ from api.schema import validate, ADMIN_MODIFY_USER
 
 from api.common.email import (
     fmt_email,
-    send_user_email,
+    send_email_to_user,
     activate_email_send,
     uid_from_email_token,
     clean_etoken,
@@ -101,12 +101,11 @@ Do not reply to this automated email.
     """,
     )
 
-    subject = fmt_email(app, "{inst_name} - Your account is now active")
-    resp_tup, user_email = await send_user_email(app, user_id, subject, body)
+    email_ok, user_email = await send_email_to_user(
+        user_id, "{inst_name} - Your account is now active", body
+    )
 
-    resp, _ = resp_tup
-
-    if resp.status == 200:
+    if email_ok:
         log.info(f"Sent email to {user_id} {user_email}")
     else:
         log.error(f"Failed to send email to {user_id} {user_email}")

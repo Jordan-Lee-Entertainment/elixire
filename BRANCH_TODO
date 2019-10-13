@@ -1,0 +1,3 @@
+- fix send_email_to_user app context in AuditLog class
+- move many manual send_email* calls to their own functions
+- allow callers to get an EmailException instead of a bool on send_email (via kwarg)

@@ -236,5 +236,4 @@ Do not reply to this automated email.
         token_url=token_url,
     )
 
-    subject = fmt_email(app, "{inst_name} - account activation")
-    return await send_user_email(app, user_id, subject, body)
+    return await send_email_to_user(user_id, "{inst_name} - account activation", body)
