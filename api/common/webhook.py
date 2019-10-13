@@ -6,7 +6,7 @@ import logging
 from typing import Optional, Union, Dict, List
 
 import aiohttp
-from quart import app as app
+from quart import current_app as app
 
 log = logging.getLogger(__name__)
 
