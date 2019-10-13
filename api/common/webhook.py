@@ -124,46 +124,28 @@ async def fail_register_webhook(user_id, username, reason):
     )
 
 
-async def jpeg_toobig_webhook(app, ctx, size_after):
-    """Dispatch a webhook when the EXIF checking raised
-    stuff.
-    """
-    wh_url = getattr(app.econfig, "EXIF_TOOBIG_WEBHOOK", None)
-    if not wh_url:
-        return
-
+async def jpeg_toobig_webhook(ctx, size_after):
+    """Dispatch a webhook when the EXIF checking failed."""
     increase = size_after / ctx.file.size
+    username = await current_app.storage.get_username(ctx.user_id)
 
-    uname = await app.db.fetchval(
-        """
-        SELECT username
-        FROM users
-        WHERE user_id = $1
-    """,
-        ctx.user_id,
+    return await _post_webhook(
+        getattr(current_app.econfig, "EXIF_TOOBIG_WEBHOOK", None),
+        embed={
+            "title": "Elixire EXIF Cleaner Size Change Warning",
+            "color": 0x420420,
+            "fields": [
+                {"name": "user", "value": f"id: {ctx.user_id}, name: {username}"},
+                {"name": "in filename", "value": ctx.file.name},
+                {"name": "out filename", "value": ctx.shortname},
+                {
+                    "name": "size change",
+                    "value": f"{ctx.file.size}b -> {size_after}b "
+                    f"({increase:.01f}x)",
+                },
+            ],
+        },
     )
-
-    payload = {
-        "embeds": [
-            {
-                "title": "Elixire EXIF Cleaner Size Change Warning",
-                "color": 0x420420,
-                "fields": [
-                    {"name": "user", "value": f"id: {ctx.user_id}, name: {uname}"},
-                    {"name": "in filename", "value": ctx.file.name},
-                    {"name": "out filename", "value": ctx.shortname},
-                    {
-                        "name": "size change",
-                        "value": f"{ctx.file.size}b -> {size_after}b "
-                        f"({increase:.01f}x)",
-                    },
-                ],
-            }
-        ]
-    }
-
-    async with app.session.post(wh_url, json=payload) as resp:
-        return resp
 
 
 async def scan_webhook(app, ctx, scan_out: str):
