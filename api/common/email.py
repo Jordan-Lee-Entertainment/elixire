@@ -4,14 +4,11 @@
 
 import secrets
 import logging
-from collections import namedtuple
 from smtplib import SMTP, SMTP_SSL
 from email.message import EmailMessage
 from typing import Tuple
 
 from quart import current_app
-
-import aiohttp
 
 from ..errors import BadInput
 
