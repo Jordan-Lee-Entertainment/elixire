@@ -54,7 +54,7 @@ class UploadContext(
 
         # or else... send a webhook about what happened
         elif ratio > ratio_limit:
-            await jpeg_toobig_webhook(app, self, noexif_len)
+            await jpeg_toobig_webhook(self, noexif_len)
 
         return self.file.io
 
