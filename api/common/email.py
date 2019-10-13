@@ -8,7 +8,7 @@ from smtplib import SMTP, SMTP_SSL
 from email.message import EmailMessage
 from typing import Tuple
 
-from quart import current_app
+from quart import current_app as app
 
 from ..errors import BadInput
 
@@ -47,7 +47,7 @@ async def gen_email_token(user_id, table: str, _count: int = 0) -> str:
     possible = secrets.token_hex(32)
 
     # check if hash already exists
-    other_id = await current_app.db.fetchval(
+    other_id = await app.db.fetchval(
         f"""
         SELECT user_id
         FROM {table}
@@ -60,7 +60,7 @@ async def gen_email_token(user_id, table: str, _count: int = 0) -> str:
         # retry with count + 1
         await gen_email_token(user_id, table, _count + 1)
 
-    hashes = await current_app.db.fetchval(
+    hashes = await app.db.fetchval(
         f"""
         SELECT COUNT(*)
         FROM {table}
@@ -107,13 +107,13 @@ def raw_send_email(cfg: dict, to: str, subject: str, content: str):
 
 async def send_email(user_email: str, subject: str, content: str) -> bool:
     try:
-        await current_app.loop.run_in_executor(
+        await app.loop.run_in_executor(
             None,
             raw_send_email,
-            current_app.econfig.SMTP_CONFIG,
+            app.econfig.SMTP_CONFIG,
             user_email,
-            fmt_email(current_app, subject),
-            fmt_email(current_app, content),
+            fmt_email(subject),
+            fmt_email(content),
         )
         return True
     except Exception:
@@ -127,7 +127,7 @@ async def send_email_to_user(user_id: int, subject: str, body: str) -> Tuple[boo
 
     Returns the success status of the email and the actual user email.
     """
-    user_email = await current_app.db.fetchval(
+    user_email = await app.db.fetchval(
         """
         SELECT email
         FROM users
@@ -142,7 +142,7 @@ async def send_email_to_user(user_id: int, subject: str, body: str) -> Tuple[boo
     return email_ok, user_email
 
 
-def fmt_email(app, string, **kwargs):
+def fmt_email(string, **kwargs):
     """Format an email"""
     base = {
         "inst_name": app.econfig.INSTANCE_NAME,
@@ -158,7 +158,7 @@ def fmt_email(app, string, **kwargs):
 
 async def uid_from_email_token(token: str, table: str, raise_err: bool = True) -> int:
     """Get user ID from a random email token."""
-    user_id = await current_app.db.fetchval(
+    user_id = await app.db.fetchval(
         f"""
         SELECT user_id
         FROM {table}
@@ -175,7 +175,7 @@ async def uid_from_email_token(token: str, table: str, raise_err: bool = True) -
 
 async def clean_etoken(token: str, table: str) -> bool:
     """Delete the given token from the given table."""
-    res = await current_app.db.execute(
+    res = await app.db.execute(
         f"""
         DELETE FROM {table}
         WHERE hash=$1
@@ -186,7 +186,7 @@ async def clean_etoken(token: str, table: str) -> bool:
     return res == "DELETE 1"
 
 
-async def activate_email_send(app, user_id: int):
+async def send_activation_email(user_id: int):
     token = await gen_email_token(user_id, "email_activation_tokens")
 
     await app.db.execute(
@@ -198,10 +198,9 @@ async def activate_email_send(app, user_id: int):
         user_id,
     )
 
-    token_url = fmt_email(app, "{main_url}/api/activate_email?key={key}", key=token)
+    token_url = fmt_email("{main_url}/api/activate_email?key={key}", key=token)
 
     body = fmt_email(
-        app,
         """
 This is an automated email from {inst_name}
 about your account activation.
@@ -223,3 +222,45 @@ Do not reply to this automated email.
     )
 
     return await send_email_to_user(user_id, "{inst_name} - account activation", body)
+
+
+async def send_register_email(email: str) -> bool:
+    """Send an email about the signup."""
+    email_body = fmt_email(
+        """This is an automated email from {inst_name}
+about your signup.
+
+It has been successfully dispatched to the system so that admins can
+activate the account. You will not be able to login until the account
+is activated.
+
+Accounts that aren't on the discord server won't be activated.
+{main_invite}
+
+Please do not re-register the account. It will just decrease your chances
+of actually getting an account activated.
+
+Reply to {support} if you have any questions.
+Do not reply to this email specifically, it will not work.
+
+ - {inst_name}, {main_url}
+"""
+    )
+
+    return await send_email(email, "{inst_name} - signup confirmation", email_body)
+
+
+async def send_username_recovery_email(uname: str, email: str):
+    email_body = fmt_email(
+        """
+This is an automated email from {inst_name} about
+your username recovery.
+
+Your username is {uname}.
+
+ - {inst_name}, {main_url}
+""",
+        uname=uname,
+    )
+
+    return await send_email(email, "{inst_name} - username recovery", email_body)

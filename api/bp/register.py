@@ -16,41 +16,12 @@ from dns import resolver
 
 from api.errors import BadInput, FeatureDisabled
 from api.schema import validate, REGISTRATION_SCHEMA, RECOVER_USERNAME
-from api.common.email import send_email, fmt_email
+from api.common.email import send_register_email, send_username_recovery_email
 from api.common.webhook import register_webhook, fail_register_webhook
 from api.common.user import create_user, delete_user
 
 log = logging.getLogger(__name__)
 bp = Blueprint("register", __name__)
-
-
-async def send_register_email(email: str) -> bool:
-    """Send an email about the signup."""
-    _inst_name = app.econfig.INSTANCE_NAME
-
-    email_body = fmt_email(
-        app,
-        """This is an automated email from {inst_name}
-about your signup.
-
-It has been successfully dispatched to the system so that admins can
-activate the account. You will not be able to login until the account
-is activated.
-
-Accounts that aren't on the discord server won't be activated.
-{main_invite}
-
-Please do not re-register the account. It will just decrease your chances
-of actually getting an account activated.
-
-Reply to {support} if you have any questions.
-Do not reply to this email specifically, it will not work.
-
- - {inst_name}, {main_url}
-""",
-    )
-
-    return await send_email(email, f"{_inst_name} - signup confirmation", email_body)
 
 
 async def check_email(loop, email: str):
@@ -115,23 +86,6 @@ async def register_user():
     )
 
 
-async def send_recover_uname(uname: str, email: str):
-    email_body = fmt_email(
-        app,
-        """
-This is an automated email from {inst_name} about
-your username recovery.
-
-Your username is {uname}.
-
- - {inst_name}, {main_url}
-""",
-        uname=uname,
-    )
-
-    return await send_email(email, "username recovery", email_body)
-
-
 @bp.route("/recover_username", methods=["POST"])
 async def recover_username():
     payload = validate(await request.get_json(), RECOVER_USERNAME)
@@ -150,7 +104,5 @@ async def recover_username():
     if row is None:
         raise BadInput("Email not found")
 
-    # send email
-    email_ok = await send_recover_uname(row["username"], row["email"])
-
+    email_ok = await send_username_recovery_email(row["username"], row["email"])
     return "", 204 if email_ok else 500
