@@ -267,7 +267,7 @@ async def delete_own_user():
     _inst_name = app.econfig.INSTANCE_NAME
     _support = app.econfig.SUPPORT_EMAIL
 
-    email_token = await gen_email_token(app, user_id, "email_deletion_tokens")
+    email_token = await gen_email_token(user_id, "email_deletion_tokens")
 
     log.info(f"Generated email hash {email_token} for account deactivation")
 
@@ -349,7 +349,7 @@ async def reset_password_req():
     _inst_name = app.econfig.INSTANCE_NAME
     _support = app.econfig.SUPPORT_EMAIL
 
-    email_token = await gen_email_token(app, user_id, "email_pwd_reset_tokens")
+    email_token = await gen_email_token(user_id, "email_pwd_reset_tokens")
 
     await app.db.execute(
         """

@@ -198,7 +198,7 @@ async def clean_etoken(token: str, table: str) -> bool:
 
 
 async def activate_email_send(app, user_id: int):
-    token = await gen_email_token(app, user_id, "email_activation_tokens")
+    token = await gen_email_token(user_id, "email_activation_tokens")
 
     await app.db.execute(
         """
