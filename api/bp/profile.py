@@ -11,9 +11,10 @@ from api.errors import FailedAuth, FeatureDisabled, BadInput, APIError
 from api.common.auth import token_check, password_check, pwd_hash, check_admin
 from api.common.email import (
     gen_email_token,
-    send_email,
     uid_from_email_token,
     clean_etoken,
+    send_deletion_confirm_email,
+    send_password_reset_email,
 )
 from api.schema import (
     validate,
@@ -252,21 +253,6 @@ async def delete_own_user():
     payload = validate(await request.get_json(), DEACTIVATE_USER_SCHEMA)
     await password_check(user_id, payload["password"])
 
-    user_email = await app.db.fetchval(
-        """
-        SELECT email
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    if not user_email:
-        raise BadInput("No email was found.")
-
-    _inst_name = app.econfig.INSTANCE_NAME
-    _support = app.econfig.SUPPORT_EMAIL
-
     email_token = await gen_email_token(user_id, "email_deletion_tokens")
 
     log.info(f"Generated email hash {email_token} for account deactivation")
@@ -280,30 +266,8 @@ async def delete_own_user():
         user_id,
     )
 
-    email_body = f"""This is an automated email from {_inst_name}
-about your account deletion.
-
-Please visit {app.econfig.MAIN_URL}/deleteconfirm.html#{email_token} to
-confirm the deletion of your account.
-
-The link will be invalid in 12 hours. Do not share it with anyone.
-
-Reply to {_support} if you have any questions.
-
-If you did not make this request, email {_support} since your account
-might be compromised.
-
-Do not reply to this email specifically, it will not work.
-
-- {_inst_name}, {app.econfig.MAIN_URL}
-"""
-
-    # TODO: change this to send_email_to_user
-    email_ok = await send_email(
-        user_email, f"{_inst_name} - account deactivation request", email_body
-    )
-
-    # TODO return '', 204
+    # TODO better email errors
+    email_ok, _ = await send_deletion_confirm_email(user_id, email_token)
     return jsonify({"success": email_ok})
 
 
@@ -346,9 +310,6 @@ async def reset_password_req():
     user_email = udata["email"]
     user_id = udata["user_id"]
 
-    _inst_name = app.econfig.INSTANCE_NAME
-    _support = app.econfig.SUPPORT_EMAIL
-
     email_token = await gen_email_token(user_id, "email_pwd_reset_tokens")
 
     await app.db.execute(
@@ -360,25 +321,7 @@ async def reset_password_req():
         user_id,
     )
 
-    email_body = f"""This is an automated email from {_inst_name}
-about your password reset.
-
-Please visit {app.econfig.MAIN_URL}/password_reset.html#{email_token} to
-reset your password.
-
-The link will be invalid in 30 minutes. Do not share the link with anyone else.
-Nobody from support will ask you for this link.
-
-Reply to {_support} if you have any questions.
-
-Do not reply to this email specifically, it will not work.
-
-- {_inst_name}, {app.econfig.MAIN_URL}
-"""
-
-    email_ok = await send_email(
-        user_email, f"{_inst_name} - password reset request", email_body
-    )
+    email_ok = await send_password_reset_email(user_email, email_token)
 
     # TODO return '', 204
     return jsonify({"success": email_ok})

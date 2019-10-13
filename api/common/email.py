@@ -264,3 +264,55 @@ Your username is {uname}.
     )
 
     return await send_email(email, "{inst_name} - username recovery", email_body)
+
+
+async def send_deletion_confirm_email(user_id: int, email_token: str):
+    email_body = fmt_email(
+        """This is an automated email from {inst_name}
+about your account deletion.
+
+Please visit {main_url}/deleteconfirm.html#{email_token} to
+confirm the deletion of your account.
+
+The link will be invalid in 12 hours. Do not share it with anyone.
+
+Reply to {support} if you have any questions.
+
+If you did not make this request, email {support} since your account
+might be compromised.
+
+Do not reply to this email specifically, it will not work.
+
+- {inst_name}, {main_url}
+""",
+        email_token=email_token,
+    )
+
+    return await send_email_to_user(
+        user_id, "{inst_name} - account deactivation request", email_body
+    )
+
+
+async def send_password_reset_email(user_email: str, email_token):
+    email_body = fmt_email(
+        """This is an automated email from {inst_name}
+about your password reset.
+
+Please visit {main_url}/password_reset.html#{email_token} to
+reset your password.
+
+The link will be invalid in 30 minutes. Do not share the link with anyone else.
+Nobody from support will ask you for this link.
+
+Reply to {support} if you have any questions.
+
+Do not reply to this email specifically, it will not work.
+
+- {inst_name}, {main_url}
+""",
+        email_token=email_token,
+    )
+
+    return await send_email(
+        user_email, "{inst_name} - password reset request", email_body
+    )
