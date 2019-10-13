@@ -34,7 +34,7 @@ async def _post_webhook(
     if not embed and not text:
         raise TypeError("Either text or embed must be provided.")
 
-    if webhook_url is None:
+    if not webhook_url:
         log.warning("Ignored webhook, payload=%r", payload)
         return None
 
