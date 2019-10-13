@@ -57,7 +57,7 @@ async def _post_webhook(
 # TODO remove app from callers
 
 
-async def ban_webhook(app, user_id: int, reason: str, period: str):
+async def ban_webhook(user_id: int, reason: str, period: str):
     """Send a webhook containing banning informatino of a user."""
 
     username = await current_app.storage.get_username(user_id)
@@ -75,49 +75,53 @@ async def ban_webhook(app, user_id: int, reason: str, period: str):
     )
 
 
-async def ip_ban_webhook(app, ip_address: str, reason: str, period: str):
+async def ip_ban_webhook(ip_address: str, reason: str, period: str):
     """Send a webhook containing banning information."""
-    wh_url = getattr(app.econfig, "IP_BAN_WEBHOOK", None)
-    if not wh_url:
-        return
-
-    payload = {
-        "embeds": [
-            {
-                "title": "Elixire Auto IP Banning",
-                "color": 0x696969,
-                "fields": [
-                    {"name": "IP address", "value": ip_address},
-                    {"name": "reason", "value": reason},
-                    {"name": "period", "value": period},
-                ],
-            }
-        ]
-    }
-
-    async with app.session.post(wh_url, json=payload) as resp:
-        return resp
+    return await _post_webhook(
+        getattr(current_app.econfig, "IP_BAN_WEBHOOK", None),
+        embed={
+            "title": "Elixire Auto IP Banning",
+            "color": 0x696969,
+            "fields": [
+                {"name": "IP address", "value": ip_address},
+                {"name": "reason", "value": reason},
+                {"name": "period", "value": period},
+            ],
+        },
+    )
 
 
-async def register_webhook(app, wh_url, user_id, username, discord_user, email):
-    # call webhook
-    payload = {
-        "embeds": [
-            {
-                "title": "user registration webhook",
-                "color": 0x7289DA,
-                "fields": [
-                    {"name": "userid", "value": str(user_id)},
-                    {"name": "user name", "value": username},
-                    {"name": "discord user", "value": discord_user},
-                    {"name": "email", "value": email},
-                ],
-            }
-        ]
-    }
+async def register_webhook(user_id, username, discord_user, email):
+    return await _post_webhook(
+        getattr(current_app, "USER_REGISTER_WEBHOOK", None),
+        check_result=True,
+        embed={
+            "title": "user registration webhook",
+            "color": 0x7289DA,
+            "fields": [
+                {"name": "userid", "value": str(user_id)},
+                {"name": "user name", "value": username},
+                {"name": "discord user", "value": discord_user},
+                {"name": "email", "value": email},
+            ],
+        },
+    )
 
-    async with app.session.post(wh_url, json=payload) as resp:
-        return resp.status == 200
+
+async def fail_register_webhook(user_id, username, reason):
+    return await _post_webhook(
+        getattr(current_app, "USER_REGISTER_WEBHOOK", None),
+        check_result=True,
+        embed={
+            "title": "registration failure",
+            "color": 0xFF0000,
+            "fields": [
+                {"name": "userid", "value": str(user_id)},
+                {"name": "user name", "value": username},
+                {"name": "reason", "value": reason},
+            ],
+        },
+    )
 
 
 async def jpeg_toobig_webhook(app, ctx, size_after):

@@ -25,7 +25,7 @@ async def ban_by_ip(ip_addr: str, reason: str) -> None:
     )
 
     await app.storage.set_with_ttl(f"ipban:{ip_addr}", reason, calc_ttl(end_timestamp))
-    await ip_ban_webhook(app, ip_addr, f"[ip ban] {reason}", period)
+    await ip_ban_webhook(ip_addr, f"[ip ban] {reason}", period)
 
 
 async def ban_user(user_id: int, reason: str) -> None:
@@ -45,7 +45,7 @@ async def ban_user(user_id: int, reason: str) -> None:
     await app.storage.set_with_ttl(
         f"userban:{user_id}", reason, calc_ttl(end_timestamp)
     )
-    await ban_webhook(app, user_id, reason, period)
+    await ban_webhook(user_id, reason, period)
 
 
 async def ban_request(reason: str) -> None:
