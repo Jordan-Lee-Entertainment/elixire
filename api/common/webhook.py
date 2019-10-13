@@ -2,41 +2,77 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import logging
+from typing import Optional, Union, Dict, List
+
+import aiohttp
+from quart import current_app
+
+log = logging.getLogger(__name__)
+
+
+async def _post_webhook(
+    webhook_url: Optional[str],
+    *,
+    embed: Optional[dict] = None,
+    text: Optional[str] = None,
+    check_result: bool = False,
+) -> Union[Optional[aiohttp.ClientResponse], bool]:
+    """Post to the given webhook."""
+
+    payload: Dict[str, Union[str, List[dict]]] = {}
+
+    if embed is not None:
+        if isinstance(embed, list):
+            payload["embeds"] = embed
+        else:
+            payload["embeds"] = [embed]
+
+    if text is not None:
+        payload["content"] = text
+
+    if not embed and not text:
+        raise TypeError("Either text or embed must be provided.")
+
+    if webhook_url is None:
+        log.warning("Ignored webhook, payload=%r", payload)
+        return None
+
+    async with current_app.session.post(webhook_url, json=payload) as resp:
+        status = resp.status
+
+        if status != 200:
+            log.warning(
+                "Failed to dispatch webhook, status=%d, body=%r",
+                status,
+                await resp.read(),
+            )
+
+        if check_result:
+            return status == 200
+
+        return resp
+
+
+# TODO remove app from callers
+
 
 async def ban_webhook(app, user_id: int, reason: str, period: str):
-    """Send a webhook containing banning information."""
-    wh_url = getattr(app.econfig, "USER_BAN_WEBHOOK", None)
-    if not wh_url:
-        return
+    """Send a webhook containing banning informatino of a user."""
 
-    if isinstance(user_id, int):
-        uname = await app.db.fetchval(
-            """
-            SELECT username
-            FROM users
-            WHERE user_id = $1
-        """,
-            user_id,
-        )
-    else:
-        uname = "<no username found>"
-
-    payload = {
-        "embeds": [
-            {
-                "title": "Elixire Auto Banning",
-                "color": 0x696969,
-                "fields": [
-                    {"name": "user", "value": f"id: {user_id}, name: {uname}"},
-                    {"name": "reason", "value": reason},
-                    {"name": "period", "value": period},
-                ],
-            }
-        ]
-    }
-
-    async with app.session.post(wh_url, json=payload) as resp:
-        return resp
+    username = await current_app.storage.get_username(user_id)
+    return await _post_webhook(
+        getattr(current_app.econfig, "USER_BAN_WEBHOOK", None),
+        embed={
+            "title": "Elixire Auto Banning",
+            "color": 0x696969,
+            "fields": [
+                {"name": "user", "value": f"id: {user_id}, name: {username}"},
+                {"name": "reason", "value": reason},
+                {"name": "period", "value": period},
+            ],
+        },
+    )
 
 
 async def ip_ban_webhook(app, ip_address: str, reason: str, period: str):
