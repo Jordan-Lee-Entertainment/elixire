@@ -10,9 +10,8 @@ from api.errors import NotFound, BadInput
 from api.schema import validate, ADMIN_MODIFY_USER
 
 from api.common.email import (
-    fmt_email,
-    send_email_to_user,
-    activate_email_send,
+    send_activation_email,
+    send_activated_email,
     uid_from_email_token,
     clean_etoken,
 )
@@ -77,40 +76,6 @@ async def get_user_by_username(username: str):
     return await _user_resp_from_row(row)
 
 
-async def notify_activate(user_id: int):
-    """Inform user that they got an account."""
-    if not app.econfig.NOTIFY_ACTIVATION_EMAILS:
-        return
-
-    log.info(f"Sending activation email to {user_id}")
-
-    body = fmt_email(
-        app,
-        """This is an automated email from {inst_name}
-about your account request.
-
-Your account has been activated and you can now log in
-at {main_url}/login.html.
-
-Welcome to {inst_name}!
-
-Send an email to {support} if any questions arise.
-Do not reply to this automated email.
-
-- {inst_name}, {main_url}
-    """,
-    )
-
-    email_ok, user_email = await send_email_to_user(
-        user_id, "{inst_name} - Your account is now active", body
-    )
-
-    if email_ok:
-        log.info(f"Sent email to {user_id} {user_email}")
-    else:
-        log.error(f"Failed to send email to {user_id} {user_email}")
-
-
 @bp.route("/activate/<int:user_id>", methods=["POST"])
 async def activate_user(user_id: int):
     """Activate one user, given their ID."""
@@ -131,9 +96,9 @@ async def activate_user(user_id: int):
             raise BadInput("Provided user ID does not reference any user.")
 
     await app.storage.invalidate(user_id, "active")
-    await notify_activate(user_id)
+    await send_activated_email(user_id)
 
-    # TODO check success of notify_activate
+    # TODO check success of send_activated_email
     return "", 204
 
 

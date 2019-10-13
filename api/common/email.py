@@ -224,6 +224,31 @@ Do not reply to this automated email.
     return await send_email_to_user(user_id, "{inst_name} - account activation", body)
 
 
+async def send_activated_email(user_id: int) -> bool:
+    if not app.econfig.NOTIFY_ACTIVATION_EMAILS:
+        return True
+
+    email_body = """This is an automated email from {inst_name}
+about your account request.
+
+Your account has been activated and you can now log in
+at {main_url}/login.html.
+
+Welcome to {inst_name}!
+
+Send an email to {support} if any questions arise.
+Do not reply to this automated email.
+
+- {inst_name}, {main_url}
+"""
+
+    email_ok, _ = await send_email_to_user(
+        user_id, "{inst_name} - Your account is now active", email_body
+    )
+
+    return email_ok
+
+
 async def send_register_email(email: str) -> bool:
     """Send an email about the signup."""
     email_body = fmt_email(
