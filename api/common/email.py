@@ -2,12 +2,13 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-"""
-elixi.re - email functions
-"""
 import secrets
 import logging
 from collections import namedtuple
+from smtplib import SMTP, SMTP_SSL
+from email.message import EmailMessage
+
+from quart import current_app
 
 import aiohttp
 
@@ -17,15 +18,13 @@ log = logging.getLogger(__name__)
 Error = namedtuple("Error", "status")
 
 
-async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
+async def gen_email_token(user_id, table: str, _count: int = 0) -> str:
     """Generate a token for email usage.
 
     Calls the database to give an unique token.
 
     Parameters
     ----------
-    app: sanic.App
-        Application instance for database access.
     user_id: int
         User snowflake ID.
     table: str
@@ -43,7 +42,7 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
         or there are more than 3 tokens issued in the span
         of a time window (defined by the table)
     """
-    if count == 11:
+    if _count == 11:
         # it really shouldn't happen,
         # but we better be ready for it.
         raise BadInput("Failed to generate an email hash.")
@@ -51,7 +50,7 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
     possible = secrets.token_hex(32)
 
     # check if hash already exists
-    other_id = await app.db.fetchval(
+    other_id = await current_app.db.fetchval(
         f"""
         SELECT user_id
         FROM {table}
@@ -62,9 +61,9 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
 
     if other_id:
         # retry with count + 1
-        await gen_email_token(app, user_id, table, count + 1)
+        await gen_email_token(user_id, table, _count + 1)
 
-    hashes = await app.db.fetchval(
+    hashes = await current_app.db.fetchval(
         f"""
         SELECT COUNT(*)
         FROM {table}
@@ -75,16 +74,61 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
 
     if hashes > 3:
         raise BadInput(
-            "You already generated more than 3 tokens " "in the time period."
+            "You already generated more than 3 tokens in the expiral time period."
         )
 
     return possible
 
 
+def raw_send_email(cfg: dict, to: str, subject: str, content: str):
+    """Send an email via SMTP."""
+
+    msg = EmailMessage()
+    msg.set_content(content)
+
+    msg["Subject"] = subject
+    msg["From"] = cfg["from"]
+    msg["To"] = to
+
+    log.debug("smtp send %r %r", cfg["host"], cfg["port"])
+
+    smtp_class = SMTP_SSL if cfg["tls_mode"] == "tls" else SMTP
+
+    with smtp_class(host=cfg["host"], port=cfg["port"]) as smtp:
+        if cfg["tls_mode"] == "starttls":
+            log.debug("smtp starttls")
+            smtp.starttls()
+
+        log.debug("smtp login")
+        smtp.login(cfg["username"], cfg["password"])
+
+        log.debug("smtp send message")
+        smtp.send_message(msg)
+
+    log.debug("smtp done")
+
+
+# TODO
+async def send_email_2(app, user_email: str, subject: str, content: str) -> bool:
+    try:
+        await app.loop.run_in_executor(
+            None,
+            raw_send_email,
+            app.econfig.SMTP_CONFIG,
+            user_email,
+            fmt_email(current_app, subject),
+            fmt_email(current_app, content),
+        )
+        return True
+    except Exception:
+        log.exception("Failed to send email")
+        return False
+
+
 async def send_email(app, user_email: str, subject: str, email_body: str) -> tuple:
     """Send an email to a user using the Mailgun API."""
     econfig = app.econfig
-    mailgun_url = f"https://api.mailgun.net/v3/{econfig.MAILGUN_DOMAIN}" "/messages"
+    mailgun_url = f"https://api.mailgun.net/v3/{econfig.MAILGUN_DOMAIN}/messages"
 
     _inst_name = econfig.INSTANCE_NAME
 

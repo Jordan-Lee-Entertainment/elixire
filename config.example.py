@@ -16,6 +16,18 @@ SUPPORT_EMAIL = "support@elixi.re"
 # If URLs over the API show http or https by default.
 USE_HTTPS = True
 
+# SMTP credentials for instance emails
+# (account deletion, data dumps, etc)
+SMTP_CONFIG = {
+    "from": "elixi.re <automated@somewhere>",
+    "host": "smtp.mailgun.org",
+    "port": 587,
+    # "tls", "starttls", or None
+    "tls_mode": "tls",
+    "username": "postmaster@somewhere",
+    "password": "something",
+}
+
 # Mailgun API credentials for instance emails.
 # (Account deletion, Data Dump, etc.)
 MAILGUN_DOMAIN = ""

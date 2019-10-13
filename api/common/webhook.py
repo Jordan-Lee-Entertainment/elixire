@@ -6,7 +6,7 @@ import logging
 from typing import Optional, Union, Dict, List
 
 import aiohttp
-from quart import current_app
+from quart import app as app
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ async def _post_webhook(
         log.warning("Ignored webhook, payload=%r", payload)
         return None
 
-    async with current_app.session.post(webhook_url, json=payload) as resp:
+    async with app.session.post(webhook_url, json=payload) as resp:
         status = resp.status
 
         if status != 200:
@@ -60,9 +60,9 @@ async def _post_webhook(
 async def ban_webhook(user_id: int, reason: str, period: str):
     """Send a webhook containing banning informatino of a user."""
 
-    username = await current_app.storage.get_username(user_id)
+    username = await app.storage.get_username(user_id)
     return await _post_webhook(
-        getattr(current_app.econfig, "USER_BAN_WEBHOOK", None),
+        getattr(app.econfig, "USER_BAN_WEBHOOK", None),
         embed={
             "title": "Elixire Auto Banning",
             "color": 0x696969,
@@ -78,7 +78,7 @@ async def ban_webhook(user_id: int, reason: str, period: str):
 async def ip_ban_webhook(ip_address: str, reason: str, period: str):
     """Send a webhook containing banning information."""
     return await _post_webhook(
-        getattr(current_app.econfig, "IP_BAN_WEBHOOK", None),
+        getattr(app.econfig, "IP_BAN_WEBHOOK", None),
         embed={
             "title": "Elixire Auto IP Banning",
             "color": 0x696969,
@@ -93,7 +93,7 @@ async def ip_ban_webhook(ip_address: str, reason: str, period: str):
 
 async def register_webhook(user_id, username, discord_user, email):
     return await _post_webhook(
-        getattr(current_app, "USER_REGISTER_WEBHOOK", None),
+        getattr(app, "USER_REGISTER_WEBHOOK", None),
         check_result=True,
         embed={
             "title": "user registration webhook",
@@ -110,7 +110,7 @@ async def register_webhook(user_id, username, discord_user, email):
 
 async def fail_register_webhook(user_id, username, reason):
     return await _post_webhook(
-        getattr(current_app, "USER_REGISTER_WEBHOOK", None),
+        getattr(app, "USER_REGISTER_WEBHOOK", None),
         check_result=True,
         embed={
             "title": "registration failure",
@@ -127,10 +127,10 @@ async def fail_register_webhook(user_id, username, reason):
 async def jpeg_toobig_webhook(ctx, size_after):
     """Dispatch a webhook when the EXIF checking failed."""
     increase = size_after / ctx.file.size
-    username = await current_app.storage.get_username(ctx.user_id)
+    username = await app.storage.get_username(ctx.user_id)
 
     return await _post_webhook(
-        getattr(current_app.econfig, "EXIF_TOOBIG_WEBHOOK", None),
+        getattr(app.econfig, "EXIF_TOOBIG_WEBHOOK", None),
         embed={
             "title": "Elixire EXIF Cleaner Size Change Warning",
             "color": 0x420420,
@@ -150,10 +150,10 @@ async def jpeg_toobig_webhook(ctx, size_after):
 
 async def scan_webhook(ctx, scan_out: str):
     """Execute a discord webhook with information about the virus scan."""
-    username = await current_app.storage.get_username(ctx.user_id)
+    username = await app.storage.get_username(ctx.user_id)
 
     return await _post_webhook(
-        current_app.econfig.UPLOAD_SCAN_WEBHOOK,
+        app.econfig.UPLOAD_SCAN_WEBHOOK,
         embed={
             "title": "Elixire Virus Scanning",
             "color": 0xFF0000,
