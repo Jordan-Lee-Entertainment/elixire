@@ -56,7 +56,7 @@ class JobManager:
             except KeyError:
                 pass
 
-    def spawn(self, coro, name: Optional[str] = None, **kwargs: bool):
+    def spawn(self, coro, name: Optional[str] = None, **kwargs: bool) -> asyncio.Task:
         """Spawn a backgrund task.
 
         This is meant for one-shot tasks.
