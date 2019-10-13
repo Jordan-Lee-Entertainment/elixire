@@ -97,16 +97,16 @@ async def register_user():
         raise BadInput("Username or email already exist.")
 
     user_id = udata["user_id"]
-
-    # TODO email and webhook rewrite
     email_ok = await send_register_email(email)
-    webhook_ok = await register_webhook(user_id, username, discord_user, email)
 
     if not email_ok:
         log.warning("failed to send email, deleting user")
         await delete_user(user_id, delete=True)
         await fail_register_webhook(user_id, username, "failed to send email")
+
         raise BadInput("Failed to send email.")
+
+    webhook_ok = await register_webhook(user_id, username, discord_user, email)
 
     log.info("registration side-effects: email=%r, webhook=%r", email_ok, webhook_ok)
 
