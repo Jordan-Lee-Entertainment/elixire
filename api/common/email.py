@@ -121,6 +121,7 @@ async def send_email(user_email: str, subject: str, content: str) -> bool:
         return True
     except Exception:
         log.exception("Failed to send email")
+        # TODO raise own exception instead
         return False
 
 

@@ -50,11 +50,7 @@ Do not reply to this email specifically, it will not work.
 """,
     )
 
-    resp, _ = await send_email(
-        app, email, f"{_inst_name} - signup confirmation", email_body
-    )
-
-    return resp.status == 200
+    return await send_email(email, f"{_inst_name} - signup confirmation", email_body)
 
 
 async def check_email(loop, email: str):
@@ -133,9 +129,7 @@ Your username is {uname}.
         uname=uname,
     )
 
-    resp, _ = await send_email(app, email, f"username recovery", email_body)
-
-    return resp.status == 200
+    return await send_email(email, "username recovery", email_body)
 
 
 @bp.route("/recover_username", methods=["POST"])

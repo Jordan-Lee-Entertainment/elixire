@@ -298,13 +298,13 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {app.econfig.MAIN_URL}
 """
 
-    # TODO: change this to send user email?
-    resp, _ = await send_email(
-        app, user_email, f"{_inst_name} - account deactivation request", email_body
+    # TODO: change this to send_email_to_user
+    email_ok = await send_email(
+        user_email, f"{_inst_name} - account deactivation request", email_body
     )
 
     # TODO return '', 204
-    return jsonify({"success": resp.status == 200})
+    return jsonify({"success": email_ok})
 
 
 @bp.route("/delete_confirm", methods=["POST"])
@@ -376,12 +376,12 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {app.econfig.MAIN_URL}
 """
 
-    resp, _ = await send_email(
-        app, user_email, f"{_inst_name} - password reset request", email_body
+    email_ok = await send_email(
+        user_email, f"{_inst_name} - password reset request", email_body
     )
 
     # TODO return '', 204
-    return jsonify({"success": resp.status == 200})
+    return jsonify({"success": email_ok})
 
 
 @bp.route("/reset_password_confirm", methods=["POST"])
