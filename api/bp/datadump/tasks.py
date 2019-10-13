@@ -16,7 +16,7 @@ from typing import Tuple, Optional
 
 from quart import current_app as app
 
-from api.common.email import gen_email_token, send_email_to_user
+from api.common.email import gen_email_token, send_datadump_email
 
 log = logging.getLogger(__name__)
 
@@ -210,11 +210,7 @@ async def dump_files(
 
 async def dispatch_dump(user_id: int, user_name: str) -> None:
     """Dispatch the data dump to a user."""
-    log.info(f"Dispatching dump for {user_id} {user_name!r}")
-
-    _inst_name = app.econfig.INSTANCE_NAME
-    _support = app.econfig.SUPPORT_EMAIL
-
+    log.info("dispatching dump for %d %r", user_id, user_name)
     dump_token = await gen_email_token(user_id, "email_dump_tokens")
 
     await app.db.execute(
@@ -226,40 +222,17 @@ async def dispatch_dump(user_id: int, user_name: str) -> None:
         user_id,
     )
 
-    # TODO move this to own function
-
-    email_body = f"""This is an automated email from {_inst_name}
-about your data dump.
-
-Visit {app.econfig.MAIN_URL}/api/dump/get?key={dump_token} to fetch your
-data dump.
-
-The URL will be invalid in 6 hours.
-Do not share this URL. Nobody will ask you for this URL.
-
-Send an email to {_support} if any questions arise.
-Do not reply to this automated email.
-
-- {_inst_name}, {app.econfig.MAIN_URL}
-    """
-
-    email_ok, user_email = await send_email_to_user(
-        user_id, "{inst_name} - Your data dump is here!", email_body
+    # either way of email success or failure, we made a datatump, and should
+    # not keep worrying about it
+    await app.db.execute(
+        """
+        DELETE FROM current_dump_state
+        WHERE user_id = $1
+        """,
+        user_id,
     )
 
-    if email_ok:
-        log.info(f"Sent email to {user_id} {user_email}")
-
-        # remove from current state
-        await app.db.execute(
-            """
-            DELETE FROM current_dump_state
-            WHERE user_id = $1
-            """,
-            user_id,
-        )
-    else:
-        log.error(f"Failed to send email to {user_id} {user_email}")
+    await send_datadump_email(user_id, dump_token)
 
 
 async def dump_static(zipdump: zipfile.ZipFile, user_id: int) -> None:

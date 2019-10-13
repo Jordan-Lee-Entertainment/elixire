@@ -341,3 +341,29 @@ Do not reply to this email specifically, it will not work.
     return await send_email(
         user_email, "{inst_name} - password reset request", email_body
     )
+
+
+async def send_datadump_email(user_id: int, dump_token: str) -> bool:
+    email_body = fmt_email(
+        """This is an automated email from {inst_name}
+about your data dump.
+
+Visit {main_url}/api/dump/get?key={dump_token} to fetch your
+data dump.
+
+The URL will be invalid in 6 hours.
+Do not share this URL. Nobody will ask you for this URL.
+
+Send an email to {support} if any questions arise.
+Do not reply to this automated email.
+
+- {inst_name}, {main_url}
+    """,
+        dump_token=dump_token,
+    )
+
+    email_ok, _ = await send_email_to_user(
+        user_id, "{inst_name} - Your data dump is here!", email_body
+    )
+
+    return email_ok
