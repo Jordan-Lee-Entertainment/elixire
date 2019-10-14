@@ -66,7 +66,7 @@ async def email_broadcast():
     subject, body = payload["subject"], payload["body"]
 
     # format stuff just to make sure
-    subject, body = fmt_email(app, subject), fmt_email(app, body)
+    subject, body = fmt_email(subject), fmt_email(body)
 
     # we do it in the background for webscale
     app.sched.spawn(_do_broadcast(subject, body), "admin_broadcast")

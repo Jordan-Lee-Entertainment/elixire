@@ -106,6 +106,9 @@ def raw_send_email(cfg: dict, to: str, subject: str, content: str):
 
 
 async def send_email(user_email: str, subject: str, content: str) -> bool:
+    if getattr(app, "_test", False):
+        return True
+
     try:
         await app.loop.run_in_executor(
             None,
