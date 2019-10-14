@@ -54,9 +54,6 @@ async def _post_webhook(
         return resp
 
 
-# TODO remove app from callers
-
-
 async def ban_webhook(user_id: int, reason: str, period: str):
     """Send a webhook containing banning informatino of a user."""
 
@@ -93,7 +90,7 @@ async def ip_ban_webhook(ip_address: str, reason: str, period: str):
 
 async def register_webhook(user_id, username, discord_user, email):
     return await _post_webhook(
-        getattr(app, "USER_REGISTER_WEBHOOK", None),
+        getattr(app.econfig, "USER_REGISTER_WEBHOOK", None),
         check_result=True,
         embed={
             "title": "user registration webhook",
@@ -110,7 +107,7 @@ async def register_webhook(user_id, username, discord_user, email):
 
 async def fail_register_webhook(user_id, username, reason):
     return await _post_webhook(
-        getattr(app, "USER_REGISTER_WEBHOOK", None),
+        getattr(app.econfig, "USER_REGISTER_WEBHOOK", None),
         check_result=True,
         embed={
             "title": "registration failure",
