@@ -105,22 +105,6 @@ async def register_webhook(user_id, username, discord_user, email):
     )
 
 
-async def fail_register_webhook(user_id, username, reason):
-    return await _post_webhook(
-        getattr(app.econfig, "USER_REGISTER_WEBHOOK", None),
-        check_result=True,
-        embed={
-            "title": "registration failure",
-            "color": 0xFF0000,
-            "fields": [
-                {"name": "userid", "value": str(user_id)},
-                {"name": "user name", "value": username},
-                {"name": "reason", "value": reason},
-            ],
-        },
-    )
-
-
 async def jpeg_toobig_webhook(ctx, size_after):
     """Dispatch a webhook when the EXIF checking failed."""
     increase = size_after / ctx.file.size
