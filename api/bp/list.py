@@ -4,6 +4,7 @@
 
 import os
 import logging
+from typing import Tuple, Union
 
 from quart import Blueprint, jsonify, request, current_app as app
 
@@ -46,17 +47,29 @@ def construct_url(domain: str, url_basename: str, *, scope: str = "i") -> str:
     return f"{prefix}{domain}/{scope}/{url_basename}"
 
 
-def _get_page():
+def _get_before_after() -> Tuple[Union[int, float], int]:
+    before = request.args.get("before")
+    if before is None:
+        # NOTE the biggest value in int64 is this
+        before = 1 << 63
+    else:
+        try:
+            before = int(before)
+        except ValueError:
+            raise BadInput("Optional before parameter must be an integer")
+
     try:
-        return int(request.args["page"])
-    except (ValueError, KeyError):
-        raise BadInput("Page parameter needs to be supplied correctly.")
+        after = int(request.args.get("after") or 0)
+    except ValueError:
+        raise BadInput("Optional after parameter must be an integer")
+
+    return before, after
 
 
 @bp.route("/files")
 async def list_files():
     """List user files"""
-    page = _get_page()
+    before, after = _get_before_after()
     user_id = await token_check()
     domains = await domain_list()
 
@@ -65,14 +78,15 @@ async def list_files():
         SELECT file_id, filename, file_size, fspath, mimetype, domain, subdomain
         FROM files
         WHERE uploader = $1
-        AND deleted = false
+          AND deleted = false
+          AND file_id < $2
+          AND file_id > $3
         ORDER BY file_id DESC
-
         LIMIT 100
-        OFFSET ($2 * 100)
         """,
         user_id,
-        page,
+        before,
+        after,
     )
 
     files = []
@@ -112,7 +126,7 @@ async def list_files():
 @bp.route("/shortens")
 async def list_shortens():
     """List user shortens"""
-    page = _get_page()
+    before, after = _get_before_after()
     user_id = await token_check()
     domains = await domain_list()
 
@@ -121,14 +135,15 @@ async def list_shortens():
         SELECT shorten_id, filename, redirto, domain, subdomain
         FROM shortens
         WHERE uploader = $1
-        AND deleted = false
+          AND deleted = false
+          AND shorten_id < $2
+          AND shorten_id > $3
         ORDER BY shorten_id DESC
-
         LIMIT 100
-        OFFSET ($2 * 100)
         """,
         user_id,
-        page,
+        before,
+        after,
     )
 
     shortens = []
