@@ -40,10 +40,7 @@ def construct_domain(domains: dict, obj: dict) -> str:
 
 def construct_url(domain: str, url_basename: str, *, scope: str = "i") -> str:
     """Create an URL for the given object."""
-
-    # http is allowed for local testing
-    prefix = "https://" if app.econfig.USE_HTTPS else "http://"
-    return f"{prefix}{domain}/{scope}/{url_basename}"
+    return f"://{domain}/{scope}/{url_basename}"
 
 
 def _get_page():
