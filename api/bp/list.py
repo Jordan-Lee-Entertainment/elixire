@@ -47,7 +47,7 @@ def construct_url(domain: str, url_basename: str, *, scope: str = "i") -> str:
     return f"{prefix}{domain}/{scope}/{url_basename}"
 
 
-def _get_before_after() -> Tuple[Union[int, float], int]:
+def _get_before_after() -> Tuple[Union[int, float], int, int]:
     before = request.args.get("before")
     if before is None:
         # NOTE the biggest value in int64 is this
@@ -63,13 +63,20 @@ def _get_before_after() -> Tuple[Union[int, float], int]:
     except ValueError:
         raise BadInput("Optional after parameter must be an integer")
 
-    return before, after
+    try:
+        limit = int(request.args.get("limit") or 100)
+        limit = max(1, limit)
+        limit = min(100, limit)
+    except ValueError:
+        limit = 100
+
+    return before, after, limit
 
 
 @bp.route("/files")
 async def list_files():
     """List user files"""
-    before, after = _get_before_after()
+    before, after, limit = _get_before_after()
     user_id = await token_check()
     domains = await domain_list()
 
@@ -82,11 +89,12 @@ async def list_files():
           AND file_id < $2
           AND file_id > $3
         ORDER BY file_id DESC
-        LIMIT 100
+        LIMIT $4
         """,
         user_id,
         before,
         after,
+        limit,
     )
 
     files = []
@@ -126,7 +134,7 @@ async def list_files():
 @bp.route("/shortens")
 async def list_shortens():
     """List user shortens"""
-    before, after = _get_before_after()
+    before, after, limit = _get_before_after()
     user_id = await token_check()
     domains = await domain_list()
 
@@ -139,11 +147,12 @@ async def list_shortens():
           AND shorten_id < $2
           AND shorten_id > $3
         ORDER BY shorten_id DESC
-        LIMIT 100
+        LIMIT $4
         """,
         user_id,
         before,
         after,
+        limit,
     )
 
     shortens = []

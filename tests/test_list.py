@@ -39,18 +39,66 @@ async def _create_file(app, user_id):
     )
 
 
-async def test_file_list(test_cli_user):
-    for _ in range(110):
-        await _create_file(test_cli_user.app, test_cli_user["user_id"])
+async def _create_shorten(app, user_id):
+    redir_id = get_snowflake()
+    async with app.app_context():
+        shortname, _ = await gen_user_shortname(user_id)
 
-    resp = await test_cli_user.get("/api/files")
+    await app.db.execute(
+        """
+        INSERT INTO shortens (shorten_id, filename,
+            uploader, redirto, domain, subdomain)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        """,
+        redir_id,
+        shortname,
+        user_id,
+        "https://google.com",
+        0,
+        "w",
+    )
+
+
+async def do_list(test_cli_user, path: str, *, before=None, after=None):
+    before = f"before={before}" if before is not None else ""
+    after = f"&after={after}" if after is not None else ""
+
+    resp = await test_cli_user.get(f"/api{path}{before}{after}")
     assert resp.status_code == 200
     rjson = await resp.json
-    assert isinstance(rjson["files"], list)
-    files = rjson["files"]
 
-    file_ids = [int(filedata["id"]) for filedata in files]
-    assert all(a >= b for a, b in zip(file_ids, file_ids[1:]))
+    objects = rjson["files" if path.startswith("/files") else "shortens"]
+    assert isinstance(objects, list)
+    return [int(obj_data["id"]) for obj_data in objects]
 
-    last_file_id = files[-1]["id"]
-    # TODO request files with that as before
+
+async def test_file_list(test_cli_user):
+    for _ in range(30):
+        await _create_file(test_cli_user.app, test_cli_user["user_id"])
+
+    ids = await do_list(test_cli_user, "/files?limit=20")
+    assert all(a >= b for a, b in zip(ids, ids[1:]))
+
+    last_id = ids[-1]
+
+    # request 2: check if "pagination" works by selecting the last id and using
+    # it in a new request, with it as before=
+    ids = await do_list(test_cli_user, "/files?", before=last_id)
+    assert last_id not in ids
+    assert len(ids) == 10
+
+
+async def test_shorten_list(test_cli_user):
+    for _ in range(30):
+        await _create_shorten(test_cli_user.app, test_cli_user["user_id"])
+
+    ids = await do_list(test_cli_user, "/shortens?limit=20")
+    assert all(a >= b for a, b in zip(ids, ids[1:]))
+
+    last_id = ids[-1]
+
+    # request 2: check if "pagination" works by selecting the last id and using
+    # it in a new request, with it as before=
+    ids = await do_list(test_cli_user, "/shortens?", before=last_id)
+    assert last_id not in ids
+    assert len(ids) == 10
