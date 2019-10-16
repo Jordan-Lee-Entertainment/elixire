@@ -84,7 +84,9 @@ async def mass_file_delete(user_id: int, delete=False):
 
     for row in file_shortnames:
         shortname = row["filename"]
-        task = app.sched.spawn(_delete_file_wrapper(shortname, user_id))
+        task = app.sched.spawn(
+            _delete_file_wrapper(shortname, user_id), name=f"_del_wrapper_{shortname}"
+        )
         tasks.append(task)
 
     if tasks:
