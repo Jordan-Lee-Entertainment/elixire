@@ -79,6 +79,7 @@ async def test_file_list(test_cli_user):
     ids = await do_list(test_cli_user, "/files?limit=20")
     assert all(a >= b for a, b in zip(ids, ids[1:]))
 
+    first_id = ids[-1]
     last_id = ids[-1]
 
     # request 2: check if "pagination" works by selecting the last id and using
@@ -86,6 +87,11 @@ async def test_file_list(test_cli_user):
     ids = await do_list(test_cli_user, "/files?", before=last_id)
     assert last_id not in ids
     assert len(ids) == 10
+
+    last_id_2 = ids[-1]
+
+    ids = await do_list(test_cli_user, "/files?", before=last_id_2, after=first_id + 1)
+    assert first_id not in ids
 
 
 async def test_shorten_list(test_cli_user):
@@ -95,6 +101,7 @@ async def test_shorten_list(test_cli_user):
     ids = await do_list(test_cli_user, "/shortens?limit=20")
     assert all(a >= b for a, b in zip(ids, ids[1:]))
 
+    first_id = ids[-1]
     last_id = ids[-1]
 
     # request 2: check if "pagination" works by selecting the last id and using
@@ -102,3 +109,8 @@ async def test_shorten_list(test_cli_user):
     ids = await do_list(test_cli_user, "/shortens?", before=last_id)
     assert last_id not in ids
     assert len(ids) == 10
+
+    last_id_2 = ids[-1]
+
+    ids = await do_list(test_cli_user, "/files?", before=last_id_2, after=first_id + 1)
+    assert first_id not in ids
