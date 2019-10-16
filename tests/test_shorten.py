@@ -39,7 +39,7 @@ async def test_shorten_complete(test_cli_user):
     domain = shorten_url.parts[1]
     shorten = shorten_url.parts[-1]
 
-    resp = await test_cli_user.get("/api/shortens?page=0")
+    resp = await test_cli_user.get("/api/shortens")
     assert resp.status_code == 200
     rjson = await resp.json
 

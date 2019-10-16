@@ -51,7 +51,7 @@ def _get_before_after() -> Tuple[Union[int, float], int]:
     before = request.args.get("before")
     if before is None:
         # NOTE the biggest value in int64 is this
-        before = 1 << 63
+        before = (1 << 63) - 1
     else:
         try:
             before = int(before)

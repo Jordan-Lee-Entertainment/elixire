@@ -13,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 
 async def check_exists(test_cli, shortname, *, reverse=False):
     """Check if a file exists (or not) given the shortname."""
-    resp = await test_cli.get("/api/files?page=0")
+    resp = await test_cli.get("/api/files")
 
     assert resp.status_code == 200
     rjson = await resp.json
