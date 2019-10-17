@@ -13,7 +13,7 @@ from api.common.auth import token_check, check_admin
 from api.schema import validate, ADMIN_SEND_BROADCAST
 from api.common.email import fmt_email, send_email_to_user
 from api.bp.admin.audit_log_actions.email import BroadcastAction
-from api.errors imprt EmailError
+from api.errors import EmailError
 
 log = logging.getLogger(__name__)
 bp = Blueprint("admin_misc", __name__)
@@ -44,12 +44,10 @@ async def _do_broadcast(subject, body):
 
     for row in uids:
         user_id = row["user_id"]
-        user_name = row['username']
+        user_name = row["username"]
 
         try:
-            await send_email_to_user(
-                user_id, subject, body, raise_err=True
-            )
+            await send_email_to_user(user_id, subject, body, raise_err=True)
         except EmailError as exc:
             log.warning("Failed to send to %d %r: %r", user_id, user_name, exc)
             continue
