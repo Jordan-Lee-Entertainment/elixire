@@ -2,15 +2,17 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import asyncio
 import secrets
 import logging
+import smtplib
 from smtplib import SMTP, SMTP_SSL
 from email.message import EmailMessage
 from typing import Tuple
 
 from quart import current_app as app
 
-from ..errors import BadInput
+from ..errors import BadInput, EmailError
 
 log = logging.getLogger(__name__)
 
@@ -105,7 +107,14 @@ def raw_send_email(cfg: dict, to: str, subject: str, content: str):
     log.debug("smtp done")
 
 
-async def send_email(user_email: str, subject: str, content: str) -> bool:
+async def send_email(
+    user_email: str,
+    subject: str,
+    content: str,
+    *,
+    raise_err: bool = False,
+    _is_repeat: bool = False,
+) -> bool:
     if getattr(app, "_test", False):
         return True
 
@@ -119,13 +128,31 @@ async def send_email(user_email: str, subject: str, content: str) -> bool:
             fmt_email(content),
         )
         return True
-    except Exception:
+    except smtplib.SMTPConnectError as exc:
+        log.error("Failed to connect to server (%r), retry=%r", exc, not _is_repeat)
+        if not _is_repeat:
+            await asyncio.sleep(5)
+            return await send_email(user_email, subject, content, _is_repeat=True)
+
+        if raise_err:
+            raise EmailError("Failed to connect to SMTP server")
+        return False
+    except smtplib.SMTPException as exc:
+        if raise_err:
+            raise EmailError(f"smtp error: {exc!r}")
+        return False
+
+    except Exception as exc:
         log.exception("Failed to send email")
-        # TODO raise own exception instead
+        if raise_err:
+            raise EmailError(f"Failed to send email: {exc!r}")
+
         return False
 
 
-async def send_email_to_user(user_id: int, subject: str, body: str) -> Tuple[bool, str]:
+async def send_email_to_user(
+    user_id: int, subject: str, body: str, **kwargs
+) -> Tuple[bool, str]:
     """Send an email to a user, given user ID.
 
     Returns the success status of the email and the actual user email.
@@ -139,8 +166,11 @@ async def send_email_to_user(user_id: int, subject: str, body: str) -> Tuple[boo
         user_id,
     )
 
-    email_ok = await send_email(user_email, subject, body)
+    email_ok = await send_email(user_email, subject, body, **kwargs)
     log.info("sent %d bytes email to %d %r %r", len(body), user_id, user_email, subject)
+
+    if kwargs.get("raise_err"):
+        return user_email
 
     return email_ok, user_email
 
