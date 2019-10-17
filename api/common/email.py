@@ -135,7 +135,7 @@ async def send_email(
             return await send_email(user_email, subject, content, _is_repeat=True)
 
         if raise_err:
-            raise EmailError("Failed to connect to SMTP server")
+            raise EmailError(f"Failed to connect to SMTP server: {exc!r}")
         return False
     except smtplib.SMTPException as exc:
         if raise_err:
