@@ -136,10 +136,12 @@ async def send_email(
 
         if raise_err:
             raise EmailError(f"Failed to connect to SMTP server: {exc!r}")
+
         return False
     except smtplib.SMTPException as exc:
         if raise_err:
             raise EmailError(f"smtp error: {exc!r}")
+
         return False
 
     except Exception as exc:
@@ -282,7 +284,7 @@ Do not reply to this automated email.
     return email_ok
 
 
-async def send_register_email(email: str) -> bool:
+async def send_register_email(email: str, **kwargs) -> bool:
     """Send an email about the signup."""
     email_body = fmt_email(
         """This is an automated email from {inst_name}
@@ -305,7 +307,9 @@ Do not reply to this email specifically, it will not work.
 """
     )
 
-    return await send_email(email, "{inst_name} - signup confirmation", email_body)
+    return await send_email(
+        email, "{inst_name} - signup confirmation", email_body, **kwargs
+    )
 
 
 async def send_username_recovery_email(uname: str, email: str):
