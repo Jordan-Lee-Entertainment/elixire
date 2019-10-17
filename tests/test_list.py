@@ -112,5 +112,5 @@ async def test_shorten_list(test_cli_user):
 
     last_id_2 = ids[-1]
 
-    ids = await do_list(test_cli_user, "/files?", before=last_id_2, after=first_id + 1)
+    ids = await do_list(test_cli_user, "/shortens?", before=last_id_2, after=first_id + 1)
     assert first_id not in ids
