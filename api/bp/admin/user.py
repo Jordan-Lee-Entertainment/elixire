@@ -127,10 +127,8 @@ async def activation_email(user_id):
     # there was an invalidate() call which is unecessary
     # because its already invalidated on activate_user_from_email
 
-    email_ok, _email = await send_activation_email(user_id)
-
-    # TODO '', 204
-    return jsonify({"success": email_ok})
+    await send_activation_email(user_id)
+    return "", 204
 
 
 @bp.route("/api/activate_email")

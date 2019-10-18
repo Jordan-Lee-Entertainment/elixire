@@ -129,11 +129,9 @@ async def email_domain(domain_id: int):
             domain_id=domain_id, owner_id=owner_id, subject=subject, body=body
         )
 
-        email_ok, user_email = await send_email_to_user(owner_id, subject, body)
+        user_email = await send_email_to_user(owner_id, subject, body)
 
-    return jsonify(
-        {"success": email_ok, "owner_id": owner_id, "owner_email": user_email}
-    )
+    return jsonify({"owner_id": owner_id, "owner_email": user_email})
 
 
 @bp.route("/<int:domain_id>/owner", methods=["PUT"])
