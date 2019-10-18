@@ -266,9 +266,8 @@ async def delete_own_user():
         user_id,
     )
 
-    # TODO better email errors
-    email_ok, _ = await send_deletion_confirm_email(user_id, email_token)
-    return jsonify({"success": email_ok})
+    await send_deletion_confirm_email(user_id, email_token)
+    return "", 204
 
 
 @bp.route("/delete_confirm", methods=["POST"])
@@ -321,10 +320,8 @@ async def reset_password_req():
         user_id,
     )
 
-    email_ok = await send_password_reset_email(user_email, email_token)
-
-    # TODO return '', 204
-    return jsonify({"success": email_ok})
+    await send_password_reset_email(user_email, email_token)
+    return "", 204
 
 
 @bp.route("/reset_password_confirm", methods=["POST"])

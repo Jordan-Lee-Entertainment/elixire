@@ -99,5 +99,5 @@ async def recover_username():
     if row is None:
         raise BadInput("Email not found")
 
-    email_ok = await send_username_recovery_email(row["username"], row["email"])
-    return "", 204 if email_ok else 500
+    await send_username_recovery_email(row["username"], row["email"])
+    return "", 204
