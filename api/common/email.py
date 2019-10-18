@@ -108,12 +108,7 @@ def raw_send_email(cfg: dict, to: str, subject: str, content: str):
 
 
 async def send_email(
-    user_email: str,
-    subject: str,
-    content: str,
-    *,
-    raise_err: bool = False,
-    _is_repeat: bool = False,
+    user_email: str, subject: str, content: str, *, _is_repeat: bool = False
 ) -> bool:
     if getattr(app, "_test", False):
         return True
@@ -127,29 +122,18 @@ async def send_email(
             fmt_email(subject),
             fmt_email(content),
         )
-        return True
     except smtplib.SMTPConnectError as exc:
         log.error("Failed to connect to server (%r), retry=%r", exc, not _is_repeat)
         if not _is_repeat:
             await asyncio.sleep(5)
             return await send_email(user_email, subject, content, _is_repeat=True)
 
-        if raise_err:
-            raise EmailError(f"Failed to connect to SMTP server: {exc!r}")
-
-        return False
+        raise EmailError(f"Failed to connect to SMTP server: {exc!r}")
     except smtplib.SMTPException as exc:
-        if raise_err:
-            raise EmailError(f"smtp error: {exc!r}")
-
-        return False
-
+        raise EmailError(f"smtp error: {exc!r}")
     except Exception as exc:
         log.exception("Failed to send email")
-        if raise_err:
-            raise EmailError(f"Failed to send email: {exc!r}")
-
-        return False
+        raise EmailError(f"Failed to send email: {exc!r}")
 
 
 async def send_email_to_user(
@@ -168,13 +152,9 @@ async def send_email_to_user(
         user_id,
     )
 
-    email_ok = await send_email(user_email, subject, body, **kwargs)
+    await send_email(user_email, subject, body, **kwargs)
     log.info("sent %d bytes email to %d %r %r", len(body), user_id, user_email, subject)
-
-    if kwargs.get("raise_err"):
-        return user_email
-
-    return email_ok, user_email
+    return user_email
 
 
 def fmt_email(string, **kwargs):
@@ -259,9 +239,9 @@ Do not reply to this automated email.
     return await send_email_to_user(user_id, "{inst_name} - account activation", body)
 
 
-async def send_activated_email(user_id: int) -> bool:
+async def send_activated_email(user_id: int):
     if not app.econfig.NOTIFY_ACTIVATION_EMAILS:
-        return True
+        return
 
     email_body = """This is an automated email from {inst_name}
 about your account request.
@@ -277,14 +257,12 @@ Do not reply to this automated email.
 - {inst_name}, {main_url}
 """
 
-    email_ok, _ = await send_email_to_user(
+    return await send_email_to_user(
         user_id, "{inst_name} - Your account is now active", email_body
     )
 
-    return email_ok
 
-
-async def send_register_email(email: str, **kwargs) -> bool:
+async def send_register_email(email: str):
     """Send an email about the signup."""
     email_body = fmt_email(
         """This is an automated email from {inst_name}
@@ -307,9 +285,7 @@ Do not reply to this email specifically, it will not work.
 """
     )
 
-    return await send_email(
-        email, "{inst_name} - signup confirmation", email_body, **kwargs
-    )
+    return await send_email(email, "{inst_name} - signup confirmation", email_body)
 
 
 async def send_username_recovery_email(uname: str, email: str):
@@ -380,7 +356,7 @@ Do not reply to this email specifically, it will not work.
     )
 
 
-async def send_datadump_email(user_id: int, dump_token: str) -> bool:
+async def send_datadump_email(user_id: int, dump_token: str):
     email_body = fmt_email(
         """This is an automated email from {inst_name}
 about your data dump.
@@ -399,8 +375,6 @@ Do not reply to this automated email.
         dump_token=dump_token,
     )
 
-    email_ok, _ = await send_email_to_user(
+    return await send_email_to_user(
         user_id, "{inst_name} - Your data dump is here!", email_body
     )
-
-    return email_ok
