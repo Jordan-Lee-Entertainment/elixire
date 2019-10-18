@@ -137,7 +137,7 @@ async def activate_user_from_email():
     except KeyError:
         raise BadInput("no key provided")
 
-    user_id = await uid_from_email_token(app, email_token, "email_activation_tokens")
+    user_id = await uid_from_email_token(email_token, "email_activation_tokens")
 
     res = await app.db.execute(
         """

@@ -171,7 +171,7 @@ def fmt_email(string, **kwargs):
     return string.replace("{}", "{{}}").format(**base)
 
 
-async def uid_from_email_token(token: str, table: str, raise_err: bool = True) -> int:
+async def uid_from_email_token(token: str, table: str) -> int:
     """Get user ID from a random email token."""
     user_id = await app.db.fetchval(
         f"""
@@ -182,7 +182,7 @@ async def uid_from_email_token(token: str, table: str, raise_err: bool = True) -
         token,
     )
 
-    if not user_id and raise_err:
+    if user_id is None:
         raise BadInput("No user found with the token")
 
     return user_id
