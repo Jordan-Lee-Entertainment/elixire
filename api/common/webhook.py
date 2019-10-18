@@ -5,7 +5,6 @@
 import logging
 from typing import Optional, Union, Dict, List
 
-import aiohttp
 from quart import current_app as app
 
 from api.errors import WebhookError

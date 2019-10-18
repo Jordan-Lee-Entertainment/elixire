@@ -14,7 +14,7 @@ import logging
 from quart import Blueprint, current_app as app, request
 from dns import resolver
 
-from api.errors import BadInput, FeatureDisabled, EmailError, WebhookError
+from api.errors import BadInput, FeatureDisabled, EmailError
 from api.schema import validate, REGISTRATION_SCHEMA, RECOVER_USERNAME
 from api.common.email import send_register_email, send_username_recovery_email
 from api.common.webhook import register_webhook
