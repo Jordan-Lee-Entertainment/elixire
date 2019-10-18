@@ -11,6 +11,7 @@ from quart import current_app as app, request
 
 from api.common.email import send_email_to_user
 from api.common.utils import find_different_keys
+from api.errors import EmailError
 
 log = logging.getLogger(__name__)
 
@@ -224,5 +225,7 @@ class AuditLog:
         log.info("sending audit log event to %d admins", len(admins))
 
         for admin_id in admins:
-            # TODO fix app context?
-            await send_email_to_user(admin_id, subject, full_text)
+            try:
+                await send_email_to_user(admin_id, subject, full_text)
+            except EmailError as exc:
+                log.warning("failed to send email to admin %d: %r", admin_id, exc)

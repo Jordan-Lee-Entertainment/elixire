@@ -17,6 +17,7 @@ from typing import Tuple, Optional
 from quart import current_app as app
 
 from api.common.email import gen_email_token, send_datadump_email
+from api.errors import EmailError
 
 log = logging.getLogger(__name__)
 
@@ -232,7 +233,11 @@ async def dispatch_dump(user_id: int, user_name: str) -> None:
         user_id,
     )
 
-    await send_datadump_email(user_id, dump_token)
+    try:
+        await send_datadump_email(user_id, dump_token)
+    except EmailError as exc:
+        # TODO make datadump api show errors
+        log.warning("failed to send datadump: %r", exc)
 
 
 async def dump_static(zipdump: zipfile.ZipFile, user_id: int) -> None:

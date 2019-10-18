@@ -47,7 +47,7 @@ async def _do_broadcast(subject, body):
         user_name = row["username"]
 
         try:
-            await send_email_to_user(user_id, subject, body, raise_err=True)
+            await send_email_to_user(user_id, subject, body)
         except EmailError as exc:
             log.warning("Failed to send to %d %r: %r", user_id, user_name, exc)
             continue

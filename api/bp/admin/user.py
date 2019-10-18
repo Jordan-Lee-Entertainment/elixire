@@ -97,8 +97,6 @@ async def activate_user(user_id: int):
 
     await app.storage.invalidate(user_id, "active")
     await send_activated_email(user_id)
-
-    # TODO check success of send_activated_email
     return "", 204
 
 
