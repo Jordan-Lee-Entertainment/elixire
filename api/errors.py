@@ -90,3 +90,9 @@ class EmailError(APIError):
     """Error to send email."""
 
     status_code = 500
+
+
+class WebhookError(APIError):
+    """Error while sending a webhook."""
+
+    status_code = 500

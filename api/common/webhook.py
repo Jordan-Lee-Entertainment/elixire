@@ -8,6 +8,8 @@ from typing import Optional, Union, Dict, List
 import aiohttp
 from quart import current_app as app
 
+from api.errors import WebhookError
+
 log = logging.getLogger(__name__)
 
 
@@ -16,8 +18,7 @@ async def _post_webhook(
     *,
     embed: Optional[dict] = None,
     text: Optional[str] = None,
-    check_result: bool = False,
-) -> Union[Optional[aiohttp.ClientResponse], bool]:
+):
     """Post to the given webhook."""
 
     payload: Dict[str, Union[str, List[dict]]] = {}
@@ -36,22 +37,35 @@ async def _post_webhook(
 
     if not webhook_url:
         log.warning("Ignored webhook, payload=%r", payload)
-        return None
+        return
 
     async with app.session.post(webhook_url, json=payload) as resp:
         status = resp.status
 
-        if status != 200:
-            log.warning(
-                "Failed to dispatch webhook, status=%d, body=%r",
-                status,
-                await resp.read(),
-            )
+        if status == 429:
+            log.warning("We are being rate-limited.")
+            # TODO can we do a wait and retry here?
+            raise WebhookError("Webhook is ratelimited")
 
-        if check_result:
-            return status == 200
+        if status == 200:
+            return
 
-        return resp
+        try:
+            data = await resp.json()
+        except Exception as exc:
+            data = f"Failed to read/parse JSON ({exc!r})"
+
+        err_code, err_msg = data["code"], data["message"]
+        log.warning(
+            "Failed to dispatch webhook, status=%d, code=%d, msg=%r",
+            status,
+            err_code,
+            err_msg,
+        )
+
+        raise WebhookError(
+            f"Failed to send webhook ({status}, {err_code}, {err_msg!r})"
+        )
 
 
 async def ban_webhook(user_id: int, reason: str, period: str):
@@ -91,7 +105,6 @@ async def ip_ban_webhook(ip_address: str, reason: str, period: str):
 async def register_webhook(user_id, username, discord_user, email):
     return await _post_webhook(
         getattr(app.econfig, "USER_REGISTER_WEBHOOK", None),
-        check_result=True,
         embed={
             "title": "user registration webhook",
             "color": 0x7289DA,

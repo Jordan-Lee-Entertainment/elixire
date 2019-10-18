@@ -14,7 +14,7 @@ import logging
 from quart import Blueprint, current_app as app, request
 from dns import resolver
 
-from api.errors import BadInput, FeatureDisabled, EmailError
+from api.errors import BadInput, FeatureDisabled, EmailError, WebhookError
 from api.schema import validate, REGISTRATION_SCHEMA, RECOVER_USERNAME
 from api.common.email import send_register_email, send_username_recovery_email
 from api.common.webhook import register_webhook
@@ -71,14 +71,8 @@ async def register_user():
         await delete_user(user_id, delete=True)
         raise BadInput("Failed to send email.")
 
-    # TODO error-based api for webhooks
-    webhook_ok = await register_webhook(user_id, username, discord_user, email)
-    log.info("registration side-effects: webhook=%r", webhook_ok)
-
-    if webhook_ok:
-        return "", 204
-
-    return f"Failed to send webhook", 500
+    await register_webhook(user_id, username, discord_user, email)
+    return "", 204
 
 
 @bp.route("/recover_username", methods=["POST"])

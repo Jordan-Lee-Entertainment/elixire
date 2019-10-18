@@ -7,6 +7,7 @@ from quart import request, current_app as app
 from api.common import get_ip_addr
 from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.storage import calc_ttl
+from api.errors import WebhookError
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +26,10 @@ async def ban_by_ip(ip_addr: str, reason: str) -> None:
     )
 
     await app.storage.set_with_ttl(f"ipban:{ip_addr}", reason, calc_ttl(end_timestamp))
-    await ip_ban_webhook(ip_addr, f"[ip ban] {reason}", period)
+    try:
+        await ip_ban_webhook(ip_addr, f"[ip ban] {reason}", period)
+    except WebhookError:
+        pass
 
 
 async def ban_user(user_id: int, reason: str) -> None:
@@ -45,7 +49,10 @@ async def ban_user(user_id: int, reason: str) -> None:
     await app.storage.set_with_ttl(
         f"userban:{user_id}", reason, calc_ttl(end_timestamp)
     )
-    await ban_webhook(user_id, reason, period)
+    try:
+        await ban_webhook(user_id, reason, period)
+    except WebhookError:
+        pass
 
 
 async def ban_request(reason: str) -> None:
