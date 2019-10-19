@@ -2,6 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import asyncio
 import logging
 from typing import Optional, Union, Dict, List
 
@@ -43,7 +44,15 @@ async def _post_webhook(
 
         if status == 429:
             log.warning("We are being rate-limited.")
-            # TODO can we do a wait and retry here?
+
+            try:
+                retry_after = int(resp.headers["retry-after"])
+                log.warning("waiting %d ms", retry_after)
+                await asyncio.sleep(retry_after / 1000)
+                return await _post_webhook(webhook_url, embed=embed, text=text)
+            except (ValueError, KeyError):
+                pass
+
             raise WebhookError("Webhook is ratelimited")
 
         if status == 200:
