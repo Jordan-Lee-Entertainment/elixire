@@ -84,3 +84,9 @@ class QuotaExploded(APIError):
     """When your quota is exploded or will be exploded."""
 
     status_code = 469
+
+
+class JobExistsError(APIError):
+    """When a background job already exists for the given action."""
+
+    status_code = 409

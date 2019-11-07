@@ -9,7 +9,7 @@ from quart import Blueprint, jsonify, request, current_app as app
 
 from api.common import delete_file, delete_shorten
 from api.common.auth import token_check, password_check
-from api.errors import BadInput
+from api.errors import BadInput, JobExistsError
 
 from api.common.user import mass_file_delete
 
@@ -144,15 +144,16 @@ async def delete_all():
 
     await password_check(user_id, password)
 
-    task_name = f"delete_files_{user_id}"
-    if app.sched.exists(task_name):
+    try:
+        app.sched.spawn(
+            mass_file_delete(user_id, False), task_id=f"delete_files_{user_id}"
+        )
+    except JobExistsError:
         return (
             jsonify({"error": True, "message": "background task already running"}),
             409,
         )
 
-    # create task to delete all files in the background
-    app.sched.spawn(mass_file_delete(user_id, False), task_name)
     return "", 204
 
 

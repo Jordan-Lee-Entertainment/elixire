@@ -3,11 +3,12 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import asyncio
-from typing import List, Any, Optional
+from typing import List, Any
 
 import logging
 
 from quart.ctx import copy_current_app_context
+from .errors import JobExistsError
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class JobManager:
 
     def _create_task(self, *, task_id: str, main_coroutine):
         if task_id in self.jobs:
-            raise ValueError(f"Task '{task_id}' already exists")
+            raise JobExistsError(f"Task '{task_id}' already exists")
 
         task = self.loop.create_task(main_coroutine)
         self.jobs[task_id] = task
