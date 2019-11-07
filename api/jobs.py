@@ -56,7 +56,15 @@ class JobManager:
             except KeyError:
                 pass
 
-    def spawn(self, coro, name: Optional[str] = None, **kwargs: bool):
+    def _create_task(self, *, task_id: str, main_coroutine):
+        if task_id in self.jobs:
+            raise ValueError(f"Task '{task_id}' already exists")
+
+        task = self.loop.create_task(main_coroutine)
+        self.jobs[task_id] = task
+        return task
+
+    def spawn(self, coro, *, task_id: str, **kwargs):
         """Spawn a backgrund task.
 
         This is meant for one-shot tasks.
@@ -65,7 +73,6 @@ class JobManager:
         If you wish to catch the coroutine's exception instead of quieting it,
         you must assign the raise_underlying_error kwarg to true.
         """
-        task_name = name or coro.__name__
 
         @copy_current_app_context
         async def _ctx_wrapper_bg() -> Any:
@@ -75,26 +82,22 @@ class JobManager:
         #  - one is _ctx_wrapper_bg() to catch and use the current app context
         #  - that runs inside a self._wrapper() that gives basic logging on the
         #     task, handles exceptions, etc.
-        task = self.loop.create_task(
-            self._wrapper(task_name, _ctx_wrapper_bg(), **kwargs)
+        return self._create_task(
+            task_id=task_id,
+            main_coroutine=self._wrapper(task_id, _ctx_wrapper_bg(), **kwargs),
         )
 
-        self.jobs[task_name] = task
-        return task
-
-    def spawn_periodic(self, func, args, period: int, name: str = None):
+    def spawn_periodic(self, func, args, *, period: int, task_id: str):
         """Spawn a background task that will be run
         every ``period`` seconds."""
-        name = name or func.__name__
 
         @copy_current_app_context
         async def _ctx_wrapper_bg(*args, **kwargs) -> Any:
             return await self._wrapper_bg(*args, **kwargs)
 
-        task = self.loop.create_task(_ctx_wrapper_bg(name, func, args, period))
-
-        self.jobs[name] = task
-        return task
+        return self._create_task(
+            task_id=task_id, main_coroutine=_ctx_wrapper_bg(task_id, func, args, period)
+        )
 
     def exists(self, job_name: str) -> bool:
         """Return if a given job name exists
