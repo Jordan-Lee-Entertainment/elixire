@@ -136,7 +136,7 @@ async def scan_file(ctx) -> Any:
         return
 
     task = app.sched.spawn(
-        run_scan(ctx), f"run_scan_{ctx.file.id}", raise_underlying_error=True
+        run_scan(ctx), task_id=f"virus_scan:{ctx.file.id}", raise_underlying_error=True
     )
 
     # if the task is on pending, we return and let it continue in the background
@@ -149,7 +149,9 @@ async def scan_file(ctx) -> Any:
         # we keep a "waiter" task in the background for that scan as well,
         # since we would really want to delete the file if the scan finds a
         # positive.
-        app.sched.spawn(scan_bg_waiter(ctx, task), f"scan_bg_{ctx.file.id}")
+        app.sched.spawn(
+            scan_bg_waiter(ctx, task), task_id=f"virus_scan_bg:{ctx.file.id}"
+        )
         return
 
     # from the docs, Task.result() will re-raise any exceptions
