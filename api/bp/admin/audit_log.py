@@ -150,7 +150,9 @@ class AuditLog:
         if self._sender_task:
             self._sender_task.cancel()
 
-        self._sender_task = self.app.loop.create_task(self._sender())
+        self._sender_task = self.app.sched.spawn(
+            self._sender(), name="global_sender_task"
+        )
 
     async def push(self, action: Action):
         """Push an action to the queue."""
