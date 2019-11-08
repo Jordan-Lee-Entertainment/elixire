@@ -4,11 +4,10 @@
 
 import asyncio
 import enum
-from typing import List, Any, Union
+from typing import List, Any
 
 import logging
 
-from quart.ctx import copy_current_app_context
 from .errors import JobExistsError
 
 log = logging.getLogger(__name__)
@@ -36,15 +35,18 @@ def get_failure_mode(kwargs: dict) -> FailMode:
 class JobManager:
     """Manage background jobs."""
 
-    def __init__(self, loop=None):
+    def __init__(self, app, loop=None):
         log.debug("job manager start")
-        self.loop = loop or asyncio.get_event_loop()
+        self.app = app
+        self.loop = app.loop
         self.jobs = {}
 
     async def _wrapper(self, job_id: str, func, args: List[Any], **kwargs) -> Any:
         try:
             log.debug("job run: %r", job_id)
-            result = await func(args)
+            async with self.app.app_context():
+                result = await func(*args)
+
             log.debug("job finish: %r", job_id)
             return result
         except asyncio.CancelledError:
@@ -90,30 +92,17 @@ class JobManager:
         It copies the current app context into the given task.
         """
 
-        @copy_current_app_context
-        async def _ctx_wrapper_bg() -> Any:
-            return await func(*args)
-
-        # we have two wrappers for the given task:
-        #  - one is _ctx_wrapper_bg() to catch and use the current app context
-        #  - that runs inside a self._wrapper() that gives basic logging on the
-        #     task, handles exceptions, etc.
         return self._create_task(
-            task_id,
-            main_coroutine=self._wrapper(task_id, _ctx_wrapper_bg, [], **kwargs),
+            task_id, main_coroutine=self._wrapper(task_id, func, args, **kwargs)
         )
 
     def spawn_periodic(self, func, args, *, period: int, task_id: str, **kwargs):
         """Spawn a background task that will be run
         every ``period`` seconds."""
 
-        @copy_current_app_context
-        async def _ctx_wrapper_bg(*args, **kwargs) -> Any:
-            return await self._wrapper_bg(*args, **kwargs)
-
         return self._create_task(
             task_id,
-            main_coroutine=_ctx_wrapper_bg(task_id, func, args, period, **kwargs),
+            main_coroutine=self._wrapper_bg(task_id, func, args, period, **kwargs),
         )
 
     def exists(self, job_name: str) -> bool:
