@@ -77,5 +77,5 @@ async def email_broadcast():
     subject, body = fmt_email(app, subject), fmt_email(app, body)
 
     # we do it in the background for webscale
-    app.sched.spawn(_do_broadcast(subject, body), task_id="admin_broadcast")
+    app.sched.spawn(_do_broadcast, [subject, body], task_id="admin_broadcast")
     return "", 204

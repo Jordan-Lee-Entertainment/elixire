@@ -146,7 +146,7 @@ async def delete_all():
 
     try:
         app.sched.spawn(
-            mass_file_delete(user_id, False), task_id=f"delete_files_{user_id}"
+            mass_file_delete, [user_id, False], task_id=f"delete_files_{user_id}"
         )
     except JobExistsError:
         return (

@@ -415,7 +415,7 @@ def start_worker() -> None:
         log.info("worker exists, skipping")
         return
 
-    app.sched.spawn(dump_worker(), task_id="datadump:worker")
+    app.sched.spawn(dump_worker, [], task_id="datadump:worker")
 
 
 async def dump_janitor() -> None:

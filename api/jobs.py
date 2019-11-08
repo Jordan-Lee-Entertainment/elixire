@@ -88,9 +88,6 @@ class JobManager:
 
         This is meant for one-shot tasks.
         It copies the current app context into the given task.
-
-        If you wish to catch the coroutine's exception instead of quieting it,
-        you must assign the raise_underlying_error kwarg to true.
         """
 
         @copy_current_app_context
