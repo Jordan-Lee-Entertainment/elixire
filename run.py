@@ -19,7 +19,6 @@ from dns import resolver
 import api.bp.auth
 import api.bp.profile
 import api.bp.upload
-import api.bp.files
 import api.bp.shorten
 import api.bp.fetch
 import api.bp.admin
@@ -36,6 +35,8 @@ import api.bp.frontend
 import api.bp.metrics.blueprint
 import api.bp.cors
 import api.bp.client
+import api.bp.list
+import api.bp.delete
 
 from api.errors import APIError, Banned
 from api.common import get_ip_addr
@@ -87,7 +88,8 @@ def set_blueprints(app_):
         api.bp.upload.bp: "",
         api.bp.personal_stats.bp: "/stats",
         api.bp.register.bp: "/auth",
-        api.bp.files.bp: "",
+        api.bp.list.bp: "",
+        api.bp.delete.bp: "",
         api.bp.datadump.bp: "/dump",
         api.bp.admin.user_bp: "/admin/users",
         api.bp.admin.object_bp: "/admin",

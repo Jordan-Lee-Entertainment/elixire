@@ -11,8 +11,9 @@ from quart import Blueprint, jsonify, current_app as app, request
 
 from api.common.auth import token_check, check_admin
 from api.schema import validate, ADMIN_SEND_BROADCAST
-from api.common.email import fmt_email, send_user_email
+from api.common.email import fmt_email, send_email_to_user
 from api.bp.admin.audit_log_actions.email import BroadcastAction
+from api.errors import EmailError
 
 log = logging.getLogger(__name__)
 bp = Blueprint("admin_misc", __name__)
@@ -43,25 +44,17 @@ async def _do_broadcast(subject, body):
 
     for row in uids:
         user_id = row["user_id"]
+        user_name = row["username"]
 
-        resp_tup, user_email = await send_user_email(app, user_id, subject, body)
-
-        resp, resp_text = resp_tup
-
-        if resp.status != 200:
-            log.warning(
-                "warning, could not send to %d %r: %d %r",
-                user_id,
-                user_email,
-                resp.status,
-                resp_text,
-            )
-
+        try:
+            await send_email_to_user(user_id, subject, body)
+        except EmailError as exc:
+            log.warning("Failed to send to %d %r: %r", user_id, user_name, exc)
             continue
 
-        log.info(f"sent broadcast to {user_id} {user_email}")
+        log.info(f"sent broadcast to %d %r", user_id, user_name)
 
-    log.info(f"Dispatched to {len(uids)} users")
+    log.info("dispatched to %d users", len(uids))
 
 
 @bp.route("/broadcast", methods=["POST"])
@@ -74,7 +67,7 @@ async def email_broadcast():
     subject, body = payload["subject"], payload["body"]
 
     # format stuff just to make sure
-    subject, body = fmt_email(app, subject), fmt_email(app, body)
+    subject, body = fmt_email(subject), fmt_email(body)
 
     # we do it in the background for webscale
     app.sched.spawn(_do_broadcast, [subject, body], task_id="admin_broadcast")

@@ -90,3 +90,15 @@ class JobExistsError(APIError):
     """When a background job already exists for the given action."""
 
     status_code = 409
+
+
+class EmailError(APIError):
+    """Error to send email."""
+
+    status_code = 500
+
+
+class WebhookError(APIError):
+    """Error while sending a webhook."""
+
+    status_code = 500

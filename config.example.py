@@ -44,6 +44,18 @@ SUPPORT_EMAIL = "support@elixi.re"
 
 ################################################################################
 
+# SMTP credentials for instance emails.
+# (account deletion, Data Dump, etc.)
+SMTP_CONFIG = {
+    "from": "elixi.re <automated@somewhere>",
+    "host": "smtp.mailgun.org",
+    "port": 587,
+    # "tls", "starttls", or None
+    "tls_mode": "tls",
+    "username": "postmaster@somewhere",
+    "password": "something",
+}
+
 # Disabled features return HTTP 503 to any requests.
 #
 # Disabling certain features is useful for private instances or for disabling

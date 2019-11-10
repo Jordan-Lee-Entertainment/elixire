@@ -2,159 +2,170 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import asyncio
+import logging
+from typing import Optional, Union, Dict, List
 
-async def ban_webhook(app, user_id: int, reason: str, period: str):
-    """Send a webhook containing banning information."""
-    wh_url = getattr(app.econfig, "USER_BAN_WEBHOOK", None)
-    if not wh_url:
+from quart import current_app as app
+
+from api.errors import WebhookError
+
+log = logging.getLogger(__name__)
+
+
+async def _post_webhook(
+    webhook_url: Optional[str],
+    *,
+    embed: Optional[dict] = None,
+    text: Optional[str] = None,
+):
+    """Post to the given webhook."""
+
+    payload: Dict[str, Union[str, List[dict]]] = {}
+
+    if embed is not None:
+        if isinstance(embed, list):
+            payload["embeds"] = embed
+        else:
+            payload["embeds"] = [embed]
+
+    if text is not None:
+        payload["content"] = text
+
+    if not embed and not text:
+        raise TypeError("Either text or embed must be provided.")
+
+    if not webhook_url:
+        log.warning("Ignored webhook, payload=%r", payload)
         return
 
-    if isinstance(user_id, int):
-        uname = await app.db.fetchval(
-            """
-            SELECT username
-            FROM users
-            WHERE user_id = $1
-        """,
-            user_id,
+    async with app.session.post(webhook_url, json=payload) as resp:
+        status = resp.status
+
+        if status == 429:
+            log.warning("We are being rate-limited.")
+
+            try:
+                retry_after = int(resp.headers["retry-after"])
+                log.warning("waiting %d ms", retry_after)
+                await asyncio.sleep(retry_after / 1000)
+                return await _post_webhook(webhook_url, embed=embed, text=text)
+            except (ValueError, KeyError):
+                pass
+
+            raise WebhookError("Webhook is ratelimited")
+
+        if status == 200:
+            return
+
+        try:
+            data = await resp.json()
+        except Exception as exc:
+            data = f"Failed to read/parse JSON ({exc!r})"
+
+        err_code, err_msg = data["code"], data["message"]
+        log.warning(
+            "Failed to dispatch webhook, status=%d, code=%d, msg=%r",
+            status,
+            err_code,
+            err_msg,
         )
-    else:
-        uname = "<no username found>"
 
-    payload = {
-        "embeds": [
-            {
-                "title": "Elixire Auto Banning",
-                "color": 0x696969,
-                "fields": [
-                    {"name": "user", "value": f"id: {user_id}, name: {uname}"},
-                    {"name": "reason", "value": reason},
-                    {"name": "period", "value": period},
-                ],
-            }
-        ]
-    }
-
-    async with app.session.post(wh_url, json=payload) as resp:
-        return resp
+        raise WebhookError(
+            f"Failed to send webhook ({status}, {err_code}, {err_msg!r})"
+        )
 
 
-async def ip_ban_webhook(app, ip_address: str, reason: str, period: str):
+async def ban_webhook(user_id: int, reason: str, period: str):
+    """Send a webhook containing banning informatino of a user."""
+
+    username = await app.storage.get_username(user_id)
+    return await _post_webhook(
+        getattr(app.econfig, "USER_BAN_WEBHOOK", None),
+        embed={
+            "title": "Elixire Auto Banning",
+            "color": 0x696969,
+            "fields": [
+                {"name": "user", "value": f"id: {user_id}, name: {username}"},
+                {"name": "reason", "value": reason},
+                {"name": "period", "value": period},
+            ],
+        },
+    )
+
+
+async def ip_ban_webhook(ip_address: str, reason: str, period: str):
     """Send a webhook containing banning information."""
-    wh_url = getattr(app.econfig, "IP_BAN_WEBHOOK", None)
-    if not wh_url:
-        return
-
-    payload = {
-        "embeds": [
-            {
-                "title": "Elixire Auto IP Banning",
-                "color": 0x696969,
-                "fields": [
-                    {"name": "IP address", "value": ip_address},
-                    {"name": "reason", "value": reason},
-                    {"name": "period", "value": period},
-                ],
-            }
-        ]
-    }
-
-    async with app.session.post(wh_url, json=payload) as resp:
-        return resp
+    return await _post_webhook(
+        getattr(app.econfig, "IP_BAN_WEBHOOK", None),
+        embed={
+            "title": "Elixire Auto IP Banning",
+            "color": 0x696969,
+            "fields": [
+                {"name": "IP address", "value": ip_address},
+                {"name": "reason", "value": reason},
+                {"name": "period", "value": period},
+            ],
+        },
+    )
 
 
-async def register_webhook(app, wh_url, user_id, username, discord_user, email):
-    # call webhook
-    payload = {
-        "embeds": [
-            {
-                "title": "user registration webhook",
-                "color": 0x7289DA,
-                "fields": [
-                    {"name": "userid", "value": str(user_id)},
-                    {"name": "user name", "value": username},
-                    {"name": "discord user", "value": discord_user},
-                    {"name": "email", "value": email},
-                ],
-            }
-        ]
-    }
-
-    async with app.session.post(wh_url, json=payload) as resp:
-        return resp.status == 200
+async def register_webhook(user_id, username, discord_user, email):
+    return await _post_webhook(
+        getattr(app.econfig, "USER_REGISTER_WEBHOOK", None),
+        embed={
+            "title": "user registration webhook",
+            "color": 0x7289DA,
+            "fields": [
+                {"name": "userid", "value": str(user_id)},
+                {"name": "user name", "value": username},
+                {"name": "discord user", "value": discord_user},
+                {"name": "email", "value": email},
+            ],
+        },
+    )
 
 
-async def jpeg_toobig_webhook(app, ctx, size_after):
-    """Dispatch a webhook when the EXIF checking raised
-    stuff.
-    """
-    wh_url = getattr(app.econfig, "EXIF_TOOBIG_WEBHOOK", None)
-    if not wh_url:
-        return
-
+async def jpeg_toobig_webhook(ctx, size_after):
+    """Dispatch a webhook when the EXIF checking failed."""
     increase = size_after / ctx.file.size
+    username = await app.storage.get_username(ctx.user_id)
 
-    uname = await app.db.fetchval(
-        """
-        SELECT username
-        FROM users
-        WHERE user_id = $1
-    """,
-        ctx.user_id,
+    return await _post_webhook(
+        getattr(app.econfig, "EXIF_TOOBIG_WEBHOOK", None),
+        embed={
+            "title": "Elixire EXIF Cleaner Size Change Warning",
+            "color": 0x420420,
+            "fields": [
+                {"name": "user", "value": f"id: {ctx.user_id}, name: {username}"},
+                {"name": "in filename", "value": ctx.file.name},
+                {"name": "out filename", "value": ctx.shortname},
+                {
+                    "name": "size change",
+                    "value": f"{ctx.file.size}b -> {size_after}b "
+                    f"({increase:.01f}x)",
+                },
+            ],
+        },
     )
 
-    payload = {
-        "embeds": [
-            {
-                "title": "Elixire EXIF Cleaner Size Change Warning",
-                "color": 0x420420,
-                "fields": [
-                    {"name": "user", "value": f"id: {ctx.user_id}, name: {uname}"},
-                    {"name": "in filename", "value": ctx.file.name},
-                    {"name": "out filename", "value": ctx.shortname},
-                    {
-                        "name": "size change",
-                        "value": f"{ctx.file.size}b -> {size_after}b "
-                        f"({increase:.01f}x)",
-                    },
-                ],
-            }
-        ]
-    }
 
-    async with app.session.post(wh_url, json=payload) as resp:
-        return resp
-
-
-async def scan_webhook(app, ctx, scan_out: str):
+async def scan_webhook(ctx, scan_out: str):
     """Execute a discord webhook with information about the virus scan."""
-    uname = await app.db.fetchval(
-        """
-        SELECT username
-        FROM users
-        WHERE user_id = $1
-    """,
-        ctx.user_id,
+    username = await app.storage.get_username(ctx.user_id)
+
+    return await _post_webhook(
+        app.econfig.UPLOAD_SCAN_WEBHOOK,
+        embed={
+            "title": "Elixire Virus Scanning",
+            "color": 0xFF0000,
+            "fields": [
+                {"name": "user", "value": f"id: {ctx.user_id}, username: {username}"},
+                {
+                    "name": "file info",
+                    "value": f"filename: `{ctx.file.name}`, {ctx.file.size} bytes",
+                },
+                {"name": "clamdscan out", "value": f"```\n{scan_out}\n```"},
+            ],
+        },
     )
-
-    webhook_payload = {
-        "embeds": [
-            {
-                "title": "Elixire Virus Scanning",
-                "color": 0xFF0000,
-                "fields": [
-                    {"name": "user", "value": f"id: {ctx.user_id}, username: {uname}"},
-                    {
-                        "name": "file info",
-                        "value": f"filename: `{ctx.file.name}`, {ctx.file.size} bytes",
-                    },
-                    {"name": "clamdscan out", "value": f"```\n{scan_out}\n```"},
-                ],
-            }
-        ]
-    }
-
-    async with app.session.post(
-        app.econfig.UPLOAD_SCAN_WEBHOOK, json=webhook_payload
-    ) as resp:
-        return resp

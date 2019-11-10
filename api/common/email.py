@@ -2,30 +2,28 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-"""
-elixi.re - email functions
-"""
+import asyncio
 import secrets
 import logging
-from collections import namedtuple
+import smtplib
+from smtplib import SMTP, SMTP_SSL
+from email.message import EmailMessage
+from typing import Tuple
 
-import aiohttp
+from quart import current_app as app
 
-from ..errors import BadInput
+from ..errors import BadInput, EmailError
 
 log = logging.getLogger(__name__)
-Error = namedtuple("Error", "status")
 
 
-async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
+async def gen_email_token(user_id, table: str, _count: int = 0) -> str:
     """Generate a token for email usage.
 
     Calls the database to give an unique token.
 
     Parameters
     ----------
-    app: sanic.App
-        Application instance for database access.
     user_id: int
         User snowflake ID.
     table: str
@@ -43,7 +41,7 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
         or there are more than 3 tokens issued in the span
         of a time window (defined by the table)
     """
-    if count == 11:
+    if _count == 11:
         # it really shouldn't happen,
         # but we better be ready for it.
         raise BadInput("Failed to generate an email hash.")
@@ -62,7 +60,7 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
 
     if other_id:
         # retry with count + 1
-        await gen_email_token(app, user_id, table, count + 1)
+        await gen_email_token(user_id, table, _count + 1)
 
     hashes = await app.db.fetchval(
         f"""
@@ -75,35 +73,76 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
 
     if hashes > 3:
         raise BadInput(
-            "You already generated more than 3 tokens " "in the time period."
+            "You already generated more than 3 tokens in the expiral time period."
         )
 
     return possible
 
 
-async def send_email(app, user_email: str, subject: str, email_body: str) -> tuple:
-    """Send an email to a user using the Mailgun API."""
-    econfig = app.econfig
-    mailgun_url = f"https://api.mailgun.net/v3/{econfig.MAILGUN_DOMAIN}" "/messages"
+def raw_send_email(cfg: dict, to: str, subject: str, content: str):
+    """Send an email via SMTP."""
 
-    _inst_name = econfig.INSTANCE_NAME
+    msg = EmailMessage()
+    msg.set_content(content)
 
-    auth = aiohttp.BasicAuth("api", econfig.MAILGUN_API_KEY)
-    data = {
-        "from": f"{_inst_name} <automated@{econfig.MAILGUN_DOMAIN}>",
-        "to": [user_email],
-        # make sure everything passes through fmt_email
-        # before sending
-        "subject": fmt_email(app, subject),
-        "text": fmt_email(app, email_body),
-    }
+    msg["Subject"] = subject
+    msg["From"] = cfg["from"]
+    msg["To"] = to
 
-    async with app.session.post(mailgun_url, auth=auth, data=data) as resp:
-        return resp, await resp.text()
+    log.debug("smtp send %r %r", cfg["host"], cfg["port"])
+
+    smtp_class = SMTP_SSL if cfg["tls_mode"] == "tls" else SMTP
+
+    with smtp_class(host=cfg["host"], port=cfg["port"]) as smtp:
+        if cfg["tls_mode"] == "starttls":
+            log.debug("smtp starttls")
+            smtp.starttls()
+
+        log.debug("smtp login")
+        smtp.login(cfg["username"], cfg["password"])
+
+        log.debug("smtp send message")
+        smtp.send_message(msg)
+
+    log.debug("smtp done")
 
 
-async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
-    """Send an email to a user, given user ID."""
+async def send_email(
+    user_email: str, subject: str, content: str, *, _is_repeat: bool = False
+) -> bool:
+    if getattr(app, "_test", False):
+        return True
+
+    try:
+        await app.loop.run_in_executor(
+            None,
+            raw_send_email,
+            app.econfig.SMTP_CONFIG,
+            user_email,
+            fmt_email(subject),
+            fmt_email(content),
+        )
+    except smtplib.SMTPConnectError as exc:
+        log.error("Failed to connect to server (%r), retry=%r", exc, not _is_repeat)
+        if not _is_repeat:
+            await asyncio.sleep(5)
+            return await send_email(user_email, subject, content, _is_repeat=True)
+
+        raise EmailError(f"Failed to connect to SMTP server: {exc!r}")
+    except smtplib.SMTPException as exc:
+        raise EmailError(f"smtp error: {exc!r}")
+    except Exception as exc:
+        log.exception("Failed to send email")
+        raise EmailError(f"Failed to send email: {exc!r}")
+
+
+async def send_email_to_user(
+    user_id: int, subject: str, body: str, **kwargs
+) -> Tuple[bool, str]:
+    """Send an email to a user, given user ID.
+
+    Returns the success status of the email and the actual user email.
+    """
     user_email = await app.db.fetchval(
         """
         SELECT email
@@ -113,17 +152,12 @@ async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
         user_id,
     )
 
-    if not user_email:
-        return (Error(6969), None), None
-
-    resp = await send_email(app, user_email, subject, body)
-
-    log.info(f"Sent {len(body)} bytes email to {user_id} " f"{user_email} {subject!r}")
-
-    return resp, user_email
+    await send_email(user_email, subject, body, **kwargs)
+    log.info("sent %d bytes email to %d %r %r", len(body), user_id, user_email, subject)
+    return user_email
 
 
-def fmt_email(app, string, **kwargs):
+def fmt_email(string, **kwargs):
     """Format an email"""
     base = {
         "inst_name": app.econfig.INSTANCE_NAME,
@@ -137,8 +171,8 @@ def fmt_email(app, string, **kwargs):
     return string.replace("{}", "{{}}").format(**base)
 
 
-async def uid_from_email(app, token: str, table: str, raise_err: bool = True) -> int:
-    """Get user ID from email."""
+async def uid_from_email_token(token: str, table: str) -> int:
+    """Get user ID from a random email token."""
     user_id = await app.db.fetchval(
         f"""
         SELECT user_id
@@ -148,24 +182,14 @@ async def uid_from_email(app, token: str, table: str, raise_err: bool = True) ->
         token,
     )
 
-    if not user_id and raise_err:
+    if user_id is None:
         raise BadInput("No user found with the token")
 
     return user_id
 
 
-async def get_owner(app, domain_id: int) -> int:
-    return await app.db.fetchval(
-        """
-        SELECT user_id
-        FROM domain_owners
-        WHERE domain_id = $1
-        """,
-        domain_id,
-    )
-
-
-async def clean_etoken(app, token: str, table: str) -> bool:
+async def clean_etoken(token: str, table: str) -> bool:
+    """Delete the given token from the given table."""
     res = await app.db.execute(
         f"""
         DELETE FROM {table}
@@ -177,8 +201,8 @@ async def clean_etoken(app, token: str, table: str) -> bool:
     return res == "DELETE 1"
 
 
-async def activate_email_send(app, user_id: int):
-    token = await gen_email_token(app, user_id, "email_activation_tokens")
+async def send_activation_email(user_id: int):
+    token = await gen_email_token(user_id, "email_activation_tokens")
 
     await app.db.execute(
         """
@@ -189,10 +213,9 @@ async def activate_email_send(app, user_id: int):
         user_id,
     )
 
-    token_url = fmt_email(app, "{main_url}/api/activate_email?key={key}", key=token)
+    token_url = fmt_email("{main_url}/api/activate_email?key={key}", key=token)
 
     body = fmt_email(
-        app,
         """
 This is an automated email from {inst_name}
 about your account activation.
@@ -213,5 +236,145 @@ Do not reply to this automated email.
         token_url=token_url,
     )
 
-    subject = fmt_email(app, "{inst_name} - account activation")
-    return await send_user_email(app, user_id, subject, body)
+    return await send_email_to_user(user_id, "{inst_name} - account activation", body)
+
+
+async def send_activated_email(user_id: int):
+    if not app.econfig.NOTIFY_ACTIVATION_EMAILS:
+        return
+
+    email_body = """This is an automated email from {inst_name}
+about your account request.
+
+Your account has been activated and you can now log in
+at {main_url}/login.html.
+
+Welcome to {inst_name}!
+
+Send an email to {support} if any questions arise.
+Do not reply to this automated email.
+
+- {inst_name}, {main_url}
+"""
+
+    return await send_email_to_user(
+        user_id, "{inst_name} - Your account is now active", email_body
+    )
+
+
+async def send_register_email(email: str):
+    """Send an email about the signup."""
+    email_body = fmt_email(
+        """This is an automated email from {inst_name}
+about your signup.
+
+It has been successfully dispatched to the system so that admins can
+activate the account. You will not be able to login until the account
+is activated.
+
+Accounts that aren't on the discord server won't be activated.
+{main_invite}
+
+Please do not re-register the account. It will just decrease your chances
+of actually getting an account activated.
+
+Reply to {support} if you have any questions.
+Do not reply to this email specifically, it will not work.
+
+ - {inst_name}, {main_url}
+"""
+    )
+
+    return await send_email(email, "{inst_name} - signup confirmation", email_body)
+
+
+async def send_username_recovery_email(uname: str, email: str):
+    email_body = fmt_email(
+        """
+This is an automated email from {inst_name} about
+your username recovery.
+
+Your username is {uname}.
+
+ - {inst_name}, {main_url}
+""",
+        uname=uname,
+    )
+
+    return await send_email(email, "{inst_name} - username recovery", email_body)
+
+
+async def send_deletion_confirm_email(user_id: int, email_token: str):
+    email_body = fmt_email(
+        """This is an automated email from {inst_name}
+about your account deletion.
+
+Please visit {main_url}/deleteconfirm.html#{email_token} to
+confirm the deletion of your account.
+
+The link will be invalid in 12 hours. Do not share it with anyone.
+
+Reply to {support} if you have any questions.
+
+If you did not make this request, email {support} since your account
+might be compromised.
+
+Do not reply to this email specifically, it will not work.
+
+- {inst_name}, {main_url}
+""",
+        email_token=email_token,
+    )
+
+    return await send_email_to_user(
+        user_id, "{inst_name} - account deactivation request", email_body
+    )
+
+
+async def send_password_reset_email(user_email: str, email_token):
+    email_body = fmt_email(
+        """This is an automated email from {inst_name}
+about your password reset.
+
+Please visit {main_url}/password_reset.html#{email_token} to
+reset your password.
+
+The link will be invalid in 30 minutes. Do not share the link with anyone else.
+Nobody from support will ask you for this link.
+
+Reply to {support} if you have any questions.
+
+Do not reply to this email specifically, it will not work.
+
+- {inst_name}, {main_url}
+""",
+        email_token=email_token,
+    )
+
+    return await send_email(
+        user_email, "{inst_name} - password reset request", email_body
+    )
+
+
+async def send_datadump_email(user_id: int, dump_token: str):
+    email_body = fmt_email(
+        """This is an automated email from {inst_name}
+about your data dump.
+
+Visit {main_url}/api/dump/get?key={dump_token} to fetch your
+data dump.
+
+The URL will be invalid in 6 hours.
+Do not share this URL. Nobody will ask you for this URL.
+
+Send an email to {support} if any questions arise.
+Do not reply to this automated email.
+
+- {inst_name}, {main_url}
+    """,
+        dump_token=dump_token,
+    )
+
+    return await send_email_to_user(
+        user_id, "{inst_name} - Your data dump is here!", email_body
+    )
