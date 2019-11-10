@@ -28,7 +28,8 @@ Optional, but useful:
 - [ClamAV] for virus scanning uploads
 - [InfluxDB] for metrics (see [`docs/managing.md`](docs/managing.md) for more
   details).
-- A [Mailgun] API key for sending emails
+- A SMTP server for outgoing email. We use [Mailgun], but any
+    SMTP server should work.
 - [Discord] webhooks for admin notifications
 
 [clamav]: https://www.clamav.net
