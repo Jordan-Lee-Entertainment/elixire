@@ -15,7 +15,7 @@ from api.schema import (
 )
 from api.common.domain import create_domain, delete_domain
 from api.common.auth import token_check, check_admin
-from api.common.email import send_user_email
+from api.common.email import send_email_to_user
 from api.common.pagination import Pagination
 from api.errors import BadInput
 
@@ -129,13 +129,9 @@ async def email_domain(domain_id: int):
             domain_id=domain_id, owner_id=owner_id, subject=subject, body=body
         )
 
-        resp_tup, user_email = await send_user_email(app, owner_id, subject, body)
+        user_email = await send_email_to_user(owner_id, subject, body)
 
-    resp, _ = resp_tup
-
-    return jsonify(
-        {"success": resp.status == 200, "owner_id": owner_id, "owner_email": user_email}
-    )
+    return jsonify({"owner_id": owner_id, "owner_email": user_email})
 
 
 @bp.route("/<int:domain_id>/owner", methods=["PUT"])

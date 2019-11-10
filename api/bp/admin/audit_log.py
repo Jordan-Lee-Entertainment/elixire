@@ -9,8 +9,9 @@ from typing import Optional
 
 from quart import current_app as app, request
 
-from api.common.email import send_user_email
+from api.common.email import send_email_to_user
 from api.common.utils import find_different_keys
+from api.errors import EmailError
 
 log = logging.getLogger(__name__)
 
@@ -143,14 +144,16 @@ class AuditLog:
     def __init__(self, app):
         self.app = app
         self.actions = []
-        self._sender_task = None
+        self._sender_task: Optional[asyncio.Task] = None
 
     def _reset(self):
         """Reset the sender task, causing the queue to be consumed in a minute."""
         if self._sender_task:
             self._sender_task.cancel()
 
-        self._sender_task = self.app.loop.create_task(self._sender())
+        self._sender_task = self.app.sched.spawn(
+            self._sender(), name="audit_log_sender"
+        )
 
     async def push(self, action: Action):
         """Push an action to the queue."""
@@ -222,4 +225,7 @@ class AuditLog:
         log.info("sending audit log event to %d admins", len(admins))
 
         for admin_id in admins:
-            await send_user_email(self.app, admin_id, subject, full_text)
+            try:
+                await send_email_to_user(admin_id, subject, full_text)
+            except EmailError as exc:
+                log.warning("failed to send email to admin %d: %r", admin_id, exc)

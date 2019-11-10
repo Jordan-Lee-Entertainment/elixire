@@ -10,10 +10,9 @@ from api.errors import NotFound, BadInput
 from api.schema import validate, ADMIN_MODIFY_USER
 
 from api.common.email import (
-    fmt_email,
-    send_user_email,
-    activate_email_send,
-    uid_from_email,
+    send_activation_email,
+    send_activated_email,
+    uid_from_email_token,
     clean_etoken,
 )
 from api.common.auth import token_check, check_admin
@@ -77,41 +76,6 @@ async def get_user_by_username(username: str):
     return await _user_resp_from_row(row)
 
 
-async def notify_activate(user_id: int):
-    """Inform user that they got an account."""
-    if not app.econfig.NOTIFY_ACTIVATION_EMAILS:
-        return
-
-    log.info(f"Sending activation email to {user_id}")
-
-    body = fmt_email(
-        app,
-        """This is an automated email from {inst_name}
-about your account request.
-
-Your account has been activated and you can now log in
-at {main_url}/login.html.
-
-Welcome to {inst_name}!
-
-Send an email to {support} if any questions arise.
-Do not reply to this automated email.
-
-- {inst_name}, {main_url}
-    """,
-    )
-
-    subject = fmt_email(app, "{inst_name} - Your account is now active")
-    resp_tup, user_email = await send_user_email(app, user_id, subject, body)
-
-    resp, _ = resp_tup
-
-    if resp.status == 200:
-        log.info(f"Sent email to {user_id} {user_email}")
-    else:
-        log.error(f"Failed to send email to {user_id} {user_email}")
-
-
 @bp.route("/activate/<int:user_id>", methods=["POST"])
 async def activate_user(user_id: int):
     """Activate one user, given their ID."""
@@ -132,9 +96,7 @@ async def activate_user(user_id: int):
             raise BadInput("Provided user ID does not reference any user.")
 
     await app.storage.invalidate(user_id, "active")
-    await notify_activate(user_id)
-
-    # TODO check success of notify_activate
+    await send_activated_email(user_id)
     return "", 204
 
 
@@ -163,11 +125,8 @@ async def activation_email(user_id):
     # there was an invalidate() call which is unecessary
     # because its already invalidated on activate_user_from_email
 
-    resp_tup, _email = await activate_email_send(app, user_id)
-    resp, _ = resp_tup
-
-    # TODO '', 204
-    return jsonify({"success": resp.status == 200})
+    await send_activation_email(user_id)
+    return "", 204
 
 
 @bp.route("/api/activate_email")
@@ -178,7 +137,7 @@ async def activate_user_from_email():
     except KeyError:
         raise BadInput("no key provided")
 
-    user_id = await uid_from_email(app, email_token, "email_activation_tokens")
+    user_id = await uid_from_email_token(email_token, "email_activation_tokens")
 
     res = await app.db.execute(
         """
@@ -190,8 +149,8 @@ async def activate_user_from_email():
     )
 
     await app.storage.invalidate(user_id, "active")
-    await clean_etoken(app, email_token, "email_activation_tokens")
-    log.info(f"Activated user id {user_id}")
+    await clean_etoken(email_token, "email_activation_tokens")
+    log.info("Activated user id %d", user_id)
 
     return jsonify({"success": res == "UPDATE 1"})
 

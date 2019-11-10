@@ -9,7 +9,13 @@ from quart import Blueprint, request, current_app as app, jsonify
 
 from api.errors import FailedAuth, FeatureDisabled, BadInput, APIError
 from api.common.auth import token_check, password_check, pwd_hash, check_admin
-from api.common.email import gen_email_token, send_email, uid_from_email, clean_etoken
+from api.common.email import (
+    gen_email_token,
+    uid_from_email_token,
+    clean_etoken,
+    send_deletion_confirm_email,
+    send_password_reset_email,
+)
 from api.schema import (
     validate,
     PATCH_PROFILE,
@@ -247,22 +253,7 @@ async def delete_own_user():
     payload = validate(await request.get_json(), DEACTIVATE_USER_SCHEMA)
     await password_check(user_id, payload["password"])
 
-    user_email = await app.db.fetchval(
-        """
-        SELECT email
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    if not user_email:
-        raise BadInput("No email was found.")
-
-    _inst_name = app.econfig.INSTANCE_NAME
-    _support = app.econfig.SUPPORT_EMAIL
-
-    email_token = await gen_email_token(app, user_id, "email_deletion_tokens")
+    email_token = await gen_email_token(user_id, "email_deletion_tokens")
 
     log.info(f"Generated email hash {email_token} for account deactivation")
 
@@ -275,31 +266,8 @@ async def delete_own_user():
         user_id,
     )
 
-    email_body = f"""This is an automated email from {_inst_name}
-about your account deletion.
-
-Please visit {app.econfig.MAIN_URL}/deleteconfirm.html#{email_token} to
-confirm the deletion of your account.
-
-The link will be invalid in 12 hours. Do not share it with anyone.
-
-Reply to {_support} if you have any questions.
-
-If you did not make this request, email {_support} since your account
-might be compromised.
-
-Do not reply to this email specifically, it will not work.
-
-- {_inst_name}, {app.econfig.MAIN_URL}
-"""
-
-    # TODO: change this to send user email?
-    resp, _ = await send_email(
-        app, user_email, f"{_inst_name} - account deactivation request", email_body
-    )
-
-    # TODO return '', 204
-    return jsonify({"success": resp.status == 200})
+    await send_deletion_confirm_email(user_id, email_token)
+    return "", 204
 
 
 @bp.route("/delete_confirm", methods=["POST"])
@@ -310,11 +278,10 @@ async def deactivate_user_from_email():
     except KeyError:
         raise BadInput("No valid token provided.")
 
-    # TODO rewrite email facilities
-    user_id = await uid_from_email(app, cli_hash, "email_deletion_tokens")
+    user_id = await uid_from_email_token(cli_hash, "email_deletion_tokens")
 
     await delete_user(user_id, True)
-    await clean_etoken(app, cli_hash, "email_deletion_tokens")
+    await clean_etoken(cli_hash, "email_deletion_tokens")
 
     log.warning(f"Deactivated user ID {user_id} by request.")
 
@@ -342,10 +309,7 @@ async def reset_password_req():
     user_email = udata["email"]
     user_id = udata["user_id"]
 
-    _inst_name = app.econfig.INSTANCE_NAME
-    _support = app.econfig.SUPPORT_EMAIL
-
-    email_token = await gen_email_token(app, user_id, "email_pwd_reset_tokens")
+    email_token = await gen_email_token(user_id, "email_pwd_reset_tokens")
 
     await app.db.execute(
         """
@@ -356,28 +320,8 @@ async def reset_password_req():
         user_id,
     )
 
-    email_body = f"""This is an automated email from {_inst_name}
-about your password reset.
-
-Please visit {app.econfig.MAIN_URL}/password_reset.html#{email_token} to
-reset your password.
-
-The link will be invalid in 30 minutes. Do not share the link with anyone else.
-Nobody from support will ask you for this link.
-
-Reply to {_support} if you have any questions.
-
-Do not reply to this email specifically, it will not work.
-
-- {_inst_name}, {app.econfig.MAIN_URL}
-"""
-
-    resp, _ = await send_email(
-        app, user_email, f"{_inst_name} - password reset request", email_body
-    )
-
-    # TODO return '', 204
-    return jsonify({"success": resp.status == 200})
+    await send_password_reset_email(user_email, email_token)
+    return "", 204
 
 
 @bp.route("/reset_password_confirm", methods=["POST"])
@@ -387,10 +331,10 @@ async def password_reset_confirmation():
     token = payload["token"]
     new_pwd = payload["new_password"]
 
-    user_id = await uid_from_email(app, token, "email_pwd_reset_tokens")
+    user_id = await uid_from_email_token(token, "email_pwd_reset_tokens")
 
     # reset password
     await _update_password(user_id, new_pwd)
-    await clean_etoken(app, token, "email_pwd_reset_tokens")
+    await clean_etoken(token, "email_pwd_reset_tokens")
 
     return "", 204

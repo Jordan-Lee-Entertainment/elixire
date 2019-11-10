@@ -84,3 +84,15 @@ class QuotaExploded(APIError):
     """When your quota is exploded or will be exploded."""
 
     status_code = 469
+
+
+class EmailError(APIError):
+    """Error to send email."""
+
+    status_code = 500
+
+
+class WebhookError(APIError):
+    """Error while sending a webhook."""
+
+    status_code = 500
