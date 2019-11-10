@@ -39,13 +39,18 @@ async def test_shorten_complete(test_cli_user):
     domain = shorten_url.parts[1]
     shorten = shorten_url.parts[-1]
 
-    resp = await test_cli_user.get("/api/list?page=0")
+    resp = await test_cli_user.get("/api/shortens")
     assert resp.status_code == 200
     rjson = await resp.json
 
     try:
-        shorten_data = rjson["shortens"][shorten]
-    except KeyError:
+        shorten_data = next(
+            filter(
+                lambda shorten_data: shorten_data["shortname"] == shorten,
+                rjson["shortens"],
+            )
+        )
+    except StopIteration:
         raise AssertionError("shorten not found")
 
     assert shorten_data["redirto"] == url
