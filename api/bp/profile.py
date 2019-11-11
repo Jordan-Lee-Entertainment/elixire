@@ -154,6 +154,11 @@ async def _try_username_patch(user_id: int, username: str) -> None:
     )
 
 
+async def validate_semantics(user_id: int, payload: dict) -> dict:
+    errors = {}
+    return errors
+
+
 @bp.route("", methods=["PATCH"])
 async def change_profile_handler():
     if not app.econfig.PATCH_API_PROFILE_ENABLED:
@@ -161,6 +166,11 @@ async def change_profile_handler():
 
     user_id = await token_check()
     payload = validate(await request.get_json(), PATCH_PROFILE)
+
+    # check the semantic validity of payload before running UPDATEs
+    errors = await validate_semantics(user_id, payload)
+    if errors:
+        raise BadInput("Bad payload", errors)
 
     if "username" in payload:
         await _check_password(user_id, payload)
