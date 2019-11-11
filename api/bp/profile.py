@@ -6,7 +6,6 @@ import logging
 from collections import defaultdict
 from typing import Dict, List
 
-import asyncpg
 from quart import Blueprint, request, current_app as app, jsonify
 
 from api.errors import FailedAuth, FeatureDisabled, BadInput, APIError
@@ -167,7 +166,7 @@ async def validate_semantics(user_id: int, payload: dict) -> dict:
 
     domain_fields = ("domain", "shorten_domain")
     for field in domain_fields:
-        if not to_update(user, payload, "domain"):
+        if not to_update(user, payload, field):
             continue
 
         domain = await get_basic_domain(payload[field])
