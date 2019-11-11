@@ -131,7 +131,10 @@ async def _try_username_patch(user_id: int, username: str) -> None:
 
 def to_update(user: dict, payload: dict, field: str) -> bool:
     """Return if a given field is to be updated inside the payload."""
-    return user[field] != payload.get(field)
+    if field not in payload:
+        return False
+
+    return user[field] != payload[field]
 
 
 async def validate_semantics(user_id: int, payload: dict) -> dict:
