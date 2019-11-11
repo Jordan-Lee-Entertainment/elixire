@@ -34,7 +34,7 @@ bp = Blueprint("profile", __name__)
 log = logging.getLogger(__name__)
 
 
-async def _update_password(user_id, new_pwd):
+async def _update_password(user_id: int, new_pwd: str):
     """Update a user's password."""
     new_hash = await pwd_hash(new_pwd)
 
@@ -76,14 +76,6 @@ async def profile_handler():
 
 
 async def _try_domain_patch(user_id: int, domain_id: int) -> None:
-    domain = await get_basic_domain(domain_id)
-
-    if domain is None:
-        raise BadInput("Unknown domain")
-
-    if domain["admin_only"] and not await check_admin(user_id):
-        raise FailedAuth("You can't use admin-only domains")
-
     await app.db.execute(
         """
         UPDATE users
@@ -123,34 +115,33 @@ async def _try_username_patch(user_id: int, username: str) -> None:
     # username in the next 600 seconds
     old_username = await app.storage.get_username(user_id)
 
-    try:
-        await app.db.execute(
-            """
-            UPDATE users
-            SET username = $1
-            WHERE user_id = $2
-            """,
-            username,
-            user_id,
-        )
-    except asyncpg.exceptions.UniqueViolationError:
-        raise BadInput("Username is already taken")
+    await app.db.execute(
+        """
+        UPDATE users
+        SET username = $1
+        WHERE user_id = $2
+        """,
+        username,
+        user_id,
+    )
 
     await app.storage.raw_invalidate(
         f"uid:{old_username}", f"uname:{user_id}", f"uid:{username}"
     )
 
 
-def to_update(user, payload, field):
-    return user[field] != payload.get("field")
+def to_update(user: dict, payload: dict, field: str) -> bool:
+    """Return if a given field is to be updated inside the payload."""
+    return user[field] != payload.get(field)
 
 
 async def validate_semantics(user_id: int, payload: dict) -> dict:
     """Validate input errors in the payload."""
     errors: Dict[str, List[str]] = defaultdict(list)
     user = await get_basic_user(user_id)
+    assert user is not None
 
-    _field_must_password = ("username", "email")
+    _field_must_password = ("username", "email", "new_password")
     _field_must_unique_user = ("username", "email")
 
     for field in _field_must_password:
@@ -174,16 +165,38 @@ async def validate_semantics(user_id: int, payload: dict) -> dict:
 
             errors["username"].append(msg)
 
+    domain_fields = ("domain", "shorten_domain")
+    for field in domain_fields:
+        if not to_update(user, payload, "domain"):
+            continue
+
+        domain = await get_basic_domain(payload[field])
+
+        if domain is None:
+            errors[field].append("Unknown domain")
+        else:
+            if domain["admin_only"] and not await check_admin(user_id):
+                errors[field].append("You can't use admin-only domains")
+
     return errors
 
 
 async def finish_update(conn, user_id: int, payload: dict):
     user = await get_basic_user(user_id)
+    assert user is not None
 
     if to_update(user, payload, "username"):
         await _try_username_patch(user_id, payload["username"])
 
-    _simple_fields = ("email",)
+    _simple_fields = (
+        "email",
+        "subdomain",
+        "shorten_domain",
+        "shorten_subdomain",
+        "paranoid",
+        "consented",
+    )
+
     for field in _simple_fields:
         if not to_update(user, payload, field):
             continue
@@ -191,6 +204,12 @@ async def finish_update(conn, user_id: int, payload: dict):
         await conn.execute(
             f"UPDATE users SET {field} = $1 WHERE user_id = $2", payload[field], user_id
         )
+
+    if to_update(user, payload, "domain"):
+        await _try_domain_patch(user_id, payload["domain"])
+
+    if to_update(user, payload, "new_password"):
+        await _update_password(user_id, payload["new_password"])
 
 
 @bp.route("", methods=["PATCH"])
@@ -210,69 +229,6 @@ async def change_profile_handler():
     async with app.db.acquire() as conn:
         async with conn.transaction():
             await finish_update(conn, user_id, payload)
-
-    if "domain" in payload:
-        await _try_domain_patch(user_id, payload["domain"])
-
-    if "subdomain" in payload:
-        await app.db.execute(
-            """
-            UPDATE users
-            SET subdomain = $1
-            WHERE user_id = $2
-            """,
-            payload["subdomain"],
-            user_id,
-        )
-
-    if "shorten_domain" in payload:
-        # TODO check validity of domain id inside payload.shorten_domain
-        await app.db.execute(
-            """
-            UPDATE users
-            SET shorten_domain = $1
-            WHERE user_id = $2
-            """,
-            payload["shorten_domain"],
-            user_id,
-        )
-
-    if "shorten_subdomain" in payload:
-        await app.db.execute(
-            """
-            UPDATE users
-            SET shorten_subdomain = $1
-            WHERE user_id = $2
-            """,
-            payload["shorten_subdomain"],
-            user_id,
-        )
-
-    if "paranoid" in payload:
-        await app.db.execute(
-            """
-            UPDATE users
-            SET paranoid = $1
-            WHERE user_id = $2
-            """,
-            payload["paranoid"],
-            user_id,
-        )
-
-    if "consented" in payload:
-        await app.db.execute(
-            """
-            UPDATE users
-            SET consented= $1
-            WHERE user_id = $2
-            """,
-            payload["consented"],
-            user_id,
-        )
-
-    if "new_password" in payload:
-        await _check_password(user_id, payload)
-        await _update_password(user_id, payload["new_password"])
 
     user = await get_basic_user(user_id)
     return jsonify(user)
