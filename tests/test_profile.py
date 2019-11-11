@@ -122,6 +122,8 @@ async def test_patch_profile_wrong(test_cli_user):
             json={
                 "username": random_username,
                 "email": random_email,
+                "domain": -1,
+                "shorten_domain": -1,
                 "password": test_cli_user["password"],
             },
         )
@@ -135,6 +137,8 @@ async def test_patch_profile_wrong(test_cli_user):
         # assert we have errors on there
         assert rjson["username"]
         assert rjson["email"]
+        assert rjson["domain"]
+        assert rjson["shorten_domain"]
     finally:
         async with test_cli_user.app.app_context():
             task = await delete_user(random_user["user_id"], delete=True)
