@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
+from collections import defaultdict
+from typing import Dict, List
 
 import asyncpg
 from quart import Blueprint, request, current_app as app, jsonify
@@ -113,21 +115,6 @@ async def _check_password(user_id: int, payload: dict) -> None:
     await pwd_check(partial["password_hash"], payload["password"])
 
 
-async def _try_email_patch(user_id: int, email: str) -> None:
-    try:
-        await app.db.execute(
-            """
-            UPDATE users
-            SET email = $1
-            WHERE user_id = $2
-            """,
-            email,
-            user_id,
-        )
-    except asyncpg.UniqueViolationError:
-        raise BadInput("Email is already being used by another user")
-
-
 async def _try_username_patch(user_id: int, username: str) -> None:
     username = username.lower()
 
@@ -154,9 +141,56 @@ async def _try_username_patch(user_id: int, username: str) -> None:
     )
 
 
+def to_update(user, payload, field):
+    return user[field] != payload.get("field")
+
+
 async def validate_semantics(user_id: int, payload: dict) -> dict:
-    errors = {}
+    """Validate input errors in the payload."""
+    errors: Dict[str, List[str]] = defaultdict(list)
+    user = await get_basic_user(user_id)
+
+    _field_must_password = ("username", "email")
+    _field_must_unique_user = ("username", "email")
+
+    for field in _field_must_password:
+        if to_update(user, payload, field):
+            await _check_password(user_id, payload)
+            break
+
+    for field in _field_must_unique_user:
+        if not to_update(user, payload, field):
+            continue
+
+        existing_user = await app.db.fetchrow(
+            f"SELECT user_id FROM users WHERE {field} = $1", payload[field]
+        )
+
+        if existing_user is not None:
+            msg = {
+                "username": "Username is already taken",
+                "email": "Email is already being used by another user",
+            }[field]
+
+            errors["username"].append(msg)
+
     return errors
+
+
+async def finish_update(conn, user_id: int, payload: dict):
+    user = await get_basic_user(user_id)
+
+    if to_update(user, payload, "username"):
+        await _try_username_patch(user_id, payload["username"])
+
+    _simple_fields = ("email",)
+    for field in _simple_fields:
+        if not to_update(user, payload, field):
+            continue
+
+        await conn.execute(
+            f"UPDATE users SET {field} = $1 WHERE user_id = $2", payload[field], user_id
+        )
 
 
 @bp.route("", methods=["PATCH"])
@@ -166,19 +200,16 @@ async def change_profile_handler():
 
     user_id = await token_check()
     payload = validate(await request.get_json(), PATCH_PROFILE)
+    payload["username"] = payload["username"].lower()
 
     # check the semantic validity of payload before running UPDATEs
     errors = await validate_semantics(user_id, payload)
     if errors:
         raise BadInput("Bad payload", errors)
 
-    if "username" in payload:
-        await _check_password(user_id, payload)
-        await _try_username_patch(user_id, payload["username"])
-
-    if "email" in payload:
-        await _check_password(user_id, payload)
-        await _try_email_patch(user_id, payload["email"])
+    async with app.db.acquire() as conn:
+        async with conn.transaction():
+            await finish_update(conn, user_id, payload)
 
     if "domain" in payload:
         await _try_domain_patch(user_id, payload["domain"])
