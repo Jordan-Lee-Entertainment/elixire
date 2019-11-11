@@ -165,7 +165,7 @@ async def validate_semantics(user_id: int, payload: dict) -> dict:
                 "email": "Email is already being used by another user",
             }[field]
 
-            errors["username"].append(msg)
+            errors[field].append(msg)
 
     domain_fields = ("domain", "shorten_domain")
     for field in domain_fields:

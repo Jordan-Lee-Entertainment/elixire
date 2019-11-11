@@ -112,13 +112,18 @@ async def test_profile_wrong_token(test_cli):
 
 async def test_patch_profile_wrong(test_cli_user):
     random_username = username()
+    random_email = email()
     async with test_cli_user.app.app_context():
-        random_user = await create_user(random_username, username(), email())
+        random_user = await create_user(random_username, username(), random_email)
 
     try:
         resp = await test_cli_user.patch(
             "/api/profile",
-            json={"username": random_username, "password": test_cli_user["password"]},
+            json={
+                "username": random_username,
+                "email": random_email,
+                "password": test_cli_user["password"],
+            },
         )
 
         assert resp.status_code == 400
@@ -129,6 +134,7 @@ async def test_patch_profile_wrong(test_cli_user):
 
         # assert we have errors on there
         assert rjson["username"]
+        assert rjson["email"]
     finally:
         async with test_cli_user.app.app_context():
             task = await delete_user(random_user["user_id"], delete=True)
