@@ -19,6 +19,8 @@ def _make_feature_list(cfg):
         res.append("registrations")
     elif cfg.PATCH_API_PROFILE_ENABLED:
         res.append("pfupdate")
+    elif cfg.REQUIRE_APPROVALS:
+        res.append("require_approvals")
 
     return res
 
