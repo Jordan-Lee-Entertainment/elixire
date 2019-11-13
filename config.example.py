@@ -75,7 +75,7 @@ PATCH_API_PROFILE_ENABLED = True
 NOTIFY_ACTIVATION_EMAILS = True
 
 # Should accounts be manually activated or will they be activated by default?
-REQUIRE_APPROVALS = True
+REQUIRE_ACCOUNT_APPROVALS = True
 
 # Acceptable MIME types for uploads.
 #
