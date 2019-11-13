@@ -59,7 +59,7 @@ def make_app() -> Quart:
 
     # TODO better config under app.cfg. check #112
     app.econfig = config
-    app.econfig.REQUIRE_APPROVALS = getattr(app.econfig, "REQUIRE_APPROVALS", True)
+    app.econfig.REQUIRE_ACCOUNT_APPROVALS = getattr(app.econfig, "REQUIRE_ACCOUNT_APPROVALS", True)
     app.mode = ElixireMode()
 
     level = getattr(config, "LOGGING_LEVEL", "INFO")
