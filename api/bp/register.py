@@ -60,7 +60,7 @@ async def register_user():
 
     try:
         udata = await create_user(
-            username, password, email, active=not app.econfig.REQUIRE_APPROVALS
+            username, password, email, active=not app.econfig.REQUIRE_ACCOUNT_APPROVALS
         )
     except asyncpg.exceptions.UniqueViolationError:
         raise BadInput("Username or email already exist.")
@@ -75,7 +75,7 @@ async def register_user():
 
     await register_webhook(user_id, username, discord_user, email)
     return jsonify(
-        {"user_id": user_id, "require_approvals": app.econfig.REQUIRE_APPROVALS}
+        {"user_id": user_id, "require_approvals": app.econfig.REQUIRE_ACCOUNT_APPROVALS}
     )
 
 
