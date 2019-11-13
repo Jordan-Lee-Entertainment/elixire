@@ -86,6 +86,12 @@ class QuotaExploded(APIError):
     status_code = 469
 
 
+class JobExistsError(APIError):
+    """When a background job already exists for the given action."""
+
+    status_code = 409
+
+
 class EmailError(APIError):
     """Error to send email."""
 

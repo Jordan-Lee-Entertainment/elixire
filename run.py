@@ -207,7 +207,7 @@ async def app_before_serving():
         app.loop
     except AttributeError:
         app.loop = asyncio.get_event_loop()
-    app.sched = JobManager()
+    app.sched = JobManager(app)
 
     app.session = aiohttp.ClientSession(loop=app.loop)
 

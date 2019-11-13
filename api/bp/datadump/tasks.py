@@ -395,7 +395,7 @@ def start_worker() -> None:
         log.info("worker exists, skipping")
         return
 
-    app.sched.spawn(dump_worker(), "dd_worker")
+    app.sched.spawn(dump_worker, [], task_id="datadump:worker")
 
 
 async def dump_janitor() -> None:
@@ -430,4 +430,9 @@ async def dump_janitor() -> None:
 
 def start_janitor() -> None:
     """Start dump janitor."""
-    app.sched.spawn_periodic(dump_janitor, [], app.econfig.DUMP_JANITOR_PERIOD)
+    app.sched.spawn_periodic(
+        dump_janitor,
+        [],
+        period=app.econfig.DUMP_JANITOR_PERIOD,
+        task_id="datadump:janitor",
+    )
