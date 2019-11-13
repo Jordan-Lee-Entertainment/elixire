@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
+import asyncio
 from .common import token, username, email
+from api.common.user import create_user, delete_user
 
 pytestmark = pytest.mark.asyncio
 
@@ -106,3 +108,38 @@ async def test_profile_wrong_token(test_cli):
     """Test the profile route with wrong tokens."""
     resp = await test_cli.get("/api/profile", headers={"Authorization": token()})
     assert resp.status_code == 403
+
+
+async def test_patch_profile_wrong(test_cli_user):
+    random_username = username()
+    random_email = email()
+    async with test_cli_user.app.app_context():
+        random_user = await create_user(random_username, username(), random_email)
+
+    try:
+        resp = await test_cli_user.patch(
+            "/api/profile",
+            json={
+                "username": random_username,
+                "email": random_email,
+                "domain": -1,
+                "shorten_domain": -1,
+                "password": test_cli_user["password"],
+            },
+        )
+
+        assert resp.status_code == 400
+
+        rjson = await resp.json
+
+        assert isinstance(rjson, dict)
+
+        # assert we have errors on there
+        assert rjson["username"]
+        assert rjson["email"]
+        assert rjson["domain"]
+        assert rjson["shorten_domain"]
+    finally:
+        async with test_cli_user.app.app_context():
+            task = await delete_user(random_user["user_id"], delete=True)
+        await asyncio.shield(task)
