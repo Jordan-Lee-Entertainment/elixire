@@ -22,4 +22,4 @@ RATELIMITS = {
     ("ip", "/"): {"requests": 10000, "second": 1},
 }
 
-REQUIRE_APPROVALS = False
+REQUIRE_ACCOUNT_APPROVALS = False
