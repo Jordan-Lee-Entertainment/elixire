@@ -74,6 +74,9 @@ PATCH_API_PROFILE_ENABLED = True
 # Send emails when a user's account is activated?
 NOTIFY_ACTIVATION_EMAILS = True
 
+# Should accounts be manually activated or will they be activated by default?
+REQUIRE_ACCOUNT_APPROVALS = True
+
 # Acceptable MIME types for uploads.
 #
 # NOTE: Admins are able to bypass this check by specifying `?admin=1`.

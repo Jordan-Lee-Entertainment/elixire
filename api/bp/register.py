@@ -11,7 +11,7 @@ This also includes routes like recovering username from email.
 import asyncpg
 import logging
 
-from quart import Blueprint, current_app as app, request
+from quart import Blueprint, current_app as app, request, jsonify
 from dns import resolver
 
 from api.errors import BadInput, FeatureDisabled, EmailError
@@ -59,7 +59,9 @@ async def register_user():
     await check_email(app.loop, email)
 
     try:
-        udata = await create_user(username, password, email, active=False)
+        udata = await create_user(
+            username, password, email, active=not app.econfig.REQUIRE_ACCOUNT_APPROVALS
+        )
     except asyncpg.exceptions.UniqueViolationError:
         raise BadInput("Username or email already exist.")
 
@@ -72,7 +74,9 @@ async def register_user():
         raise BadInput("Failed to send email.")
 
     await register_webhook(user_id, username, discord_user, email)
-    return "", 204
+    return jsonify(
+        {"user_id": user_id, "require_approvals": app.econfig.REQUIRE_ACCOUNT_APPROVALS}
+    )
 
 
 @bp.route("/recover_username", methods=["POST"])
