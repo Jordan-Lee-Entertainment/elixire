@@ -64,12 +64,12 @@ def main(config):
     loop = asyncio.get_event_loop()
 
     conn, redis = loop.run_until_complete(connect_db(config, loop))
-    ctx = Context(conn, redis, loop, LockStorage())
+    ctx = Context(config, conn, redis, loop, LockStorage())
 
     # this needs an actual connection to the database and redis
     # so we first instantiate Context, then set the attribute
     ctx.storage = Storage(ctx)
-    ctx.sched = JobManager(loop)
+    ctx.sched = JobManager(ctx)
 
     # aiohttp warns us when making ClientSession out of
     # a coroutine, so yeah.
