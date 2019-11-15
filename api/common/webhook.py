@@ -18,7 +18,7 @@ async def _post_webhook(
     *,
     embed: Optional[dict] = None,
     text: Optional[str] = None,
-):
+) -> None:
     """Post to the given webhook."""
 
     payload: Dict[str, Union[str, List[dict]]] = {}
@@ -37,6 +37,13 @@ async def _post_webhook(
 
     if not webhook_url:
         log.warning("Ignored webhook, payload=%r", payload)
+        return
+
+    if getattr(app, "_test", False):
+        app._webhook_list.append(
+            {"webhook_url": webhook_url, "embed": embed, "text": text}
+        )
+
         return
 
     async with app.session.post(webhook_url, json=payload) as resp:
