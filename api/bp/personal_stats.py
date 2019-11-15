@@ -7,7 +7,7 @@ import logging
 from quart import Blueprint, current_app as app, jsonify
 
 from api.common.auth import token_check
-from api.common.domain import get_domain_public
+from api.common.domain import get_domain_public, get_domain_tag_ids
 from api.common.profile import get_counts
 
 
@@ -30,10 +30,10 @@ async def personal_domain_stats():
 
     domain_ids = await db.fetch(
         """
-    SELECT domain_id
-    FROM domain_owners
-    WHERE user_id = $1
-    """,
+        SELECT domain_id
+        FROM domain_owners
+        WHERE user_id = $1
+        """,
         user_id,
     )
 
@@ -44,17 +44,20 @@ async def personal_domain_stats():
 
         domain_info = await db.fetchrow(
             """
-        SELECT domain, official, admin_only, permissions
-        FROM domains
-        WHERE domain_id = $1
-        """,
+            SELECT domain, permissions
+            FROM domains
+            WHERE domain_id = $1
+            """,
             domain_id,
         )
 
         dinfo = dict(domain_info)
-        dinfo["cf_enabled"] = False
 
         public = await get_domain_public(domain_id)
-        res[domain_id] = {"info": dinfo, "stats": public}
+        res[domain_id] = {
+            "info": dinfo,
+            "stats": public,
+            "tags": await get_domain_tag_ids(domain_id),
+        }
 
     return jsonify(res)
