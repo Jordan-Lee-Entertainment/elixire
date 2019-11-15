@@ -153,6 +153,27 @@ async def get_domain_tag_ids(domain_id: int) -> Optional[List[int]]:
     ]
 
 
+async def is_domain_tags_label(domain_id: int, *, label: str) -> bool:
+    """Returns if the given domain has any tags that have the given label"""
+    matching_tags = await app.db.fetch(
+        """
+        SELECT tag_id
+        FROM domain_tags
+        JOIN tag_list
+        WHERE tag_list.label = "admin"
+          AND domain_id = $1
+        """,
+        domain_id,
+    )
+
+    assert matching_tags is not None
+    return bool(matching_tags)
+
+
+async def is_domain_admin_only(domain_id: int) -> bool:
+    return await is_domain_tags_label(domain_id, label="admin_only")
+
+
 async def get_domain_info(domain_id: int) -> Optional[dict]:
     """Get domain information."""
     raw_info = await app.db.fetchrow(
