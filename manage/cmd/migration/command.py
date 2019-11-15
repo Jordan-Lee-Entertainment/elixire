@@ -5,16 +5,25 @@
 """
 elixire db migration script.
 """
+import importlib
 import logging
+import sys
 from pathlib import Path
 from inspect import stack
 from collections import namedtuple
+from enum import Enum
 
 import asyncpg
 
 log = logging.getLogger(__name__)
 
-Migration = namedtuple("Migration", "mid name path")
+
+class ScriptType(Enum):
+    SQL = 0
+    Python = 1
+
+
+Migration = namedtuple("Migration", "mid name path type")
 
 
 def _get_mig_folder() -> Path:
@@ -46,7 +55,16 @@ class MigrationContext:
         mig_folder = self.migration_folder
         migrations = {}
 
-        for migration_path in mig_folder.glob("*.sql"):
+        for migration_path in mig_folder.iterdir():
+            if migration_path.name.startswith(".") or migration_path.name.startswith(
+                "_"
+            ):
+                continue
+
+            is_sql = migration_path.name.endswith(".sql")
+            is_python = migration_path.name.endswith(".py")
+            if not is_sql and not is_python:
+                continue
 
             # we need to extract the migration's
             # ID and name to insert in the dictionary
@@ -61,7 +79,12 @@ class MigrationContext:
             mig_id = int(fragments[0])
             mig_name = "_".join(fragments[1:])
 
-            migrations[mig_id] = Migration(mig_id, mig_name, migration_path)
+            migrations[mig_id] = Migration(
+                mig_id,
+                mig_name,
+                migration_path,
+                ScriptType.SQL if is_sql else ScriptType.Python,
+            )
 
         return migrations
 
@@ -123,6 +146,20 @@ async def _ensure_changelog(ctx, mctx) -> int:
     )
 
 
+async def _apply_sql(ctx, migration):
+    # get this migration's raw sql to apply
+    raw_sql = migration.path.read_text(encoding="utf-8")
+    await ctx.db.execute(raw_sql)
+
+
+async def _apply_py(ctx, migration):
+    # get this migration's raw sql to apply
+    module = importlib.import_module(
+        "manage.cmd.migration.scripts." + migration.path.name.replace(".py", "")
+    )
+    await module.run(ctx)
+
+
 async def apply_migration(ctx, migration: Migration):
     """Apply a single migration to the database."""
 
@@ -138,23 +175,21 @@ async def apply_migration(ctx, migration: Migration):
 
     if apply_ts is not None:
         print("already applied", migration.mid, ": skipping")
-
         return
 
-    # get this migration's raw sql to apply
-    raw_sql = migration.path.read_text(encoding="utf-8")
-
-    # try to apply
     try:
-        await ctx.db.execute(raw_sql)
+        if migration.type == ScriptType.SQL:
+            await _apply_sql(ctx, migration)
+        elif migration.type == ScriptType.Python:
+            await _apply_py(ctx, migration)
 
         await ctx.db.execute(
             """
-        INSERT INTO migration_log
-            (change_id, description)
-        VALUES
-            ($1, $2)
-        """,
+            INSERT INTO migration_log
+                (change_id, description)
+            VALUES
+                ($1, $2)
+            """,
             migration.mid,
             f"migration: {migration.name}",
         )
