@@ -10,8 +10,6 @@ elixire - index routes
 """
 from quart import Blueprint, jsonify, current_app as app
 
-from api.errors import FailedAuth
-from api.common.auth import token_check, check_admin
 from api.common.domain import get_domain_tag_ids
 
 bp = Blueprint("index", __name__)
