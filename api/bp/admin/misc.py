@@ -74,7 +74,7 @@ async def email_broadcast():
     return "", 204
 
 
-@bp.route("/email/<user_id:int>", methods=["POST"])
+@bp.route("/email/<int:user_id>", methods=["POST"])
 async def sendmail(user_id: int):
     """Send an email to a given user."""
     j = validate(await request.get_json(), ADMIN_SEND_BROADCAST)
