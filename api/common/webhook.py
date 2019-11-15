@@ -35,15 +35,15 @@ async def _post_webhook(
     if not embed and not text:
         raise TypeError("Either text or embed must be provided.")
 
-    if not webhook_url:
-        log.warning("Ignored webhook, payload=%r", payload)
-        return
-
     if getattr(app, "_test", False):
         app._webhook_list.append(
             {"webhook_url": webhook_url, "embed": embed, "text": text}
         )
 
+        return
+
+    if not webhook_url:
+        log.warning("Ignored webhook, payload=%r", payload)
         return
 
     async with app.session.post(webhook_url, json=payload) as resp:
