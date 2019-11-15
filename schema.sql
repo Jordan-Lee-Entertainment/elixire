@@ -203,3 +203,14 @@ CREATE TABLE IF NOT EXISTS dump_queue (
     request_timestamp timestamp without time zone default now(),
     PRIMARY KEY (user_id)
 );
+
+CREATE TABLE IF NOT EXISTS tag_list (
+    tag_id serial PRIMARY KEY,
+    label text
+);
+
+CREATE TABLE IF NOT EXISTS domain_tags (
+    domain_id bigint REFERENCES domains ON DELETE CASCADE,
+    tag_id bigint REFERENCES tag_list ON DELETE CASCADE,
+    PRIMARY KEY (domain_id, tag_id)
+);

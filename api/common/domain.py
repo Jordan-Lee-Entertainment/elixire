@@ -2,7 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Optional
+from typing import Optional, List
 
 # TODO replace by app and remove current app parameters
 from quart import current_app as app
@@ -143,6 +143,13 @@ async def _domain_file_stats(domain_id, *, ignore_consented: bool = False) -> tu
     return row["count"], int(row["sum"] or 0)
 
 
+async def get_domain_tag_ids(domain_id: int) -> Optional[List[int]]:
+    """Get a domain's tag IDs."""
+    return await app.db.fetch(
+        """SELECT tag_id FROM domain_tags WHERE domain_id = $1""", domain_id
+    )
+
+
 async def get_domain_info(domain_id: int) -> Optional[dict]:
     """Get domain information."""
     raw_info = await app.db.fetchrow(
@@ -191,6 +198,7 @@ async def get_domain_info(domain_id: int) -> Optional[dict]:
 
     return {
         "info": {**dinfo, **{"owner": dict_owner_data}},
+        "tags": await get_domain_tag_ids(domain_id),
         "stats": stats,
         "public_stats": await get_domain_public(domain_id),
     }
