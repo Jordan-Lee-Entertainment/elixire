@@ -185,14 +185,10 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     user_id = str(test_cli_user.user["user_id"])
     admin_id = str(test_cli_admin.user["user_id"])
 
+    # TODO tags instead of fields
+
     resp = await test_cli_admin.patch(
-        "/api/admin/domains/0",
-        json={
-            "owner_id": user_id,
-            "admin_only": True,
-            "official": True,
-            "permissions": 0,
-        },
+        "/api/admin/domains/0", json={"owner_id": user_id, "permissions": 0}
     )
 
     assert resp.status_code == 200
@@ -202,8 +198,6 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     fields = rjson["updated"]
     assert isinstance(fields, list)
     assert "owner_id" in fields
-    assert "admin_only" in fields
-    assert "official" in fields
     assert "permissions" in fields
 
     # fetch domain info
@@ -216,20 +210,12 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     dinfo = rjson["info"]
     assert isinstance(dinfo, dict)
     assert dinfo["owner"]["user_id"] == user_id
-    assert dinfo["admin_only"]
-    assert dinfo["official"]
     assert dinfo["permissions"] == 0
 
     # reset the domain properties
     # to sane defaults
     resp = await test_cli_admin.patch(
-        "/api/admin/domains/0",
-        json={
-            "owner_id": admin_id,
-            "admin_only": False,
-            "official": False,
-            "permissions": 3,
-        },
+        "/api/admin/domains/0", json={"owner_id": admin_id, "permissions": 3}
     )
 
     assert resp.status_code == 200
@@ -239,8 +225,6 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     fields = rjson["updated"]
     assert isinstance(fields, list)
     assert "owner_id" in fields
-    assert "admin_only" in fields
-    assert "official" in fields
     assert "permissions" in fields
 
     # fetch domain info, again, to make sure.
@@ -253,8 +237,6 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     dinfo = rjson["info"]
     assert isinstance(dinfo, dict)
     assert dinfo["owner"]["user_id"] == admin_id
-    assert not dinfo["admin_only"]
-    assert not dinfo["official"]
     assert dinfo["permissions"] == 3
 
 
@@ -318,8 +300,6 @@ async def test_my_stats_as_admin(test_cli_admin):
 
     info = dom["info"]
     assert isinstance(info["domain"], str)
-    assert isinstance(info["official"], bool)
-    assert isinstance(info["admin_only"], bool)
     assert isinstance(info["permissions"], int)
 
     stats = dom["stats"]

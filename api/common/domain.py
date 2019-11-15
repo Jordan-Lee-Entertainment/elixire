@@ -30,7 +30,7 @@ async def create_domain(
         INSERT INTO domains
             (domain, permissions)
         VALUES
-            ($1, $2, $3, $4)
+            ($1, $2)
         RETURNING domain_id
         """,
         domain,
@@ -374,7 +374,6 @@ async def set_domain_tags(domain_id: int, tags: List[int]) -> None:
                 """
                 DELETE FROM domain_tags
                 WHERE domain_id = $1 AND tag_id = $2
-                VALUES ($1, $2)
                 """,
                 [(domain_id, tag_id) for tag_id in to_remove],
             )

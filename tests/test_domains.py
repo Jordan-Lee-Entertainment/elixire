@@ -21,17 +21,17 @@ async def test_domains_common_functions(test_cli_admin):
     # test that it exists with the correct info
     row = await test_cli_admin.app.db.fetchrow(
         """
-        SELECT domain, admin_only, official, permissions
+        SELECT domain, permissions
         FROM domains
         WHERE domain_id = $1
         """,
         domain_id,
     )
 
+    # TODO check admin_only and official tags not existing for domain
+
     assert row is not None
     assert row["domain"] == name
-    assert row["admin_only"] is False
-    assert row["official"] is False
     assert row["permissions"] == 3
 
     # test that the permission mapping exists

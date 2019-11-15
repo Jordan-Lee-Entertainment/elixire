@@ -36,9 +36,5 @@ async def domainlist_handler():
         domain_tags[domain_id] = tag_ids
 
     return jsonify(
-        {
-            "domains": dict(domains),
-            "domain_tags": domain_tags,
-            "tags": await get_tags(),
-        }
+        {"domains": dict(domains), "domain_tags": domain_tags, "tags": await get_tags()}
     )
