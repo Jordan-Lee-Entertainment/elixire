@@ -8,6 +8,7 @@ import secrets
 from api.bp.profile import delete_user
 from api.common.user import create_user
 from api.common.auth import pwd_hash
+from api.common.email import send_email_to_user
 from ..utils import get_user
 
 
@@ -76,6 +77,14 @@ new password: {password!r}
     )
 
 
+async def sendmail(ctx, args):
+    """Send email to a user"""
+    user_id = await get_user(ctx, args.username)
+    body = "\n".join(args.body)
+    user_email = await send_email_to_user(user_id, args.subject, body)
+    print("OK", user_email)
+
+
 def setup(subparsers):
     parser_adduser = subparsers.add_parser(
         "adduser",
@@ -110,3 +119,9 @@ from this operation.
     parser_resetpwd.add_argument("username", help="Username")
 
     parser_resetpwd.set_defaults(func=resetpass)
+
+    parser_sendmail = subparsers.add_parser("sendmail", help="Send an email to a user")
+    parser_sendmail.add_argument("username", help="Username")
+    parser_sendmail.add_argument("subject", help="Email subject")
+    parser_sendmail.add_argument("body", help="Email body", nargs="+")
+    parser_sendmail.set_defaults(func=sendmail)

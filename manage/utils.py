@@ -22,11 +22,12 @@ class Context:
     instead of having to instantiate the sanic App object.
     """
 
-    def __init__(self, db, redis, loop, locks):
+    def __init__(self, econfig, db, redis, loop, locks):
         self.db = db
         self.redis = redis
         self.loop = loop
         self.locks = locks
+        self.econfig = econfig
 
         # those are set later
         self.args = None
@@ -43,6 +44,7 @@ class Context:
         app.session = self.session
         app.storage = self.storage
         app.sched = self.sched
+        app.econfig = self.econfig
         return app
 
 
