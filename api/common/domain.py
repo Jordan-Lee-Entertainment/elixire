@@ -180,7 +180,7 @@ async def get_domain_info(domain_id: int) -> Optional[dict]:
     """Get domain information."""
     raw_info = await app.db.fetchrow(
         """
-        SELECT domain, official, admin_only, permissions
+        SELECT domain, permissions
         FROM domains
         WHERE domain_id = $1
         """,
@@ -190,8 +190,6 @@ async def get_domain_info(domain_id: int) -> Optional[dict]:
     dinfo = dict_(raw_info)
     if dinfo is None:
         return None
-
-    dinfo["cf_enabled"] = False
 
     stats = {}
 
