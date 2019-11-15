@@ -77,24 +77,12 @@ async def test_domains_solving():
     assert possibilities == ["*.sample.domain.tld", "sample.domain.tld", "*.domain.tld"]
 
 
-async def _assert_domains(resp):
+async def test_domainlist(test_cli):
+    resp = await test_cli.get("/api/domains")
     assert resp.status_code == 200
 
     rjson = await resp.json
     assert isinstance(rjson, dict)
     assert isinstance(rjson["domains"], dict)
-
-
-async def test_domains_nouser(test_cli):
-    resp = await test_cli.get("/api/domains")
-    await _assert_domains(resp)
-
-
-async def test_domains_user(test_cli_user):
-    resp = await test_cli_user.get("/api/domains")
-    await _assert_domains(resp)
-
-
-async def test_domains_admin(test_cli_admin):
-    resp = await test_cli_admin.get("/api/domains")
-    await _assert_domains(resp)
+    assert isinstance(rjson["domain_tags"], dict)
+    assert isinstance(rjson["tags"], dict)

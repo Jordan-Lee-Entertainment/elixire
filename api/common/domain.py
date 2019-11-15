@@ -145,9 +145,12 @@ async def _domain_file_stats(domain_id, *, ignore_consented: bool = False) -> tu
 
 async def get_domain_tag_ids(domain_id: int) -> Optional[List[int]]:
     """Get a domain's tag IDs."""
-    return await app.db.fetch(
-        """SELECT tag_id FROM domain_tags WHERE domain_id = $1""", domain_id
-    )
+    return [
+        r["tag_id"]
+        for r in await app.db.fetch(
+            """SELECT tag_id FROM domain_tags WHERE domain_id = $1""", domain_id
+        )
+    ]
 
 
 async def get_domain_info(domain_id: int) -> Optional[dict]:

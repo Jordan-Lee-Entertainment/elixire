@@ -11,6 +11,7 @@ elixire - index routes
 from quart import Blueprint, jsonify, current_app as app
 
 from api.common.domain import get_domain_tag_ids
+from api.common.common import get_tags
 
 bp = Blueprint("index", __name__)
 
@@ -49,6 +50,7 @@ async def domainlist_handler():
         {
             "domains": dict(domains),
             "officialdomains": official_domains,
-            "tags": domain_tags,
+            "domain_tags": domain_tags,
+            "tags": await get_tags(),
         }
     )

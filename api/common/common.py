@@ -8,7 +8,7 @@ import hashlib
 import logging
 import time
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict
 
 import asyncpg
 from quart import current_app as app, request
@@ -424,3 +424,9 @@ def transform_wildcard(domain: str, subdomain_name: str) -> str:
             domain = domain.replace("*.", "")
 
     return domain
+
+
+async def get_tags() -> Dict[int, str]:
+    """Get a mapping from tag ID to tag label."""
+    tag_rows = await app.db.fetch("SELECT tag_id, label FROM tag_list")
+    return {row["tag_id"]: row["label"] for row in tag_rows}
