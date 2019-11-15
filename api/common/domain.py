@@ -347,3 +347,34 @@ async def remove_domain_tag(domain_id: int, tag_id: int) -> None:
         domain_id,
         tag_id,
     )
+
+
+async def set_domain_tags(domain_id: int, tags: List[int]) -> None:
+    """Forcefully set tags for a given domain."""
+    existing_tags = await get_domain_tag_ids(domain_id)
+    assert existing_tags is not None
+
+    existing_set = set(existing_tags)
+    tags_set = set(tags)
+
+    to_add = tags_set - existing_set
+    to_remove = existing_set - tags_set
+
+    async with app.conn.acquire() as conn:
+        async with conn.transaction():
+            await app.db.executemany(
+                """
+                INSERT INTO domain_tags (domain_id, tag_id)
+                VALUES ($1, $2)
+                """,
+                [(domain_id, tag_id) for tag_id in to_add],
+            )
+
+            await app.db.executemany(
+                """
+                DELETE FROM domain_tags
+                WHERE domain_id = $1 AND tag_id = $2
+                VALUES ($1, $2)
+                """,
+                [(domain_id, tag_id) for tag_id in to_remove],
+            )

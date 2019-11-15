@@ -13,7 +13,7 @@ from api.schema import (
     ADMIN_SEND_DOMAIN_EMAIL,
     ADMIN_PUT_DOMAIN,
 )
-from api.common.domain import create_domain, delete_domain
+from api.common.domain import create_domain, delete_domain, set_domain_tags
 from api.common.auth import token_check, check_admin
 from api.common.email import send_email_to_user
 from api.common.pagination import Pagination
@@ -74,12 +74,12 @@ async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
         j.pop("owner_id")
 
     if "tags" in j:
-        # TODO
-        raise NotImplementedError()
+        await set_domain_tags(domain_id, j["tags"])
+        fields.append("tags")
+        j.pop("tags")
 
-    # the other available fields are admin_only, official, and permissions.
-    # all of those follow the same sql query, so we can just write a for loop
-    # to process them
+    # the other available field is permissions. we keep this for loop to
+    # future proof other fields being added to domains.
     for field, value in j.items():
         await app.db.execute(
             f"""
