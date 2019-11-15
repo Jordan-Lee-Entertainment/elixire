@@ -29,7 +29,7 @@ async def test_register(test_cli):
         },
     )
 
-    assert resp.status_code == 204
+    assert resp.status_code == 200
 
     row = await test_cli.app.db.fetchrow(
         """
