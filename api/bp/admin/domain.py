@@ -43,9 +43,10 @@ async def add_domain():
     j = validate(await request.get_json(), ADMIN_PUT_DOMAIN)
     domain = j["domain"]
 
-    kwargs = dict(
-        admin_only=j["admin_only"], official=j["official"], permissions=j["permissions"]
-    )
+    kwargs = dict(permissions=j["permissions"])
+
+    if "tags" in j:
+        kwargs.update(tags=j["tags"])
 
     if "owner_id" in j:
         kwargs.update(owner_id=j["owner_id"])
