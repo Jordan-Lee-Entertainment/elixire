@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
 
-from api.common.domain import get_domain_info
+from api.common.domain import get_domain_info, get_domain_tag_ids
 from api.bp.admin.audit_log import Action, EditAction, DeleteAction
 
 log = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class DomainAddAction(Action):
 
         domain = await self.app.db.fetchrow(
             """
-        SELECT domain, admin_only, official, permissions
+        SELECT domain, permissions
         FROM domains
         WHERE domain_id = $1
         """,
@@ -28,8 +28,7 @@ class DomainAddAction(Action):
             "Domain data:",
             f"\tid: {domain_id}",
             f'\tname: {domain["domain"]}',
-            f'\tis admin only? {domain["admin_only"]}',
-            f'\tofficial? {domain["official"]}',
+            f"\ttags: {await get_domain_tag_ids(domain_id)}",
             f'\tpermissions number: {domain["permissions"]}\n',
             f"set owner on add: {owner_name} ({owner_id})",
         ]
@@ -44,7 +43,7 @@ class DomainEditAction(EditAction):
     async def get_object(self, domain_id) -> dict:
         domain = await self.app.db.fetchrow(
             """
-        SELECT admin_only, official, domain, permissions
+        SELECT domain, permissions
         FROM domains
         WHERE domain_id = $1
         """,
@@ -63,6 +62,8 @@ class DomainEditAction(EditAction):
         )
 
         domain["owner_id"] = domain_owner
+
+        domain["tags"] = await get_domain_tag_ids(domain_id)
 
         return domain
 

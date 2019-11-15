@@ -150,7 +150,13 @@ async def get_domain_tag_ids(domain_id: int) -> Optional[List[int]]:
     return [
         r["tag_id"]
         for r in await app.db.fetch(
-            """SELECT tag_id FROM domain_tags WHERE domain_id = $1""", domain_id
+            """
+            SELECT tag_id
+            FROM domain_tags
+            WHERE domain_id = $1
+            ORDER BY tag_id ASC
+            """,
+            domain_id,
         )
     ]
 

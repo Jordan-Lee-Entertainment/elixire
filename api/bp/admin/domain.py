@@ -73,6 +73,10 @@ async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
         fields.append("owner_id")
         j.pop("owner_id")
 
+    if "tags" in j:
+        # TODO
+        raise NotImplementedError()
+
     # the other available fields are admin_only, official, and permissions.
     # all of those follow the same sql query, so we can just write a for loop
     # to process them
