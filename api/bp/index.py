@@ -24,20 +24,9 @@ async def domainlist_handler():
         """
         SELECT domain_id, domain
         FROM domains
-        ORDER BY official DESC, domain_id ASC
-        """
-    )
-
-    official_domains = await app.db.fetch(
-        """
-        SELECT domain_id
-        FROM domains
-        WHERE official = true
         ORDER BY domain_id ASC
         """
     )
-
-    official_domains = [row["domain_id"] for row in official_domains]
 
     domain_tags = {}
 
@@ -49,7 +38,6 @@ async def domainlist_handler():
     return jsonify(
         {
             "domains": dict(domains),
-            "officialdomains": official_domains,
             "domain_tags": domain_tags,
             "tags": await get_tags(),
         }
