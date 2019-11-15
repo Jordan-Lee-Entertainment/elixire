@@ -4,8 +4,8 @@
 
 from typing import Optional, List
 
-# TODO replace by app and remove current app parameters
 from quart import current_app as app
+from asyncpg import UniqueViolationError
 
 from api.storage import solve_domain
 from api.common.utils import dict_
@@ -15,8 +15,7 @@ from api.errors import NotFound, BadInput
 async def create_domain(
     domain: str,
     *,
-    admin_only: bool = False,
-    official: bool = False,
+    tags: Optional[List[int]] = None,
     permissions: int = 3,
     owner_id: int = None,
 ) -> int:
@@ -24,22 +23,25 @@ async def create_domain(
 
     The related cache keys will be invalidated for you.
     """
+    tags = tags or []
+
     domain_id = await app.db.fetchval(
         """
         INSERT INTO domains
-            (domain, admin_only, official, permissions)
+            (domain, permissions)
         VALUES
             ($1, $2, $3, $4)
         RETURNING domain_id
         """,
         domain,
-        admin_only,
-        official,
         permissions,
     )
 
     if owner_id:
         await set_domain_owner(domain_id, owner_id)
+
+    for tag_id in tags:
+        await add_domain_tag(domain_id, tag_id)
 
     # invalidate cache
     possibilities = solve_domain(domain)
@@ -314,3 +316,30 @@ async def get_basic_domain_by_domain(
         raise NotFound("This domain does not exist in this elixire instance.")
 
     return domain_info
+
+
+async def add_domain_tag(domain_id: int, tag_id: int) -> None:
+    try:
+        await app.db.execute(
+            """
+            INSERT INTO domain_tags
+                (domain_id, tag_id)
+            VALUES
+                ($1, $2)
+            """,
+            domain_id,
+            tag_id,
+        )
+    except UniqueViolationError:
+        pass
+
+
+async def remove_domain_tag(domain_id: int, tag_id: int) -> None:
+    await app.db.execute(
+        """
+        DELETE FROM domain_tags
+        WHERE domain_id = $1 AND tag_id = $2
+        """,
+        domain_id,
+        tag_id,
+    )
