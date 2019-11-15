@@ -7,7 +7,6 @@ elixire db migration script.
 """
 import importlib
 import logging
-import sys
 from pathlib import Path
 from inspect import stack
 from collections import namedtuple
@@ -153,7 +152,6 @@ async def _apply_sql(ctx, migration):
 
 
 async def _apply_py(ctx, migration):
-    # get this migration's raw sql to apply
     module = importlib.import_module(
         "manage.cmd.migration.scripts." + migration.path.name.replace(".py", "")
     )
