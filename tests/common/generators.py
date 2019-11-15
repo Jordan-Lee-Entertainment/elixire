@@ -62,9 +62,7 @@ def username() -> str:
 
 def email() -> str:
     name = hexs()
-    domain = hexs()
-
-    return f"{name}@{domain}.com"
+    return f"{name}@discordapp.io"
 
 
 class FormData:

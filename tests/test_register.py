@@ -46,5 +46,6 @@ async def test_register(test_cli):
         assert test_cli.app._email_list
         assert test_cli.app._webhook_list
     finally:
-        task = await delete_user(user_id, delete=True)
-        await asyncio.shield(task)
+        async with test_cli.app.app_context():
+            task = await delete_user(user_id, delete=True)
+            await asyncio.shield(task)
