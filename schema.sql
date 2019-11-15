@@ -214,3 +214,6 @@ CREATE TABLE IF NOT EXISTS domain_tags (
     tag_id bigint REFERENCES tag_list ON DELETE CASCADE,
     PRIMARY KEY (domain_id, tag_id)
 );
+
+INSERT INTO tag_list (label) VALUES ('admin_only');
+INSERT INTO tag_list (label) VALUES ('official');
