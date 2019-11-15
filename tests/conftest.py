@@ -41,6 +41,10 @@ async def app_fixture(event_loop):
     # use mock instances of some external services.
     app_.audit_log = MockAuditLog()
 
+    # used in internal email/webhook functions for testing
+    app_._email_list = []
+    app_._webhook_list = []
+
     # event_loop.run_until_complete(app_.startup())
     await app_.startup()
 

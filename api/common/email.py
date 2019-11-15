@@ -111,6 +111,10 @@ async def send_email(
     user_email: str, subject: str, content: str, *, _is_repeat: bool = False
 ) -> bool:
     if getattr(app, "_test", False):
+        app._email_list.append(
+            {"email": user_email, "subject": subject, "content": content}
+        )
+
         return True
 
     try:

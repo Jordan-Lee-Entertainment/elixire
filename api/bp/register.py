@@ -32,6 +32,9 @@ async def check_email(loop, email: str):
     """
     _, domain = email.split("@")
 
+    if getattr(app, "_test", False):
+        return
+
     try:
         # check dns, MX record
         await loop.run_in_executor(None, app.resolv.query, domain, "MX")
@@ -67,7 +70,7 @@ async def register_user():
 
     user_id = udata["user_id"]
     try:
-        await send_register_email(email, raise_err=True)
+        await send_register_email(email)
     except EmailError:
         log.warning("failed to send email, deleting user")
         await delete_user(user_id, delete=True)
