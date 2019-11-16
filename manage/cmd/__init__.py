@@ -9,4 +9,4 @@ from .user import setup as user
 from .migration import setup as migration
 from .domains import setup as domains
 
-__all__ = ["ban", "files", "find", "user", "migration"]
+__all__ = ["ban", "files", "find", "user", "migration", "domains"]

@@ -172,12 +172,7 @@ async def test_domain_stats(test_cli_admin):
 
 async def test_domain_get(test_cli_admin):
     resp = await test_cli_admin.get("/api/admin/domains/38918583")
-
-    # TODO return 404
-    assert resp.status_code == 200
-
-    rjson = await resp.json
-    assert rjson is None
+    assert resp.status_code == 404
 
 
 async def test_domain_patch(test_cli_user, test_cli_admin):
@@ -185,10 +180,12 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     user_id = str(test_cli_user.user["user_id"])
     admin_id = str(test_cli_admin.user["user_id"])
 
-    # TODO tags instead of fields
+    # we can always assume tags 0 and 1 will exist (admin_only and official)
+    # so we can use those
 
     resp = await test_cli_admin.patch(
-        "/api/admin/domains/0", json={"owner_id": user_id, "permissions": 0}
+        "/api/admin/domains/0",
+        json={"owner_id": user_id, "permissions": 0, "tags": [0, 1]},
     )
 
     assert resp.status_code == 200
@@ -199,6 +196,7 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     assert isinstance(fields, list)
     assert "owner_id" in fields
     assert "permissions" in fields
+    assert "tags" in fields
 
     # fetch domain info
     resp = await test_cli_admin.get("/api/admin/domains/0")
@@ -211,11 +209,13 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     assert isinstance(dinfo, dict)
     assert dinfo["owner"]["user_id"] == user_id
     assert dinfo["permissions"] == 0
+    assert dinfo["tags"] == [0, 1]
 
     # reset the domain properties
     # to sane defaults
     resp = await test_cli_admin.patch(
-        "/api/admin/domains/0", json={"owner_id": admin_id, "permissions": 3}
+        "/api/admin/domains/0",
+        json={"owner_id": admin_id, "permissions": 3, "tags": []},
     )
 
     assert resp.status_code == 200
@@ -226,6 +226,7 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     assert isinstance(fields, list)
     assert "owner_id" in fields
     assert "permissions" in fields
+    assert "tags" in fields
 
     # fetch domain info, again, to make sure.
     resp = await test_cli_admin.get("/api/admin/domains/0")
@@ -238,6 +239,7 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     assert isinstance(dinfo, dict)
     assert dinfo["owner"]["user_id"] == admin_id
     assert dinfo["permissions"] == 3
+    assert not dinfo["tags"]
 
 
 async def test_user_patch(test_cli_user, test_cli_admin):

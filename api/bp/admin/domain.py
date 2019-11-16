@@ -23,7 +23,7 @@ from api.common.domain import (
 from api.common.auth import token_check, check_admin
 from api.common.email import send_email_to_user
 from api.common.pagination import Pagination
-from api.errors import BadInput
+from api.errors import BadInput, NotFound
 
 from api.bp.admin.audit_log_actions.domain import (
     DomainAddAction,
@@ -188,8 +188,11 @@ async def get_domain_stats(domain_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    # TODO return 404 when not found instead of null
-    return jsonify(await get_domain_info(domain_id))
+    info = await get_domain_info(domain_id)
+    if info is None:
+        raise NotFound("Domain not found")
+
+    return jsonify(info)
 
 
 @bp.route("", methods=["GET"])
