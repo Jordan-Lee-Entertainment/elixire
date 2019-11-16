@@ -17,10 +17,11 @@ from api.common.domain import (
     create_domain,
     delete_domain,
     set_domain_tags,
-    create_domain_tag,
-    delete_domain_tag,
     get_domain_info,
     set_domain_owner,
+    create_domain_tag,
+    delete_domain_tag,
+    update_domain_tag,
 )
 from api.common.auth import token_check, check_admin
 from api.common.email import send_email_to_user
@@ -314,3 +315,19 @@ async def delete_tag(tag_id: int):
 
     await delete_domain_tag(tag_id)
     return "", 204
+
+
+@bp.route("/tag/<int:tag_id>", methods=["PATCH"])
+async def patch_tag(tag_id: int):
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    j = validate(
+        await request.get_json(), {"label": {"type": "string", "required": False}}
+    )
+
+    kwargs = {}
+    if "label" in j:
+        kwargs["label"] = j["label"]
+
+    return jsonify(await update_domain_tag(tag_id, **kwargs))

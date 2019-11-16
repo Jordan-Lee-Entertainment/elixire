@@ -439,3 +439,36 @@ async def get_all_domains_basic() -> List[dict]:
             ),
         )
     )
+
+
+async def update_domain_tag(tag_id: int, **kwargs) -> Dict[str, Union[int, str]]:
+    """Update a domain tag. Receives values to update in the form of
+    keyword arguments. The key of the argument MUST be a field in the
+    tag table.
+
+    Returns a dictionary containing the updated tag object.
+    """
+    async with app.db.acquire() as conn:
+        async with conn.transaction():
+            for field, value in kwargs.items():
+                await conn.execute(
+                    f"""
+                    UPDATE domain_tags
+                    SET {field} = $1
+                    WHERE tag_id = $2
+                    """,
+                    value,
+                    tag_id,
+                )
+
+    row = await app.db.fetchrow(
+        """
+        SELECT tag_id AS id, label
+        FROM domain_tags
+        WHERE tag_id = $1
+        """,
+        tag_id,
+    )
+
+    assert row is not None
+    return dict(row)
