@@ -69,6 +69,6 @@ def setup(subparser):
     parser_delete_tag.set_defaults(func=remove_tag)
 
     parser_list_domains = subparser.add_parser(
-        "list_domains", help="List domains in the instance",
+        "list_domains", help="List domains in the instance"
     )
     parser_list_domains.set_defaults(func=list_domains)

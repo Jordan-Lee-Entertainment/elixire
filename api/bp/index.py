@@ -8,7 +8,7 @@ elixire - index routes
     because those provide public functionality (where as /api/hello
     isn't used by a client).
 """
-from quart import Blueprint, jsonify, current_app as app
+from quart import Blueprint, jsonify
 
 from api.common.domain import get_domain_tags, get_all_domains_basic
 
