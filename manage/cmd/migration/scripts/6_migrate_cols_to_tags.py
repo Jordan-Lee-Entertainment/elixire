@@ -10,7 +10,7 @@ async def _add(ctx, drow, field, target):
 
     try:
         await ctx.db.execute(
-            f"""INSERT INTO domain_tags(domain_id, tag_id) VALUES ($1, {target})""",
+            f"""INSERT INTO domain_tag_mappings(domain_id, tag_id) VALUES ($1, {target})""",
             domain_id,
         )
         print("add tag for", domain_id, field)
