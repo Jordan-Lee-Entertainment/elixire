@@ -396,3 +396,20 @@ async def set_domain_tags(domain_id: int, tags: List[int]) -> None:
                 """,
                 [(domain_id, tag_id) for tag_id in to_remove],
             )
+
+
+async def create_domain_tag(label: str) -> int:
+    return await app.db.fetchval(
+        """
+        INSERT INTO domain_tags
+            (label)
+        VALUES
+            ($1)
+        RETURNING domain_id
+        """,
+        label,
+    )
+
+
+async def delete_domain_tag(tag_id: int) -> None:
+    await app.db.execute("DELETE FROM domain_tags WHERE tag_id = $1", tag_id)
