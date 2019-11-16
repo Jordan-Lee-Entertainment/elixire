@@ -10,8 +10,7 @@ elixire - index routes
 """
 from quart import Blueprint, jsonify, current_app as app
 
-from api.common.domain import get_domain_tag_ids
-from api.common.common import get_tags
+from api.common.domain import get_domain_tags
 
 bp = Blueprint("index", __name__)
 
@@ -20,7 +19,7 @@ bp = Blueprint("index", __name__)
 async def domainlist_handler():
     """Gets the domain list."""
 
-    domains = await app.db.fetch(
+    domain_data = await app.db.fetch(
         """
         SELECT domain_id, domain
         FROM domains
@@ -28,13 +27,15 @@ async def domainlist_handler():
         """
     )
 
-    domain_tags = {}
+    res = []
 
-    for drow in domains:
-        domain_id = drow["domain_id"]
-        tag_ids = await get_domain_tag_ids(domain_id)
-        domain_tags[domain_id] = tag_ids
+    for drow in domain_data:
+        res.append(
+            {
+                "id": drow["domain_id"],
+                "domain": drow["domain"],
+                "tags": await get_domain_tags(drow["domain_id"]),
+            }
+        )
 
-    return jsonify(
-        {"domains": dict(domains), "domain_tags": domain_tags, "tags": await get_tags()}
-    )
+    return jsonify({"domains": res})

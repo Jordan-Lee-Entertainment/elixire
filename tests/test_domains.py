@@ -83,6 +83,15 @@ async def test_domainlist(test_cli):
 
     rjson = await resp.json
     assert isinstance(rjson, dict)
-    assert isinstance(rjson["domains"], dict)
-    assert isinstance(rjson["domain_tags"], dict)
-    assert isinstance(rjson["tags"], dict)
+    assert isinstance(rjson["domains"], list)
+
+    for domain in rjson["domains"]:
+        assert isinstance(domain, dict)
+        assert isinstance(domain["id"], int)
+        assert isinstance(domain["domain"], str)
+        assert isinstance(domain["tags"], list)
+
+        for tag in domain["tags"]:
+            assert isinstance(tag, dict)
+            assert isinstance(tag["id"], int)
+            assert isinstance(tag["label"], str)
