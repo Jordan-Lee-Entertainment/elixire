@@ -19,6 +19,8 @@ from api.common.domain import (
     set_domain_tags,
     create_domain_tag,
     delete_domain_tag,
+    get_domain_info,
+    set_domain_owner,
 )
 from api.common.auth import token_check, check_admin
 from api.common.email import send_email_to_user
@@ -33,7 +35,7 @@ from api.bp.admin.audit_log_actions.domain import (
 
 from api.bp.admin.audit_log_actions.email import DomainOwnerNotifyAction
 
-from api.common.domain import get_domain_info, set_domain_owner
+from api.common.common import get_tags
 
 bp = Blueprint("admin_domain", __name__)
 
@@ -296,6 +298,13 @@ async def create_tag():
     j = validate(await request.get_json(), {"label": {"type": "string"}})
     tag_id = await create_domain_tag(j["label"])
     return jsonify({"id": tag_id})
+
+
+@bp.route("/tags", methods=["GET"])
+async def list_tags():
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+    return jsonify({"tags": await get_tags()})
 
 
 @bp.route("/tag/<int:tag_id>", methods=["DELETE"])
