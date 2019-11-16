@@ -13,7 +13,13 @@ from api.schema import (
     ADMIN_SEND_DOMAIN_EMAIL,
     ADMIN_PUT_DOMAIN,
 )
-from api.common.domain import create_domain, delete_domain, set_domain_tags
+from api.common.domain import (
+    create_domain,
+    delete_domain,
+    set_domain_tags,
+    create_domain_tag,
+    delete_domain_tag,
+)
 from api.common.auth import token_check, check_admin
 from api.common.email import send_email_to_user
 from api.common.pagination import Pagination
@@ -247,6 +253,9 @@ async def get_domain_stats_all():
 @bp.route("/search", methods=["GET"])
 async def domains_search():
     """Search for domains"""
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
     args = request.args
     pagination = Pagination()
 
@@ -274,3 +283,22 @@ async def domains_search():
 
     total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
     return jsonify(pagination.response(results, total_count=total_count))
+
+
+@bp.route("/tag", methods=["PUT"])
+async def create_tag():
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    j = validate(await request.get_json(), {"label": {"type": "string"}})
+    tag_id = await create_domain_tag(j["label"])
+    return jsonify({"id": tag_id})
+
+
+@bp.route("/tag/<int:tag_id>", methods=["DELETE"])
+async def delete_tag(tag_id: int):
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    await delete_domain_tag(tag_id)
+    return "", 204
