@@ -325,12 +325,22 @@ async def test_domain_tag_create_delete(test_cli_admin):
     assert isinstance(rjson["id"], int)
     tag_id = rjson["id"]
 
-    resp = await test_cli_admin.get("/api/admin/domains/tags")
-    assert resp.status_code == 200
-    rjson = await resp.json
-    assert isinstance(rjson, dict)
-    assert isinstance(rjson["tags"], list)
-    assert any(tag["id"] == tag_id for tag in rjson["tags"])
+    try:
+        resp = await test_cli_admin.get("/api/admin/domains/tags")
+        assert resp.status_code == 200
+        rjson = await resp.json
+        assert isinstance(rjson, dict)
+        assert isinstance(rjson["tags"], list)
+        assert any(tag["id"] == tag_id for tag in rjson["tags"])
 
-    resp = await test_cli_admin.delete(f"/api/admin/domains/tag/{tag_id}")
-    assert resp.status_code == 204
+        resp = await test_cli_admin.patch(
+            f"/api/admin/domains/tag/{tag_id}", json={"label": "asdf"}
+        )
+        assert resp.status_code == 200
+        rjson = await resp.json
+        assert isinstance(rjson, dict)
+        assert rjson["id"] == tag_id
+        assert rjson["label"] == "asdf"
+    finally:
+        resp = await test_cli_admin.delete(f"/api/admin/domains/tag/{tag_id}")
+        assert resp.status_code == 204
