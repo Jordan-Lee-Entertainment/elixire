@@ -166,6 +166,7 @@ async def test_domain_stats(test_cli_admin):
     for domain in rjson.values():
         assert isinstance(domain, dict)
         assert isinstance(domain["info"], dict)
+        assert isinstance(domain["tags"], list)
         assert isinstance(domain["stats"], dict)
         assert isinstance(domain["public_stats"], dict)
 
@@ -303,6 +304,7 @@ async def test_my_stats_as_admin(test_cli_admin):
     info = dom["info"]
     assert isinstance(info["domain"], str)
     assert isinstance(info["permissions"], int)
+    assert isinstance(info["tags"], list)
 
     stats = dom["stats"]
     assert isinstance(stats["users"], int)
