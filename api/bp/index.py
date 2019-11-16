@@ -20,15 +20,13 @@ async def domainlist_handler():
     """Gets the domain list."""
     domain_data = await get_all_domains_basic()
 
-    res = []
+    result = [
+        {
+            "id": drow["domain_id"],
+            "domain": drow["domain"],
+            "tags": await get_domain_tags(drow["domain_id"]),
+        }
+        for drow in domain_data
+    ]
 
-    for drow in domain_data:
-        res.append(
-            {
-                "id": drow["domain_id"],
-                "domain": drow["domain"],
-                "tags": await get_domain_tags(drow["domain_id"]),
-            }
-        )
-
-    return jsonify({"domains": res})
+    return jsonify({"domains": result})
