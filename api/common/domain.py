@@ -325,7 +325,7 @@ async def get_basic_domain(
 async def get_basic_domain_by_domain(
     domain: str, *, raise_notfound: bool = False
 ) -> Optional[dict]:
-    """Fetch a domain's info by the string representing it."""
+    """Fetch a domain's info by the domain name."""
 
     domains_to_check = solve_domain(domain)
     assert len(domains_to_check) == 3
@@ -348,6 +348,7 @@ async def get_basic_domain_by_domain(
 
 
 async def add_domain_tag(domain_id: int, tag_id: int) -> None:
+    """Add a tag to a domain."""
     try:
         await app.db.execute(
             """
@@ -364,6 +365,7 @@ async def add_domain_tag(domain_id: int, tag_id: int) -> None:
 
 
 async def remove_domain_tag(domain_id: int, tag_id: int) -> None:
+    """Remove a tag from a domain."""
     await app.db.execute(
         """
         DELETE FROM domain_tag_mappings
@@ -375,7 +377,7 @@ async def remove_domain_tag(domain_id: int, tag_id: int) -> None:
 
 
 async def set_domain_tags(domain_id: int, tags: List[int]) -> None:
-    """Forcefully set tags for a given domain."""
+    """Set tags for a given domain and delete the previously assigned ones."""
     existing_tags = await get_domain_tag_ids(domain_id)
     assert existing_tags is not None
 
@@ -405,6 +407,7 @@ async def set_domain_tags(domain_id: int, tags: List[int]) -> None:
 
 
 async def create_domain_tag(label: str) -> int:
+    """Create a domain tag and return its ID."""
     return await app.db.fetchval(
         """
         INSERT INTO domain_tags
@@ -418,10 +421,12 @@ async def create_domain_tag(label: str) -> int:
 
 
 async def delete_domain_tag(tag_id: int) -> None:
+    """Delete a domain tag by ID."""
     await app.db.execute("DELETE FROM domain_tags WHERE tag_id = $1", tag_id)
 
 
 async def get_all_domains_basic() -> List[dict]:
+    """Fetch a list of all domains (but only their IDs and domain names)."""
     return list(
         map(
             dict,
