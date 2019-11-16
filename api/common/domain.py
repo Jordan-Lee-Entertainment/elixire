@@ -25,23 +25,26 @@ async def create_domain(
     """
     tags = tags or []
 
-    domain_id = await app.db.fetchval(
-        """
-        INSERT INTO domains
-            (domain, permissions)
-        VALUES
-            ($1, $2)
-        RETURNING domain_id
-        """,
-        domain,
-        permissions,
-    )
+    async with app.db.acquire() as conn:
+        async with conn.transaction():
 
-    if owner_id:
-        await set_domain_owner(domain_id, owner_id)
+            domain_id = await app.db.fetchval(
+                """
+                INSERT INTO domains
+                    (domain, permissions)
+                VALUES
+                    ($1, $2)
+                RETURNING domain_id
+                """,
+                domain,
+                permissions,
+            )
 
-    for tag_id in tags:
-        await add_domain_tag(domain_id, tag_id)
+            if owner_id:
+                await set_domain_owner(domain_id, owner_id)
+
+            for tag_id in tags:
+                await add_domain_tag(domain_id, tag_id)
 
     # invalidate cache
     possibilities = solve_domain(domain)

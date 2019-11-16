@@ -6,7 +6,7 @@ import pytest
 from .common import hexs
 
 from api.storage import solve_domain
-from api.common.domain import create_domain, delete_domain
+from api.common.domain import create_domain, delete_domain, get_domain_tags
 
 pytestmark = pytest.mark.asyncio
 
@@ -18,38 +18,42 @@ async def test_domains_common_functions(test_cli_admin):
     async with test_cli_admin.app.app_context():
         domain_id = await create_domain(name, owner_id=test_cli_admin.user["user_id"])
 
-    # test that it exists with the correct info
-    row = await test_cli_admin.app.db.fetchrow(
-        """
-        SELECT domain, permissions
-        FROM domains
-        WHERE domain_id = $1
-        """,
-        domain_id,
-    )
+    try:
+        # test that it exists with the correct info
+        row = await test_cli_admin.app.db.fetchrow(
+            """
+            SELECT domain, permissions
+            FROM domains
+            WHERE domain_id = $1
+            """,
+            domain_id,
+        )
 
-    # TODO check admin_only and official tags not existing for domain
+        assert row is not None
+        assert row["domain"] == name
+        assert row["permissions"] == 3
 
-    assert row is not None
-    assert row["domain"] == name
-    assert row["permissions"] == 3
+        # test that the owner mapping exists
+        row = await test_cli_admin.app.db.fetchrow(
+            """
+            SELECT user_id
+            FROM domain_owners
+            WHERE domain_id = $1
+            """,
+            domain_id,
+        )
 
-    # test that the permission mapping exists
-    row = await test_cli_admin.app.db.fetchrow(
-        """
-        SELECT user_id
-        FROM domain_owners
-        WHERE domain_id = $1
-        """,
-        domain_id,
-    )
+        assert row is not None
+        assert row["user_id"] == test_cli_admin.user["user_id"]
 
-    assert row is not None
-    assert row["user_id"] == test_cli_admin.user["user_id"]
+        # assert tags are empty for new domains
+        async with test_cli_admin.app.app_context():
+            tags = await get_domain_tags(domain_id)
 
-    # delete the domain
-    async with test_cli_admin.app.app_context():
-        results = await delete_domain(domain_id)
+        assert not tags
+    finally:
+        async with test_cli_admin.app.app_context():
+            results = await delete_domain(domain_id)
 
     assert isinstance(results, dict)
     assert results["result"] == "DELETE 1"
@@ -58,7 +62,7 @@ async def test_domains_common_functions(test_cli_admin):
     assert results["users_move_result"] == "UPDATE 0"
     assert results["users_shorten_move_result"] == "UPDATE 0"
 
-    # test that the permission mapping no longer exists
+    # test that the owner mapping no longer exists
     row = await test_cli_admin.app.db.fetchrow(
         """
         SELECT user_id
