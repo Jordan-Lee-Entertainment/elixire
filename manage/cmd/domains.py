@@ -7,6 +7,8 @@ from api.common.domain import (
     delete_domain_tag,
     add_domain_tag,
     remove_domain_tag,
+    get_all_domains_basic,
+    get_domain_tags,
 )
 
 
@@ -28,6 +30,17 @@ async def add_tag(_ctx, args):
 async def remove_tag(_ctx, args):
     await remove_domain_tag(args.domain_id, args.tag_id)
     print("OK")
+
+
+async def list_domains(ctx, _args):
+    domains = await get_all_domains_basic()
+    for domain in domains:
+        domain_id = domain["domain_id"]
+        print("id:", domain_id, "name:", domain["domain"])
+
+        tags = await get_domain_tags(domain_id)
+        for tag in tags:
+            print("\ttag", tag["id"], "label", tag["label"])
 
 
 def setup(subparser):
@@ -54,3 +67,8 @@ def setup(subparser):
     parser_delete_tag.add_argument("domain_id", type=int)
     parser_delete_tag.add_argument("tag_id", type=int)
     parser_delete_tag.set_defaults(func=remove_tag)
+
+    parser_list_domains = subparser.add_parser(
+        "list_domains", help="List domains in the instance",
+    )
+    parser_list_domains.set_defaults(func=list_domains)

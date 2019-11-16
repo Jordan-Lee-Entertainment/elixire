@@ -415,3 +415,18 @@ async def create_domain_tag(label: str) -> int:
 
 async def delete_domain_tag(tag_id: int) -> None:
     await app.db.execute("DELETE FROM domain_tags WHERE tag_id = $1", tag_id)
+
+
+async def get_all_domains_basic() -> List[dict]:
+    return list(
+        map(
+            dict,
+            await app.db.fetch(
+                """
+                SELECT domain_id, domain
+                FROM domains
+                ORDER BY domain_id ASC
+                """
+            ),
+        )
+    )
