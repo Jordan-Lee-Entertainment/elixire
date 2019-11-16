@@ -190,9 +190,10 @@ async def is_domain_tags_label(domain_id: int, *, label: str) -> bool:
         FROM domain_tag_mappings
         JOIN domain_tags
         ON domain_tags.tag_id = domain_tag_mappings.tag_id
-        WHERE domain_tags.label = "admin"
-          AND domain_id = $1
+        WHERE domain_tags.label = $1
+          AND domain_id = $2
         """,
+        label,
         domain_id,
     )
 
