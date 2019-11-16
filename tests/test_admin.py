@@ -311,3 +311,26 @@ async def test_my_stats_as_admin(test_cli_admin):
     assert isinstance(stats["files"], int)
     assert isinstance(stats["size"], int)
     assert isinstance(stats["shortens"], int)
+
+
+async def test_domain_tag_create_delete(test_cli_admin):
+    """Test the personal domain stats route but as an admin."""
+    resp = await test_cli_admin.put(
+        "/api/admin/domains/tag", json={"label": "admin_only"}
+    )
+    assert resp.status_code == 200
+
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["id"], int)
+    tag_id = rjson["id"]
+
+    resp = await test_cli_admin.get("/api/admin/domains/tags")
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["tags"], list)
+    assert any(tag["id"] == tag_id for tag in rjson["tags"])
+
+    resp = await test_cli_admin.delete(f"/api/admin/domains/tag/{tag_id}")
+    assert resp.status_code == 204

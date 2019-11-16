@@ -411,7 +411,7 @@ async def create_domain_tag(label: str) -> int:
             (label)
         VALUES
             ($1)
-        RETURNING domain_id
+        RETURNING tag_id
         """,
         label,
     )
