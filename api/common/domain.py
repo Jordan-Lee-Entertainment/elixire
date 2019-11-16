@@ -152,7 +152,7 @@ async def get_domain_tag_ids(domain_id: int) -> Optional[List[int]]:
         for r in await app.db.fetch(
             """
             SELECT tag_id
-            FROM domain_tags
+            FROM domain_tag_mappings
             WHERE domain_id = $1
             ORDER BY tag_id ASC
             """,
@@ -166,9 +166,10 @@ async def is_domain_tags_label(domain_id: int, *, label: str) -> bool:
     matching_tags = await app.db.fetch(
         """
         SELECT tag_id
-        FROM domain_tags
-        JOIN tag_list
-        WHERE tag_list.label = "admin"
+        FROM domain_tag_mappings
+        JOIN domain_tags
+        ON domain_tags.tag_id = domain_tag_mappings.tag_id
+        WHERE domain_tags.label = "admin"
           AND domain_id = $1
         """,
         domain_id,
@@ -326,7 +327,7 @@ async def add_domain_tag(domain_id: int, tag_id: int) -> None:
     try:
         await app.db.execute(
             """
-            INSERT INTO domain_tags
+            INSERT INTO domain_tag_mappings
                 (domain_id, tag_id)
             VALUES
                 ($1, $2)
@@ -341,7 +342,7 @@ async def add_domain_tag(domain_id: int, tag_id: int) -> None:
 async def remove_domain_tag(domain_id: int, tag_id: int) -> None:
     await app.db.execute(
         """
-        DELETE FROM domain_tags
+        DELETE FROM domain_tag_mappings
         WHERE domain_id = $1 AND tag_id = $2
         """,
         domain_id,
@@ -364,7 +365,7 @@ async def set_domain_tags(domain_id: int, tags: List[int]) -> None:
         async with conn.transaction():
             await app.db.executemany(
                 """
-                INSERT INTO domain_tags (domain_id, tag_id)
+                INSERT INTO domain_tag_mappings (domain_id, tag_id)
                 VALUES ($1, $2)
                 """,
                 [(domain_id, tag_id) for tag_id in to_add],
@@ -372,7 +373,7 @@ async def set_domain_tags(domain_id: int, tags: List[int]) -> None:
 
             await app.db.executemany(
                 """
-                DELETE FROM domain_tags
+                DELETE FROM domain_tag_mappings
                 WHERE domain_id = $1 AND tag_id = $2
                 """,
                 [(domain_id, tag_id) for tag_id in to_remove],

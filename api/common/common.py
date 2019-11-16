@@ -428,5 +428,5 @@ def transform_wildcard(domain: str, subdomain_name: str) -> str:
 
 async def get_tags() -> Dict[int, str]:
     """Get a mapping from tag ID to tag label."""
-    tag_rows = await app.db.fetch("SELECT tag_id, label FROM tag_list")
+    tag_rows = await app.db.fetch("SELECT tag_id, label FROM domain_tags")
     return {row["tag_id"]: row["label"] for row in tag_rows}

@@ -204,16 +204,19 @@ CREATE TABLE IF NOT EXISTS dump_queue (
     PRIMARY KEY (user_id)
 );
 
-CREATE TABLE IF NOT EXISTS tag_list (
+CREATE TABLE IF NOT EXISTS domain_tags (
     tag_id serial PRIMARY KEY,
     label text
 );
 
-CREATE TABLE IF NOT EXISTS domain_tags (
+CREATE TABLE IF NOT EXISTS domain_tag_mappings (
     domain_id bigint REFERENCES domains ON DELETE CASCADE,
-    tag_id bigint REFERENCES tag_list ON DELETE CASCADE,
+    tag_id bigint REFERENCES domain_tags ON DELETE CASCADE,
     PRIMARY KEY (domain_id, tag_id)
 );
 
-INSERT INTO tag_list (label) VALUES ('admin_only');
-INSERT INTO tag_list (label) VALUES ('official');
+INSERT INTO domain_tags (label) VALUES ('admin_only');
+
+-- a domain being official means the DNS ownership of it is by
+-- the instance owner, keep in mind this isn't the same as Registrar ownership
+INSERT INTO domain_tags (label) VALUES ('official');
