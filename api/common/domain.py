@@ -246,8 +246,10 @@ async def get_domain_info(domain_id: int) -> Optional[dict]:
     dict_owner_data = dict_(owner_data)
 
     return {
-        "info": {**dinfo, **{"owner": dict_owner_data}},
-        "tags": await get_domain_tags(domain_id),
+        "info": {
+            **dinfo,
+            **{"owner": dict_owner_data, "tags": await get_domain_tags(domain_id)},
+        },
         "stats": stats,
         "public_stats": await get_domain_public(domain_id),
     }
@@ -379,7 +381,7 @@ async def set_domain_tags(domain_id: int, tags: List[int]) -> None:
     to_add = tags_set - existing_set
     to_remove = existing_set - tags_set
 
-    async with app.conn.acquire() as conn:
+    async with app.db.acquire() as conn:
         async with conn.transaction():
             await app.db.executemany(
                 """

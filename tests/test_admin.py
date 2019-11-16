@@ -166,7 +166,7 @@ async def test_domain_stats(test_cli_admin):
     for domain in rjson.values():
         assert isinstance(domain, dict)
         assert isinstance(domain["info"], dict)
-        assert isinstance(domain["tags"], list)
+        assert isinstance(domain["info"]["tags"], list)
         assert isinstance(domain["stats"], dict)
         assert isinstance(domain["public_stats"], dict)
 
@@ -181,12 +181,12 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     user_id = str(test_cli_user.user["user_id"])
     admin_id = str(test_cli_admin.user["user_id"])
 
-    # we can always assume tags 0 and 1 will exist (admin_only and official)
+    # we can always assume tags 1 and 2 will exist (admin_only and official)
     # so we can use those
 
     resp = await test_cli_admin.patch(
         "/api/admin/domains/0",
-        json={"owner_id": user_id, "permissions": 0, "tags": [0, 1]},
+        json={"owner_id": user_id, "permissions": 0, "tags": [1, 2]},
     )
 
     assert resp.status_code == 200
@@ -210,7 +210,7 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     assert isinstance(dinfo, dict)
     assert dinfo["owner"]["user_id"] == user_id
     assert dinfo["permissions"] == 0
-    assert dinfo["tags"] == [0, 1]
+    assert [tag["id"] for tag in dinfo["tags"]] == [1, 2]
 
     # reset the domain properties
     # to sane defaults

@@ -7,7 +7,7 @@ import logging
 from quart import Blueprint, current_app as app, jsonify
 
 from api.common.auth import token_check
-from api.common.domain import get_domain_public, get_domain_tag_ids
+from api.common.domain import get_domain_public, get_domain_tags
 from api.common.profile import get_counts
 
 
@@ -55,9 +55,8 @@ async def personal_domain_stats():
 
         public = await get_domain_public(domain_id)
         res[domain_id] = {
-            "info": dinfo,
+            "info": {**dinfo, **{"tags": await get_domain_tags(domain_id)}},
             "stats": public,
-            "tags": await get_domain_tag_ids(domain_id),
         }
 
     return jsonify(res)
