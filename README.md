@@ -15,6 +15,7 @@ elixire is an open source image host and link shortener written in [Python].
 - [Redis]
 - [Node.js] LTS
   - [Yarn] and [npm]
+- libmagic
 
 [python]: https://www.python.org
 [postgresql]: https://www.postgresql.org
