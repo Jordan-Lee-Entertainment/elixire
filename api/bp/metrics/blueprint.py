@@ -6,6 +6,7 @@ import logging
 import time
 
 from quart import Blueprint, request, current_app as app
+from aioprometheus import render
 from api.bp.metrics.tasks import second_tasks, hourly_tasks, upload_uniq_task
 from api.bp.metrics.compactor import compact_task
 from api.bp.metrics.manager import MetricsManager
@@ -61,8 +62,7 @@ async def on_request():
     if not app.econfig.ENABLE_METRICS:
         return
 
-    # increase the counter on every request
-    app.counters.inc("request")
+    app.counters.request.inc({"path": request.path})
 
     # so we can measure response latency
     request.start_time = time.monotonic()
@@ -86,3 +86,14 @@ async def on_response(response):
         await app.metrics.submit("response_latency", latency * 1000)
     except AttributeError:
         pass
+
+
+@bp.route("/metrics")
+async def render_metrics():
+    content, http_headers = render(app.registry, [request.headers.get("accept")])
+    # resp = Response(content, headers=http_headers)
+    # TODO headers
+    print(content.decode("utf-8"))
+    if content is None:
+        return "give accept header pls", 400
+    return content.decode("utf-8"), 200

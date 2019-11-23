@@ -12,6 +12,7 @@ import aioredis
 
 import quart
 from quart import Quart, jsonify, request, send_file
+from aioprometheus import Registry
 
 from dns import resolver
 
@@ -105,6 +106,7 @@ def set_blueprints(app_):
         api.bp.fetch.bp: -1,
         api.bp.wpadmin.bp: -1,
         api.bp.client.bp: -1,
+        api.bp.metrics.blueprint.bp: -1,
     }
 
     for blueprint, api_prefix in blueprints.items():
@@ -232,6 +234,8 @@ async def app_before_serving():
 
     # metrics stuff
     app.counters = MetricsCounters()
+    app.registry = Registry()
+    app.counters.register(app.registry)
 
     api.bp.ratelimit.setup_ratelimits()
     await api.bp.metrics.blueprint.create_db()

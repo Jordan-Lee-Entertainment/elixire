@@ -2,6 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
+from aioprometheus import Counter, Gauge
 
 log = logging.getLogger(__name__)
 
@@ -10,14 +11,30 @@ class MetricsCounters:
     """Simple class to hold counters related to various things of the app."""
 
     def __init__(self):
-        self.data = {
-            "request": 0,
-            "response": 0,
-            "error": 0,
-            "error_ise": 0,
-            "file_upload_hour": 0,
-            "file_upload_hour_pub": 0,
-        }
+        self.request = Counter("request", "total requests done")
+        self.response = Counter("response", "total responses done")
+        self.errors = Counter("error", "total errors returned")
+        self.errors_ise = Counter("error_ise", "total non-api errors returned")
+
+        self.file_upload = Gauge("file_uploads_total", "total files being uploaded")
+        self.file_upload_pub = Gauge(
+            "file_uploads_total_pub",
+            "total files being uploaded (only users who consented)",
+        )
+
+        self.data = {}
+
+    def register(self, registry):
+        _fields = (
+            "request",
+            "response",
+            "errors",
+            "errors_ise",
+            "file_upload",
+            "file_upload_pub",
+        )
+        for field in _fields:
+            registry.register(getattr(self, field))
 
     def reset_all(self):
         """Initialize/reset all counters."""
@@ -40,5 +57,11 @@ class MetricsCounters:
             log.warning("unknown counter: %s", counter)
 
     async def auto_submit(self, metrics, counter: str):
-        await metrics.submit(counter, self.data[counter])
+        try:
+            data = self.data[counter]
+        except KeyError:
+            log.warning("unknown counter: %s", counter)
+            return
+
+        await metrics.submit(counter, data)
         self.reset_single(counter)

@@ -46,3 +46,5 @@ parsedatetime==2.4
 
 # for email checking
 dnspython==1.16.0
+
+aioprometheus==19.10.0
