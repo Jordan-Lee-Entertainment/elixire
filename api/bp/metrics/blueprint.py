@@ -96,4 +96,4 @@ async def render_metrics():
     print(content.decode("utf-8"))
     if content is None:
         return "give accept header pls", 400
-    return content.decode("utf-8"), 200
+    return content.decode("utf-8")

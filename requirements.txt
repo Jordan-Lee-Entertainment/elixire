@@ -1,6 +1,6 @@
 # web
-Quart==0.9.1
-hypercorn==0.7.1
+git+https://gitlab.com/pgjones/quart
+git+https://gitlab.com/pgjones/hypercorn
 
 # password hashing mechanism
 bcrypt==3.1.7
