@@ -242,10 +242,6 @@ async def app_before_serving():
     # a MockAuditLog instance will be in that attribute
     # when running tests. look at tests/conftest.py
 
-    # TODO: maybe we can make a MockMetricsManager so that we
-    # don't stress InfluxDB out while running the tests.
-
-    # maybe move this to current_app too?
     if not getattr(app, "_test", False):
         app.audit_log = AuditLog(app)
 

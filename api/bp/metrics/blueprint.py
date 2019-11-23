@@ -7,9 +7,8 @@ import time
 
 from quart import Blueprint, request, current_app as app
 from aioprometheus import render
-from api.bp.metrics.tasks import second_tasks, hourly_tasks, upload_uniq_task
-from api.bp.metrics.compactor import compact_task
-from api.bp.metrics.manager import MetricsManager
+
+# from api.bp.metrics.tasks import second_tasks, hourly_tasks, upload_uniq_task
 
 bp = Blueprint("metrics", __name__)
 log = logging.getLogger(__name__)
