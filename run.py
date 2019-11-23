@@ -33,7 +33,6 @@ import api.bp.misc
 import api.bp.index
 import api.bp.ratelimit
 import api.bp.frontend
-import api.bp.metrics.blueprint
 import api.bp.cors
 import api.bp.client
 import api.bp.list
@@ -238,8 +237,6 @@ async def app_before_serving():
     app.counters.register(app.registry)
 
     api.bp.ratelimit.setup_ratelimits()
-    await api.bp.metrics.blueprint.create_db()
-    api.bp.metrics.blueprint.start_tasks()
 
     # only give real AuditLog when we are on production
     # a MockAuditLog instance will be in that attribute
@@ -268,7 +265,6 @@ async def close_db():
 
     app.sched.stop()
     await app.session.close()
-    await api.bp.metrics.blueprint.close_worker()
 
 
 set_blueprints(app)
