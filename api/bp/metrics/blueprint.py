@@ -93,9 +93,4 @@ async def on_response(response):
 @bp.route("/metrics")
 async def render_metrics():
     content, http_headers = render(app.registry, [request.headers.get("accept")])
-    # resp = Response(content, headers=http_headers)
-    # TODO headers
-    print(content.decode("utf-8"))
-    if content is None:
-        return "give accept header pls", 400
-    return content.decode("utf-8")
+    return content.decode("utf-8"), 200, http_headers
