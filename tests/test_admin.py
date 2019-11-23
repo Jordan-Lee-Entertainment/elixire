@@ -166,18 +166,14 @@ async def test_domain_stats(test_cli_admin):
     for domain in rjson.values():
         assert isinstance(domain, dict)
         assert isinstance(domain["info"], dict)
+        assert isinstance(domain["info"]["tags"], list)
         assert isinstance(domain["stats"], dict)
         assert isinstance(domain["public_stats"], dict)
 
 
 async def test_domain_get(test_cli_admin):
     resp = await test_cli_admin.get("/api/admin/domains/38918583")
-
-    # TODO return 404
-    assert resp.status_code == 200
-
-    rjson = await resp.json
-    assert rjson is None
+    assert resp.status_code == 404
 
 
 async def test_domain_patch(test_cli_user, test_cli_admin):
@@ -185,14 +181,12 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     user_id = str(test_cli_user.user["user_id"])
     admin_id = str(test_cli_admin.user["user_id"])
 
+    # we can always assume tags 1 and 2 will exist (admin_only and official)
+    # so we can use those
+
     resp = await test_cli_admin.patch(
         "/api/admin/domains/0",
-        json={
-            "owner_id": user_id,
-            "admin_only": True,
-            "official": True,
-            "permissions": 0,
-        },
+        json={"owner_id": user_id, "permissions": 0, "tags": [1, 2]},
     )
 
     assert resp.status_code == 200
@@ -202,9 +196,8 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     fields = rjson["updated"]
     assert isinstance(fields, list)
     assert "owner_id" in fields
-    assert "admin_only" in fields
-    assert "official" in fields
     assert "permissions" in fields
+    assert "tags" in fields
 
     # fetch domain info
     resp = await test_cli_admin.get("/api/admin/domains/0")
@@ -216,20 +209,14 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     dinfo = rjson["info"]
     assert isinstance(dinfo, dict)
     assert dinfo["owner"]["user_id"] == user_id
-    assert dinfo["admin_only"]
-    assert dinfo["official"]
     assert dinfo["permissions"] == 0
+    assert [tag["id"] for tag in dinfo["tags"]] == [1, 2]
 
     # reset the domain properties
     # to sane defaults
     resp = await test_cli_admin.patch(
         "/api/admin/domains/0",
-        json={
-            "owner_id": admin_id,
-            "admin_only": False,
-            "official": False,
-            "permissions": 3,
-        },
+        json={"owner_id": admin_id, "permissions": 3, "tags": []},
     )
 
     assert resp.status_code == 200
@@ -239,9 +226,8 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     fields = rjson["updated"]
     assert isinstance(fields, list)
     assert "owner_id" in fields
-    assert "admin_only" in fields
-    assert "official" in fields
     assert "permissions" in fields
+    assert "tags" in fields
 
     # fetch domain info, again, to make sure.
     resp = await test_cli_admin.get("/api/admin/domains/0")
@@ -253,9 +239,8 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     dinfo = rjson["info"]
     assert isinstance(dinfo, dict)
     assert dinfo["owner"]["user_id"] == admin_id
-    assert not dinfo["admin_only"]
-    assert not dinfo["official"]
     assert dinfo["permissions"] == 3
+    assert not dinfo["tags"]
 
 
 async def test_user_patch(test_cli_user, test_cli_admin):
@@ -318,12 +303,44 @@ async def test_my_stats_as_admin(test_cli_admin):
 
     info = dom["info"]
     assert isinstance(info["domain"], str)
-    assert isinstance(info["official"], bool)
-    assert isinstance(info["admin_only"], bool)
     assert isinstance(info["permissions"], int)
+    assert isinstance(info["tags"], list)
 
     stats = dom["stats"]
     assert isinstance(stats["users"], int)
     assert isinstance(stats["files"], int)
     assert isinstance(stats["size"], int)
     assert isinstance(stats["shortens"], int)
+
+
+async def test_domain_tag_create_delete(test_cli_admin):
+    """Test the personal domain stats route but as an admin."""
+    resp = await test_cli_admin.put(
+        "/api/admin/domains/tag", json={"label": "admin_only"}
+    )
+    assert resp.status_code == 200
+
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["id"], int)
+    tag_id = rjson["id"]
+
+    try:
+        resp = await test_cli_admin.get("/api/admin/domains/tags")
+        assert resp.status_code == 200
+        rjson = await resp.json
+        assert isinstance(rjson, dict)
+        assert isinstance(rjson["tags"], list)
+        assert any(tag["id"] == tag_id for tag in rjson["tags"])
+
+        resp = await test_cli_admin.patch(
+            f"/api/admin/domains/tag/{tag_id}", json={"label": "asdf"}
+        )
+        assert resp.status_code == 200
+        rjson = await resp.json
+        assert isinstance(rjson, dict)
+        assert rjson["id"] == tag_id
+        assert rjson["label"] == "asdf"
+    finally:
+        resp = await test_cli_admin.delete(f"/api/admin/domains/tag/{tag_id}")
+        assert resp.status_code == 204

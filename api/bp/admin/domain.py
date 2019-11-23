@@ -13,11 +13,20 @@ from api.schema import (
     ADMIN_SEND_DOMAIN_EMAIL,
     ADMIN_PUT_DOMAIN,
 )
-from api.common.domain import create_domain, delete_domain
+from api.common.domain import (
+    create_domain,
+    delete_domain,
+    set_domain_tags,
+    get_domain_info,
+    set_domain_owner,
+    create_domain_tag,
+    delete_domain_tag,
+    update_domain_tag,
+)
 from api.common.auth import token_check, check_admin
 from api.common.email import send_email_to_user
 from api.common.pagination import Pagination
-from api.errors import BadInput
+from api.errors import BadInput, NotFound
 
 from api.bp.admin.audit_log_actions.domain import (
     DomainAddAction,
@@ -27,7 +36,7 @@ from api.bp.admin.audit_log_actions.domain import (
 
 from api.bp.admin.audit_log_actions.email import DomainOwnerNotifyAction
 
-from api.common.domain import get_domain_info, set_domain_owner
+from api.common.common import get_tags
 
 bp = Blueprint("admin_domain", __name__)
 
@@ -43,9 +52,10 @@ async def add_domain():
     j = validate(await request.get_json(), ADMIN_PUT_DOMAIN)
     domain = j["domain"]
 
-    kwargs = dict(
-        admin_only=j["admin_only"], official=j["official"], permissions=j["permissions"]
-    )
+    kwargs = dict(permissions=j["permissions"])
+
+    if "tags" in j:
+        kwargs.update(tags=j["tags"])
 
     if "owner_id" in j:
         kwargs.update(owner_id=j["owner_id"])
@@ -72,9 +82,13 @@ async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
         fields.append("owner_id")
         j.pop("owner_id")
 
-    # the other available fields are admin_only, official, and permissions.
-    # all of those follow the same sql query, so we can just write a for loop
-    # to process them
+    if "tags" in j:
+        await set_domain_tags(domain_id, j["tags"])
+        fields.append("tags")
+        j.pop("tags")
+
+    # the other available field is permissions. we keep this for loop to
+    # future proof other fields being added to domains.
     for field, value in j.items():
         await app.db.execute(
             f"""
@@ -177,8 +191,11 @@ async def get_domain_stats(domain_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    # TODO return 404 when not found instead of null
-    return jsonify(await get_domain_info(domain_id))
+    info = await get_domain_info(domain_id)
+    if info is None:
+        raise NotFound("Domain not found")
+
+    return jsonify(info)
 
 
 @bp.route("", methods=["GET"])
@@ -242,6 +259,9 @@ async def get_domain_stats_all():
 @bp.route("/search", methods=["GET"])
 async def domains_search():
     """Search for domains"""
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
     args = request.args
     pagination = Pagination()
 
@@ -269,3 +289,45 @@ async def domains_search():
 
     total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
     return jsonify(pagination.response(results, total_count=total_count))
+
+
+@bp.route("/tag", methods=["PUT"])
+async def create_tag():
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    j = validate(await request.get_json(), {"label": {"type": "string"}})
+    tag_id = await create_domain_tag(j["label"])
+    return jsonify({"id": tag_id})
+
+
+@bp.route("/tags", methods=["GET"])
+async def list_tags():
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+    return jsonify({"tags": await get_tags()})
+
+
+@bp.route("/tag/<int:tag_id>", methods=["DELETE"])
+async def delete_tag(tag_id: int):
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    await delete_domain_tag(tag_id)
+    return "", 204
+
+
+@bp.route("/tag/<int:tag_id>", methods=["PATCH"])
+async def patch_tag(tag_id: int):
+    admin_id = await token_check()
+    await check_admin(admin_id, True)
+
+    j = validate(
+        await request.get_json(), {"label": {"type": "string", "required": False}}
+    )
+
+    kwargs = {}
+    if "label" in j:
+        kwargs["label"] = j["label"]
+
+    return jsonify(await update_domain_tag(tag_id, **kwargs))

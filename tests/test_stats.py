@@ -33,9 +33,7 @@ async def test_domains(test_cli_admin):
     info = rjson["0"]["info"]
     assert isinstance(info["domain"], str)
     assert isinstance(info["permissions"], int)
-    assert isinstance(info["cf_enabled"], bool)
-    assert isinstance(info["admin_only"], bool)
-    assert isinstance(info["official"], bool)
+    assert isinstance(info["tags"], list)
 
     pub = rjson["0"]["stats"]
     assert isinstance(pub["users"], int)

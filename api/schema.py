@@ -118,8 +118,7 @@ PASSWORD_RESET_CONFIRM_SCHEMA = {
 
 ADMIN_PUT_DOMAIN = {
     "domain": {"type": "string", "required": True},
-    "admin_only": {"type": "boolean", "required": True},
-    "official": {"type": "boolean", "required": True},
+    "tags": {"type": "list", "schema": {"coerce": int}, "required": False},
     "permissions": {"coerce": int, "required": False, "default": 3},
     "owner_id": {"coerce": int, "required": False},
 }
@@ -137,8 +136,7 @@ ADMIN_MODIFY_USER = {
 
 ADMIN_MODIFY_DOMAIN = {
     "owner_id": {"coerce": int, "required": False},
-    "admin_only": {"type": "boolean", "required": False},
-    "official": {"type": "boolean", "required": False},
+    "tags": {"type": "list", "schema": {"coerce": int}, "required": False},
     "permissions": {"coerce": int, "required": False},
 }
 
