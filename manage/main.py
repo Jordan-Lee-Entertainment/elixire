@@ -15,10 +15,10 @@ from api.storage import Storage
 from api.common.utils import LockStorage
 from api.jobs import JobManager
 
+from manage.cmd import ban, files, find, user, migration, domains
 from .errors import PrintException, ArgError
 from .utils import Context
 
-from manage.cmd import ban, files, find, user, migration
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +52,7 @@ def set_parser() -> argparse.ArgumentParser:
     find(subparsers)
     ban(subparsers)
     migration(subparsers)
+    domains(subparsers)
 
     return parser
 

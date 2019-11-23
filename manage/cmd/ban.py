@@ -2,7 +2,6 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# TODO: banip, unbanip
 from ..utils import get_user
 
 
@@ -28,15 +27,6 @@ async def unban_user(ctx, args):
 
 
 def setup(subparser):
-    # parser_ban = subparser.add_parser(
-    #    "ban_user", aliases=["ban"], help="Ban a single user"
-    # )
-
-    # parser_ban.add_argument("username", help="The username to ban")
-    # parser_ban.add_argument("interval", help="How long to ban the user for")
-    # parser_ban.add_argument("reason", help="The ban reason")
-    # parser_ban.set_defaults(func=ban_user)
-
     parser_unban = subparser.add_parser(
         "unban_user",
         help="Unban a single user",
