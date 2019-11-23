@@ -71,10 +71,10 @@ async def on_request():
 @bp.after_app_request
 async def on_response(response):
     if not app.econfig.ENABLE_METRICS:
-        return
+        return response
 
     # increase the counter on every response from server
-    app.counters.inc("response")
+    app.counters.response.inc({"path": request.path})
 
     try:
         # calculate latency to get a response, and submit that to influx
@@ -86,6 +86,8 @@ async def on_response(response):
         await app.metrics.submit("response_latency", latency * 1000)
     except AttributeError:
         pass
+
+    return response
 
 
 @bp.route("/metrics")

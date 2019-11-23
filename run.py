@@ -106,7 +106,7 @@ def set_blueprints(app_):
         api.bp.fetch.bp: -1,
         api.bp.wpadmin.bp: -1,
         api.bp.client.bp: -1,
-        api.bp.metrics.blueprint.bp: -1,
+        api.bp.metrics.bp: -1,
     }
 
     for blueprint, api_prefix in blueprints.items():
