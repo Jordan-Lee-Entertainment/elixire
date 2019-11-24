@@ -13,16 +13,15 @@ class MetricsCounters:
     def __init__(self):
         self.request = Counter("request", "total requests done")
         self.response = Counter("response", "total responses done")
-        self.errors = Counter("error", "total errors returned")
-        self.errors_ise = Counter("error_ise", "total non-api errors returned")
-        self.file_uploads = Counter("file_uploads_total", "total files being uploaded")
-        self.upload_latency = Histogram(
-            "upload_processing_time",
-            "time spent on upload processing (majorly virus scanning)",
+        self.response_latency = Summary(
+            "response_latency", "total time spent on response"
+        )
+        self.background_latency = Summary(
+            "background_latency", "time spent on background processing"
         )
 
         self.shortname_gen_tries = Summary(
-            "shortname_gen_tries",
+            "object_shortname_gen_tries",
             "amount of times hitting the database to generate a shortname",
         )
 
@@ -32,10 +31,8 @@ class MetricsCounters:
         _fields = (
             "request",
             "response",
-            "errors",
-            "errors_ise",
-            "file_uploads",
-            "upload_latency",
+            "response_latency",
+            "background_latency",
             "shortname_gen_tries",
         )
 

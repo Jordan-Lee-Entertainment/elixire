@@ -89,7 +89,7 @@ async def shorten_handler():
             )
 
     redir_rname, tries = await gen_user_shortname(user_id, "shortens")
-    await app.metrics.submit("shortname_gen_tries", tries)
+    app.counters.shortname_gen_tries.observe({"type": "shorten"}, tries)
 
     redir_id = get_snowflake()
     domain_id, subdomain, domain = await get_user_domain_info(

@@ -70,11 +70,10 @@ async def find_repeat(ctx: UploadContext, extension: str) -> Optional[Dict[str, 
     }
 
 
-async def upload_metrics(ctx):
-    """Upload total time taken for procesisng to InfluxDB."""
+def upload_metrics(ctx):
     end = time.monotonic()
     delta = round((end - ctx.start_timestamp) * 1000, 5)
-    app.counters.upload_latency.observe({}, delta)
+    app.counters.background_latency.observe({"type": "upload"}, delta)
 
 
 def _fetch_domain() -> Tuple[Optional[int], Optional[str]]:
@@ -148,7 +147,7 @@ async def upload_handler():
     if file.path.exists():
         repeat = await find_repeat(ctx, extension)
         if repeat is not None:
-            await upload_metrics(ctx)
+            upload_metrics(ctx)
             return jsonify(repeat)
 
     user_domain_id, user_subdomain, user_domain = await get_user_domain_info(user_id)
@@ -221,7 +220,7 @@ async def upload_handler():
 
             output.write(chunk)
 
-    await upload_metrics(ctx)
+    upload_metrics(ctx)
     return jsonify(
         {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
     )

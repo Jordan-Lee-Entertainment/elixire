@@ -56,14 +56,14 @@ async def on_response(response):
         return response
 
     # increase the counter on every response from server
-    app.counters.response.inc({"path": request.path})
+    labels = {"path": request.path, "status_code": response.status_code}
+    app.counters.response.inc(labels)
 
-    # try:
-    #    # calculate latency to get a response, and submit that to influx
-    #    # this field won't help in the case of network failure
-    #    latency = time.monotonic() - request.start_time
-    # except AttributeError:
-    #    pass
+    try:
+        latency = time.monotonic() - request.start_time
+        app.counters.response_latency.observe(labels, latency)
+    except AttributeError:
+        pass
 
     return response
 
