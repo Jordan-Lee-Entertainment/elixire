@@ -2,7 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
-from aioprometheus import Counter, Gauge
+from aioprometheus import Counter, Gauge, Histogram, Summary
 
 log = logging.getLogger(__name__)
 
@@ -15,11 +15,15 @@ class MetricsCounters:
         self.response = Counter("response", "total responses done")
         self.errors = Counter("error", "total errors returned")
         self.errors_ise = Counter("error_ise", "total non-api errors returned")
+        self.file_uploads = Counter("file_uploads_total", "total files being uploaded")
+        self.upload_latency = Histogram(
+            "upload_processing_time",
+            "time spent on upload processing (majorly virus scanning)",
+        )
 
-        self.file_upload = Gauge("file_uploads_total", "total files being uploaded")
-        self.file_upload_pub = Gauge(
-            "file_uploads_total_pub",
-            "total files being uploaded (only users who consented)",
+        self.shortname_gen_tries = Summary(
+            "shortname_gen_tries",
+            "amount of times hitting the database to generate a shortname",
         )
 
         self.data = {}
@@ -30,9 +34,11 @@ class MetricsCounters:
             "response",
             "errors",
             "errors_ise",
-            "file_upload",
-            "file_upload_pub",
+            "file_uploads",
+            "upload_latency",
+            "shortname_gen_tries",
         )
+
         for field in _fields:
             registry.register(getattr(self, field))
 

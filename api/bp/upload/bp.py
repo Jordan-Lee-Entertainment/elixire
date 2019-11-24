@@ -73,10 +73,8 @@ async def find_repeat(ctx: UploadContext, extension: str) -> Optional[Dict[str, 
 async def upload_metrics(ctx):
     """Upload total time taken for procesisng to InfluxDB."""
     end = time.monotonic()
-    metrics = app.metrics
     delta = round((end - ctx.start_timestamp) * 1000, 5)
-
-    await metrics.submit("upload_latency", delta)
+    app.counters.upload_latency.observe({}, delta)
 
 
 def _fetch_domain() -> Tuple[Optional[int], Optional[str]]:
@@ -121,7 +119,7 @@ async def upload_handler():
     # generate a filename so we can identify later when removing it
     # because of virus scanning.
     shortname, tries = await gen_user_shortname(user_id)
-    await app.metrics.submit("shortname_gen_tries", tries)
+    app.counters.shortname_gen_tries.observe({"type": "upload"}, tries)
 
     # construct an upload context, which holds the file and other data about
     # the current upload
@@ -176,11 +174,11 @@ async def upload_handler():
     domain = transform_wildcard(domain, subdomain_name)
 
     # upload counter
-    app.counters.inc("file_upload_hour")
+    app.counters.file_uploads.inc({"type": "private"})
 
     # TODO maybe push this to a background task
     if await is_metrics_consenting(user_id):
-        app.counters.inc("file_upload_hour_pub")
+        app.counters.file_uploads.inc({"type": "public"})
 
     # calculate the new file size, with the dupe decrease factor multiplied in
     # if necessary
