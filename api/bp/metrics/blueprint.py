@@ -3,12 +3,14 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
+import base64
 import time
 
 from quart import Blueprint, request, current_app as app
 from aioprometheus import render
 
 # from api.bp.metrics.tasks import second_tasks, hourly_tasks, upload_uniq_task
+from api.errors import FailedAuth
 
 bp = Blueprint("metrics", __name__)
 log = logging.getLogger(__name__)
@@ -68,7 +70,34 @@ async def on_response(response):
     return response
 
 
+def try_metrics_auth():
+    if not app.econfig.METRICS_MUST_AUTH:
+        return
+
+    try:
+        auth_value = request.headers["authorization"]
+    except KeyError:
+        raise FailedAuth("Must provide authentication header")
+
+    auth_value = auth_value.replace("Basic ", "", 1)
+    try:
+        auth_value = base64.b64decode(auth_value).decode()
+        components = auth_value.split(":")
+    except ValueError:
+        pass
+
+    try:
+        user, password = components[0], components[1]
+    except ValueError:
+        raise FailedAuth("Invalid user/password format")
+
+    if user != app.econfig.METRICS_USER or password != app.econfig.METRICS_PASSWORD:
+        raise FailedAuth("Invalid user/password")
+
+
 @bp.route("/metrics")
 async def render_metrics():
+    try_metrics_auth()
+
     content, http_headers = render(app.registry, [request.headers.get("accept")])
     return content.decode("utf-8"), 200, http_headers
