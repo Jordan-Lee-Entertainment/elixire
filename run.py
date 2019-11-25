@@ -172,6 +172,11 @@ def handle_api_error(err: APIError):
     return _wrap_err_in_json(err)
 
 
+@app.errorhandler(FileNotFoundError)
+async def handle_notfound_error(err):
+    return await handle_notfound(err)
+
+
 @app.errorhandler(404)
 async def handle_notfound(_err):
     """Give specific pages/behavior when reaching files that aren't found."""
