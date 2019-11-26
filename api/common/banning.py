@@ -1,7 +1,10 @@
 # elixire: Image Host software
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+
 import logging
+import enum
+from typing import Union, List, Dict, Any
 
 from quart import request, current_app as app
 from api.common import get_ip_addr
@@ -88,3 +91,35 @@ async def unban_ip(ipaddr: str) -> None:
         """,
         ipaddr,
     )
+
+
+class TargetType(enum.Enum):
+    User = "user"
+    Ip = "ip"
+
+
+async def get_bans(
+    target_value: Union[str, int], *, target_type: TargetType, page: int = 0
+) -> List[Dict[str, Any]]:
+    """Get the bans for a given target (user ID or IP address)."""
+    is_user = target_type == TargetType.User
+
+    table = "bans" if is_user else "ip_bans"
+    field = "user_id" if is_user else "ip_address"
+
+    # TODO make bans table have timestamp column
+    maybe_ts = "" if is_user else ", timestamp"
+
+    rows = await app.db.fetch(
+        f"""
+        SELECT reason, end_timestamp {maybe_ts}
+        FROM {table}
+        WHERE {field} = $1
+        LIMIT 30
+        OFFSET (30 * $2)
+        """,
+        target_value,
+        page,
+    )
+
+    return [dict(r) for r in rows]
