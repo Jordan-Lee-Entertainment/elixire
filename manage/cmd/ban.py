@@ -3,39 +3,20 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from ..utils import get_user
+from api.common.banning import unban_user, unban_ip
 
 
-async def unban_user(ctx, args):
+async def unban_user_cmd(ctx, args):
     """Unban a single user"""
-    username = args.username
-    user_id = await get_user(ctx, username)
-    await ctx.storage.invalidate(f"userban:{user_id}")
-
-    exec_out = await ctx.db.execute(
-        """
-        DELETE FROM bans
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    print(f"SQL result: {exec_out}")
+    user_id = await get_user(ctx, args.username)
+    await unban_user(user_id)
+    print("OK")
 
 
-async def unban_ip(ctx, args):
+async def unban_ip_cmd(_ctx, args):
     """Unban a single IP"""
-    ipaddr = args.ipaddr
-    await ctx.storage.invalidate(f"ipban:{ipaddr}")
-
-    exec_out = await ctx.db.execute(
-        """
-        DELETE FROM ip_bans
-        WHERE ip_address = $1
-        """,
-        ipaddr,
-    )
-
-    print(f"SQL result: {exec_out}")
+    await unban_ip(args.ipaddr)
+    print("OK")
 
 
 def setup(subparser):
@@ -48,7 +29,7 @@ This removes all current bans in the table.
     )
 
     parser_unban.add_argument("username")
-    parser_unban.set_defaults(func=unban_user)
+    parser_unban.set_defaults(func=unban_user_cmd)
 
     parser_unban_ip = subparser.add_parser(
         "unban_ip",
@@ -59,4 +40,4 @@ This removes all current IP bans in the table for the given IP.
     )
 
     parser_unban_ip.add_argument("ipaddr")
-    parser_unban_ip.set_defaults(func=unban_ip)
+    parser_unban_ip.set_defaults(func=unban_ip_cmd)

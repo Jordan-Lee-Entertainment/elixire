@@ -66,3 +66,25 @@ async def ban_request(reason: str) -> None:
         ip_addr = get_ip_addr()
         log.warning(f"Banning ip address {ip_addr} with reason {reason!r}")
         await ban_by_ip(ip_addr, reason)
+
+
+async def unban_user(user_id: int) -> None:
+    await app.storage.raw_invalidate(f"userban:{user_id}")
+    await app.db.execute(
+        """
+        DELETE FROM bans
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+
+async def unban_ip(ipaddr: str) -> None:
+    await app.storage.raw_invalidate(f"ipban:{ipaddr}")
+    await app.db.execute(
+        """
+        DELETE FROM ip_bans
+        WHERE ip_address = $1
+        """,
+        ipaddr,
+    )
