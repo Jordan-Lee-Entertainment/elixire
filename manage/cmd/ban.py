@@ -5,15 +5,11 @@
 from ..utils import get_user
 
 
-async def _invalidate(ctx, user_id: int):
-    await ctx.storage.invalidate(f"userban:{user_id}")
-
-
 async def unban_user(ctx, args):
     """Unban a single user"""
     username = args.username
     user_id = await get_user(ctx, username)
-    await _invalidate(ctx, user_id)
+    await ctx.storage.invalidate(f"userban:{user_id}")
 
     exec_out = await ctx.db.execute(
         """
@@ -26,11 +22,26 @@ async def unban_user(ctx, args):
     print(f"SQL result: {exec_out}")
 
 
+async def unban_ip(ctx, args):
+    """Unban a single IP"""
+    ipaddr = args.ipaddr
+    await ctx.storage.invalidate(f"ipban:{ipaddr}")
+
+    exec_out = await ctx.db.execute(
+        """
+        DELETE FROM ip_bans
+        WHERE ip_address = $1
+        """,
+        ipaddr,
+    )
+
+    print(f"SQL result: {exec_out}")
+
+
 def setup(subparser):
     parser_unban = subparser.add_parser(
         "unban_user",
         help="Unban a single user",
-        aliases=["unban"],
         description="""
 This removes all current bans in the table.
         """,
@@ -38,3 +49,14 @@ This removes all current bans in the table.
 
     parser_unban.add_argument("username")
     parser_unban.set_defaults(func=unban_user)
+
+    parser_unban_ip = subparser.add_parser(
+        "unban_ip",
+        help="Unban a single IP",
+        description="""
+This removes all current IP bans in the table for the given IP.
+        """,
+    )
+
+    parser_unban_ip.add_argument("ipaddr")
+    parser_unban_ip.set_defaults(func=unban_ip)
