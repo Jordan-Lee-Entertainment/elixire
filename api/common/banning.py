@@ -127,4 +127,4 @@ async def get_bans(
         page,
     )
 
-    return [dict(r) for r in rows]
+    return list(map(dict, rows))
