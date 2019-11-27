@@ -7,7 +7,7 @@ from typing import Tuple
 
 from quart import Blueprint, request, jsonify
 
-from api.errors import NotFound, BadInput
+from api.errors import BadInput
 
 from api.common.banning import unban_user, unban_ip, TargetType, get_bans
 from api.common.pagination import Pagination
