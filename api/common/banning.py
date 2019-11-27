@@ -99,7 +99,11 @@ class TargetType(enum.Enum):
 
 
 async def get_bans(
-    target_value: Union[str, int], *, target_type: TargetType, page: int = 0
+    target_value: Union[str, int],
+    *,
+    target_type: TargetType,
+    page: int = 0,
+    per_page: int = 30,
 ) -> List[Dict[str, Any]]:
     """Get the bans for a given target (user ID or IP address)."""
     is_user = target_type == TargetType.User
@@ -115,8 +119,9 @@ async def get_bans(
         SELECT reason, end_timestamp {maybe_ts}
         FROM {table}
         WHERE {field} = $1
-        LIMIT 30
-        OFFSET (30 * $2)
+        ORDER BY end_timestamp DESC
+        LIMIT {per_page}
+        OFFSET ({per_page} * $2)
         """,
         target_value,
         page,

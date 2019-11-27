@@ -44,7 +44,6 @@ This removes all current bans in the table for the given target.
 
     parser_getbans = subparser.add_parser("getbans", help="List the bans for a user/ip")
 
-    # is it really target type?
     parser_getbans.add_argument("target_type", choices=("user", "ip"))
     parser_getbans.add_argument("target_value")
     parser_getbans.add_argument("page", nargs="?", default=0)
