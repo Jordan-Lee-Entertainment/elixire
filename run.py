@@ -99,6 +99,7 @@ def set_blueprints(app_):
         api.bp.admin.object_bp: "/admin",
         api.bp.admin.domain_bp: "/admin/domains",
         api.bp.admin.settings_bp: "/admin/settings",
+        api.bp.admin.bans_bp: "/admin/bans",
         api.bp.admin.misc_bp: "/admin",
         api.bp.shorten.bp: -1,
         api.bp.frontend.bp: -1,
