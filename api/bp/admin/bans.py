@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 bp = Blueprint("admin_bans", __name__)
 
 
-def _extract_target() -> Tuple[str, str]:
+def _get_target() -> Tuple[str, str]:
 
     try:
         target_type = TargetType(request.args.get("target_type"))
@@ -39,7 +39,7 @@ async def get_bans_handler():
     user_id = await token_check()
     await check_admin(user_id, True)
 
-    target_type, target_value = _extract_target()
+    target_type, target_value = _get_target()
 
     pagination = Pagination()
     bans = await get_bans(
@@ -57,7 +57,7 @@ async def unban_target():
     """Unban a single target"""
     user_id = await token_check()
     await check_admin(user_id, True)
-    target_type, target_value = _extract_target()
+    target_type, target_value = _get_target()
 
     unban_function = unban_user if target_type == TargetType.User else unban_ip
     await unban_function(target_value)
