@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
+from typing import Tuple
 
 from quart import Blueprint, request, jsonify
 
@@ -17,11 +18,7 @@ log = logging.getLogger(__name__)
 bp = Blueprint("admin_bans", __name__)
 
 
-@bp.route("/")
-async def get_bans_handler():
-    """Get the bans of a given target."""
-    user_id = await token_check()
-    await check_admin(user_id, True)
+def _extract_target() -> Tuple[str, str]:
 
     try:
         target_type = TargetType(request.args.get("target_type"))
@@ -33,6 +30,17 @@ async def get_bans_handler():
     except KeyError:
         raise BadInput("target_value is required")
 
+    return target_type, target_value
+
+
+@bp.route("/")
+async def get_bans_handler():
+    """Get the bans of a given target."""
+    user_id = await token_check()
+    await check_admin(user_id, True)
+
+    target_type, target_value = _extract_target()
+
     pagination = Pagination()
     bans = await get_bans(
         target_value,
@@ -42,3 +50,16 @@ async def get_bans_handler():
     )
 
     return jsonify(bans)
+
+
+@bp.route("/", methods=["DELETE"])
+async def unban_target():
+    """Unban a single target"""
+    user_id = await token_check()
+    await check_admin(user_id, True)
+    target_type, target_value = _extract_target()
+
+    unban_function = unban_user if target_type == TargetType.User else unban_ip
+    await unban_function(target_value)
+
+    return "", 204
