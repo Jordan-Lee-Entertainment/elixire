@@ -7,7 +7,8 @@ import os
 import time
 from typing import Optional, Tuple
 
-from quart import Blueprint, current_app as app, request, send_file, redirect
+from quart import Blueprint, current_app as app, request, redirect
+from api.common.utils import send_file
 
 from PIL import Image
 
@@ -74,12 +75,6 @@ async def resolve_file(filename) -> Tuple[str, Optional[str]]:
     return file_path, shortname
 
 
-async def _send_file(fspath: str, mimetype: Optional[str] = None):
-    resp = await send_file(fspath, mimetype=mimetype)
-    resp.headers["content-security-policy"] = "sandbox; frame-src 'None'"
-    return resp
-
-
 @bp.route("/i/<filename>")
 async def file_handler(filename):
     """Handles file serves."""
@@ -93,7 +88,7 @@ async def file_handler(filename):
     if mimetype == "text/plain":
         mimetype = "text/plain; charset=utf-8"
 
-    return await _send_file(filepath, mimetype)
+    return await send_file(filepath, mimetype=mimetype)
 
 
 @bp.route("/t/<filename>")
@@ -106,7 +101,7 @@ async def thumbnail_handler(filename):
     # if thumbnails are disabled, just return
     # the same file
     if not appcfg.THUMBNAILS:
-        return await _send_file(fspath)
+        return await send_file(fspath)
 
     thb_folder = appcfg.THUMBNAIL_FOLDER
     thumbpath = os.path.join(thb_folder, f"{thumbtype}{filename}")
@@ -127,7 +122,7 @@ async def thumbnail_handler(filename):
 
     # yes, we are doing more I/O by using response.file
     # and not sending the bytes ourselves.
-    return await _send_file(thumbpath)
+    return await send_file(thumbpath)
 
 
 async def _get_urlredir(
