@@ -34,7 +34,7 @@ async def find_repeat(ctx: UploadContext, extension: str) -> Optional[Dict[str, 
     uploaded by the uploader of the current file."""
     repeat = await app.db.fetchrow(
         """
-        SELECT filename, domain
+        SELECT filename, domain, subdomain
         FROM files
         WHERE fspath = $1 AND uploader = $2 AND files.deleted = false
         """,
@@ -60,8 +60,13 @@ async def find_repeat(ctx: UploadContext, extension: str) -> Optional[Dict[str, 
             f'file.domain ({repeat["domain"]}) refers to unknown domain'
         )
 
-    # NOTE files.subdomain doesn't exist (see issue 44)
-    domain = transform_wildcard(domain, "i")
+    # if subdomain is:
+    #  - None: use "i" as subdomain (v2/legacy file)
+    #  - an empty string: use "" as subdomain, only accessible at root
+    #  - a non-empty string: use it as subdomain
+
+    subdomain = "i" if repeat["subdomain"] is None else repeat["subdomain"]
+    domain = transform_wildcard(domain, subdomain)
 
     return {
         "repeated": True,
