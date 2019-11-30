@@ -6,8 +6,7 @@ import io
 import logging
 import mimetypes
 from dataclasses import dataclass
-from collections import namedtuple
-from typing import Optional
+from typing import Optional, Tuple
 
 import magic
 from quart import current_app as app
@@ -21,24 +20,11 @@ from .file import UploadFile
 __all__ = ["UploadContext"]
 log = logging.getLogger(__name__)
 
-FORCE_EXTENSION = {
-    "image/jpeg": ".jpg",
-}
+FORCE_EXTENSION = {"image/jpeg": ".jpg"}
 
 
 @dataclass
-class UploadContext(
-    namedtuple(
-        "UploadContext",
-        [
-            "file",  # the UploadFile that is being uploaded
-            "user_id",  # user id that is uploading
-            "shortname",  # shortname of the file
-            "do_checks",  # True if checks will be performed
-            "start_timestamp",  # the start timestamp of this upload
-        ],
-    )
-):
+class UploadContext:
     """Represents the context of a file upload.
 
     Attributes:
