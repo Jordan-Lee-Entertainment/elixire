@@ -100,14 +100,11 @@ class UploadContext:
         Returns the MIME of the file and the extension of the file.
         """
         # TODO check None and raise BadImage if do_checks is on
+        # but instead use file.mime if do_checks is off
         mimetype = await self.mime
 
-        if self.do_checks:
-            if mimetype not in app.econfig.ACCEPTED_MIMES:
-                raise BadImage(f"Bad mime type: {mimetype!r}")
-        else:
-            # TODO use the mimetype given by admin
-            pass
+        if self.do_checks and mimetype not in app.econfig.ACCEPTED_MIMES:
+            raise BadImage(f"Bad mime type: {mimetype!r}")
 
         try:
             extensions = [FORCE_EXTENSION[mimetype]]
@@ -116,7 +113,15 @@ class UploadContext:
 
         assert extensions
 
-        return mimetype, extensions[0]
+        # we use file.given_extension ONLY WHEN it exists in the
+        # extensions list. this disallows users to e.g set .jpe
+        # when mimetype is image/jpeg, because FORCE_EXTENSION will only give
+        # .jpeg available.
+        extension = self.file.given_extension
+        if extension not in extensions:
+            extension = extensions[0]
+
+        return mimetype, extension
 
     async def perform_checks(self) -> None:
         """Perform higher level checks"""

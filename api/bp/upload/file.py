@@ -6,6 +6,7 @@ import os
 import io
 from pathlib import Path
 from typing import Optional
+from dataclasses import dataclass
 
 from quart import request, current_app as app
 
@@ -13,16 +14,23 @@ from api.common import calculate_hash
 from api.errors import BadUpload
 
 
+@dataclass
 class UploadFile:
-    def __init__(self, data):
-        self.name: str = data.filename
-        self.size: int = data.stream.getbuffer().nbytes
-        self.stream: io.BytesIO = data.stream
-        self.mime: str = data.mimetype
+    # TODO docstring
 
-        self.hash: Optional[str] = None
-        self.path: Optional[Path] = None
-        self.id: Optional[int] = None
+    name: str
+    size: int
+    stream: io.BytesIO
+    mime: str
+
+    hash: Optional[str] = None
+    path: Optional[Path] = None
+    id: Optional[int] = None
+
+    def __init__(self, data):
+        super().__init__(
+            data.filename, data.stream.getbuffer().nbytes, data.stream, data.mimetype
+        )
 
     @property
     def given_extension(self):
@@ -56,7 +64,7 @@ class UploadFile:
     @classmethod
     async def from_request(cls):
         """Make an UploadFile from the current request context."""
-        # get the first file in the request
+        # this works by getting all the files, then getting the first one.
         files = await request.files
 
         try:
@@ -69,6 +77,7 @@ class UploadFile:
     async def _gen_hash(self):
         """Hash the given file. The output hash is given via the
         :attr:`hash` attribute."""
+        self.stream.seek(0)
         self.hash = await calculate_hash(self.stream)
         self.stream.seek(0)
 
