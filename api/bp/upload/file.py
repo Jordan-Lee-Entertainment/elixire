@@ -28,9 +28,15 @@ class UploadFile:
     id: Optional[int] = None
 
     def __init__(self, data):
-        super().__init__(
-            data.filename, data.stream.getbuffer().nbytes, data.stream, data.mimetype
-        )
+        self.name = data.filename
+        # TODO don't create an intermerdiary bytes object for this
+        self.size = data.stream.getbuffer().nbytes
+        self.stream = data.stream
+        self.mime = data.mimetype
+
+        self.hash = None
+        self.path = None
+        self.id = None
 
     @property
     def given_extension(self):
