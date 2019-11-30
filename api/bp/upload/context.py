@@ -21,9 +21,7 @@ from .file import UploadFile
 __all__ = ["UploadContext"]
 log = logging.getLogger(__name__)
 
-FORCE_EXTENSION = {
-    "image/jpeg": ".jpg",
-}
+FORCE_EXTENSION = {"image/jpeg": ".jpg"}
 INCLUDE_EXTENSIONS = {"application/octet-stream": [""]}
 
 
