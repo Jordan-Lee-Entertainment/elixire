@@ -5,7 +5,7 @@
 import asyncio
 from typing import Optional, Any, TypeVar
 from collections import defaultdict
-from quart import send_file as quart_send_file, request
+from quart import send_file as quart_send_file
 
 T = TypeVar("T")
 
