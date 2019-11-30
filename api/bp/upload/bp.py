@@ -116,13 +116,6 @@ async def upload_handler():
 
     file = await UploadFile.from_request()
 
-    # by default, assume the extension given in the filename
-    # is the one we should use.
-    #
-    # this will be true if the upload is an admin upload, but if it isn't
-    # we need to check MIMEs to ensure a proper extension is used for security
-    extension = file.given_extension
-
     # generate a filename so we can identify later when removing it
     # because of virus scanning.
     shortname, tries = await gen_user_shortname(user_id)
@@ -141,11 +134,10 @@ async def upload_handler():
     file_id = get_snowflake()
     ctx.file.id = file_id
 
-    # perform any checks like virus scanning and quota limits. this method will
-    # also check the MIME type, and return the extension that we should be
-    # using. (admins get to bypass!)
-    if do_checks:
-        extension = await ctx.perform_checks(app)
+    mime, extension = await ctx.resolve_mime()
+
+    # perform any checks like virus scanning and quota limits.
+    await ctx.perform_checks()
 
     await ctx.file.resolve(extension)
 
@@ -202,7 +194,7 @@ async def upload_handler():
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         """,
         file_id,
-        ctx.file.mime,
+        mime,
         shortname,
         file_size,
         user_id,
