@@ -77,5 +77,6 @@ async def send_file(path: str, *, mimetype: Optional[str] = None):
     """Helper function to send files while also supporting Ranged Requests."""
     response = await quart_send_file(path, mimetype=mimetype)
     response.headers["content-length"] = response.response.size
+    response.headers["accept-ranges"] = "none"
     response.headers["content-security-policy"] = "sandbox; frame-src 'None'"
     return response
