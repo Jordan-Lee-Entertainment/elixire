@@ -111,12 +111,9 @@ async def get_bans(
     table = "bans" if is_user else "ip_bans"
     field = "user_id" if is_user else "ip_address"
 
-    # TODO make bans table have timestamp column
-    maybe_ts = "" if is_user else ", timestamp"
-
     rows = await app.db.fetch(
         f"""
-        SELECT reason, end_timestamp {maybe_ts}
+        SELECT reason, end_timestamp, timestamp
         FROM {table}
         WHERE {field} = $1
         ORDER BY end_timestamp DESC
