@@ -5,6 +5,7 @@
 import io
 import logging
 import mimetypes
+import functools
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -90,7 +91,8 @@ class UploadContext:
             self.file.stream.seek(0)
 
             # TODO check failure, return None
-            self._mime = magic.from_buffer(chunk, mime=True)
+            mime_function = functools.partial(magic.from_buffer, mime=True)
+            self._mime = await app.loop.run_in_executor(None, mime_function, chunk)
 
         return self._mime
 
