@@ -81,7 +81,7 @@ async def file_handler(filename):
     filepath, shortname = await resolve_file(filename)
 
     # fetch the file's mimetype from the database
-    # which should be way more reliable than sanic
+    # which should be way more reliable than quart
     # taking a guess at it.
     mimetype = await app.storage.get_file_mime(shortname)
 

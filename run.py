@@ -57,6 +57,8 @@ def make_app() -> Quart:
     """Make a Quart instance."""
     app = Quart(__name__)
 
+    app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
+
     # TODO better config under app.cfg. check #112
     app.econfig = config
     app.econfig.REQUIRE_ACCOUNT_APPROVALS = getattr(

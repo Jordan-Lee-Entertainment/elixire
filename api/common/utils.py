@@ -5,7 +5,7 @@
 import asyncio
 from typing import Optional, Any, TypeVar
 from collections import defaultdict
-from quart import send_file as quart_send_file
+from quart import send_file as quart_send_file, request
 
 T = TypeVar("T")
 
@@ -75,8 +75,11 @@ def find_different_keys(dict1: dict, dict2: dict) -> list:
 
 async def send_file(path: str, *, mimetype: Optional[str] = None):
     """Helper function to send files while also supporting Ranged Requests."""
-    response = await quart_send_file(path, mimetype=mimetype)
-    response.headers["content-length"] = response.response.size
-    response.headers["accept-ranges"] = "none"
+    response = await quart_send_file(path, mimetype=mimetype, conditional=True)
+
+    filebody = response.response
+    response.headers["content-length"] = filebody.end - filebody.begin
+    response.headers["content-disposition"] = "inline"
     response.headers["content-security-policy"] = "sandbox; frame-src 'None'"
+
     return response
