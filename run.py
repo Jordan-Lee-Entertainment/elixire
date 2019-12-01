@@ -57,6 +57,8 @@ def make_app() -> Quart:
     """Make a Quart instance."""
     app = Quart(__name__)
 
+    app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
+
     # TODO better config under app.cfg. check #112
     app.econfig = config
     app.econfig.REQUIRE_ACCOUNT_APPROVALS = getattr(
@@ -99,6 +101,7 @@ def set_blueprints(app_):
         api.bp.admin.object_bp: "/admin",
         api.bp.admin.domain_bp: "/admin/domains",
         api.bp.admin.settings_bp: "/admin/settings",
+        api.bp.admin.bans_bp: "/admin/bans",
         api.bp.admin.misc_bp: "/admin",
         api.bp.shorten.bp: -1,
         api.bp.frontend.bp: -1,
@@ -171,6 +174,11 @@ def handle_api_error(err: APIError):
     app.counters.inc("error")
 
     return _wrap_err_in_json(err)
+
+
+@app.errorhandler(FileNotFoundError)
+async def handle_notfound_error(err):
+    return await handle_notfound(err)
 
 
 @app.errorhandler(404)

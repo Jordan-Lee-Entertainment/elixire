@@ -89,10 +89,18 @@ async def test_upload_png(test_cli_user, test_domain):
     # -- "*.domain.tld" is how they are represented internally)
 
     # accessing on the subdomain+domain that it was uploaded to works
-    resp = await test_cli_user.get(
-        url, headers={"host": f"{subdomain}.{host_without_wildcard}"}
-    )
+    host = f"{subdomain}.{host_without_wildcard}"
+    resp = await test_cli_user.get(url, headers={"host": host})
     assert resp.status_code == 200
+
+    # test HEAD and Ranged requests to the file
+    resp = await test_cli_user.head(url, headers={"host": host})
+    assert resp.status_code == 200
+
+    resp = await test_cli_user.get(url, headers={"host": host, "range": "bytes=0-10"})
+    assert resp.status_code == 206
+
+    assert resp.headers["content-length"] == "10"
 
     # accessing on the base domain without a subdomain doesn't work
     resp = await test_cli_user.get(url, headers={"host": host_without_wildcard})
