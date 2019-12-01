@@ -21,7 +21,13 @@ from .file import UploadFile
 __all__ = ["UploadContext"]
 log = logging.getLogger(__name__)
 
+#: MIME types in this dict, when detected as the file being uploaded,
+#  will have their extension forced to be the given one.
 FORCE_EXTENSION = {"image/jpeg": ".jpg"}
+
+#: MIME types in this dict, when detected as the file being uploaded,
+#  will have the given list of extensions extended to the given value.
+#  (extended from the result of mimetypes.guess_all_extensions)
 INCLUDE_EXTENSIONS = {"application/octet-stream": [""]}
 
 
