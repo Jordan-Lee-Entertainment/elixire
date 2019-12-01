@@ -23,3 +23,6 @@ RATELIMITS = {
 }
 
 REQUIRE_ACCOUNT_APPROVALS = False
+
+FORCE_EXTENSION = {"image/jpeg": ".jpg"}
+INCLUDE_EXTENSIONS = {"application/octet-stream": [""]}
