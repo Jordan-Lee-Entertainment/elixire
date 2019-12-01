@@ -86,7 +86,7 @@ class UploadContext:
         # or else... send a webhook about what happened
         if ratio > ratio_limit:
             await jpeg_toobig_webhook(self, noexif_len)
-            raise BadImage("jpeg-bomb artifact detected")
+            raise BadImage("jpeg-bomb attempt detected")
 
         return self.file.stream
 
