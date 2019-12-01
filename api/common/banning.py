@@ -1,7 +1,10 @@
 # elixire: Image Host software
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+
 import logging
+import enum
+from typing import Union, List, Dict, Any
 
 from quart import request, current_app as app
 from api.common import get_ip_addr
@@ -66,3 +69,59 @@ async def ban_request(reason: str) -> None:
         ip_addr = get_ip_addr()
         log.warning(f"Banning ip address {ip_addr} with reason {reason!r}")
         await ban_by_ip(ip_addr, reason)
+
+
+async def unban_user(user_id: int) -> None:
+    await app.storage.raw_invalidate(f"userban:{user_id}")
+    await app.db.execute(
+        """
+        DELETE FROM bans
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+
+async def unban_ip(ipaddr: str) -> None:
+    await app.storage.raw_invalidate(f"ipban:{ipaddr}")
+    await app.db.execute(
+        """
+        DELETE FROM ip_bans
+        WHERE ip_address = $1
+        """,
+        ipaddr,
+    )
+
+
+class TargetType(enum.Enum):
+    User = "user"
+    Ip = "ip"
+
+
+async def get_bans(
+    target_value: Union[str, int],
+    *,
+    target_type: TargetType,
+    page: int = 0,
+    per_page: int = 30,
+) -> List[Dict[str, Any]]:
+    """Get the bans for a given target (user ID or IP address)."""
+    is_user = target_type == TargetType.User
+
+    table = "bans" if is_user else "ip_bans"
+    field = "user_id" if is_user else "ip_address"
+
+    rows = await app.db.fetch(
+        f"""
+        SELECT reason, end_timestamp, timestamp
+        FROM {table}
+        WHERE {field} = $1
+        ORDER BY end_timestamp DESC
+        LIMIT {per_page}
+        OFFSET ({per_page} * $2)
+        """,
+        target_value,
+        page,
+    )
+
+    return list(map(dict, rows))

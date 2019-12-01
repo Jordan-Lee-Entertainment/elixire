@@ -1,4 +1,4 @@
-all: frontend panel
+all: frontend admin-panel
 
 .PHONY: all frontend admin-panel
 

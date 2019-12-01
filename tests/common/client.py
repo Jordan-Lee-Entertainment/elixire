@@ -50,3 +50,4 @@ class TestClient:
     put = _wrapped_method("put")
     patch = _wrapped_method("patch")
     delete = _wrapped_method("delete")
+    head = _wrapped_method("head")
