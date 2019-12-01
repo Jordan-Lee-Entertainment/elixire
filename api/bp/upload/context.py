@@ -104,10 +104,7 @@ class UploadContext:
         return self._mime
 
     async def resolve_mime(self) -> Tuple[str, str]:
-        """Resolve the of the upload file.
-
-        Returns the MIME of the file and the extension of the file.
-        """
+        """Resolve the mime type and extension of the file being uploaded."""
         # TODO check None and raise BadImage if do_checks is on
         # but instead use file.mime if do_checks is off
         mimetype = await self.mime
