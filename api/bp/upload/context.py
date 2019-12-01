@@ -21,15 +21,6 @@ from .file import UploadFile
 __all__ = ["UploadContext"]
 log = logging.getLogger(__name__)
 
-#: MIME types in this dict, when detected as the file being uploaded,
-#  will have their extension forced to be the given one.
-FORCE_EXTENSION = {"image/jpeg": ".jpg"}
-
-#: MIME types in this dict, when detected as the file being uploaded,
-#  will have the given list of extensions extended to the given value.
-#  (extended from the result of mimetypes.guess_all_extensions)
-INCLUDE_EXTENSIONS = {"application/octet-stream": [""]}
-
 
 @dataclass
 class UploadContext:
@@ -113,12 +104,12 @@ class UploadContext:
             raise BadImage(f"Bad mime type: {mimetype!r}")
 
         try:
-            extensions = [FORCE_EXTENSION[mimetype]]
+            extensions = [app.econfig.FORCE_EXTENSION[mimetype]]
         except KeyError:
             extensions = mimetypes.guess_all_extensions(mimetype)
 
         try:
-            extensions.extend(INCLUDE_EXTENSIONS[mimetype])
+            extensions.extend(app.econfig.INCLUDE_EXTENSIONS[mimetype])
         except KeyError:
             pass
 
