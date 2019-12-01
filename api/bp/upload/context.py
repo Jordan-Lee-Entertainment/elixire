@@ -47,6 +47,7 @@ class UploadContext(namedtuple('UploadContext', [
         # or else... send a webhook about what happened
         elif ratio > ratio_limit:
             await jpeg_toobig_webhook(app, self, noexif_len)
+            raise BadImage('jpeg-bomb attempt detected')
 
         return self.file.io
 
