@@ -134,9 +134,7 @@ async def upload_handler():
             await upload_metrics(ctx)
             return jsonify(repeat)
 
-    domain_id, domain, subdomain_name = await resolve_domain(
-        user_id, FileNameType.FILE
-    )
+    domain_id, domain, subdomain_name = await resolve_domain(user_id, FileNameType.FILE)
 
     # upload counter
     app.counters.inc("file_upload_hour")
