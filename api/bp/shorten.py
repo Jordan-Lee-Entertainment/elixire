@@ -9,10 +9,10 @@ from quart import Blueprint, jsonify, current_app as app, request
 
 from api.common.auth import token_check, check_admin
 from api.errors import QuotaExploded, BadInput, FeatureDisabled
-from api.common import get_user_domain_info, transform_wildcard, FileNameType
+from api.common import FileNameType
 from api.common.utils import get_domain_querystring
 from api.snowflake import get_snowflake
-from api.permissions import Permissions, domain_permissions
+from api.permissions import Permissions, resolve_domain
 from api.common.profile import gen_user_shortname
 from api.storage import object_key
 
@@ -95,28 +95,9 @@ async def shorten_handler():
 
     redir_id = get_snowflake()
 
-    user_domain_id, user_subdomain, user_domain = await get_user_domain_info(
-        user_id, FileNameType.SHORTEN
+    domain_id, domain, subdomain_name = await resolve_domain(
+        user_id, FileNameType.SHORTEN, Permissions.SHORTEN
     )
-    domain_id = given_domain or user_domain_id
-    subdomain = given_subdomain or user_subdomain
-
-    # check if domain is uploadable
-    await domain_permissions(app, domain_id, Permissions.SHORTEN)
-
-    # resolve the given (domain_id, subdomain_name) into a string
-    if given_domain is None:
-        domain = user_domain
-    else:
-        domain = await app.db.fetchval(
-            """
-            SELECT domain
-            FROM domains
-            WHERE domain_id = $1
-            """,
-            given_domain,
-        )
-    domain = transform_wildcard(domain, subdomain)
 
     await app.db.execute(
         """
@@ -129,11 +110,11 @@ async def shorten_handler():
         user_id,
         url_toredir,
         domain_id,
-        subdomain,
+        subdomain_name,
     )
 
     await app.storage.set_with_ttl(
-        object_key("redir", domain_id, subdomain, redir_rname), url_toredir, 600
+        object_key("redir", domain_id, subdomain_name, redir_rname), url_toredir, 600
     )
 
     # appended to generated filename

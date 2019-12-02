@@ -5,7 +5,9 @@
 import asyncio
 from typing import Optional, Any, TypeVar
 from collections import defaultdict
-from quart import request, send_file as quart_send_file
+from quart import request, send_file as quart_send_file, current_app as app
+from api.common import get_user_domain_info, transform_wildcard, FileNameType
+from api.permissions import Permissions, domain_permissions
 from typing import Tuple
 
 T = TypeVar("T")
@@ -74,8 +76,8 @@ def find_different_keys(dict1: dict, dict2: dict) -> list:
     return keys
 
 
-def get_domain_querystring() -> Tuple[Optional[int], Optional[str]]:
-    """Fetch domain information, if any"""
+def _get_domain_querystring() -> Tuple[Optional[int], Optional[str]]:
+    """Fetch domain information supplied in query string, if any"""
     try:
         given_domain: Optional[int] = int(request.args["domain"])
     except (KeyError, ValueError):
@@ -87,6 +89,38 @@ def get_domain_querystring() -> Tuple[Optional[int], Optional[str]]:
         given_subdomain = None
 
     return given_domain, given_subdomain
+
+
+async def resolve_domain(
+    user_id: int, ptype: Permissions, ftype: FileNameType
+) -> Tuple[Optional[int], Optional[str], Optional[str]]:
+    """Fetch domain information, if any"""
+    given_domain, given_subdomain = _get_domain_querystring()
+
+    user_domain_id, user_subdomain, user_domain = await get_user_domain_info(
+        user_id, ftype
+    )
+    domain_id = given_domain or user_domain_id
+    subdomain_name = given_subdomain or user_subdomain
+
+    # check if domain is uploadable
+    await domain_permissions(app, domain_id, ftype)
+
+    # resolve the given (domain_id, subdomain_name) into a string
+    if given_domain is None:
+        domain = user_domain
+    else:
+        domain = await app.db.fetchval(
+            """
+            SELECT domain
+            FROM domains
+            WHERE domain_id = $1
+            """,
+            given_domain,
+        )
+
+    domain = transform_wildcard(domain, subdomain_name)
+    return domain_id, domain, subdomain_name
 
 
 async def send_file(path: str, *, mimetype: Optional[str] = None):

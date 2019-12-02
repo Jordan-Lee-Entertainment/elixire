@@ -10,10 +10,10 @@ from typing import Any, Dict, Optional
 from quart import Blueprint, jsonify, current_app as app, request
 
 from api.storage import object_key
-from api.common import get_user_domain_info, transform_wildcard
+from api.common import transform_wildcard, FileNameType
 from api.common.auth import check_admin, token_check
-from api.common.utils import get_domain_querystring
-from api.permissions import Permissions, domain_permissions
+from api.common.utils import resolve_domain
+from api.permissions import Permissions
 from api.snowflake import get_snowflake
 from api.common.profile import gen_user_shortname, is_metrics_consenting
 from .context import UploadContext
@@ -93,7 +93,6 @@ async def upload_handler():
     # if admin is set on request.args, we will # do an "admin upload", without
     # any checking for viruses, weekly limits, MIME, etc.
     do_checks = not bool(request.args.get("admin"))
-    given_domain, given_subdomain = get_domain_querystring()
 
     # if the user is admin and they wanted an admin
     # upload, check if they're actually an admin
@@ -136,27 +135,9 @@ async def upload_handler():
             await upload_metrics(ctx)
             return jsonify(repeat)
 
-    user_domain_id, user_subdomain, user_domain = await get_user_domain_info(user_id)
-    domain_id = given_domain or user_domain_id
-    subdomain_name = given_subdomain or user_subdomain
-
-    # check if domain is uploadable
-    await domain_permissions(app, domain_id, Permissions.UPLOAD)
-
-    # resolve the given (domain_id, subdomain_name) into a string
-    if given_domain is None:
-        domain = user_domain
-    else:
-        domain = await app.db.fetchval(
-            """
-            SELECT domain
-            FROM domains
-            WHERE domain_id = $1
-            """,
-            given_domain,
-        )
-
-    domain = transform_wildcard(domain, subdomain_name)
+    domain_id, domain, subdomain_name = await resolve_domain(
+        user_id, FileNameType.UPLOAD, Permissions.UPLOAD
+    )
 
     # upload counter
     app.counters.inc("file_upload_hour")
