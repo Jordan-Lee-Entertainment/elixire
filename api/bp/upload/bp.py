@@ -5,7 +5,7 @@
 import logging
 import pathlib
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 from quart import Blueprint, jsonify, current_app as app, request
 
