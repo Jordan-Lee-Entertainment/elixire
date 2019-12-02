@@ -10,6 +10,7 @@ from quart import Blueprint, jsonify, current_app as app, request
 from api.common.auth import token_check, check_admin
 from api.errors import QuotaExploded, BadInput, FeatureDisabled
 from api.common import get_user_domain_info, transform_wildcard, FileNameType
+from api.common.utils import fetch_domain
 from api.snowflake import get_snowflake
 from api.permissions import Permissions, domain_permissions
 from api.common.profile import gen_user_shortname
@@ -45,6 +46,7 @@ async def shorten_handler():
     # Check if admin is set in get values, if not, do checks
     # If it is set, and the admin value is truthy, do not do checks
     do_checks = not ("admin" in request.args and request.args["admin"])
+    given_domain, given_subdomain = fetch_domain()
 
     # Let's actually check if the user is an admin
     # and raise an error if they're not an admin
@@ -92,11 +94,28 @@ async def shorten_handler():
     await app.metrics.submit("shortname_gen_tries", tries)
 
     redir_id = get_snowflake()
-    domain_id, subdomain, domain = await get_user_domain_info(
+
+    user_domain_id, user_subdomain, user_domain = await get_user_domain_info(
         user_id, FileNameType.SHORTEN
     )
+    domain_id = given_domain or user_domain_id
+    subdomain = given_subdomain or user_subdomain
 
+    # check if domain is uploadable
     await domain_permissions(app, domain_id, Permissions.SHORTEN)
+
+    # resolve the given (domain_id, subdomain_name) into a string
+    if given_domain is None:
+        domain = user_domain
+    else:
+        domain = await app.db.fetchval(
+            """
+            SELECT domain
+            FROM domains
+            WHERE domain_id = $1
+            """,
+            given_domain,
+        )
     domain = transform_wildcard(domain, subdomain)
 
     await app.db.execute(

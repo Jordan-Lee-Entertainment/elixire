@@ -12,6 +12,7 @@ from quart import Blueprint, jsonify, current_app as app, request
 from api.storage import object_key
 from api.common import get_user_domain_info, transform_wildcard
 from api.common.auth import check_admin, token_check
+from api.common.utils import fetch_domain
 from api.permissions import Permissions, domain_permissions
 from api.snowflake import get_snowflake
 from api.common.profile import gen_user_shortname, is_metrics_consenting
@@ -84,21 +85,6 @@ async def upload_metrics(ctx):
     await metrics.submit("upload_latency", delta)
 
 
-def _fetch_domain() -> Tuple[Optional[int], Optional[str]]:
-    """Fetch domain information, if any"""
-    try:
-        given_domain: Optional[int] = int(request.args["domain"])
-    except (KeyError, ValueError):
-        given_domain = None
-
-    try:
-        given_subdomain = request.args["subdomain"]
-    except KeyError:
-        given_subdomain = None
-
-    return given_domain, given_subdomain
-
-
 @bp.route("/upload", methods=["POST"])
 async def upload_handler():
     """Main upload handler."""
@@ -107,7 +93,7 @@ async def upload_handler():
     # if admin is set on request.args, we will # do an "admin upload", without
     # any checking for viruses, weekly limits, MIME, etc.
     do_checks = not bool(request.args.get("admin"))
-    given_domain, given_subdomain = _fetch_domain()
+    given_domain, given_subdomain = fetch_domain()
 
     # if the user is admin and they wanted an admin
     # upload, check if they're actually an admin

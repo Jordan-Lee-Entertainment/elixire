@@ -5,7 +5,8 @@
 import asyncio
 from typing import Optional, Any, TypeVar
 from collections import defaultdict
-from quart import send_file as quart_send_file
+from quart import request, send_file as quart_send_file
+from typing import Tuple
 
 T = TypeVar("T")
 
@@ -71,6 +72,21 @@ def find_different_keys(dict1: dict, dict2: dict) -> list:
             keys.append(key)
 
     return keys
+
+
+def fetch_domain() -> Tuple[Optional[int], Optional[str]]:
+    """Fetch domain information, if any"""
+    try:
+        given_domain: Optional[int] = int(request.args["domain"])
+    except (KeyError, ValueError):
+        given_domain = None
+
+    try:
+        given_subdomain = request.args["subdomain"]
+    except KeyError:
+        given_subdomain = None
+
+    return given_domain, given_subdomain
 
 
 async def send_file(path: str, *, mimetype: Optional[str] = None):
