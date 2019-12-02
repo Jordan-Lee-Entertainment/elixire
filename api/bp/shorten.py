@@ -10,7 +10,7 @@ from quart import Blueprint, jsonify, current_app as app, request
 from api.common.auth import token_check, check_admin
 from api.errors import QuotaExploded, BadInput, FeatureDisabled
 from api.common import get_user_domain_info, transform_wildcard, FileNameType
-from api.common.utils import fetch_domain
+from api.common.utils import get_domain_querystring
 from api.snowflake import get_snowflake
 from api.permissions import Permissions, domain_permissions
 from api.common.profile import gen_user_shortname
@@ -46,7 +46,7 @@ async def shorten_handler():
     # Check if admin is set in get values, if not, do checks
     # If it is set, and the admin value is truthy, do not do checks
     do_checks = not ("admin" in request.args and request.args["admin"])
-    given_domain, given_subdomain = fetch_domain()
+    given_domain, given_subdomain = get_domain_querystring()
 
     # Let's actually check if the user is an admin
     # and raise an error if they're not an admin

@@ -74,7 +74,7 @@ def find_different_keys(dict1: dict, dict2: dict) -> list:
     return keys
 
 
-def fetch_domain() -> Tuple[Optional[int], Optional[str]]:
+def get_domain_querystring() -> Tuple[Optional[int], Optional[str]]:
     """Fetch domain information, if any"""
     try:
         given_domain: Optional[int] = int(request.args["domain"])
