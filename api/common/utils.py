@@ -100,13 +100,13 @@ async def resolve_domain(
     given_domain, given_subdomain = _get_domain_querystring()
 
     user_domain_id, user_subdomain, user_domain = await get_user_domain_info(
-        user_id, ptype
+        user_id, ftype
     )
     domain_id = given_domain or user_domain_id
     subdomain_name = given_subdomain or user_subdomain
 
     # check if domain is uploadable
-    await domain_permissions(app, domain_id, ftype)
+    await domain_permissions(app, domain_id, ptype)
 
     # resolve the given (domain_id, subdomain_name) into a string
     if given_domain is None:
