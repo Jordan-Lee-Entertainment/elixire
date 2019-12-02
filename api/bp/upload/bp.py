@@ -13,7 +13,6 @@ from api.storage import object_key
 from api.common import transform_wildcard, FileNameType
 from api.common.auth import check_admin, token_check
 from api.common.utils import resolve_domain
-from api.permissions import Permissions
 from api.snowflake import get_snowflake
 from api.common.profile import gen_user_shortname, is_metrics_consenting
 from .context import UploadContext
@@ -136,7 +135,7 @@ async def upload_handler():
             return jsonify(repeat)
 
     domain_id, domain, subdomain_name = await resolve_domain(
-        user_id, FileNameType.UPLOAD, Permissions.UPLOAD
+        user_id, FileNameType.FILE
     )
 
     # upload counter

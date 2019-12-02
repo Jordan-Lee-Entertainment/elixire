@@ -12,7 +12,7 @@ from api.errors import QuotaExploded, BadInput, FeatureDisabled
 from api.common import FileNameType
 from api.common.utils import get_domain_querystring
 from api.snowflake import get_snowflake
-from api.permissions import Permissions, resolve_domain
+from api.permissions import resolve_domain
 from api.common.profile import gen_user_shortname
 from api.storage import object_key
 
@@ -96,7 +96,7 @@ async def shorten_handler():
     redir_id = get_snowflake()
 
     domain_id, domain, subdomain_name = await resolve_domain(
-        user_id, FileNameType.SHORTEN, Permissions.SHORTEN
+        user_id, FileNameType.SHORTEN
     )
 
     await app.db.execute(

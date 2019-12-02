@@ -92,13 +92,15 @@ def _get_domain_querystring() -> Tuple[Optional[int], Optional[str]]:
 
 
 async def resolve_domain(
-    user_id: int, ptype: Permissions, ftype: FileNameType
+    user_id: int, ftype: FileNameType
 ) -> Tuple[Optional[int], Optional[str], Optional[str]]:
     """Fetch domain information, if any"""
+    ptype = Permissions.UPLOAD if ftype == FileNameType.FILE else Permissions.SHORTEN
+
     given_domain, given_subdomain = _get_domain_querystring()
 
     user_domain_id, user_subdomain, user_domain = await get_user_domain_info(
-        user_id, ftype
+        user_id, ptype
     )
     domain_id = given_domain or user_domain_id
     subdomain_name = given_subdomain or user_subdomain
