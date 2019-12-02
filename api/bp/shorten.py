@@ -45,7 +45,6 @@ async def shorten_handler():
     # Check if admin is set in get values, if not, do checks
     # If it is set, and the admin value is truthy, do not do checks
     do_checks = not ("admin" in request.args and request.args["admin"])
-    given_domain, given_subdomain = get_domain_querystring()
 
     # Let's actually check if the user is an admin
     # and raise an error if they're not an admin
