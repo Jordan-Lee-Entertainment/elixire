@@ -285,7 +285,7 @@ SCAN_WAIT_THRESHOLD = 1
 # Should we strip EXIF metadata for JPEGs?
 #
 # This features requires the Pillow library (it should be already installed by
-# `requirements.txt`).
+# pipenv).
 CLEAR_EXIF = False
 
 # The growth ratio to prevent EXIF stripping at.

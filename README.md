@@ -18,6 +18,7 @@ elixire is an open source image host and link shortener written in [Python].
 - libmagic
 
 [python]: https://www.python.org
+[pipenv]: https://pipenv.kennethreitz.org/en/latest/
 [postgresql]: https://www.postgresql.org
 [redis]: https://redis.io
 [node.js]: https://nodejs.org
@@ -56,11 +57,11 @@ Create some necessary directories:
 mkdir -p images dumps thumbnails
 ```
 
-Install [Python] dependencies using pip:
+Install [Python] dependencies using [pipenv]:
 
 ```bash
-# You can use a virtual environment, too.
-python3 -m pip install -Ur requirements.txt
+# or --dev if you're developing for elixire
+pipenv install
 ```
 
 Create the [PostgreSQL] database if it doesn't already exist:
