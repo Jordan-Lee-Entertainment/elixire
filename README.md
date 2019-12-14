@@ -121,10 +121,10 @@ Run the app:
 
 ```bash
 # bind to any wanted address
-hypercorn --access-log - run:app --bind 0.0.0.0:8081
+pipenv run hypercorn --access-log - run:app --bind 0.0.0.0:8081
 
 # when running in production, set the PYTHON_ENV variable to prod
-env PYTHON_ENV=production hypercorn --access-log - run:app --bind 0.0.0.0:8081
+env PYTHON_ENV=production pipenv run hypercorn --access-log - run:app --bind 0.0.0.0:8081
 ```
 
 ## Operator's Manual

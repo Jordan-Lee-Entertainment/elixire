@@ -32,7 +32,7 @@ run_backend:
       freetype-dev lcms2-dev openjpeg-dev tiff-dev tk-dev tcl-dev libxml2-dev
       libxslt-dev libffi-dev gcc musl-dev libgcc openssl-dev curl libmagic
       postgresql-client
-    - pip install wheel tox
+    - pip install pipenv wheel tox
     - mkdir -p images dumps thumbnails
     - cat config.example.py config.ci.py > config.py
     - pip install aioredis==1.2 asyncpg==0.18.3
