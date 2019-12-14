@@ -9,9 +9,9 @@ from quart import Blueprint, jsonify, current_app as app, request
 
 from api.common.auth import token_check, check_admin
 from api.errors import QuotaExploded, BadInput, FeatureDisabled
-from api.common import get_user_domain_info, transform_wildcard, FileNameType
+from api.common import FileNameType
+from api.common.utils import resolve_domain
 from api.snowflake import get_snowflake
-from api.permissions import Permissions, domain_permissions
 from api.common.profile import gen_user_shortname
 from api.storage import object_key
 
@@ -92,12 +92,10 @@ async def shorten_handler():
     await app.metrics.submit("shortname_gen_tries", tries)
 
     redir_id = get_snowflake()
-    domain_id, subdomain, domain = await get_user_domain_info(
+
+    domain_id, domain, subdomain_name = await resolve_domain(
         user_id, FileNameType.SHORTEN
     )
-
-    await domain_permissions(app, domain_id, Permissions.SHORTEN)
-    domain = transform_wildcard(domain, subdomain)
 
     await app.db.execute(
         """
@@ -110,11 +108,11 @@ async def shorten_handler():
         user_id,
         url_toredir,
         domain_id,
-        subdomain,
+        subdomain_name,
     )
 
     await app.storage.set_with_ttl(
-        object_key("redir", domain_id, subdomain, redir_rname), url_toredir, 600
+        object_key("redir", domain_id, subdomain_name, redir_rname), url_toredir, 600
     )
 
     # appended to generated filename
