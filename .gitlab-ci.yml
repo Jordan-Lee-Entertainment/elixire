@@ -27,6 +27,7 @@ run_backend:
       - /var/cache/apk
   before_script:
     - python -V
+    - pip -V
     - apk --update add build-base git python3-dev libffi-dev jpeg-dev zlib-dev
       freetype-dev lcms2-dev openjpeg-dev tiff-dev tk-dev tcl-dev libxml2-dev
       libxslt-dev libffi-dev gcc musl-dev libgcc openssl-dev curl libmagic
