@@ -14,6 +14,10 @@ log = logging.getLogger(__name__)
 @bp.before_app_request
 async def before_request():
     """Check the request for the x-elixire-client header"""
+    rule = request.url_rule
+    if not rule or not rule.rule.startswith("/api"):
+        return
+
     try:
         client = request.headers["x-elixire-client"]
         app.logger.info("request client: %r", client)
