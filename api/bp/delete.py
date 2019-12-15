@@ -31,8 +31,9 @@ async def delete_all():
     await password_check(user_id, password)
 
     try:
+        # TODO use job queue
         app.sched.spawn(
-            mass_file_delete, [user_id, False], task_id=f"delete_files_{user_id}"
+            mass_file_delete, [user_id, False], job_id=f"delete_files_{user_id}"
         )
     except JobExistsError:
         return (

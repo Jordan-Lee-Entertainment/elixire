@@ -33,22 +33,22 @@ def start_tasks():
         return
 
     app.sched.spawn_periodic(
-        second_tasks, [app], period=1, task_id="metrics:second_tasks"
+        second_tasks, [app], period=1, job_id="metrics:second_tasks"
     )
 
     app.sched.spawn_periodic(
-        hourly_tasks, [app], period=3600, task_id="metrics:hourly_tasks"
+        hourly_tasks, [app], period=3600, job_id="metrics:hourly_tasks"
     )
 
     app.sched.spawn_periodic(
-        upload_uniq_task, [app], period=86400, task_id="metrics:unique_uploads"
+        upload_uniq_task, [app], period=86400, job_id="metrics:unique_uploads"
     )
 
     app.sched.spawn_periodic(
         compact_task,
         [app],
         period=app.econfig.METRICS_COMPACT_GENERALIZE,
-        task_id="metrics:compactor",
+        job_id="metrics:compactor",
     )
 
 
