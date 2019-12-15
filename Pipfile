@@ -9,12 +9,10 @@ bcrypt = "==3.1.7"
 itsdangerous = "==1.1.0"
 cerberus = "==1.3.1"
 # -------------------------------------------------------------------------------
-
 # when changing these dependencies, make sure to change them in .gitlab-ci.yml,
 # too.
-
 aioredis = "==1.2"
-asyncpg = "==0.18.3"
+asyncpg = "==0.20.0"
 # -------------------------------------------------------------------------------
 aiohttp = "==3.5.4"
 aioinflux = "==0.9.0"
@@ -24,6 +22,7 @@ parsedatetime = "==2.4"
 dnspython = "==1.16.0"
 Quart = "==0.10.0"
 Pillow = "==6.1.0"
+violet = {editable = true,git = "https://gitlab.com/elixire/violet.git"}
 
 [dev-packages]
 pytest = "==5.0.1"
