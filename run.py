@@ -272,7 +272,7 @@ async def close_db():
     app.redis.close()
     await app.redis.wait_closed()
 
-    app.sched.stop()
+    app.sched.stop_all()
     await app.session.close()
     await api.bp.metrics.blueprint.close_worker()
 

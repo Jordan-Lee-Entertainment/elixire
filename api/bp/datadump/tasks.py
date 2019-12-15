@@ -391,7 +391,7 @@ async def dump_worker() -> None:
 
 def start_worker() -> None:
     """Start the dump worker, but not start more than 1 of them."""
-    if app.sched.exists("dd_worker"):
+    if app.sched.exists("datadump:worker"):
         log.info("worker exists, skipping")
         return
 
