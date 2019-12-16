@@ -152,7 +152,7 @@ class AuditLog:
             self._sender_task.cancel()
 
         self._sender_task = self.app.sched.spawn(
-            self._sender, [], task_id="global_sender_task"
+            self._sender, [], job_id="global_sender_task"
         )
 
     async def push(self, action: Action):

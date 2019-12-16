@@ -35,7 +35,7 @@ run_backend:
     - pip install pipenv wheel tox
     - mkdir -p images dumps thumbnails
     - cat config.example.py config.ci.py > config.py
-    - pip install aioredis==1.2 asyncpg==0.18.3
+    - pip install aioredis==1.2 asyncpg==0.20.0
     - python ./utils/upgrade/folder_sharding.py
   script:
     - mkdir frontend/output admin-panel/dist -p

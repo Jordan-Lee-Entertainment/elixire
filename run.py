@@ -12,8 +12,8 @@ import aioredis
 
 import quart
 from quart import Quart, jsonify, request, send_file
-
 from dns import resolver
+from violet import JobManager
 
 # TODO from api.bp import ...
 import api.bp.auth
@@ -42,7 +42,6 @@ from api.errors import APIError, Banned
 from api.common import get_ip_addr
 from api.common.utils import LockStorage
 from api.storage import Storage
-from api.jobs import JobManager
 from api.bp.metrics.counters import MetricsCounters
 from api.bp.admin.audit_log import AuditLog
 from api.common.banning import ban_request
@@ -220,12 +219,14 @@ async def app_before_serving():
         app.loop
     except AttributeError:
         app.loop = asyncio.get_event_loop()
-    app.sched = JobManager(app)
 
     app.session = aiohttp.ClientSession(loop=app.loop)
 
     log.info("connecting to db")
     app.db = await asyncpg.create_pool(**config.db)
+
+    log.info("start job manager")
+    app.sched = JobManager(loop=app.loop, db=app.db, context_function=app.app_context)
 
     log.info("connecting to redis")
     app.redis = await aioredis.create_redis_pool(
@@ -271,7 +272,7 @@ async def close_db():
     app.redis.close()
     await app.redis.wait_closed()
 
-    app.sched.stop()
+    app.sched.stop_all()
     await app.session.close()
     await api.bp.metrics.blueprint.close_worker()
 

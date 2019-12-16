@@ -391,11 +391,11 @@ async def dump_worker() -> None:
 
 def start_worker() -> None:
     """Start the dump worker, but not start more than 1 of them."""
-    if app.sched.exists("dd_worker"):
+    if app.sched.exists("datadump:worker"):
         log.info("worker exists, skipping")
         return
 
-    app.sched.spawn(dump_worker, [], task_id="datadump:worker")
+    app.sched.spawn(dump_worker, [], job_id="datadump:worker")
 
 
 async def dump_janitor() -> None:
@@ -434,5 +434,5 @@ def start_janitor() -> None:
         dump_janitor,
         [],
         period=app.econfig.DUMP_JANITOR_PERIOD,
-        task_id="datadump:janitor",
+        job_id="datadump:janitor",
     )

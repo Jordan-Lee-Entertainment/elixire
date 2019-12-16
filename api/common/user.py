@@ -87,7 +87,7 @@ async def mass_file_delete(user_id: int, delete: bool = False):
         task = app.sched.spawn(
             _delete_file_wrapper,
             [shortname, user_id],
-            task_id=f"delete_file:{shortname}",
+            job_id=f"delete_file:{shortname}",
         )
         tasks.append(task)
 
@@ -162,7 +162,7 @@ async def delete_user(user_id: int, delete: bool = False):
     # when calling delete_file, we create a task that deletes them.
 
     return app.sched.spawn(
-        mass_file_delete, [user_id, delete], task_id=f"mass_delete:{user_id}"
+        mass_file_delete, [user_id, delete], job_id=f"mass_delete:{user_id}"
     )
 
 

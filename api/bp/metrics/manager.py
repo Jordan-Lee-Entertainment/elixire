@@ -44,7 +44,7 @@ class MetricsManager:
 
         if app.econfig.ENABLE_METRICS:
             self.app.sched.spawn_periodic(
-                self._work, [], period=self._period, task_id="metrics_worker"
+                self._work, [], period=self._period, job_id="metrics_worker"
             )
 
     def _start_influx(self):
@@ -175,5 +175,5 @@ class MetricsManager:
         """Stop the manager by cancelling
         its worker task and finishing any
         remaining datapoints."""
-        self.app.sched.stop_job("metrics_worker")
+        self.app.sched.stop("metrics_worker")
         await self.finish_all()
