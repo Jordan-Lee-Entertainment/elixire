@@ -255,14 +255,29 @@ async def dispatch_dump(user_id: int, user_name: str) -> None:
 async def handler(ctx, user_id: int) -> None:
     state = await app.sched.fetch_job_state(ctx.job_id)
     if not state:
+        row = await app.db.fetchrow(
+            """
+            SELECT MIN(file_id), COUNT(*)
+            FROM files
+            WHERE uploader = $1
+            """,
+            user_id,
+        )
+
         state = {
             "zip": False,
-            "min_file": -1,
-            "max_file": -1,
-            "cur_file": -1,
+            "cur_file": row["min"],
             "files_done": 0,
+            "files_total": row["count"],
         }
         await app.sched.set_job_state(ctx.job_id, state)
+
+    log.info(
+        "start datadump, resume %s, min %d, total %d",
+        state["zip"],
+        state["cur_file"],
+        state["files_total"],
+    )
 
     zipdump, user_name = await open_zipdump(user_id, resume=state["zip"])
 
