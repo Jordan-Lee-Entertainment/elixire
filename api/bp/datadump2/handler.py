@@ -4,9 +4,15 @@
 import json
 import zipfile
 import os.path
+import logging
 
 from typing import Tuple, Optional
 from quart import current_app as app
+
+from api.common.email import gen_email_token, send_datadump_email
+from api.errors import EmailError
+
+log = logging.getLogger(__name__)
 
 
 async def open_zipdump(
@@ -146,6 +152,106 @@ async def dump_json(zipdump: zipfile.ZipFile, user_id: int) -> None:
     await dump_json_shortens(zipdump, user_id)
 
 
+async def dump_files(ctx, state: dict, zipdump: zipfile.ZipFile, user_id: int) -> None:
+    """Dump files into the data dump zip."""
+
+    current_id = state["cur_file"]
+    files_done = state["files_done"]
+
+    # TODO refactor? maybe fetch e.g 10 files in a row instead of
+    # one-by-one?
+
+    while True:
+        if state["files_done"] % 100 == 0:
+            log.info("Worked %d files for user %s", state["files_done"], user_id)
+
+        if current_id is None:
+            log.info("Finished file takeout for %s", user_id)
+            break
+
+        # add current file to dump
+        fdata = await app.db.fetchrow(
+            """
+            SELECT fspath, filename
+            FROM files
+            WHERE file_id = $1
+            """,
+            current_id,
+        )
+
+        fspath = fdata["fspath"]
+        filename = fdata["filename"]
+        ext = os.path.splitext(fspath)[-1]
+
+        filepath = f"./files/{current_id}_{filename}{ext}"
+        try:
+            await app.loop.run_in_executor(None, zipdump.write, fspath, filepath)
+        except FileNotFoundError:
+            log.warning("File not found: %s %r", current_id, filename)
+
+        state["files_done"] += 1
+        await app.sched.set_job_state(ctx.job_id, state)
+
+        # update current_dump_state
+        await app.db.execute(
+            """
+            UPDATE current_dump_state
+            SET current_id = $1, files_done = $2
+            WHERE user_id = $3
+            """,
+            current_id,
+            files_done,
+            user_id,
+        )
+
+        # fetch next id
+        current_id = await app.db.fetchval(
+            """
+            SELECT file_id
+            FROM files
+            WHERE uploader = $1
+              AND file_id > $2
+              AND deleted = false
+            ORDER BY file_id ASC
+            LIMIT 1
+            """,
+            user_id,
+            current_id,
+        )
+        state["current_id"] = current_id
+
+
+async def dispatch_dump(user_id: int, user_name: str) -> None:
+    """Dispatch the data dump to a user."""
+    log.info("dispatching dump for %d %r", user_id, user_name)
+    dump_token = await gen_email_token(user_id, "email_dump_tokens")
+
+    await app.db.execute(
+        """
+        INSERT INTO email_dump_tokens (hash, user_id)
+        VALUES ($1, $2)
+        """,
+        dump_token,
+        user_id,
+    )
+
+    # either way of email success or failure, we made a datatump, and should
+    # not keep worrying about it
+    await app.db.execute(
+        """
+        DELETE FROM current_dump_state
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+    try:
+        await send_datadump_email(user_id, dump_token)
+    except EmailError as exc:
+        # TODO make datadump api show errors
+        log.warning("failed to send datadump: %r", exc)
+
+
 async def handler(ctx, user_id: int) -> None:
     state = await app.sched.fetch_job_state(ctx.job_id)
     if not state:
@@ -159,6 +265,7 @@ async def handler(ctx, user_id: int) -> None:
         await app.sched.set_job_state(ctx.job_id, state)
 
     zipdump, user_name = await open_zipdump(user_id, resume=state["zip"])
+
     state["zip"] = not state["zip"]
     await app.sched.set_job_state(ctx.job_id, state)
 
@@ -167,7 +274,7 @@ async def handler(ctx, user_id: int) -> None:
             return
 
         await dump_json(zipdump, user_id)
-        # await dump_files(ctx, zipdump, user_id, state)
-        # await dispatch_dump(user_id, user_name)
+        await dump_files(ctx, state, zipdump, user_id)
+        await dispatch_dump(user_id, user_name)
     finally:
         zipdump.close()
