@@ -23,7 +23,6 @@ import api.bp.shorten
 import api.bp.fetch
 import api.bp.admin
 import api.bp.register
-import api.bp.datadump
 import api.bp.datadump2 as datadump2
 import api.bp.metrics
 import api.bp.personal_stats
@@ -96,7 +95,7 @@ def set_blueprints(app_):
         api.bp.register.bp: "/auth",
         api.bp.list.bp: "",
         api.bp.delete.bp: "",
-        api.bp.datadump.bp: "/dump",
+        api.bp.datadump2.bp: "/dump",
         api.bp.admin.user_bp: "/admin/users",
         api.bp.admin.object_bp: "/admin",
         api.bp.admin.domain_bp: "/admin/domains",
@@ -262,7 +261,6 @@ async def app_before_serving():
     if not getattr(app, "_test", False):
         app.audit_log = AuditLog(app)
 
-    await api.bp.datadump.start_dump_worker_ss()
     await api.bp.cors.setup()
 
 
