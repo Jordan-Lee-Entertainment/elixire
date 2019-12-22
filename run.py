@@ -24,6 +24,7 @@ import api.bp.fetch
 import api.bp.admin
 import api.bp.register
 import api.bp.datadump
+import api.bp.datadump2 as datadump2
 import api.bp.metrics
 import api.bp.personal_stats
 import api.bp.d1check
@@ -227,6 +228,9 @@ async def app_before_serving():
 
     log.info("start job manager")
     app.sched = JobManager(loop=app.loop, db=app.db, context_function=app.app_context)
+    app.sched.create_job_queue(
+        "datadump", args=(int,), handler=datadump2.handler, takes=1, period=5,
+    )
 
     log.info("connecting to redis")
     app.redis = await aioredis.create_redis_pool(
