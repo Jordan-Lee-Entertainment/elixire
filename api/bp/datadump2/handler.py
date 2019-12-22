@@ -41,7 +41,7 @@ def _write_json(zipdump, filepath, obj) -> None:
     zipdump.writestr(filepath, objstr)
 
 
-async def dump_json_data(zipdump, user_id) -> None:
+async def dump_json_user(zipdump, user_id) -> None:
     """Insert user information into the dump."""
     udata = await app.db.fetchrow(
         """
@@ -53,7 +53,16 @@ async def dump_json_data(zipdump, user_id) -> None:
         user_id,
     )
 
-    _write_json(zipdump, "user_data.json", dict(udata))
+    limits = await app.db.fetchrow(
+        """
+        SELECT blimit AS file_byte_limit, shlimit AS shorten_limit
+        FROM limits
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+    _write_json(zipdump, "user_data.json", {**dict(udata), **dict(limits)})
 
 
 async def dump_json_bans(zipdump: zipfile.ZipFile, user_id: int) -> None:
@@ -131,9 +140,8 @@ async def dump_json_shortens(zipdump: zipfile.ZipFile, user_id: int) -> None:
 
 
 async def dump_json(zipdump: zipfile.ZipFile, user_id: int) -> None:
-    await dump_json_data(zipdump, user_id)
+    await dump_json_user(zipdump, user_id)
     await dump_json_bans(zipdump, user_id)
-    await dump_json_limits(zipdump, user_id)
     await dump_json_files(zipdump, user_id)
     await dump_json_shortens(zipdump, user_id)
 
