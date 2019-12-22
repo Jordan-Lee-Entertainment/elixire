@@ -42,7 +42,7 @@ async def fetch_dump(
         SELECT job_id, internal_state
         FROM violet_jobs
         WHERE
-            args::json->0 = $1
+            args->0 = $1::bigint::text::jsonb
         {where}
         LIMIT 1
         """,
@@ -73,7 +73,7 @@ async def data_dump_user_status():
     user_id = await token_check()
     job = await fetch_dump(user_id)
     # TODO structure job.state
-    return jsonify(job["state"])
+    return jsonify(job["state"] if job is not None else None)
 
 
 # TODO move to its own admin blueprint?
