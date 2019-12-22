@@ -1,6 +1,7 @@
 # elixire: Image Host software
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+import json
 import zipfile
 import os.path
 
@@ -35,6 +36,108 @@ async def open_zipdump(
     return zipfile.ZipFile(zip_path, "a", compression=zipfile.ZIP_DEFLATED), user_name
 
 
+def _write_json(zipdump, filepath, obj) -> None:
+    objstr = json.dumps(obj, indent=4)
+    zipdump.writestr(filepath, objstr)
+
+
+async def dump_json_data(zipdump, user_id) -> None:
+    """Insert user information into the dump."""
+    udata = await app.db.fetchrow(
+        """
+        SELECT user_id, username, active, password_hash, email,
+               consented, admin, subdomain, domain
+        FROM users
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+    _write_json(zipdump, "user_data.json", dict(udata))
+
+
+async def dump_json_bans(zipdump: zipfile.ZipFile, user_id: int) -> None:
+    """Insert user bans, if any, into the dump."""
+    bans = await app.db.fetch(
+        """
+        SELECT user_id, reason, end_timestamp
+        FROM bans
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+    treated = []
+    for row in bans:
+        goodrow = {
+            "user_id": row["user_id"],
+            "reason": row["reason"],
+            "end_timestamp": row["end_timestamp"].isoformat(),
+        }
+
+        treated.append(goodrow)
+
+    _write_json(zipdump, "bans.json", treated)
+
+
+async def dump_json_limits(zipdump: zipfile.ZipFile, user_id: int) -> None:
+    """Write the current limits for the user in the dump."""
+    limits = await app.db.fetchrow(
+        """
+        SELECT user_id, blimit, shlimit
+        FROM limits
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+    _write_json(zipdump, "limits.json", dict(limits))
+
+
+async def dump_json_files(zipdump: zipfile.ZipFile, user_id: int) -> None:
+    """Dump all information about the user's files."""
+    all_files = await app.db.fetch(
+        """
+        SELECT file_id, mimetype, filename, file_size, uploader, domain
+        FROM files
+        WHERE uploader = $1
+        """,
+        user_id,
+    )
+
+    all_files_l = []
+    for row in all_files:
+        all_files_l.append(dict(row))
+
+    _write_json(zipdump, "files.json", all_files_l)
+
+
+async def dump_json_shortens(zipdump: zipfile.ZipFile, user_id: int) -> None:
+    """Dump all information about the user's shortens."""
+    all_shortens = await app.db.fetch(
+        """
+        SELECT shorten_id, filename, redirto, domain
+        FROM shortens
+        WHERE uploader = $1
+        """,
+        user_id,
+    )
+
+    all_shortens_l = []
+    for row in all_shortens:
+        all_shortens_l.append(dict(row))
+
+    _write_json(zipdump, "shortens.json", all_shortens_l)
+
+
+async def dump_json(zipdump: zipfile.ZipFile, user_id: int) -> None:
+    await dump_json_data(zipdump, user_id)
+    await dump_json_bans(zipdump, user_id)
+    await dump_json_limits(zipdump, user_id)
+    await dump_json_files(zipdump, user_id)
+    await dump_json_shortens(zipdump, user_id)
+
+
 async def handler(ctx, user_id: int) -> None:
     state = await app.sched.fetch_job_state(ctx.job_id)
     if not state:
@@ -55,7 +158,7 @@ async def handler(ctx, user_id: int) -> None:
         if user_name is None:
             return
 
-        # await dump_json(zipdump,user_id)
+        await dump_json(zipdump, user_id)
         # await dump_files(ctx, zipdump, user_id, state)
         # await dispatch_dump(user_id, user_name)
     finally:
