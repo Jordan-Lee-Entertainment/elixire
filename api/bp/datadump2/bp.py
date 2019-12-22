@@ -62,8 +62,8 @@ async def request_data_dump():
     if job is not None:
         raise BadInput("Your data dump is currently being processed or in the queue.")
 
-    await app.sched.push_queue("datadump", [user_id])
-    return "", 204
+    job_id = await app.sched.push_queue("datadump", [user_id])
+    return {"job_id": job_id}
 
 
 @bp.route("/status")
