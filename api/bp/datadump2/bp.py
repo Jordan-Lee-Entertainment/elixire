@@ -10,7 +10,7 @@ from asyncpg import Record
 from quart import Blueprint, jsonify, request, current_app as app, send_file
 
 from api.errors import BadInput, FeatureDisabled
-from api.bp.datadump.tasks import start_janitor
+from api.bp.datadump2.janitor import start_janitor
 from api.common.auth import token_check, check_admin
 
 log = logging.getLogger(__name__)
