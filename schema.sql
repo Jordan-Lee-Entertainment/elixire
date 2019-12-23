@@ -220,3 +220,15 @@ INSERT INTO domain_tags (label) VALUES ('admin_only');
 -- a domain being official means the DNS ownership of it is by
 -- the instance owner, keep in mind this isn't the same as Registrar ownership
 INSERT INTO domain_tags (label) VALUES ('official');
+
+CREATE TABLE IF NOT EXISTS violet_jobs (
+    job_id text primary key,
+    queue text default null,
+    state bigint default 0,
+    fail_mode text default 'log_error',
+    errors text default '',
+    args jsonb default '{}',
+    inserted_at timestamp without time zone default (now() at time zone 'utc'),
+    scheduled_at timestamp without time zone default (now() at time zone 'utc'),
+    internal_state jsonb default '{}'
+);
