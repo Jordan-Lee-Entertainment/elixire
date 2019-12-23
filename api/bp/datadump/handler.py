@@ -156,7 +156,6 @@ async def dump_files(ctx, state: dict, zipdump: zipfile.ZipFile, user_id: int) -
     """Dump files into the data dump zip."""
 
     current_id = state["cur_file"]
-    files_done = state["files_done"]
 
     # TODO refactor? maybe fetch e.g 10 files in a row instead of
     # one-by-one?
@@ -192,18 +191,6 @@ async def dump_files(ctx, state: dict, zipdump: zipfile.ZipFile, user_id: int) -
         state["files_done"] += 1
         await app.sched.set_job_state(ctx.job_id, state)
 
-        # update current_dump_state
-        await app.db.execute(
-            """
-            UPDATE current_dump_state
-            SET current_id = $1, files_done = $2
-            WHERE user_id = $3
-            """,
-            current_id,
-            files_done,
-            user_id,
-        )
-
         # fetch next id
         current_id = await app.db.fetchval(
             """
@@ -232,16 +219,6 @@ async def dispatch_dump(user_id: int, user_name: str) -> None:
         VALUES ($1, $2)
         """,
         dump_token,
-        user_id,
-    )
-
-    # either way of email success or failure, we made a datatump, and should
-    # not keep worrying about it
-    await app.db.execute(
-        """
-        DELETE FROM current_dump_state
-        WHERE user_id = $1
-        """,
         user_id,
     )
 

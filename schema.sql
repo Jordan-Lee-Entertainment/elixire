@@ -230,5 +230,6 @@ CREATE TABLE IF NOT EXISTS violet_jobs (
     args jsonb default '{}',
     inserted_at timestamp without time zone default (now() at time zone 'utc'),
     scheduled_at timestamp without time zone default (now() at time zone 'utc'),
+    taken_at timestamp without time zone default null,
     internal_state jsonb default '{}'
 );

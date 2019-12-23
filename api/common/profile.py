@@ -2,9 +2,11 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Dict, Optional, Union, Tuple
+from typing import Dict, Optional, Union, Tuple, List
 
 from quart import current_app as app
+from asyncpg import Record
+from violet import JobState
 
 from api.common.utils import int_
 from api.common.common import gen_shortname
@@ -92,6 +94,56 @@ async def get_counts(user_id: int) -> Dict[str, int]:
         "total_bytes": total_bytes,
         "total_shortens": total_shortens,
     }
+
+
+async def fetch_dumps(
+    user_id: int, *, current: bool = True, future: bool = False
+) -> Optional[List[Record]]:
+    where = {
+        (False, False): "",
+        (False, True): "scheduled_at >= (now() at time zone 'utc')",
+        (True, False): "state = 1",
+        (True, True): "state = 1 OR scheduled_at >= (now() at time zone 'utc')",
+    }[(current, future)]
+
+    if where:
+        where = f"AND {where}"
+
+    return await app.db.fetch(
+        f"""
+        SELECT
+            job_id, state, taken_at, internal_state
+        FROM violet_jobs
+        WHERE
+            queue = 'datadump'
+        AND args->0 = $1::bigint::text::jsonb
+        {where}
+        LIMIT 1
+        """,
+        user_id,
+    )
+
+
+def wrap_dump_job_state(job_record: Optional[Record]) -> Optional[dict]:
+    if job_record is None:
+        return None
+
+    if job_record["state"] == JobState.NotTaken:
+        # TODO calculate position in queue
+        return {"state": "in_queue"}
+    elif job_record["state"] == JobState.Taken:
+        taken_at = job_record["taken_at"]
+        state = job_record["internal_state"]
+
+        return {
+            "state": "processing",
+            "start_timestamp": taken_at.isoformat() if taken_at is not None else None,
+            "current_id": str(state["cur_file"]),
+            "files_total": state["files_total"],
+            "files_done": state["files_done"],
+        }
+
+    return {"state": "not_in_queue"}
 
 
 async def get_dump_status(user_id: int) -> Dict[str, Union[str, int]]:

@@ -505,7 +505,7 @@
         "violet": {
             "editable": true,
             "git": "https://gitlab.com/elixire/violet.git",
-            "ref": "690164cc0b5ee96615870c68ebc8825a8954ac13"
+            "ref": "754f5bfd85049793520afb2abab93c92e3e218ef"
         },
         "wsproto": {
             "hashes": [

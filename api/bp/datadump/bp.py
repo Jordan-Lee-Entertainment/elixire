@@ -4,7 +4,7 @@
 
 import os.path
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from asyncpg import Record
 from quart import Blueprint, jsonify, request, current_app as app, send_file
@@ -12,6 +12,7 @@ from quart import Blueprint, jsonify, request, current_app as app, send_file
 from api.errors import BadInput, FeatureDisabled
 from api.bp.datadump.janitor import start_janitor
 from api.common.auth import token_check, check_admin
+from api.common.profile import fetch_dumps
 
 log = logging.getLogger(__name__)
 bp = Blueprint("datadump", __name__)
@@ -24,32 +25,6 @@ def start():
         log.info("data dumps are disabled!")
 
 
-async def fetch_dump(
-    user_id: int, *, current: bool = True, future: bool = False
-) -> Optional[Record]:
-    where = {
-        (False, False): "",
-        (False, True): "scheduled_at >= (now() at time zone 'utc')",
-        (True, False): "state = 1",
-        (True, True): "state = 1 OR scheduled_at >= (now() at time zone 'utc')",
-    }[(current, future)]
-
-    if where:
-        where = f"AND {where}"
-
-    return await app.db.fetchrow(
-        f"""
-        SELECT job_id, internal_state
-        FROM violet_jobs
-        WHERE
-            args->0 = $1::bigint::text::jsonb
-        {where}
-        LIMIT 1
-        """,
-        user_id,
-    )
-
-
 @bp.route("/request", methods=["POST"])
 async def request_data_dump():
     """Request a data dump."""
@@ -58,8 +33,8 @@ async def request_data_dump():
 
     user_id = await token_check()
 
-    job = await fetch_dump(user_id, future=True)
-    if job is not None:
+    jobs = await fetch_dumps(user_id, future=True)
+    if jobs is not None:
         raise BadInput("Your data dump is currently being processed or in the queue.")
 
     job_id = await app.sched.push_queue("datadump", [user_id])
@@ -71,9 +46,10 @@ async def data_dump_user_status():
     """Give information about the current dump for the user,
     if one exists."""
     user_id = await token_check()
-    job = await fetch_dump(user_id)
+    jobs = await fetch_dumps(user_id)
+
     # TODO structure job.state
-    return jsonify(job["state"] if job is not None else None)
+    return jsonify(jobs[0]["state"] if jobs else None)
 
 
 # TODO move to its own admin blueprint?
