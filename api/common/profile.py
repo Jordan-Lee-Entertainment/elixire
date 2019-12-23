@@ -2,7 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Dict, Optional, Union, Tuple, List
+from typing import Dict, Optional, Tuple, List
 
 from quart import current_app as app
 from asyncpg import Record

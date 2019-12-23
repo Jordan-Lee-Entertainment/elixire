@@ -4,9 +4,7 @@
 
 import os.path
 import logging
-from typing import Optional, List
 
-from asyncpg import Record
 from quart import Blueprint, jsonify, request, current_app as app, send_file
 
 from api.errors import BadInput, FeatureDisabled

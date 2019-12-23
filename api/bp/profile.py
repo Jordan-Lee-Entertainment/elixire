@@ -69,7 +69,7 @@ async def profile_handler():
     user["stats"] = counts
 
     jobs = await fetch_dumps(user_id, current=True)
-    user["dump_status"] = wrap_job_state(jobs[0]["state"] if jobs else None)
+    user["dump_status"] = wrap_dump_job_state(jobs[0]["state"] if jobs else None)
 
     return jsonify(user)
 
