@@ -146,43 +146,6 @@ def wrap_dump_job_state(job_record: Optional[Record]) -> Optional[dict]:
     return {"state": "not_in_queue"}
 
 
-async def get_dump_status(user_id: int) -> Dict[str, Union[str, int]]:
-    """Get datadump status."""
-    row = await app.db.fetchrow(
-        """
-        SELECT user_id, start_timestamp, current_id, total_files, files_done
-        FROM current_dump_state
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    if not row:
-        queue = await app.db.fetch(
-            """
-            SELECT user_id
-            FROM dump_queue
-            ORDER BY request_timestamp ASC
-            """
-        )
-
-        queue = [r["user_id"] for r in queue]
-
-        try:
-            pos = queue.index(user_id)
-            return {"state": "in_queue", "position": pos + 1}
-        except ValueError:
-            return {"state": "not_in_queue"}
-
-    return {
-        "state": "processing",
-        "start_timestamp": row["start_timestamp"].isoformat(),
-        "current_id": str(row["current_id"]),
-        "total_files": row["total_files"],
-        "files_done": row["files_done"],
-    }
-
-
 async def is_user_paranoid(user_id: int) -> Optional[bool]:
     """If the user is in paranoid mode."""
     # TODO maybe move to Storage.is_paranoid?
