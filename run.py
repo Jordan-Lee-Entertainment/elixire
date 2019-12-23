@@ -228,7 +228,7 @@ async def app_before_serving():
     log.info("start job manager")
     app.sched = JobManager(loop=app.loop, db=app.db, context_function=app.app_context)
     app.sched.create_job_queue(
-        "datadump", args=(int,), handler=api.bp.datadump.handler, takes=1, period=5,
+        "datadump", args=(int,), handler=api.bp.datadump.handler, takes=1, period=5
     )
 
     log.info("connecting to redis")
