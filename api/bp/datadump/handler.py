@@ -152,10 +152,26 @@ async def dump_json(zipdump: zipfile.ZipFile, user_id: int) -> None:
     await dump_json_shortens(zipdump, user_id)
 
 
+async def _fetch_next(user_id: int, current_id: Optional[int]) -> Optional[int]:
+    return await app.db.fetchval(
+        """
+        SELECT file_id
+        FROM files
+        WHERE uploader = $1
+            AND file_id > $2
+            AND deleted = false
+        ORDER BY file_id ASC
+        LIMIT 1
+        """,
+        user_id,
+        current_id,
+    )
+
+
 async def dump_files(ctx, state: dict, zipdump: zipfile.ZipFile, user_id: int) -> None:
     """Dump files into the data dump zip."""
 
-    current_id = state["cur_file"]
+    current_id = state["current_file_id"]
 
     # TODO refactor? maybe fetch e.g 10 files in a row instead of
     # one-by-one?
@@ -178,6 +194,12 @@ async def dump_files(ctx, state: dict, zipdump: zipfile.ZipFile, user_id: int) -
             current_id,
         )
 
+        if fdata is None:
+            log.error("Failed to dump file id %d, not found", current_id)
+            current_id = await _fetch_next(user_id, current_id)
+            state["current_file_id"] = current_id
+            continue
+
         fspath = fdata["fspath"]
         filename = fdata["filename"]
         ext = os.path.splitext(fspath)[-1]
@@ -192,20 +214,8 @@ async def dump_files(ctx, state: dict, zipdump: zipfile.ZipFile, user_id: int) -
         await app.sched.set_job_state(ctx.job_id, state)
 
         # fetch next id
-        current_id = await app.db.fetchval(
-            """
-            SELECT file_id
-            FROM files
-            WHERE uploader = $1
-              AND file_id > $2
-              AND deleted = false
-            ORDER BY file_id ASC
-            LIMIT 1
-            """,
-            user_id,
-            current_id,
-        )
-        state["current_id"] = current_id
+        current_id = await _fetch_next(user_id, current_id)
+        state["current_file_id"] = current_id
 
 
 async def dispatch_dump(user_id: int, user_name: str) -> None:
@@ -243,7 +253,7 @@ async def handler(ctx, user_id: int) -> None:
 
         state = {
             "zip": False,
-            "cur_file": row["min"],
+            "current_file_id": row["min"] or 0,
             "files_done": 0,
             "files_total": row["count"],
         }
@@ -252,7 +262,7 @@ async def handler(ctx, user_id: int) -> None:
     log.info(
         "start datadump, resume %s, min %d, total %d",
         state["zip"],
-        state["cur_file"],
+        state["current_file_id"],
         state["files_total"],
     )
 

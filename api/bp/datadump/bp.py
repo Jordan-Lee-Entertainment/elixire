@@ -32,7 +32,7 @@ async def request_data_dump():
     user_id = await token_check()
 
     jobs = await fetch_dumps(user_id, future=True)
-    if jobs is not None:
+    if jobs:
         raise BadInput("Your data dump is currently being processed or in the queue.")
 
     job_id = await app.sched.push_queue("datadump", [user_id])
