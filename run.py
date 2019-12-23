@@ -23,7 +23,7 @@ import api.bp.shorten
 import api.bp.fetch
 import api.bp.admin
 import api.bp.register
-import api.bp.datadump2 as datadump2
+import api.bp.datadump
 import api.bp.metrics
 import api.bp.personal_stats
 import api.bp.d1check
@@ -95,7 +95,7 @@ def set_blueprints(app_):
         api.bp.register.bp: "/auth",
         api.bp.list.bp: "",
         api.bp.delete.bp: "",
-        api.bp.datadump2.bp: "/dump",
+        api.bp.datadump.bp: "/dump",
         api.bp.admin.user_bp: "/admin/users",
         api.bp.admin.object_bp: "/admin",
         api.bp.admin.domain_bp: "/admin/domains",
@@ -228,7 +228,7 @@ async def app_before_serving():
     log.info("start job manager")
     app.sched = JobManager(loop=app.loop, db=app.db, context_function=app.app_context)
     app.sched.create_job_queue(
-        "datadump", args=(int,), handler=datadump2.handler, takes=1, period=5,
+        "datadump", args=(int,), handler=api.bp.datadump.handler, takes=1, period=5,
     )
 
     log.info("connecting to redis")
@@ -249,7 +249,7 @@ async def app_before_serving():
     api.bp.ratelimit.setup_ratelimits()
     await api.bp.metrics.blueprint.create_db()
     api.bp.metrics.blueprint.start_tasks()
-    api.bp.datadump2.start()
+    api.bp.datadump.start()
 
     # only give real AuditLog when we are on production
     # a MockAuditLog instance will be in that attribute
