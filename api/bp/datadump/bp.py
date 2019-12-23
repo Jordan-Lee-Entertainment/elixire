@@ -11,6 +11,7 @@ from api.errors import BadInput, FeatureDisabled
 from api.bp.datadump.janitor import start_janitor
 from api.common.auth import token_check, check_admin
 from api.common.profile import fetch_dumps
+from api.common.pagination import Pagination
 
 log = logging.getLogger(__name__)
 bp = Blueprint("datadump", __name__)
@@ -23,7 +24,7 @@ def start():
         log.info("data dumps are disabled!")
 
 
-@bp.route("/request", methods=["POST"])
+@bp.route("", methods=["POST"])
 async def request_data_dump():
     """Request a data dump."""
     if not app.econfig.DUMP_ENABLED:
@@ -39,15 +40,49 @@ async def request_data_dump():
     return {"job_id": job_id}
 
 
-@bp.route("/status")
-async def data_dump_user_status():
-    """Give information about the current dump for the user,
-    if one exists."""
+@bp.route("")
+async def list_dumps():
     user_id = await token_check()
     jobs = await fetch_dumps(user_id)
 
-    # TODO structure job.state
-    return jsonify(jobs[0]["state"] if jobs else None)
+    pagination = Pagination()
+
+    jobs = await app.db.fetch(
+        """
+        SELECT
+            job_id, state, inserted_at, taken_at, internal_state,
+            COUNT(*) OVER () AS total_count
+        FROM violet_jobs
+        WHERE
+            queue = 'datadump'
+        AND args->0 = $3::bigint::text::jsonb
+        ORDER BY inserted_at ASC
+        LIMIT $2::integer
+        OFFSET ($1::integer * $2::integer)
+        """,
+        pagination.page,
+        pagination.per_page,
+        user_id,
+    )
+
+    total_count = 0 if not jobs else jobs[0]["total_count"]
+    return jsonify(
+        pagination.response(
+            [
+                {
+                    **dict(r),
+                    **{
+                        "inserted_at": r["inserted_at"].isoformat(),
+                        "taken_at": r["taken_at"].isoformat()
+                        if r["taken_at"] is not None
+                        else None,
+                    },
+                }
+                for r in jobs
+            ],
+            total_count=total_count,
+        )
+    )
 
 
 # TODO move to its own admin blueprint?
