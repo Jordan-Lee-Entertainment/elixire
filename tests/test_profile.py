@@ -32,8 +32,9 @@ async def test_profile_work(test_cli_user):
     assert isinstance(rjson["stats"], dict)
 
     dstatus = rjson["dump_status"]
-    assert isinstance(dstatus, dict)
-    assert isinstance(dstatus["state"], str)
+    if dstatus is not None:
+        assert isinstance(dstatus, dict)
+        assert isinstance(dstatus["state"], str)
 
 
 def assert_limits(limits: dict):

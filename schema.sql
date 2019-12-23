@@ -179,31 +179,6 @@ CREATE TABLE IF NOT EXISTS email_activation_tokens (
     PRIMARY KEY (hash, user_id)
 );
 
--- data dump state
-CREATE TABLE IF NOT EXISTS current_dump_state (
-    -- identify the current dump
-    user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
-
-    -- when did it properly start so we
-    -- send an email to user saying how long did it take
-    start_timestamp timestamp without time zone default now(),
-
-    -- current state of the dump
-    current_id bigint REFERENCES files (file_id) ON DELETE CASCADE,
-
-    -- for percentages
-    total_files bigint,
-    files_done bigint,
-
-    PRIMARY KEY (user_id)
-);
-
-CREATE TABLE IF NOT EXISTS dump_queue (
-    user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
-    request_timestamp timestamp without time zone default now(),
-    PRIMARY KEY (user_id)
-);
-
 CREATE TABLE IF NOT EXISTS domain_tags (
     tag_id serial PRIMARY KEY,
     label text
@@ -220,3 +195,16 @@ INSERT INTO domain_tags (label) VALUES ('admin_only');
 -- a domain being official means the DNS ownership of it is by
 -- the instance owner, keep in mind this isn't the same as Registrar ownership
 INSERT INTO domain_tags (label) VALUES ('official');
+
+CREATE TABLE IF NOT EXISTS violet_jobs (
+    job_id text primary key,
+    queue text default null,
+    state bigint default 0,
+    fail_mode text default 'log_error',
+    errors text default '',
+    args jsonb default '{}',
+    inserted_at timestamp without time zone default (now() at time zone 'utc'),
+    scheduled_at timestamp without time zone default (now() at time zone 'utc'),
+    taken_at timestamp without time zone default null,
+    internal_state jsonb default '{}'
+);

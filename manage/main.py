@@ -10,10 +10,10 @@ import sys
 import aiohttp
 import asyncpg
 import aioredis
+from violet import JobManager
 
 from api.storage import Storage
 from api.common.utils import LockStorage
-from api.jobs import JobManager
 
 from manage.cmd import ban, files, find, user, migration, domains
 from .errors import PrintException, ArgError
@@ -70,7 +70,8 @@ def main(config):
     # this needs an actual connection to the database and redis
     # so we first instantiate Context, then set the attribute
     ctx.storage = Storage(ctx)
-    ctx.sched = JobManager(ctx)
+    app = ctx.make_app()
+    ctx.sched = JobManager(loop=ctx.loop, db=ctx.db, context_function=app.app_context)
 
     # aiohttp warns us when making ClientSession out of
     # a coroutine, so yeah.
@@ -80,7 +81,7 @@ def main(config):
     parser = set_parser()
 
     async def _ctx_wrapper(ctx, args):
-        app = ctx.make_app()
+        # app = ctx.make_app()
         async with app.app_context():
             await args.func(ctx, args)
 

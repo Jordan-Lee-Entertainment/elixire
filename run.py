@@ -227,6 +227,9 @@ async def app_before_serving():
 
     log.info("start job manager")
     app.sched = JobManager(loop=app.loop, db=app.db, context_function=app.app_context)
+    app.sched.create_job_queue(
+        "datadump", args=(int,), handler=api.bp.datadump.handler, takes=1, period=5
+    )
 
     log.info("connecting to redis")
     app.redis = await aioredis.create_redis_pool(
@@ -246,6 +249,7 @@ async def app_before_serving():
     api.bp.ratelimit.setup_ratelimits()
     await api.bp.metrics.blueprint.create_db()
     api.bp.metrics.blueprint.start_tasks()
+    api.bp.datadump.start()
 
     # only give real AuditLog when we are on production
     # a MockAuditLog instance will be in that attribute
@@ -258,7 +262,6 @@ async def app_before_serving():
     if not getattr(app, "_test", False):
         app.audit_log = AuditLog(app)
 
-    await api.bp.datadump.start_dump_worker_ss()
     await api.bp.cors.setup()
 
 

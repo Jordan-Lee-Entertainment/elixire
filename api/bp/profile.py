@@ -25,7 +25,7 @@ from api.schema import (
     PASSWORD_RESET_CONFIRM_SCHEMA,
 )
 from api.common.user import delete_user, get_basic_user
-from api.common.profile import get_limits, get_counts, get_dump_status
+from api.common.profile import get_limits, get_counts, fetch_dumps, wrap_dump_job_state
 from api.common.domain import get_basic_domain, is_domain_admin_only
 from api.common.auth import pwd_check
 
@@ -68,8 +68,8 @@ async def profile_handler():
     counts = await get_counts(user_id)
     user["stats"] = counts
 
-    dump_status = await get_dump_status(user_id)
-    user["dump_status"] = dump_status
+    jobs = await fetch_dumps(user_id, current=True)
+    user["dump_status"] = wrap_dump_job_state(jobs[0]["state"] if jobs else None)
 
     return jsonify(user)
 
