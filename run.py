@@ -249,6 +249,7 @@ async def app_before_serving():
     api.bp.ratelimit.setup_ratelimits()
     await api.bp.metrics.blueprint.create_db()
     api.bp.metrics.blueprint.start_tasks()
+    api.bp.datadump2.start()
 
     # only give real AuditLog when we are on production
     # a MockAuditLog instance will be in that attribute

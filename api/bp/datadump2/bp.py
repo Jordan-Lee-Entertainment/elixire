@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 bp = Blueprint("datadump", __name__)
 
 
-async def start_dump_worker_ss():
+def start():
     if app.econfig.DUMP_ENABLED:
         start_janitor()
     else:

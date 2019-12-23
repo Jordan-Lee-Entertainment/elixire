@@ -3,6 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from .handler import handler
-from .bp import bp
+from .bp import bp, start
 
-__all__ = ["handler", "bp"]
+__all__ = ["handler", "bp", "start"]
