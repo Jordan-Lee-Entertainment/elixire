@@ -19,7 +19,7 @@ aioredis==1.2
 aiohttp==3.5.4
 
 # May god have mercy on my soul
-Pillow==6.1.0
+Pillow==6.2.1
 
 # testing stuff
 pytest==5.0.1
