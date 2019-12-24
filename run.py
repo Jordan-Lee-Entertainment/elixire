@@ -230,6 +230,13 @@ async def app_before_serving():
     app.sched.create_job_queue(
         "datadump", args=(int,), handler=api.bp.datadump.handler, takes=1, period=5
     )
+    app.sched.create_job_queue(
+        "mass_delete",
+        args=(int, dict,),
+        handler=api.bp.delete.mass_delete_handler,
+        takes=1,
+        period=5,
+    )
 
     log.info("connecting to redis")
     app.redis = await aioredis.create_redis_pool(

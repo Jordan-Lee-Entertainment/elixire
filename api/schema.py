@@ -155,18 +155,18 @@ ADMIN_SEND_BROADCAST = {
 RECOVER_USERNAME = {"email": {"type": "email", "required": True}}
 
 
-def _isoformat_or_snowflake(value: str):
+def isotimestamp_or_int(value: str):
     try:
-        return dateutil.parser.isoparse(value)
-    except ValueError:
         return int(value)
+    except ValueError:
+        return dateutil.parser.isoparse(value)
 
 
 DELETE_ALL_SCHEMA = {
     "password": {"type": "password", "required": True},
-    "delete_files_before": {"coerce": _isoformat_or_snowflake, "required": False},
-    "delete_files_after": {"coerce": _isoformat_or_snowflake, "required": False},
-    "delete_shortens_before": {"coerce": _isoformat_or_snowflake, "required": False},
-    "delete_shortens_after": {"coerce": _isoformat_or_snowflake, "required": False},
+    "delete_files_before": {"coerce": isotimestamp_or_int, "required": False},
+    "delete_files_after": {"coerce": isotimestamp_or_int, "required": False},
+    "delete_shortens_before": {"coerce": isotimestamp_or_int, "required": False},
+    "delete_shortens_after": {"coerce": isotimestamp_or_int, "required": False},
     "delete_on_domain": {"coerce": int, "required": False},
 }
