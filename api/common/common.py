@@ -196,7 +196,13 @@ async def remove_fspath(shortname: str):
         )
 
 
-async def delete_file(file_name: str, user_id, set_delete=True):
+async def delete_file(
+    user_id: Optional[int],
+    *,
+    by_name: Optional[str] = None,
+    by_id: Optional[int] = None,
+    full_delete: bool = False,
+):
     """Delete a file, purging it from Cloudflare's cache.
 
     Parameters
@@ -215,6 +221,8 @@ async def delete_file(file_name: str, user_id, set_delete=True):
     NotFound
         If no file is found.
     """
+    raise NotImplementedError()
+
     domain_data = await app.storage.get_domain_file(file_name)
 
     if domain_data is None:
@@ -288,31 +296,33 @@ async def delete_file(file_name: str, user_id, set_delete=True):
     )
 
 
-async def delete_shorten(shortname: str, user_id: int):
-    """Remove a shorten from the system"""
-    domain_data = await app.storage.get_domain_shorten(shortname)
+async def delete_shorten(
+    user_id, *, by_name: Optional[str] = None, by_id: Optional[int] = None
+):
+    """Delete a shorten."""
+    if by_id and by_name:
+        raise ValueError("Please elect either ID or name to delete")
 
-    # By doing this, we're cutting down DB calls by half
-    # and it still checks for user
-    if domain_data is None:
-        raise NotFound("You have no shortens with this name.")
-
-    domain_id, subdomain = domain_data
-
-    await app.db.execute(
-        """
+    column = "shorten_id" if by_id is not None else "filename"
+    # TODO set redirto to empty string?
+    row = await app.db.fetchrow(
+        f"""
         UPDATE shortens
         SET deleted = true
         WHERE uploader = $1
-          AND filename = $2
+          AND {column} = $2
           AND deleted = false
+        RETURNING domain, subdomain, filename
         """,
         user_id,
-        shortname,
+        by_id or by_name,
     )
 
+    if row is None:
+        raise NotFound("You have no shortens with this name.")
+
     await app.storage.raw_invalidate(
-        object_key("redir", domain_id, subdomain, shortname)
+        object_key("redir", row["domain"], row["subdomain"], row["filename"])
     )
 
 

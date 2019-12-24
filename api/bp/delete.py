@@ -20,6 +20,15 @@ bp = Blueprint("files", __name__)
 log = logging.getLogger(__name__)
 
 
+async def _mass_file_delete(file_ids: List[int]):
+    pass
+
+
+async def _mass_shorten_delete(user_id: int, shorten_ids: List[int]):
+    for shorten_id in shorten_ids:
+        await delete_shorten(user_id, by_id=shorten_id)
+
+
 @bp.route("/delete_all", methods=["POST"])
 async def delete_all():
     """Delete all files for the user"""
@@ -51,10 +60,6 @@ async def mass_delete_handler(ctx, user_id, raw: dict):
     file_args = list(base_args)
     shorten_args = list(base_args)
 
-    # The algorithm here is confusing, but the rundown is that this is
-    # dynamically generating SQL expressions for the WHERE clause in
-    # our starting SELECT.
-
     j = {}
     _fields = (
         "delete_files_before",
@@ -65,6 +70,15 @@ async def mass_delete_handler(ctx, user_id, raw: dict):
 
     file_wheres: List[str] = []
     shorten_wheres: List[str] = []
+
+    # The algorithm here is confusing, but the rundown is that this is
+    # dynamically generating SQL expressions for the WHERE clause in
+    # our starting SELECT depending of the delete selectors
+    # (delete_files_before, etc) in the route input.
+
+    # This already takes care of selecting the right column depending of the
+    # type of the selector's value (since they can be snowflakes OR timestamps),
+    # as well as the necessary $N indexing in the statement
 
     for field in _fields:
         if field not in raw:
@@ -107,19 +121,19 @@ async def mass_delete_handler(ctx, user_id, raw: dict):
     print(shorten_stmt)
     print("args", file_args)
 
-    file_ids = (
-        []
-        if not file_wheres
-        else [r["file_id"] for r in await app.db.fetch(file_stmt, *file_args)]
-    )
-    print(file_ids)
+    log.info("job %r got selectors %r", ctx.job_id, j)
 
-    shorten_ids = (
-        []
-        if not shorten_wheres
-        else [r["shorten_id"] for r in await app.db.fetch(shorten_stmt, *shorten_args)]
-    )
-    print(shorten_ids)
+    if file_wheres:
+        file_ids = [r["file_id"] for r in await app.db.fetch(file_stmt, *file_args)]
+        log.info("job %r got %d files", ctx.job_id, len(file_ids))
+        await _mass_file_delete(file_ids)
+
+    if shorten_wheres:
+        shorten_ids = [
+            r["shorten_id"] for r in await app.db.fetch(shorten_stmt, *shorten_args)
+        ]
+        log.info("job %r got %d shortens", ctx.job_id, len(shorten_ids))
+        app.sched.spawn(_mass_shorten_delete, [user_id, shorten_ids])
 
 
 @bp.route("/files/<shortname>", methods=["DELETE"])
@@ -127,7 +141,7 @@ async def mass_delete_handler(ctx, user_id, raw: dict):
 async def delete_single(shortname):
     """Delete a single file."""
     user_id = await token_check()
-    await delete_file(shortname, user_id)
+    await delete_file(user_id, by_name=shortname)
     return "", 204
 
 
@@ -135,5 +149,5 @@ async def delete_single(shortname):
 async def shortendelete_handler(user_id, shorten_name):
     """Invalidate a shorten."""
     user_id = await token_check()
-    await delete_shorten(shorten_name, user_id)
+    await delete_shorten(user_id, by_name=shorten_name)
     return "", 204
