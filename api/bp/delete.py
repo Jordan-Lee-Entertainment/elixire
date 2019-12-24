@@ -9,6 +9,7 @@ from quart import Blueprint, jsonify, request, current_app as app
 from api.common import delete_file, delete_shorten
 from api.common.auth import token_check, password_check
 from api.errors import BadInput, JobExistsError
+from api.schema import validate, DELETE_ALL_SCHEMA
 
 from api.common.user import mass_file_delete
 
@@ -20,8 +21,7 @@ log = logging.getLogger(__name__)
 async def delete_all():
     """Delete all files for the user"""
     user_id = await token_check()
-
-    j = await request.get_json()
+    j = validate(await request.get_json(), DELETE_ALL_SCHEMA)
 
     try:
         password = j["password"]

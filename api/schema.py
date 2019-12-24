@@ -8,7 +8,9 @@ elixi.re - schema data
 """
 import re
 
+import dateutil.parser
 from cerberus import Validator
+
 from api.errors import BadInput
 
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9]{1}[a-zA-Z0-9_]{2,19}$", re.A)
@@ -151,3 +153,20 @@ ADMIN_SEND_BROADCAST = {
 }
 
 RECOVER_USERNAME = {"email": {"type": "email", "required": True}}
+
+
+def _isoformat_or_snowflake(value: str):
+    try:
+        return dateutil.parser.isoparse(value)
+    except ValueError:
+        return int(value)
+
+
+DELETE_ALL_SCHEMA = {
+    "password": {"type": "password", "required": True},
+    "delete_files_before": {"coerce": _isoformat_or_snowflake, "required": False},
+    "delete_files_after": {"coerce": _isoformat_or_snowflake, "required": False},
+    "delete_shortens_before": {"coerce": _isoformat_or_snowflake, "required": False},
+    "delete_shortens_after": {"coerce": _isoformat_or_snowflake, "required": False},
+    "delete_on_domain": {"coerce": int, "required": False},
+}

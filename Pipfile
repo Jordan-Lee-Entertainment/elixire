@@ -23,6 +23,7 @@ dnspython = "==1.16.0"
 Quart = "==0.10.0"
 Pillow = "==6.2.1"
 violet = {editable = true,git = "https://gitlab.com/elixire/violet.git"}
+python-dateutil = "*"
 
 [dev-packages]
 pytest = "==5.0.1"
