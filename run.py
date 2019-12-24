@@ -271,6 +271,20 @@ async def app_before_serving():
 
     await api.bp.cors.setup()
 
+    # NOTE: the doll user is made for anonymization of files. when deleting
+    # a file, we keep its record up on the files table to prevent shortname
+    # reuse, so we move the ownership of the file to the doll.
+    try:
+        await app.db.execute(
+            """
+            INSERT INTO users (user_id, username, active, password_hash, email)
+            VALUES (0, 'doll', false, 'blah', 'd o l l')
+            """
+        )
+        log.info("doll user with ID 0 successfully created")
+    except asyncpg.UniqueViolationError:
+        log.info("doll user with ID 0 already created")
+
 
 @app.after_serving
 async def close_db():

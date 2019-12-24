@@ -150,7 +150,7 @@ async def calculate_hash(fhandle) -> str:
     return await app.loop.run_in_executor(None, _calculate_hash, fhandle)
 
 
-async def remove_fspath(shortname: str):
+async def remove_fspath(file_id: int):
     """Delete the given file shortname from the database.
 
     Checks if any other files are sharing fspath, and if there are none,
@@ -197,24 +197,22 @@ async def remove_fspath(shortname: str):
 
 
 async def delete_file(
-    user_id: Optional[int],
+    user_id: Optional[int] = None,
     *,
     by_name: Optional[str] = None,
     by_id: Optional[int] = None,
     full_delete: bool = False,
 ):
-    """Delete a file, purging it from Cloudflare's cache.
+    """Delete a file.
 
     Parameters
     ----------
-    file_name: str
-        File shortname to be deleted.
     user_id: int
         User ID making the request, so we
         crosscheck that information with the file's uploader.
-    set_delete, optional: bool
-        If we set the deleted field to true OR
-        delete the row directly.
+    full_delete, optional: bool
+        Delete the row from the table or set the deleted column to
+        true in the row.
 
     Raises
     ------
@@ -223,81 +221,57 @@ async def delete_file(
     """
     raise NotImplementedError()
 
-    domain_data = await app.storage.get_domain_file(file_name)
+    column = "file_id" if by_id is not None else "filename"
+    selector = by_id or by_name
 
-    if domain_data is None:
-        raise NotFound("You have no files with this name.")
-
-    domain_id, subdomain = domain_data
-
-    # TODO maybe move this to app start instead of on every delete_file()
-    try:
-        await app.db.execute(
-            """
-            INSERT INTO users (user_id, username, active, password_hash, email)
-            VALUES (0, 'dummy', false, 'blah', 'd u m m y')
-            """
-        )
-    except asyncpg.UniqueViolationError:
-        pass
-
-    if set_delete:
-        exec_out = await app.db.execute(
-            """
+    if not full_delete:
+        row = await app.db.fetchrow(
+            f"""
             UPDATE files
             SET deleted = true
             WHERE uploader = $1
-            AND filename = $2
+            AND {column} = $2
             AND deleted = false
+            RETURNING domain, subdomain, file_id, filename
             """,
             user_id,
-            file_name,
+            selector,
         )
 
-        if exec_out == "UPDATE 0":
+        if row is None:
             raise NotFound("You have no files with this name.")
 
-        await remove_fspath(file_name)
+        # TODO remove_fspath with file ids
+        await remove_fspath(row["file_id"])
     else:
-        await remove_fspath(file_name)
+        uploader = "AND uploader = $2" if user_id else ""
 
-        if user_id:
-            await app.db.execute(
-                """
-                UPDATE files
-                SET uploader = 0,
-                    file_size = 0,
-                    fspath = '',
-                    deleted = true,
-                    domain = 0
-                WHERE
-                    filename = $1
-                AND uploader = $2
-                """,
-                file_name,
-                user_id,
-            )
-        else:
-            await app.db.execute(
-                """
-                UPDATE files
-                SET uploader = 0,
-                    file_size = 0,
-                    fspath = '',
-                    deleted = true,
-                    domain = 0
-                WHERE filename = $1
-                """,
-                file_name,
-            )
+        row = await app.db.fetchrow(
+            f"""
+            UPDATE files
+            SET uploader = 0,
+                file_size = 0,
+                fspath = '',
+                deleted = true,
+                domain = 0
+            WHERE
+                {column} = $1
+                {uploader}
+            RETURNING domain, subdomain, file_id, filename
+            """,
+            selector,
+            *([user_id] if user_id else []),
+        )
+
+        await remove_fspath(row["file_id"])
 
     await app.storage.raw_invalidate(
-        object_key("fspath", domain_id, subdomain, file_name)
+        object_key("fspath", row["domain_id"], row["subdomain"], row["filename"])
     )
 
 
 async def delete_shorten(
-    user_id, *, by_name: Optional[str] = None, by_id: Optional[int] = None
+    user_id: int, *, by_name: Optional[str] = None, by_id: Optional[int] = None
 ):
     """Delete a shorten."""
     if by_id and by_name:
