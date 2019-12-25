@@ -296,7 +296,7 @@ async def undelete_file_cmd(ctx, args):
 async def nuke_file_cmd(ctx, args):
     shortname = args.shortname
     domain_id = await _extract_file_info(ctx, shortname)
-    await delete_file(ctx, shortname, None, False)
+    await delete_file(None, by_name=shortname, full_delete=True)
     print("OK", shortname, "DOMAIN", domain_id)
 
 

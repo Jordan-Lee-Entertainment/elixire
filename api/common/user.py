@@ -56,7 +56,7 @@ async def _delete_file_wrapper(shortname, user_id):
     """
     lock = app.locks["delete_files"][user_id]
     async with lock:
-        await delete_file(shortname, user_id, False)
+        await delete_file(user_id, by_name=shortname, full_delete=True)
 
 
 async def mass_file_delete(user_id: int, delete: bool = False):
