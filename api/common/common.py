@@ -207,15 +207,13 @@ async def delete_file(
         User ID making the request, so we
         crosscheck that information with the file's uploader.
     full_delete, optional: bool
-        Delete the row from the table or set the deleted column to
-        true in the row.
+        Move the ownership of the file to the doll user.
 
     Raises
     ------
     NotFound
         If no file is found.
     """
-    raise NotImplementedError()
 
     column = "file_id" if by_id is not None else "filename"
     selector = by_id or by_name

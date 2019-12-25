@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 bp = Blueprint("admin_bans", __name__)
 
 
-def _get_target() -> Tuple[str, str]:
+def _get_target() -> Tuple[TargetType, str]:
 
     try:
         target_type = TargetType(request.args.get("target_type"))
