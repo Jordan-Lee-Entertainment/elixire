@@ -7,21 +7,17 @@ from typing import List
 
 from quart import Blueprint, jsonify, request, current_app as app
 
-from api.common import delete_file, delete_shorten
+from api.common import delete_file, delete_shorten, delete_many
 from api.common.auth import token_check, password_check
 from api.errors import BadInput  # , JobExistsError
 from api.schema import validate, DELETE_ALL_SCHEMA, isotimestamp_or_int
 
 from api.common.domain import get_domain_info
 
-# from api.common.user import mass_file_delete
+from api.common.user import delete_many
 
 bp = Blueprint("files", __name__)
 log = logging.getLogger(__name__)
-
-
-async def _mass_file_delete(file_ids: List[int]):
-    pass
 
 
 async def _mass_shorten_delete(user_id: int, shorten_ids: List[int]):
@@ -126,14 +122,14 @@ async def mass_delete_handler(ctx, user_id, raw: dict):
     if file_wheres:
         file_ids = [r["file_id"] for r in await app.db.fetch(file_stmt, *file_args)]
         log.info("job %r got %d files", ctx.job_id, len(file_ids))
-        await _mass_file_delete(file_ids)
+        await delete_many(file_ids, user_id=user_id)
 
     if shorten_wheres:
         shorten_ids = [
             r["shorten_id"] for r in await app.db.fetch(shorten_stmt, *shorten_args)
         ]
         log.info("job %r got %d shortens", ctx.job_id, len(shorten_ids))
-        app.sched.spawn(_mass_shorten_delete, [user_id, shorten_ids])
+        await _mass_shorten_delete(user_id, shorten_ids)
 
 
 @bp.route("/files/<shortname>", methods=["DELETE"])

@@ -8,6 +8,7 @@ from typing import Dict, Union, Any, Optional
 from quart import current_app as app
 
 from api.common.auth import pwd_hash
+from api.common.common import delete_file_user_lock
 from api.snowflake import get_snowflake
 from api.common import delete_file
 
@@ -47,58 +48,44 @@ async def create_user(
     return {"user_id": user_id, "password_hash": password_hash}
 
 
-async def _delete_file_wrapper(shortname, user_id):
-    """Wrapper function for a single file delete, so that users doing
-    multiple deletes don't run into concurrency problems.
-
-    This function requires a lock due to the extra work delete_file()
-    goes through, creating dummy users, checking external fspaths, etc.
-    """
-    lock = app.locks["delete_files"][user_id]
-    async with lock:
-        await delete_file(user_id, by_name=shortname, full_delete=True)
-
-
-async def mass_file_delete(user_id: int, delete: bool = False):
+async def full_file_delete(user_id: int, delete_user_after: bool = False):
     """Delete all the files from the user.
 
     Parameters
     ----------
     user_id: int
         User ID to have all files deleted from.
-    delete, optional: bool
+    delete_user, optional: bool
         If delete the user when all files are deleted
     """
-    file_shortnames = await app.db.fetch(
+    file_ids = await app.db.fetch(
         """
-        SELECT filename
+        SELECT file_id
         FROM files
         WHERE uploader = $1
+          AND deleted = false
         """,
         user_id,
     )
 
-    log.info(f"Deleting ALL {len(file_shortnames)} files")
+    log.info(f"Deleting ALL {len(file_ids)} files")
 
     tasks = []
-
-    for row in file_shortnames:
-        shortname = row["filename"]
+    for row in file_ids:
+        file_id = row["file_id"]
         task = app.sched.spawn(
-            _delete_file_wrapper,
-            [shortname, user_id],
-            job_id=f"delete_file:{shortname}",
+            delete_file_user_lock, [user_id, file_id], job_id=f"delete_file:{file_id}",
         )
         tasks.append(task)
 
     if tasks:
         await asyncio.wait(tasks)
 
-    log.info(f"finished waiting for {len(tasks)} tasks")
-    log.info(f"delete? {delete}")
+    log.info("finished waiting for %d tasks", len(tasks))
+    log.info("delete user? %r", delete_user_after)
 
-    if delete:
-        log.info(f"Deleting user id {user_id}")
+    if delete_user_after:
+        log.info("Deleting user id %d", user_id)
         await app.db.execute(
             """
             DELETE FROM users
@@ -121,12 +108,12 @@ async def delete_user(user_id: int, delete: bool = False):
     delete: bool, optional
         Delete the user records?
     """
-    # ignore deletion of the dummy user via any admin-facing
+    # ignore deletion of the doll user via any admin-facing
     # administration util (manage.py will also be unable
-    # to delete the dummy user).
+    # to delete the doll user).
     #  instance admins should proceed to deleting via the psql shell.
     if user_id == 0:
-        log.warning("Not deleting dummy user")
+        log.warning("Not deleting doll user")
         return
 
     await app.db.execute(
@@ -160,9 +147,8 @@ async def delete_user(user_id: int, delete: bool = False):
 
     # since there is a lot of db load
     # when calling delete_file, we create a task that deletes them.
-
     return app.sched.spawn(
-        mass_file_delete, [user_id, delete], job_id=f"mass_delete:{user_id}"
+        full_file_delete, [user_id, delete], job_id=f"full_delete:{user_id}"
     )
 
 
