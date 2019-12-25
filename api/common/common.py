@@ -150,50 +150,46 @@ async def calculate_hash(fhandle) -> str:
     return await app.loop.run_in_executor(None, _calculate_hash, fhandle)
 
 
-async def remove_fspath(file_id: int):
+async def remove_fspath(file_id: Optional[int]) -> None:
     """Delete the given file shortname from the database.
 
     Checks if any other files are sharing fspath, and if there are none,
     the underlying fspath is deleted.
     """
-    if shortname is None:
-        return
-
-    fspath = await app.db.fetchval(
-        """
-        SELECT fspath
-        FROM files
-        WHERE filename = $1
-        """,
-        shortname,
-    )
-
-    if fspath is None:
+    if file_id is None:
         return
 
     # fetch all files with the same fspath
     # and on the hash system, means the same hash
-    same_fspath = await app.db.fetchval(
+    row = await app.db.fetchrow(
         """
-        SELECT COUNT(*)
+        SELECT fspath, COUNT(*)
         FROM files
-        WHERE fspath = $1 AND deleted = false
+        WHERE fspath = (SELECT fspath FROM files WHERE file_id = $1)
+          AND deleted = false
         """,
-        fspath,
+        file_id,
     )
 
-    if same_fspath == 0:
-        path = Path(fspath)
-        try:
-            path.unlink()
-            log.info(f"Deleted {fspath!s} since no files refer to it")
-        except FileNotFoundError:
-            log.warning(f"fspath {fspath!s} does not exist")
-    else:
+    if row is None:
+        return
+
+    fspath, same_fspath = row["fspath"], row["count"]
+
+    if same_fspath != 0:
         log.info(
-            f"there are still {same_fspath} files with the "
-            f"same fspath {fspath!s}, not deleting"
+            "there are still %d files with the same fspath %r, not deleting",
+            same_fspath,
+            fspath,
         )
+        return
+
+    path = Path(fspath)
+    try:
+        path.unlink()
+        log.info("Deleted %r since no files refer to it", fspath)
+    except FileNotFoundError:
+        log.warning("fspath %s does not exist", fspath)
 
 
 async def delete_file(
