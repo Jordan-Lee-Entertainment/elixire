@@ -8,7 +8,7 @@ from typing import Dict, Union, Any, Optional
 from quart import current_app as app
 
 from api.common.auth import pwd_hash
-from api.common.common import delete_file_user_lock
+from api.common.common import delete_many
 from api.snowflake import get_snowflake
 from api.common import delete_file
 
@@ -68,20 +68,7 @@ async def full_file_delete(user_id: int, delete_user_after: bool = False):
         user_id,
     )
 
-    log.info(f"Deleting ALL {len(file_ids)} files")
-
-    tasks = []
-    for row in file_ids:
-        file_id = row["file_id"]
-        task = app.sched.spawn(
-            delete_file_user_lock, [user_id, file_id], job_id=f"delete_file:{file_id}",
-        )
-        tasks.append(task)
-
-    if tasks:
-        await asyncio.wait(tasks)
-
-    log.info("finished waiting for %d tasks", len(tasks))
+    await delete_many(file_ids, user_id=user_id)
     log.info("delete user? %r", delete_user_after)
 
     if delete_user_after:
