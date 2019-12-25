@@ -2,7 +2,6 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
-import asyncio
 from typing import Dict, Union, Any, Optional
 
 from quart import current_app as app
@@ -10,7 +9,6 @@ from quart import current_app as app
 from api.common.auth import pwd_hash
 from api.common.common import delete_many
 from api.snowflake import get_snowflake
-from api.common import delete_file
 
 log = logging.getLogger(__name__)
 

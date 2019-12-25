@@ -14,8 +14,6 @@ from api.schema import validate, DELETE_ALL_SCHEMA, isotimestamp_or_int
 
 from api.common.domain import get_domain_info
 
-from api.common.user import delete_many
-
 bp = Blueprint("files", __name__)
 log = logging.getLogger(__name__)
 
