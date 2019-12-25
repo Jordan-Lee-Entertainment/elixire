@@ -232,7 +232,7 @@ async def app_before_serving():
     )
     app.sched.create_job_queue(
         "mass_delete",
-        args=(int, dict,),
+        args=(int, dict),
         handler=api.bp.delete.mass_delete_handler,
         takes=1,
         period=5,

@@ -10,7 +10,6 @@ import time
 from pathlib import Path
 from typing import Tuple, Optional, Dict, List, Union
 
-import asyncpg
 from quart import current_app as app, request
 
 from api.errors import FailedAuth, NotFound
@@ -167,6 +166,7 @@ async def remove_fspath(file_id: Optional[int]) -> None:
         FROM files
         WHERE fspath = (SELECT fspath FROM files WHERE file_id = $1)
           AND deleted = false
+        GROUP BY fspath
         """,
         file_id,
     )
@@ -235,7 +235,6 @@ async def delete_file(
         if row is None:
             raise NotFound("You have no files with this name.")
 
-        # TODO remove_fspath with file ids
         await remove_fspath(row["file_id"])
     else:
         uploader = "AND uploader = $2" if user_id else ""
@@ -260,7 +259,7 @@ async def delete_file(
         await remove_fspath(row["file_id"])
 
     await app.storage.raw_invalidate(
-        object_key("fspath", row["domain_id"], row["subdomain"], row["filename"])
+        object_key("fspath", row["domain"], row["subdomain"], row["filename"])
     )
 
 

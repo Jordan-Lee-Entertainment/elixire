@@ -7,11 +7,8 @@ import logging
 
 from quart import Blueprint, jsonify, request, current_app as app
 
-from api.common import delete_file, delete_shorten
-from api.common.auth import token_check, password_check
-from api.errors import BadInput, JobExistsError
-
-from api.common.user import mass_file_delete
+from api.common.auth import token_check
+from api.errors import BadInput
 
 bp = Blueprint("files", __name__)
 log = logging.getLogger(__name__)
