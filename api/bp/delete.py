@@ -23,8 +23,8 @@ async def _mass_shorten_delete(user_id: int, shorten_ids: List[int]):
         await delete_shorten(user_id, by_id=shorten_id)
 
 
-@bp.route("/delete_all", methods=["POST"])
-async def delete_all():
+@bp.route("/purge_all_content", methods=["POST"])
+async def purge_all_content():
     """Delete all files for the user"""
     user_id = await token_check()
     raw = await request.get_json()
