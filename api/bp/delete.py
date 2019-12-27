@@ -48,11 +48,11 @@ async def purge_all_content():
     return jsonify({"job_id": job_id})
 
 
-@bp.route("/compute_purge_all", methods=["POST"])
+@bp.route("/compute_purge_all", methods=["GET"])
 async def compute_purge_all_content():
     """Calculate the total amount of files to be deleted"""
     user_id = await token_check()
-    raw = await request.get_json()
+    raw = dict(request.args)
     validate(raw, PURGE_ALL_BASE_SCHEMA)
     file_count, shorten_count = await mass_delete_handler(None, user_id, raw, False)
     return jsonify({"file_count": file_count, "shorten_count": shorten_count})
