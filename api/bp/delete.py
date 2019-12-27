@@ -25,7 +25,7 @@ async def _mass_shorten_delete(user_id: int, shorten_ids: List[int]):
 
 @bp.route("/purge_all_content", methods=["POST"])
 async def purge_all_content():
-    """Delete all files for the user"""
+    """selectively delete content from the user."""
     user_id = await token_check()
     raw = await request.get_json()
     j = validate(raw, DELETE_ALL_SCHEMA)
