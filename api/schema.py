@@ -162,11 +162,15 @@ def isotimestamp_or_int(value: str):
         return dateutil.parser.isoparse(value)
 
 
-DELETE_ALL_SCHEMA = {
-    "password": {"type": "password", "required": True},
+PURGE_ALL_BASE_SCHEMA = {
     "delete_files_before": {"coerce": isotimestamp_or_int, "required": False},
     "delete_files_after": {"coerce": isotimestamp_or_int, "required": False},
     "delete_shortens_before": {"coerce": isotimestamp_or_int, "required": False},
     "delete_shortens_after": {"coerce": isotimestamp_or_int, "required": False},
     "delete_from_domain": {"coerce": int, "required": False},
+}
+
+PURGE_ALL_SCHEMA = {
+    **{"password": {"type": "password", "required": True}},
+    **PURGE_ALL_BASE_SCHEMA,
 }

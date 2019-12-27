@@ -10,7 +10,12 @@ from quart import Blueprint, jsonify, request, current_app as app
 from api.common import delete_file, delete_shorten, delete_many
 from api.common.auth import token_check, password_check
 from api.errors import BadInput  # , JobExistsError
-from api.schema import validate, DELETE_ALL_SCHEMA, isotimestamp_or_int
+from api.schema import (
+    validate,
+    PURGE_ALL_BASE_SCHEMA,
+    PURGE_ALL_SCHEMA,
+    isotimestamp_or_int,
+)
 
 from api.common.domain import get_domain_info
 
@@ -28,7 +33,7 @@ async def purge_all_content():
     """selectively delete content from the user."""
     user_id = await token_check()
     raw = await request.get_json()
-    j = validate(raw, DELETE_ALL_SCHEMA)
+    j = validate(raw, PURGE_ALL_SCHEMA)
     await password_check(user_id, j["password"])
 
     raw.pop("password")
@@ -47,8 +52,10 @@ async def purge_all_content():
 async def compute_purge_all_content():
     """Calculate the total amount of files to be deleted"""
     user_id = await token_check()
-    file_count, shorten_count = await mass_delete_handler(None, user_id, False)
-    return file_count, shorten_count
+    raw = await request.get_json()
+    validate(raw, PURGE_ALL_BASE_SCHEMA)
+    file_count, shorten_count = await mass_delete_handler(None, user_id, raw, False)
+    return jsonify({"file_count": file_count, "shorten_count": shorten_count})
 
 
 async def mass_delete_handler(ctx, user_id, raw: dict, delete_content: bool = True):
