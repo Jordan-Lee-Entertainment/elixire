@@ -111,14 +111,16 @@ async def mass_delete_handler(ctx, user_id, raw: dict, delete_content: bool = Tr
         wheres.append(f"{column} {compare_symbol} ${len(args) + 1}")
         args.append(j[field])
 
-    col_file = "file_id" if delete_content else "COUNT(*)"
-    col_shorten = "shorten_id" if delete_content else "COUNT(*)"
+    col_file = "file_id" if delete_content else "COUNT(file_id)"
+    col_shorten = "shorten_id" if delete_content else "COUNT(shorten_id)"
+    order_by_file = "order by file_id desc" if delete_content else ""
+    order_by_shorten = "order by shorten_id desc" if delete_content else ""
 
     file_stmt = f"""
         SELECT {col_file}
         FROM files
         WHERE uploader = $1 AND {domain_where} AND {" AND ".join(file_wheres)}
-        ORDER BY file_id ASC
+        {order_by_file}
         """
 
     shorten_stmt = f"""
@@ -126,6 +128,7 @@ async def mass_delete_handler(ctx, user_id, raw: dict, delete_content: bool = Tr
         FROM shortens
         WHERE uploader = $1 AND {domain_where} {" AND ".join(shorten_wheres)}
         ORDER BY shorten_id ASC
+        {order_by_shorten}
         """
 
     if not delete_content:
