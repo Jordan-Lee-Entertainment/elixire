@@ -168,5 +168,5 @@ DELETE_ALL_SCHEMA = {
     "delete_files_after": {"coerce": isotimestamp_or_int, "required": False},
     "delete_shortens_before": {"coerce": isotimestamp_or_int, "required": False},
     "delete_shortens_after": {"coerce": isotimestamp_or_int, "required": False},
-    "delete_on_domain": {"coerce": int, "required": False},
+    "delete_from_domain": {"coerce": int, "required": False},
 }

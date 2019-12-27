@@ -34,8 +34,8 @@ async def purge_all_content():
     raw.pop("password")
 
     # semantic validation
-    if "delete_on_domain" in j:
-        domain = await get_domain_info(j["delete_on_domain"])
+    if "delete_from_domain" in j:
+        domain = await get_domain_info(j["delete_from_domain"])
         if domain is None:
             raise BadInput("Invalid domain ID")
 
