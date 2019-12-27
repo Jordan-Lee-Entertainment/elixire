@@ -110,11 +110,6 @@ async def mass_delete_handler(ctx, user_id, raw: dict):
         ORDER BY shorten_id ASC
         """
 
-    print(file_stmt)
-    print("args", file_args)
-    print(shorten_stmt)
-    print("args", file_args)
-
     log.info("job %r got selectors %r", ctx.job_id, j)
 
     if file_wheres:
