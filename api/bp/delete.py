@@ -43,7 +43,7 @@ async def purge_all_content():
     return jsonify({"job_id": job_id})
 
 
-async def mass_delete_handler(ctx, user_id, raw: dict):
+async def mass_delete_handler(ctx, user_id, raw: dict, delete_content: bool = True):
     base_args = [user_id]
 
     domain_where = "true"
@@ -96,25 +96,36 @@ async def mass_delete_handler(ctx, user_id, raw: dict):
         wheres.append(f"{column} {compare_symbol} ${len(args) + 1}")
         args.append(j[field])
 
+    col_file = "file_id" if delete_content else "COUNT(*)"
+    col_shorten = "shorten_id" if delete_content else "COUNT(*)"
+
     file_stmt = f"""
-        SELECT file_id
+        SELECT {col_file}
         FROM files
         WHERE uploader = $1 AND {domain_where} AND {" AND ".join(file_wheres)}
         ORDER BY file_id ASC
         """
 
     shorten_stmt = f"""
-        SELECT shorten_id
+        SELECT {col_shorten}
         FROM shortens
         WHERE uploader = $1 AND {domain_where} {" AND ".join(shorten_wheres)}
         ORDER BY shorten_id ASC
         """
+
+    if not delete_content:
+        file_count = await app.db.fetchval(file_stmt, *file_args) if file_wheres else 0
+        shorten_count = (
+            await app.db.fetchval(shorten_stmt, *shorten_args) if shorten_wheres else 0
+        )
+        return file_count, shorten_count
 
     log.info("job %r got selectors %r", ctx.job_id, j)
 
     if file_wheres:
         file_ids = [r["file_id"] for r in await app.db.fetch(file_stmt, *file_args)]
         log.info("job %r got %d files", ctx.job_id, len(file_ids))
+
         await delete_many(file_ids, user_id=user_id)
 
     if shorten_wheres:
@@ -122,6 +133,7 @@ async def mass_delete_handler(ctx, user_id, raw: dict):
             r["shorten_id"] for r in await app.db.fetch(shorten_stmt, *shorten_args)
         ]
         log.info("job %r got %d shortens", ctx.job_id, len(shorten_ids))
+
         await _mass_shorten_delete(user_id, shorten_ids)
 
 
