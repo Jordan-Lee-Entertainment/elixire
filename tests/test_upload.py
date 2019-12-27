@@ -176,6 +176,16 @@ async def test_delete_file_many(test_cli_user):
     rjson = await _upload(test_cli_user)
     shortname = rjson["shortname"]
 
+    resp = await test_cli_user.post(
+        "/api/compute_purge_all", json={"delete_files_after": 0}
+    )
+
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert rjson["file_count"] == 1
+    assert rjson["shorten_count"] == 0
+
     resp_del = await test_cli_user.post(
         "/api/purge_all_content",
         json={"password": test_cli_user["password"], "delete_files_after": 0},
