@@ -2,6 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import asyncio
 import string
 import secrets
 import hashlib
@@ -10,7 +11,6 @@ import time
 from pathlib import Path
 from typing import Tuple, Optional, Dict, List, Union
 
-import asyncpg
 from quart import current_app as app, request
 
 from api.errors import FailedAuth, NotFound
@@ -150,170 +150,183 @@ async def calculate_hash(fhandle) -> str:
     return await app.loop.run_in_executor(None, _calculate_hash, fhandle)
 
 
-async def remove_fspath(shortname: str):
+async def remove_fspath(file_id: Optional[int]) -> None:
     """Delete the given file shortname from the database.
 
     Checks if any other files are sharing fspath, and if there are none,
     the underlying fspath is deleted.
     """
-    if shortname is None:
-        return
-
-    fspath = await app.db.fetchval(
-        """
-        SELECT fspath
-        FROM files
-        WHERE filename = $1
-        """,
-        shortname,
-    )
-
-    if fspath is None:
+    if file_id is None:
         return
 
     # fetch all files with the same fspath
     # and on the hash system, means the same hash
-    same_fspath = await app.db.fetchval(
+    row = await app.db.fetchrow(
         """
-        SELECT COUNT(*)
+        SELECT fspath, COUNT(*)
         FROM files
-        WHERE fspath = $1 AND deleted = false
+        WHERE fspath = (SELECT fspath FROM files WHERE file_id = $1)
+          AND deleted = false
+        GROUP BY fspath
         """,
-        fspath,
+        file_id,
     )
 
-    if same_fspath == 0:
-        path = Path(fspath)
-        try:
-            path.unlink()
-            log.info(f"Deleted {fspath!s} since no files refer to it")
-        except FileNotFoundError:
-            log.warning(f"fspath {fspath!s} does not exist")
-    else:
+    if row is None:
+        return
+
+    fspath, same_fspath = row["fspath"], row["count"]
+
+    if same_fspath != 0:
         log.info(
-            f"there are still {same_fspath} files with the "
-            f"same fspath {fspath!s}, not deleting"
+            "there are still %d files with the same fspath %r, not deleting",
+            same_fspath,
+            fspath,
         )
+        return
+
+    path = Path(fspath)
+    try:
+        path.unlink()
+        log.info("Deleted %r since no files refer to it", fspath)
+    except FileNotFoundError:
+        log.warning("fspath %s does not exist", fspath)
 
 
-async def delete_file(file_name: str, user_id, set_delete=True):
-    """Delete a file, purging it from Cloudflare's cache.
+async def delete_file(
+    user_id: Optional[int] = None,
+    *,
+    by_name: Optional[str] = None,
+    by_id: Optional[int] = None,
+    full_delete: bool = False,
+):
+    """Delete a file.
 
     Parameters
     ----------
-    file_name: str
-        File shortname to be deleted.
     user_id: int
         User ID making the request, so we
         crosscheck that information with the file's uploader.
-    set_delete, optional: bool
-        If we set the deleted field to true OR
-        delete the row directly.
+    full_delete, optional: bool
+        Move the ownership of the file to the doll user.
 
     Raises
     ------
     NotFound
         If no file is found.
     """
-    domain_data = await app.storage.get_domain_file(file_name)
 
-    if domain_data is None:
-        raise NotFound("You have no files with this name.")
+    column = "file_id" if by_id is not None else "filename"
+    selector = by_id or by_name
 
-    domain_id, subdomain = domain_data
-
-    # TODO maybe move this to app start instead of on every delete_file()
-    try:
-        await app.db.execute(
-            """
-            INSERT INTO users (user_id, username, active, password_hash, email)
-            VALUES (0, 'dummy', false, 'blah', 'd u m m y')
-            """
-        )
-    except asyncpg.UniqueViolationError:
-        pass
-
-    if set_delete:
-        exec_out = await app.db.execute(
-            """
+    if not full_delete:
+        row = await app.db.fetchrow(
+            f"""
             UPDATE files
             SET deleted = true
             WHERE uploader = $1
-            AND filename = $2
+            AND {column} = $2
             AND deleted = false
+            RETURNING domain, subdomain, file_id, filename
             """,
             user_id,
-            file_name,
+            selector,
         )
 
-        if exec_out == "UPDATE 0":
+        if row is None:
             raise NotFound("You have no files with this name.")
 
-        await remove_fspath(file_name)
+        await remove_fspath(row["file_id"])
     else:
-        await remove_fspath(file_name)
+        uploader = "AND uploader = $2" if user_id else ""
 
-        if user_id:
-            await app.db.execute(
-                """
-                UPDATE files
-                SET uploader = 0,
-                    file_size = 0,
-                    fspath = '',
-                    deleted = true,
-                    domain = 0
-                WHERE
-                    filename = $1
-                AND uploader = $2
-                """,
-                file_name,
-                user_id,
-            )
-        else:
-            await app.db.execute(
-                """
-                UPDATE files
-                SET uploader = 0,
-                    file_size = 0,
-                    fspath = '',
-                    deleted = true,
-                    domain = 0
-                WHERE filename = $1
-                """,
-                file_name,
-            )
+        row = await app.db.fetchrow(
+            f"""
+            UPDATE files
+            SET uploader = 0,
+                file_size = 0,
+                fspath = '',
+                deleted = true,
+                domain = 0
+            WHERE
+                {column} = $1
+                {uploader}
+            RETURNING domain, subdomain, file_id, filename
+            """,
+            selector,
+            *([user_id] if user_id else []),
+        )
+
+        await remove_fspath(row["file_id"])
 
     await app.storage.raw_invalidate(
-        object_key("fspath", domain_id, subdomain, file_name)
+        object_key("fspath", row["domain"], row["subdomain"], row["filename"])
     )
 
 
-async def delete_shorten(shortname: str, user_id: int):
-    """Remove a shorten from the system"""
-    domain_data = await app.storage.get_domain_shorten(shortname)
+async def delete_shorten(
+    user_id: int, *, by_name: Optional[str] = None, by_id: Optional[int] = None
+):
+    """Delete a shorten."""
+    if by_id and by_name:
+        raise ValueError("Please elect either ID or name to delete")
 
-    # By doing this, we're cutting down DB calls by half
-    # and it still checks for user
-    if domain_data is None:
-        raise NotFound("You have no shortens with this name.")
-
-    domain_id, subdomain = domain_data
-
-    await app.db.execute(
-        """
+    column = "shorten_id" if by_id is not None else "filename"
+    # TODO set redirto to empty string?
+    row = await app.db.fetchrow(
+        f"""
         UPDATE shortens
         SET deleted = true
         WHERE uploader = $1
-          AND filename = $2
+          AND {column} = $2
           AND deleted = false
+        RETURNING domain, subdomain, filename
         """,
         user_id,
-        shortname,
+        by_id or by_name,
     )
 
+    if row is None:
+        raise NotFound("You have no shortens with this name.")
+
     await app.storage.raw_invalidate(
-        object_key("redir", domain_id, subdomain, shortname)
+        object_key("redir", row["domain"], row["subdomain"], row["filename"])
     )
+
+
+async def delete_file_user_lock(user_id: Optional[int], file_id: int):
+    lock = app.locks["delete_files"][user_id]
+    async with lock:
+        await delete_file(user_id, by_id=file_id, full_delete=True)
+
+
+async def delete_many(file_ids: List[int], *, user_id: Optional[int] = None):
+    tasks = []
+
+    for file_id in file_ids:
+        task = app.sched.spawn(
+            delete_file_user_lock, [user_id, file_id], job_id=f"delete_file:{file_id}"
+        )
+        tasks.append(task)
+
+    if not tasks:
+        log.warning("no tasks")
+        return
+
+    log.info("waiting for %d file tasks", len(tasks))
+    done, pending = await asyncio.wait(tasks)
+    log.info(
+        "waited for %d file tasks, %d done, %d pending",
+        len(tasks),
+        len(done),
+        len(pending),
+    )
+    assert not pending
+    for task in done:
+        try:
+            task.result()
+        except Exception:
+            log.exception("exception while deleting file")
 
 
 async def check_bans(user_id: Optional[int] = None):

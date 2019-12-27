@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2760764990129a935ac6f59c696c780184775b9d874d7d47a322f8b0a4801cc1"
+            "sha256": "9dd40321872bfbec6b9da26553d805220554ab6b1a0642bb2b5217405e36ff52"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -443,6 +443,14 @@
             ],
             "version": "==2.19"
         },
+        "python-dateutil": {
+            "hashes": [
+                "sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c",
+                "sha256:75bb3f31ea686f1197762692a9ee6a7550b59fc6ca3a1f4b5d7e32fb98e2da2a"
+            ],
+            "index": "pypi",
+            "version": "==2.8.1"
+        },
         "python-magic": {
             "hashes": [
                 "sha256:f2674dcfad52ae6c49d4803fa027809540b130db1dec928cfbb9240316831375",
@@ -491,7 +499,7 @@
         "violet": {
             "editable": true,
             "git": "https://gitlab.com/elixire/violet.git",
-            "ref": "754f5bfd85049793520afb2abab93c92e3e218ef"
+            "ref": "46d7f0da597d4866a6b62f7aa4ad0195f4601e9e"
         },
         "wsproto": {
             "hashes": [
@@ -694,10 +702,10 @@
         },
         "pyparsing": {
             "hashes": [
-                "sha256:20f995ecd72f2a1f4bf6b072b63b22e2eb457836601e76d6e5dfcd75436acc1f",
-                "sha256:4ca62001be367f01bd3e92ecbb79070272a9d4964dce6a48a82ff0b8bc7e683a"
+                "sha256:4c830582a84fb022400b85429791bc551f1f4871c33f23e44f353119e92f969f",
+                "sha256:c342dccb5250c08d45fd6f8b4a559613ca603b57498511740e65cd11a2e7dcec"
             ],
-            "version": "==2.4.5"
+            "version": "==2.4.6"
         },
         "pytest": {
             "hashes": [

@@ -149,7 +149,7 @@ async def test_legacy_file_resolution(test_cli_user, test_domain):
     assert resp.status_code == 404
 
 
-async def test_delete_file(test_cli_user):
+async def _upload(test_cli_user) -> dict:
     resp = await test_cli_user.post("/api/upload", **(await png_request()))
 
     assert resp.status_code == 200
@@ -158,12 +158,36 @@ async def test_delete_file(test_cli_user):
     assert isinstance(respjson["url"], str)
     await check_exists(test_cli_user, respjson["shortname"])
 
+    return respjson
+
+
+async def test_delete_file(test_cli_user):
+    respjson = await _upload(test_cli_user)
+
     # test delete
     short = respjson["shortname"]
 
     resp_del = await test_cli_user.delete(f"/api/files/{short}")
     assert resp_del.status_code == 204
     await check_exists(test_cli_user, respjson["shortname"], reverse=True)
+
+
+async def test_delete_file_many(test_cli_user):
+    rjson = await _upload(test_cli_user)
+    shortname = rjson["shortname"]
+
+    resp_del = await test_cli_user.post(
+        "/api/purge_all_content",
+        json={"password": test_cli_user["password"], "delete_files_after": 0},
+    )
+    assert resp_del.status_code == 200
+    rjson = await resp_del.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["job_id"], str)
+    assert rjson["job_id"]
+    await test_cli_user.app.sched.wait_job(rjson["job_id"])
+
+    await check_exists(test_cli_user, shortname, reverse=True)
 
 
 async def test_delete_nonexist(test_cli_user):

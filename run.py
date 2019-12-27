@@ -230,6 +230,13 @@ async def app_before_serving():
     app.sched.create_job_queue(
         "datadump", args=(int,), handler=api.bp.datadump.handler, takes=1, period=5
     )
+    app.sched.create_job_queue(
+        "mass_delete",
+        args=(int, dict),
+        handler=api.bp.delete.mass_delete_handler,
+        takes=1,
+        period=5,
+    )
 
     log.info("connecting to redis")
     app.redis = await aioredis.create_redis_pool(
@@ -263,6 +270,20 @@ async def app_before_serving():
         app.audit_log = AuditLog(app)
 
     await api.bp.cors.setup()
+
+    # NOTE: the doll user is made for anonymization of files. when deleting
+    # a file, we keep its record up on the files table to prevent shortname
+    # reuse, so we move the ownership of the file to the doll.
+    try:
+        await app.db.execute(
+            """
+            INSERT INTO users (user_id, username, active, password_hash, email)
+            VALUES (0, 'doll', false, 'blah', 'd o l l')
+            """
+        )
+        log.info("doll user with ID 0 successfully created")
+    except asyncpg.UniqueViolationError:
+        log.info("doll user with ID 0 already created")
 
 
 @app.after_serving

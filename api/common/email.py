@@ -126,6 +126,8 @@ async def send_email(
             fmt_email(subject),
             fmt_email(content),
         )
+
+        return True
     except smtplib.SMTPConnectError as exc:
         log.error("Failed to connect to server (%r), retry=%r", exc, not _is_repeat)
         if not _is_repeat:

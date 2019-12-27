@@ -106,7 +106,7 @@ async def _delete_file_from_scan(ctx) -> None:
     except OSError:
         log.warning(f"File path {fspath!r} deleted before virus-triggered deletion")
 
-    await delete_file(ctx.shortname, None, False)
+    await delete_file(None, by_name=ctx.shortname, full_delete=True)
     log.info(f"Deleted file {ctx.shortname} (virus found)")
 
 

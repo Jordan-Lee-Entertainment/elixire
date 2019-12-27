@@ -159,7 +159,7 @@ async def delete_file_handler(file_id: int):
         raise BadInput("File not found")
 
     async with ObjectDeleteAction(request, file_id, "file"):
-        await delete_file(row["filename"], row["uploader"])
+        await delete_file(row["uploader"], by_name=row["filename"])
 
     return jsonify(
         {
@@ -189,7 +189,7 @@ async def delete_shorten_handler(shorten_id: int):
         raise BadInput("Shorten not found")
 
     async with ObjectDeleteAction(request, shorten_id, "shorten"):
-        await delete_shorten(row["filename"], row["uploader"])
+        await delete_shorten(row["uploader"], by_name=row["filename"])
 
     return jsonify(
         {
