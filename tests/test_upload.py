@@ -176,8 +176,8 @@ async def test_delete_file_many(test_cli_user):
     rjson = await _upload(test_cli_user)
     shortname = rjson["shortname"]
 
-    resp = await test_cli_user.post(
-        "/api/compute_purge_all", json={"delete_files_after": 0}
+    resp = await test_cli_user.get(
+        "/api/compute_purge_all", query_string={"delete_files_after": 0}
     )
 
     assert resp.status_code == 200
