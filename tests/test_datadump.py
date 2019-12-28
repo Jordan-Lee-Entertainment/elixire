@@ -2,7 +2,6 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import asyncio
 import os
 import logging
 import pytest
@@ -34,9 +33,7 @@ async def test_profile_work(test_cli_user):
         assert "total" in rjson["pagination"]
         assert "current" in rjson["pagination"]
 
-        # we can't really wait for the job to complete here, so instead
-        # we sleep()
-        await asyncio.sleep(1.3)
+        await test_cli_user.app.sched.wait_job(job_id)
 
         status = await test_cli_user.app.sched.fetch_queue_job_status(job_id)
         assert status.queue_name == "datadump"
