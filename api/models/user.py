@@ -9,14 +9,36 @@ from quart import current_app as app
 class User:
     """Represents an elixire user."""
 
-    # TODO the rest
-    __slots__ = ("id", "name", "email", "paranoid")
+    __slots__ = (
+        "id",
+        "name",
+        "active",
+        "password_hash",
+        "email",
+        "consented",
+        "admin",
+        "paranoid",
+        "subdomain",
+        "domain",
+        "shorten_subdomain",
+        "shorten_domain",
+    )
 
     def __init__(self, row):
         self.id: int = row["user_id"]
         self.name: str = row["username"]
+        self.active: bool = row["active"]
+        self.password_hash: str = row["password_hash"]
         self.email: str = row["email"]
+        self.consented: bool = row["consented"]
+        self.admin: bool = row["admin"]
         self.paranoid: bool = row["paranoid"]
+
+        self.domain: int = row["domain"]
+        self.shorten_domain: int = row["shorten_domain"]
+
+        self.subdomain: str = row["subdomain"]
+        self.shorten_subdomain: Optional[str] = row["shorten_subdomain"]
 
     def __eq__(self, other):
         return self.id == other.id
@@ -25,7 +47,10 @@ class User:
     async def fetch(cls, user_id: int):
         row = await app.db.fetchrow(
             f"""
-            SELECT user_id, username, email
+            SELECT
+                user_id, username, active, password_hash, email, consented,
+                admin, paranoid, subdomain, domain, shorten_subdomain,
+                shorten_domain
             FROM users
             WHERE user_id = $1
             LIMIT 1
@@ -48,12 +73,14 @@ class User:
         assert not (username and email)
 
         search_field = "username" if username else "email"
-
         value = username or email
 
         row = await app.db.fetchrow(
             f"""
-            SELECT user_id, username, email
+            SELECT
+                user_id, username, active, password_hash, email, consented,
+                admin, paranoid, subdomain, domain, shorten_subdomain,
+                shorten_domain
             FROM users
             WHERE {search_field} = $1
             LIMIT 1
