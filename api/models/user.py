@@ -10,12 +10,13 @@ class User:
     """Represents an elixire user."""
 
     # TODO the rest
-    __slots__ = ("id", "name", "email")
+    __slots__ = ("id", "name", "email", "paranoid")
 
     def __init__(self, row):
         self.id: int = row["user_id"]
         self.name: str = row["username"]
         self.email: str = row["email"]
+        self.paranoid: bool = row["paranoid"]
 
     def __eq__(self, other):
         return self.id == other.id
