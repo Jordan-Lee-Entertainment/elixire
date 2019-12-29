@@ -54,7 +54,7 @@ class User:
             f"""
             SELECT user_id, username, email
             FROM users
-            WHERE search_field = $1
+            WHERE {search_field} = $1
             LIMIT 1
             """,
             value,
