@@ -38,6 +38,8 @@ async def test_profile_work(test_cli_user):
         status = await test_cli_user.app.sched.fetch_queue_job_status(job_id)
         assert status.queue_name == "datadump"
         assert not status.errors
+
+        # TODO check email, and then see if /get gives the actual dump
     finally:
         try:
             path = os.path.join(test_cli_user.app.econfig.DUMP_FOLDER, filename)
