@@ -22,7 +22,17 @@ class User:
 
     @classmethod
     async def fetch(cls, user_id: int):
-        raise NotImplementedError()
+        row = await app.db.fetchrow(
+            f"""
+            SELECT user_id, username, email
+            FROM users
+            WHERE user_id = $1
+            LIMIT 1
+            """,
+            user_id,
+        )
+
+        return User(row) if row is not None else None
 
     @classmethod
     async def fetch_by(
