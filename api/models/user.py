@@ -30,15 +30,15 @@ class User:
         self.active: bool = row["active"]
         self.password_hash: str = row["password_hash"]
         self.email: str = row["email"]
-        self.consented: bool = row["consented"]
+        self.consented: Optional[bool] = row["consented"]
         self.admin: bool = row["admin"]
         self.paranoid: bool = row["paranoid"]
 
         self.domain: int = row["domain"]
-        self.shorten_domain: int = row["shorten_domain"]
+        self.shorten_domain: Optional[int] = row["shorten_domain"]
 
         self.subdomain: str = row["subdomain"]
-        self.shorten_subdomain: Optional[str] = row["shorten_subdomain"]
+        self.shorten_subdomain: str = row["shorten_subdomain"]
 
     def __eq__(self, other):
         return self.id == other.id
