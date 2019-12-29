@@ -10,6 +10,7 @@ from violet import JobState
 
 from api.common.utils import int_
 from api.common.common import gen_shortname
+from api.models.user import User
 
 
 async def get_limits(user_id: int) -> Dict[str, Optional[int]]:
@@ -146,27 +147,14 @@ def wrap_dump_job_state(job_record: Optional[Record]) -> Optional[dict]:
     return {"state": "not_in_queue"}
 
 
-async def is_user_paranoid(user_id: int) -> Optional[bool]:
-    """If the user is in paranoid mode."""
-    # TODO maybe move to Storage.is_paranoid?
-    return await app.db.fetchval(
-        """
-        SELECT paranoid
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-
 async def gen_user_shortname(user_id: int, table: str = "files") -> Tuple[str, int]:
     """Generate a shortname for a file.
 
     Checks if the user is in paranoid mode and acts accordingly
     """
 
-    paranoid = await is_user_paranoid(user_id)
-    shortname_len = 8 if paranoid else app.econfig.SHORTNAME_LEN
+    user = await User.fetch(user_id)
+    shortname_len = 8 if user.paranoid else app.econfig.SHORTNAME_LEN
     return await gen_shortname(shortname_len, table)
 
 
