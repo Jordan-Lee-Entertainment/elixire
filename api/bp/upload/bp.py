@@ -14,7 +14,8 @@ from api.common import transform_wildcard, FileNameType
 from api.common.auth import check_admin, token_check
 from api.common.utils import resolve_domain
 from api.snowflake import get_snowflake
-from api.common.profile import gen_user_shortname, is_metrics_consenting
+from api.common.profile import gen_user_shortname
+from api.models import User
 from .context import UploadContext
 from .file import UploadFile
 
@@ -88,6 +89,8 @@ async def upload_metrics(ctx):
 async def upload_handler():
     """Main upload handler."""
     user_id = await token_check()
+    user = await User.fetch(user_id)
+    assert user is not None
 
     # if admin is set on request.args, we will # do an "admin upload", without
     # any checking for viruses, weekly limits, MIME, etc.
@@ -140,7 +143,7 @@ async def upload_handler():
     app.counters.inc("file_upload_hour")
 
     # TODO maybe push this to a background task
-    if await is_metrics_consenting(user_id):
+    if user.consenting:
         app.counters.inc("file_upload_hour_pub")
 
     # calculate the new file size, with the dupe decrease factor multiplied in
