@@ -28,6 +28,7 @@ from api.common.user import delete_user, get_basic_user
 from api.common.profile import get_limits, get_counts, fetch_dumps, wrap_dump_job_state
 from api.common.domain import get_basic_domain, is_domain_admin_only
 from api.common.auth import pwd_check
+from api.models import User
 
 bp = Blueprint("profile", __name__)
 log = logging.getLogger(__name__)
@@ -297,22 +298,11 @@ async def reset_password_req():
     payload = validate(await request.get_json(), PASSWORD_RESET_SCHEMA)
     username = payload["username"].lower()
 
-    udata = await app.db.fetchrow(
-        """
-        SELECT email, user_id
-        FROM users
-        WHERE username = $1
-        """,
-        username,
-    )
-
-    if not udata:
+    user = await User.fetch_by(username=username)
+    if user is None:
         raise BadInput("User not found")
 
-    user_email = udata["email"]
-    user_id = udata["user_id"]
-
-    email_token = await gen_email_token(user_id, "email_pwd_reset_tokens")
+    email_token = await gen_email_token(user.id, "email_pwd_reset_tokens")
 
     await app.db.execute(
         """
@@ -320,10 +310,10 @@ async def reset_password_req():
         VALUES ($1, $2)
         """,
         email_token,
-        user_id,
+        user.id,
     )
 
-    await send_password_reset_email(user_email, email_token)
+    await send_password_reset_email(user.email, email_token)
     return "", 204
 
 
