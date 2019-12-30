@@ -86,6 +86,8 @@ async def delete_user(user_id: int, delete: bool = False):
     If the delete flag is set, it will delete the user record,
     else it'll mark the user as deactivated.
 
+    Raises ValueError if user_id is 0 (the doll user).
+
     Parameters
     ----------
     user_id: int
@@ -93,13 +95,10 @@ async def delete_user(user_id: int, delete: bool = False):
     delete: bool, optional
         Delete the user records?
     """
-    # ignore deletion of the doll user via any admin-facing
-    # administration util (manage.py will also be unable
-    # to delete the doll user).
-    #  instance admins should proceed to deleting via the psql shell.
+    # instance admins should proceed to deleting the doll user via psql shell
+    # if wanted.
     if user_id == 0:
-        log.warning("Not deleting doll user")
-        return
+        raise ValueError("doll user is not delete-able")
 
     await app.db.execute(
         """
