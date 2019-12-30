@@ -7,19 +7,6 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 
-async def test_stats(test_cli_user):
-    resp = await test_cli_user.get("/api/stats")
-
-    assert resp.status_code == 200
-    rjson = await resp.json
-    assert isinstance(rjson, dict)
-
-    assert isinstance(rjson["total_files"], int)
-    assert isinstance(rjson["total_deleted_files"], int)
-    assert isinstance(rjson["total_bytes"], (float, int))
-    assert isinstance(rjson["total_shortens"], int)
-
-
 async def test_domains(test_cli_admin):
     # admins always own at least domain 0
     resp = await test_cli_admin.get("/api/stats/my_domains")
