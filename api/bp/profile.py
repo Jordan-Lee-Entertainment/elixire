@@ -63,6 +63,8 @@ async def profile_handler():
     if limits is None:
         raise APIError("Failed to fetch limits")
 
+    # TODO use User.fetch, add limits to User
+
     user["limits"] = limits
 
     counts = await get_counts(user_id)
