@@ -2,7 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Optional
+from typing import Optional, Dict, Any
 from quart import current_app as app
 
 
@@ -22,6 +22,8 @@ class User:
         "domain",
         "shorten_subdomain",
         "shorten_domain",
+        "file_byte_limit",
+        "shorten_limit",
     )
 
     def __init__(self, row):
@@ -40,6 +42,9 @@ class User:
         self.subdomain: str = row["subdomain"]
         self.shorten_subdomain: str = row["shorten_subdomain"]
 
+        self.file_byte_limit: int = row["file_byte_limit"]
+        self.shorten_limit: int = row["shorten_limit"]
+
     def __eq__(self, other):
         return self.id == other.id
 
@@ -48,11 +53,13 @@ class User:
         row = await app.db.fetchrow(
             f"""
             SELECT
-                user_id, username, active, password_hash, email, consented,
+                users.user_id, username, active, password_hash, email, consented,
                 admin, paranoid, subdomain, domain, shorten_subdomain,
-                shorten_domain
+                shorten_domain, blimit AS file_byte_limit, shlimit AS shorten_limit
             FROM users
-            WHERE user_id = $1
+            JOIN limits
+            ON users.user_id = limits.user_id
+            WHERE users.user_id = $1
             LIMIT 1
             """,
             user_id,
@@ -78,10 +85,12 @@ class User:
         row = await app.db.fetchrow(
             f"""
             SELECT
-                user_id, username, active, password_hash, email, consented,
+                users.user_id, username, active, password_hash, email, consented,
                 admin, paranoid, subdomain, domain, shorten_subdomain,
-                shorten_domain
+                shorten_domain, blimit AS file_byte_limit, shlimit AS shorten_limit
             FROM users
+            JOIN limits
+            ON users.user_id = limits.user_id
             WHERE {search_field} = $1
             LIMIT 1
             """,
