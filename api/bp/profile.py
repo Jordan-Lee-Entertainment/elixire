@@ -189,8 +189,8 @@ async def finish_update(conn, user_id: int, payload: dict):
     assert user is not None
     user_dict = user.to_dict()
 
-    if to_update(user_dict, payload, "username"):
-        await _try_username_patch(user_id, payload["username"])
+    if to_update(user_dict, payload, "name"):
+        await _try_username_patch(user_id, payload["name"])
 
     _simple_fields = (
         "email",
