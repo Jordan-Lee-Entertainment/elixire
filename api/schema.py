@@ -68,7 +68,7 @@ def validate(document, schema):
 
 
 PATCH_PROFILE = {
-    "username": {"type": "username", "required": False, "coerce": str.lower},
+    "name": {"type": "username", "required": False, "coerce": str.lower},
     "password": {"type": "password", "required": False},
     "email": {"type": "email", "required": False},
     "domain": {"type": "integer", "required": False},
@@ -81,7 +81,7 @@ PATCH_PROFILE = {
 }
 
 REGISTRATION_SCHEMA = {
-    "username": {"type": "username", "required": True, "coerce": str.lower},
+    "name": {"type": "username", "required": True, "coerce": str.lower},
     "password": {"type": "password", "required": True},
     "discord_user": {"type": "discord", "required": True},
     "email": {"type": "email", "required": True},
@@ -110,7 +110,7 @@ LOGIN_SCHEMA = {
 DEACTIVATE_USER_SCHEMA = {"password": {"type": "password", "required": True}}
 
 PASSWORD_RESET_SCHEMA = {
-    "username": {"type": "string", "required": True, "coerce": str.lower}
+    "name": {"type": "string", "required": True, "coerce": str.lower}
 }
 
 PASSWORD_RESET_CONFIRM_SCHEMA = {
