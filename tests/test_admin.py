@@ -61,7 +61,7 @@ async def test_user_fetch(test_cli_admin):
 
     # just checking the id should work, as the response of
     # /by-username/ is the same as doing it by ID.
-    assert isinstance(rjson["user_id"], str)
+    assert isinstance(rjson["id"], str)
     assert rjson["id"] == user_id
 
 
