@@ -139,6 +139,8 @@ class UploadContext:
     async def check_limits(self):
         user_id = self.user_id
 
+        # TODO User.fetch + User.fetch_limits
+
         # check user's limits
         used = await app.db.fetchval(
             """
