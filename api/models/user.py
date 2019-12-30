@@ -13,7 +13,6 @@ class User:
         "id",
         "name",
         "active",
-        "password_hash",
         "email",
         "consented",
         "admin",
@@ -30,7 +29,7 @@ class User:
         self.id: int = row["user_id"]
         self.name: str = row["username"]
         self.active: bool = row["active"]
-        self.password_hash: str = row["password_hash"]
+        # self.password_hash: str = row["password_hash"]
         self.email: str = row["email"]
         self.consented: Optional[bool] = row["consented"]
         self.admin: bool = row["admin"]
@@ -53,7 +52,7 @@ class User:
         row = await app.db.fetchrow(
             f"""
             SELECT
-                users.user_id, username, active, password_hash, email, consented,
+                users.user_id, username, active, email, consented,
                 admin, paranoid, subdomain, domain, shorten_subdomain,
                 shorten_domain, blimit AS file_byte_limit, shlimit AS shorten_limit
             FROM users
@@ -85,7 +84,7 @@ class User:
         row = await app.db.fetchrow(
             f"""
             SELECT
-                users.user_id, username, active, password_hash, email, consented,
+                users.user_id, username, active, email, consented,
                 admin, paranoid, subdomain, domain, shorten_subdomain,
                 shorten_domain, blimit AS file_byte_limit, shlimit AS shorten_limit
             FROM users
