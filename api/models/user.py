@@ -6,6 +6,21 @@ from typing import Optional, Dict, Any
 from quart import current_app as app
 
 
+async def _get_counts(table: str, user_id: int, extra: str = "") -> int:
+    return (
+        await app.db.fetchval(
+            f"""
+            SELECT COUNT(*)
+            FROM {table}
+            WHERE uploader = $1
+            {extra}
+            """,
+            user_id,
+        )
+        or 0
+    )
+
+
 class User:
     """Represents an elixire user."""
 
@@ -96,3 +111,67 @@ class User:
             user_dict[field] = getattr(self, field)
 
         return user_dict
+
+    async def fetch_limits(self) -> Dict[str, int]:
+        """Fetch the limits and used resources of the user."""
+        limits = await app.db.fetchrow(
+            """
+            SELECT blimit, shlimit
+            FROM limits
+            WHERE user_id = $1
+            """,
+            self.id,
+        )
+        assert limits is not None
+
+        bytes_used = await app.db.fetchval(
+            """
+            SELECT SUM(file_size)
+            FROM files
+            WHERE uploader = $1
+            AND file_id > time_snowflake(now() - interval '7 days')
+            """,
+            self.id,
+        )
+
+        shortens_used = await app.db.fetchval(
+            """
+            SELECT COUNT(*)
+            FROM shortens
+            WHERE uploader = $1
+            AND shorten_id > time_snowflake(now() - interval '7 days')
+            """,
+            self.id,
+        )
+
+        return {
+            "file_byte_limit": limits["blimit"],
+            "file_byte_used": bytes_used or 0,
+            "shorten_limit": limits["shlimit"],
+            "shorten_used": shortens_used,
+        }
+
+    async def fetch_stats(self) -> Dict[str, int]:
+        """Fetch general statistics about the user."""
+        total_files = await _get_counts("files", self.id)
+        total_shortens = await _get_counts("shortens", self.id)
+        total_deleted = await _get_counts("files", self.id, "AND deleted = true")
+
+        total_bytes = (
+            await app.db.fetchval(
+                """
+                SELECT SUM(file_size)::bigint
+                FROM files
+                WHERE uploader = $1
+                """,
+                self.id,
+            )
+            or 0
+        )
+
+        return {
+            "total_files": total_files,
+            "total_deleted_files": total_deleted,
+            "total_bytes": total_bytes,
+            "total_shortens": total_shortens,
+        }
