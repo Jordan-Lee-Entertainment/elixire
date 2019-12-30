@@ -56,6 +56,8 @@ def make_app() -> Quart:
     """Make a Quart instance."""
     app = Quart(__name__)
 
+    # TODO custom json encoder that re-encodes snowflakes as strs
+
     app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
 
     # TODO better config under app.cfg. check #112
