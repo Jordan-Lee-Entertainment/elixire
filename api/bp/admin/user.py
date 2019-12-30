@@ -19,24 +19,12 @@ from api.common.auth import token_check, check_admin
 from api.common.pagination import Pagination
 
 from api.common.user import delete_user
-from api.common.profile import get_limits
 
 from api.bp.admin.audit_log_actions.user import UserEditAction, UserDeleteAction
 from api.models import User
 
 log = logging.getLogger(__name__)
 bp = Blueprint("admin_user", __name__)
-
-
-async def _user_resp_from_row(user_row):
-    if not user_row:
-        raise NotFound("User not found")
-
-    user = dict(user_row)
-    user["limits"] = await get_limits(int(user["user_id"]))
-    user["user_id"] = str(user["user_id"])
-
-    return jsonify(user)
 
 
 @bp.route("/<int:user_id>")
@@ -49,7 +37,11 @@ async def get_user_handler(user_id: int):
     if user is None:
         raise NotFound("User not found")
 
-    return jsonify(user.to_dict())
+    user_dict = user.to_dict()
+    user_dict["limits"] = await user.fetch_limits()
+    user_dict["stats"] = await user.fetch_stats()
+
+    return jsonify(user_dict)
 
 
 @bp.route("/by-username/<username>")
@@ -61,6 +53,10 @@ async def get_user_by_username(username: str):
     user = await User.fetch_by(username=username)
     if user is None:
         raise NotFound("User not found")
+
+    user_dict = user.to_dict()
+    user_dict["limits"] = await user.fetch_limits()
+    user_dict["stats"] = await user.fetch_stats()
 
     return jsonify(user.to_dict())
 
