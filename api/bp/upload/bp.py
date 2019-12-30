@@ -143,7 +143,7 @@ async def upload_handler():
     app.counters.inc("file_upload_hour")
 
     # TODO maybe push this to a background task
-    if user.consenting:
+    if user.consented:
         app.counters.inc("file_upload_hour_pub")
 
     # calculate the new file size, with the dupe decrease factor multiplied in
