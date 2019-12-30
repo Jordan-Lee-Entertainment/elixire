@@ -44,7 +44,7 @@ class User:
         return self.id == other.id
 
     @classmethod
-    async def fetch(cls, user_id: int):
+    async def fetch(cls, user_id: int) -> Optional["User"]:
         row = await app.db.fetchrow(
             f"""
             SELECT
