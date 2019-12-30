@@ -156,16 +156,3 @@ async def gen_user_shortname(user_id: int, table: str = "files") -> Tuple[str, i
     user = await User.fetch(user_id)
     shortname_len = 8 if user.paranoid else app.econfig.SHORTNAME_LEN
     return await gen_shortname(shortname_len, table)
-
-
-async def is_metrics_consenting(user_id: int) -> Optional[bool]:
-    """Return if a user consented to data processing."""
-    # TODO maybe move to Storage.is_metrics_consenting?
-    return await app.db.fetchval(
-        """
-        SELECT consented
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
