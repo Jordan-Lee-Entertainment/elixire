@@ -44,13 +44,13 @@ async def test_profile_work(test_cli_user):
 def assert_limits(limits: dict):
     assert isinstance(limits, dict)
 
-    assert isinstance(limits["limit"], int)
-    assert isinstance(limits["used"], int)
-    assert limits["used"] <= limits["limit"]
+    assert isinstance(limits["file_byte_limit"], int)
+    assert isinstance(limits["file_byte_used"], int)
+    assert limits["file_byte_used"] <= limits["file_byte_limit"]
 
-    assert isinstance(limits["shortenlimit"], int)
-    assert isinstance(limits["shortenused"], int)
-    assert limits["shortenused"] <= limits["shortenlimit"]
+    assert isinstance(limits["shorten_limit"], int)
+    assert isinstance(limits["shorten_used"], int)
+    assert limits["shorten_used"] <= limits["shorten_limit"]
 
 
 async def test_patch_profile(test_cli_user):
@@ -104,7 +104,7 @@ async def test_patch_profile(test_cli_user):
     rjson = await resp.json
 
     assert isinstance(rjson, dict)
-    assert rjson["username"] == test_cli_user["username"]
+    assert rjson["name"] == test_cli_user["username"]
     assert rjson["email"] == test_cli_user["email"]
     assert not rjson["paranoid"]
 
@@ -140,7 +140,7 @@ async def test_patch_profile_wrong(test_cli_user):
         assert isinstance(rjson, dict)
 
         # assert we have errors on there
-        assert rjson["username"]
+        assert rjson["name"]
         assert rjson["email"]
         assert rjson["domain"]
         assert rjson["shorten_domain"]
