@@ -5,11 +5,24 @@
 from typing import Any
 from quart.json import JSONEncoder
 
+JS_MAX_SAFE_INT = 9007199254740991
+
+
+def stringify_snowflakes(obj):
+    if not isinstance(obj, dict):
+        return
+
+    for key, value in obj.items():
+        if isinstance(value, dict):
+            stringify_snowflakes(value)
+            continue
+
+        # TODO how do we safely determine a snowflake..
+        if key == "id" and isinstance(value, int) and value > JS_MAX_SAFE_INT:
+            obj[key] = str(value)
+
 
 class ElixireJSONEncoder(JSONEncoder):
     def encode(self, value: Any):
-        # TODO js max int? how do we safely determine a snowflake..
-        if isinstance(value, dict) and "id" in value and value["id"] > 10000000:
-            value.update({"id": str(value["id"])})
-
+        stringify_snowflakes(value)
         return super().encode(value)
