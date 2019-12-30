@@ -98,3 +98,11 @@ class User:
         )
 
         return User(row) if row is not None else None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Get the user as a dictionary."""
+        user_dict: Dict[str, Any] = {}
+        for field in User.__slots__:
+            user_dict[field] = getattr(self, field)
+
+        return user_dict
