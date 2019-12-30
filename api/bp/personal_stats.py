@@ -8,18 +8,10 @@ from quart import Blueprint, current_app as app, jsonify
 
 from api.common.auth import token_check
 from api.common.domain import get_domain_public, get_domain_tags
-from api.common.profile import get_counts
 
 
 bp = Blueprint("personal_stats", __name__)
 log = logging.getLogger(__name__)
-
-
-@bp.route("")
-async def personal_stats_handler():
-    """Personal statistics for users."""
-    user_id = await token_check()
-    return jsonify(await get_counts(user_id))
 
 
 @bp.route("/my_domains")
