@@ -55,7 +55,7 @@ async def register_user():
 
     payload = validate(await request.get_json(), REGISTRATION_SCHEMA)
 
-    username = payload["username"].lower()
+    username = payload["name"].lower()
     password = payload["password"]
     discord_user = payload["discord_user"]
     email = payload["email"]
