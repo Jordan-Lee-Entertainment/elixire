@@ -18,8 +18,8 @@ async def test_profile_work(test_cli_user):
     rjson = await resp.json
     assert isinstance(rjson, dict)
 
-    assert isinstance(rjson["user_id"], str)
-    assert isinstance(rjson["username"], str)
+    assert isinstance(rjson["id"], str)
+    assert isinstance(rjson["name"], str)
     assert isinstance(rjson["active"], bool)
     assert isinstance(rjson["admin"], bool)
 
@@ -30,6 +30,10 @@ async def test_profile_work(test_cli_user):
 
     assert_limits(rjson["limits"])
     assert isinstance(rjson["stats"], dict)
+    assert isinstance(rjson["stats"]["total_files"], int)
+    assert isinstance(rjson["stats"]["total_deleted_files"], int)
+    assert isinstance(rjson["stats"]["total_bytes"], int)
+    assert isinstance(rjson["stats"]["total_shortens"], int)
 
     dstatus = rjson["dump_status"]
     if dstatus is not None:
@@ -65,7 +69,7 @@ async def test_patch_profile(test_cli_user):
     resp = await test_cli_user.patch(
         "/api/profile",
         json={
-            "username": new_uname,
+            "name": new_uname,
             "email": new_email,
             # users dont have paranoid by default, so
             # change that too. the more we change,
@@ -80,7 +84,7 @@ async def test_patch_profile(test_cli_user):
     rjson = await resp.json
 
     assert isinstance(rjson, dict)
-    assert rjson["username"] == new_uname
+    assert rjson["name"] == new_uname
     assert rjson["email"] == new_email
     assert rjson["paranoid"]
 
@@ -88,7 +92,7 @@ async def test_patch_profile(test_cli_user):
     resp = await test_cli_user.patch(
         "/api/profile",
         json={
-            "username": test_cli_user["username"],
+            "name": test_cli_user["username"],
             "email": test_cli_user["email"],
             "paranoid": False,
             # password required to change username and email
@@ -121,7 +125,7 @@ async def test_patch_profile_wrong(test_cli_user):
         resp = await test_cli_user.patch(
             "/api/profile",
             json={
-                "username": random_username,
+                "name": random_username,
                 "email": random_email,
                 "domain": -1,
                 "shorten_domain": -1,

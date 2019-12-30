@@ -40,8 +40,8 @@ async def test_user_fetch(test_cli_admin):
     rjson = await resp.json
 
     assert isinstance(rjson, dict)
-    assert isinstance(rjson["user_id"], str)
-    assert isinstance(rjson["username"], str)
+    assert isinstance(rjson["id"], str)
+    assert isinstance(rjson["name"], str)
     assert isinstance(rjson["active"], bool)
     assert isinstance(rjson["admin"], bool)
     assert isinstance(rjson["domain"], int)
@@ -53,8 +53,8 @@ async def test_user_fetch(test_cli_admin):
 
     # trying to fetch the user from the username we got
     # should also work
-    user_id = rjson["user_id"]
-    resp = await test_cli_admin.get(f'/api/admin/users/by-username/{rjson["username"]}')
+    user_id = rjson["id"]
+    resp = await test_cli_admin.get(f'/api/admin/users/by-username/{rjson["name"]}')
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -62,7 +62,7 @@ async def test_user_fetch(test_cli_admin):
     # just checking the id should work, as the response of
     # /by-username/ is the same as doing it by ID.
     assert isinstance(rjson["user_id"], str)
-    assert rjson["user_id"] == user_id
+    assert rjson["id"] == user_id
 
 
 async def test_user_activate_cycle(test_cli_user, test_cli_admin):
@@ -266,8 +266,8 @@ async def test_user_patch(test_cli_user, test_cli_admin):
     rjson = await resp.json
     assert isinstance(rjson, dict)
     assert isinstance(rjson["limits"], dict)
-    assert rjson["limits"]["limit"] == 1000
-    assert rjson["limits"]["shortenlimit"] == 1000
+    assert rjson["limits"]["file_byte_limit"] == 1000
+    assert rjson["limits"]["shorten_limit"] == 1000
 
     # request 3: changing it back
     resp = await test_cli_admin.patch(
