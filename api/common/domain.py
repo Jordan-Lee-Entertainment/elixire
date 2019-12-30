@@ -10,6 +10,7 @@ from asyncpg import UniqueViolationError
 from api.storage import solve_domain
 from api.common.utils import dict_
 from api.errors import NotFound, BadInput
+from api.models import User
 
 
 async def create_domain(
@@ -238,21 +239,18 @@ async def get_domain_info(domain_id: int) -> Optional[dict]:
     filestats = await _domain_file_stats(domain_id, ignore_consented=True)
     stats["files"], stats["size"] = filestats
 
-    owner_data = await app.db.fetchrow(
-        """
-        SELECT user_id::text, username, active, consented, admin, paranoid
-        FROM users
-        WHERE user_id = (SELECT user_id FROM domain_owners WHERE domain_id = $1)
-        """,
-        domain_id,
+    owner_id = await app.db.fetchval(
+        "SELECT user_id FROM domain_owners WHERE domain_id = $1", domain_id
     )
-
-    dict_owner_data = dict_(owner_data)
+    owner = await User.fetch(owner_id)
 
     return {
         "info": {
             **dinfo,
-            **{"owner": dict_owner_data, "tags": await get_domain_tags(domain_id)},
+            **{
+                "owner": None if owner is None else owner.to_dict(),
+                "tags": await get_domain_tags(domain_id),
+            },
         },
         "stats": stats,
         "public_stats": await get_domain_public(domain_id),
