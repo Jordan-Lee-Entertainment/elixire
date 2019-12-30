@@ -4,7 +4,6 @@
 import logging
 
 from api.bp.admin.audit_log import EditAction, DeleteAction
-from api.common.profile import get_counts
 from api.models import User
 
 log = logging.getLogger(__name__)
@@ -32,9 +31,7 @@ class UserDeleteAction(DeleteAction):
     async def get_object(self, user_id: int) -> dict:
         user = await User.fetch(user_id)
         assert user is not None
-
-        # TODO add counts to User, remove need for get_counts
-        return {**user.to_dict(), **await get_counts(user_id)}
+        return {**user.to_dict(), **await user.fetch_stats()}
 
     async def details(self) -> list:
         lines = [f"User ID {self.id} was deleted", "Domain information:"]
