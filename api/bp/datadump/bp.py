@@ -12,6 +12,7 @@ from api.bp.datadump.janitor import start_janitor
 from api.common.auth import token_check, check_admin
 from api.common.profile import fetch_dumps
 from api.common.pagination import Pagination
+from api.models import User
 
 log = logging.getLogger(__name__)
 bp = Blueprint("datadump", __name__)
@@ -137,15 +138,7 @@ async def get_dump():
     if not user_id:
         raise BadInput("Invalid or expired token.")
 
-    user_name = await app.db.fetchval(
-        """
-        SELECT username
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    filename = f"{user_id}_{user_name}.zip"
+    user = await User.fetch(user_id)
+    filename = f"{user_id}_{user.name}.zip"
     zip_path = os.path.join(app.econfig.DUMP_FOLDER, filename)
     return await send_file(zip_path, as_attachment=True, attachment_filename=filename)

@@ -18,8 +18,8 @@ async def test_profile_work(test_cli_user):
     rjson = await resp.json
     assert isinstance(rjson, dict)
 
-    assert isinstance(rjson["user_id"], str)
-    assert isinstance(rjson["username"], str)
+    assert isinstance(rjson["id"], str)
+    assert isinstance(rjson["name"], str)
     assert isinstance(rjson["active"], bool)
     assert isinstance(rjson["admin"], bool)
 
@@ -30,6 +30,10 @@ async def test_profile_work(test_cli_user):
 
     assert_limits(rjson["limits"])
     assert isinstance(rjson["stats"], dict)
+    assert isinstance(rjson["stats"]["total_files"], int)
+    assert isinstance(rjson["stats"]["total_deleted_files"], int)
+    assert isinstance(rjson["stats"]["total_bytes"], int)
+    assert isinstance(rjson["stats"]["total_shortens"], int)
 
     dstatus = rjson["dump_status"]
     if dstatus is not None:
@@ -40,13 +44,13 @@ async def test_profile_work(test_cli_user):
 def assert_limits(limits: dict):
     assert isinstance(limits, dict)
 
-    assert isinstance(limits["limit"], int)
-    assert isinstance(limits["used"], int)
-    assert limits["used"] <= limits["limit"]
+    assert isinstance(limits["file_byte_limit"], int)
+    assert isinstance(limits["file_byte_used"], int)
+    assert limits["file_byte_used"] <= limits["file_byte_limit"]
 
-    assert isinstance(limits["shortenlimit"], int)
-    assert isinstance(limits["shortenused"], int)
-    assert limits["shortenused"] <= limits["shortenlimit"]
+    assert isinstance(limits["shorten_limit"], int)
+    assert isinstance(limits["shorten_used"], int)
+    assert limits["shorten_used"] <= limits["shorten_limit"]
 
 
 async def test_patch_profile(test_cli_user):
@@ -65,7 +69,7 @@ async def test_patch_profile(test_cli_user):
     resp = await test_cli_user.patch(
         "/api/profile",
         json={
-            "username": new_uname,
+            "name": new_uname,
             "email": new_email,
             # users dont have paranoid by default, so
             # change that too. the more we change,
@@ -80,7 +84,7 @@ async def test_patch_profile(test_cli_user):
     rjson = await resp.json
 
     assert isinstance(rjson, dict)
-    assert rjson["username"] == new_uname
+    assert rjson["name"] == new_uname
     assert rjson["email"] == new_email
     assert rjson["paranoid"]
 
@@ -88,7 +92,7 @@ async def test_patch_profile(test_cli_user):
     resp = await test_cli_user.patch(
         "/api/profile",
         json={
-            "username": test_cli_user["username"],
+            "name": test_cli_user["username"],
             "email": test_cli_user["email"],
             "paranoid": False,
             # password required to change username and email
@@ -100,7 +104,7 @@ async def test_patch_profile(test_cli_user):
     rjson = await resp.json
 
     assert isinstance(rjson, dict)
-    assert rjson["username"] == test_cli_user["username"]
+    assert rjson["name"] == test_cli_user["username"]
     assert rjson["email"] == test_cli_user["email"]
     assert not rjson["paranoid"]
 
@@ -121,7 +125,7 @@ async def test_patch_profile_wrong(test_cli_user):
         resp = await test_cli_user.patch(
             "/api/profile",
             json={
-                "username": random_username,
+                "name": random_username,
                 "email": random_email,
                 "domain": -1,
                 "shorten_domain": -1,
@@ -136,7 +140,7 @@ async def test_patch_profile_wrong(test_cli_user):
         assert isinstance(rjson, dict)
 
         # assert we have errors on there
-        assert rjson["username"]
+        assert rjson["name"]
         assert rjson["email"]
         assert rjson["domain"]
         assert rjson["shorten_domain"]

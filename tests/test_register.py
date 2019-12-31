@@ -22,7 +22,7 @@ async def test_register(test_cli):
     resp = await test_cli.post(
         "/api/auth/register",
         json={
-            "username": rand_username,
+            "name": rand_username,
             "password": rand_password,
             "email": rand_email,
             "discord_user": rand_discord,

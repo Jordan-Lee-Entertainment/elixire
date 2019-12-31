@@ -37,6 +37,7 @@ import api.bp.cors
 import api.bp.client
 import api.bp.list
 import api.bp.delete
+from api.json import ElixireJSONEncoder
 
 from api.errors import APIError, Banned
 from api.common import get_ip_addr
@@ -55,6 +56,8 @@ log = logging.getLogger(__name__)
 def make_app() -> Quart:
     """Make a Quart instance."""
     app = Quart(__name__)
+
+    app.json_encoder = ElixireJSONEncoder
 
     app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
 

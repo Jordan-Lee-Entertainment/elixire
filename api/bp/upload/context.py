@@ -16,6 +16,7 @@ from api.bp.upload.exif import clear_exif
 from api.bp.upload.virus import scan_file
 from api.common.webhook import jpeg_toobig_webhook
 from api.errors import BadImage, FeatureDisabled, QuotaExploded
+from api.models import User
 from .file import UploadFile
 
 __all__ = ["UploadContext"]
@@ -137,35 +138,20 @@ class UploadContext:
         await scan_file(self)
 
     async def check_limits(self):
-        user_id = self.user_id
-
-        # check user's limits
-        used = await app.db.fetchval(
-            """
-            SELECT SUM(file_size)
-            FROM files
-            WHERE uploader = $1
-            AND file_id > time_snowflake(now() - interval '7 days')
-            """,
-            user_id,
-        )
-
-        byte_limit = await app.db.fetchval(
-            """
-            SELECT blimit
-            FROM limits
-            WHERE user_id = $1
-            """,
-            user_id,
-        )
+        """Check if the user uploading has enough bytes on their weekly limit.
+        Raises QuotaExploded when they don't.
+        """
+        user = await User.fetch(self.user_id)
+        assert user is not None
+        limits = await user.fetch_limits()
 
         # convert to megabytes so we display to the user
-        cnv_limit = byte_limit / 1024 / 1024
+        cnv_limit = limits["file_byte_limit"] / 1024 / 1024
 
-        if used and used > byte_limit:
+        if limits["file_byte_used"] > limits["file_byte_limit"]:
             raise QuotaExploded(f"You already blew your weekly limit of {cnv_limit} MB")
 
-        if used and used + self.file.size > byte_limit:
+        if limits["file_byte_used"] + self.file.size > limits["file_byte_limit"]:
             raise QuotaExploded(
                 f"This file would blow the weekly limit of {cnv_limit} MB"
             )

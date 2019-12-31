@@ -19,23 +19,12 @@ from api.common.auth import token_check, check_admin
 from api.common.pagination import Pagination
 
 from api.common.user import delete_user
-from api.common.profile import get_limits
 
 from api.bp.admin.audit_log_actions.user import UserEditAction, UserDeleteAction
+from api.models import User
 
 log = logging.getLogger(__name__)
 bp = Blueprint("admin_user", __name__)
-
-
-async def _user_resp_from_row(user_row):
-    if not user_row:
-        raise NotFound("User not found")
-
-    user = dict(user_row)
-    user["limits"] = await get_limits(int(user["user_id"]))
-    user["user_id"] = str(user["user_id"])
-
-    return jsonify(user)
 
 
 @bp.route("/<int:user_id>")
@@ -44,17 +33,15 @@ async def get_user_handler(user_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    row = await app.db.fetchrow(
-        """
-        SELECT user_id, username, active, admin, domain, subdomain,
-          consented, email, paranoid
-        FROM users
-        WHERE user_id=$1
-        """,
-        user_id,
-    )
+    user = await User.fetch(user_id)
+    if user is None:
+        raise NotFound("User not found")
 
-    return await _user_resp_from_row(row)
+    user_dict = user.to_dict()
+    user_dict["limits"] = await user.fetch_limits()
+    user_dict["stats"] = await user.fetch_stats()
+
+    return jsonify(user_dict)
 
 
 @bp.route("/by-username/<username>")
@@ -63,17 +50,15 @@ async def get_user_by_username(username: str):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    row = await app.db.fetchrow(
-        """
-        SELECT user_id, username, active, admin, domain, subdomain,
-          consented, email, paranoid
-        FROM users
-        WHERE username = $1
-        """,
-        username,
-    )
+    user = await User.fetch_by(username=username)
+    if user is None:
+        raise NotFound("User not found")
 
-    return await _user_resp_from_row(row)
+    user_dict = user.to_dict()
+    user_dict["limits"] = await user.fetch_limits()
+    user_dict["stats"] = await user.fetch_stats()
+
+    return jsonify(user.to_dict())
 
 
 @bp.route("/activate/<int:user_id>", methods=["POST"])
@@ -107,19 +92,11 @@ async def activation_email(user_id):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    active = await app.db.fetchval(
-        """
-        SELECT active
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    if active is None:
+    user = await User.fetch(user_id)
+    if user is None:
         raise BadInput("Provided user_id does not reference any user")
 
-    if active:
+    if user.active:
         raise BadInput("User is already active")
 
     # there was an invalidate() call which is unecessary
@@ -322,17 +299,9 @@ async def del_user(user_id):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    active = await app.db.fetchval(
-        """
-        SELECT active
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    if active is None:
-        raise BadInput("user not found")
+    user = await User.fetch(user_id)
+    if user is None:
+        raise NotFound("User not found")
 
     async with UserDeleteAction(request, user_id):
         await delete_user(user_id, True)

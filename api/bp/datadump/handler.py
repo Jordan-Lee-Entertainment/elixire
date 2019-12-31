@@ -11,6 +11,7 @@ from quart import current_app as app
 
 from api.common.email import gen_email_token, send_datadump_email
 from api.errors import EmailError
+from api.models import User
 
 log = logging.getLogger(__name__)
 
@@ -19,16 +20,9 @@ async def open_zipdump(
     user_id: int, *, resume=False
 ) -> Tuple[zipfile.ZipFile, Optional[str]]:
     """Open the zip file relating to your dump."""
-    user_name = await app.db.fetchval(
-        """
-        SELECT username
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    zip_path = os.path.join(app.econfig.DUMP_FOLDER, f"{user_id}_{user_name}.zip")
+    user = await User.fetch(user_id)
+    assert user is not None
+    zip_path = os.path.join(app.econfig.DUMP_FOLDER, f"{user_id}_{user.name}.zip")
 
     if not resume:
         # we use w instead of x because
@@ -36,10 +30,10 @@ async def open_zipdump(
         # just overwrite it.
         return (
             zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED),
-            user_name,
+            user.name,
         )
 
-    return zipfile.ZipFile(zip_path, "a", compression=zipfile.ZIP_DEFLATED), user_name
+    return zipfile.ZipFile(zip_path, "a", compression=zipfile.ZIP_DEFLATED), user.name
 
 
 def _write_json(zipdump, filepath, obj) -> None:
@@ -49,26 +43,9 @@ def _write_json(zipdump, filepath, obj) -> None:
 
 async def dump_json_user(zipdump, user_id) -> None:
     """Insert user information into the dump."""
-    udata = await app.db.fetchrow(
-        """
-        SELECT user_id, username, active, password_hash, email,
-               consented, admin, subdomain, domain
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    limits = await app.db.fetchrow(
-        """
-        SELECT blimit AS file_byte_limit, shlimit AS shorten_limit
-        FROM limits
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    _write_json(zipdump, "user_data.json", {**dict(udata), **dict(limits)})
+    user = await User.fetch(user_id)
+    assert user is not None
+    _write_json(zipdump, "user_data.json", user.to_dict())
 
 
 async def dump_json_bans(zipdump: zipfile.ZipFile, user_id: int) -> None:

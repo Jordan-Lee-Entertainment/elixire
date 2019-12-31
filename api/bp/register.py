@@ -19,6 +19,7 @@ from api.schema import validate, REGISTRATION_SCHEMA, RECOVER_USERNAME
 from api.common.email import send_register_email, send_username_recovery_email
 from api.common.webhook import register_webhook
 from api.common.user import create_user, delete_user
+from api.models import User
 
 log = logging.getLogger(__name__)
 bp = Blueprint("register", __name__)
@@ -54,7 +55,7 @@ async def register_user():
 
     payload = validate(await request.get_json(), REGISTRATION_SCHEMA)
 
-    username = payload["username"].lower()
+    username = payload["name"].lower()
     password = payload["password"]
     discord_user = payload["discord_user"]
     email = payload["email"]
@@ -87,18 +88,10 @@ async def recover_username():
     payload = validate(await request.get_json(), RECOVER_USERNAME)
     email = payload["email"]
 
-    row = await app.db.fetchrow(
-        """
-        SELECT username, email
-        FROM users
-        WHERE email = $1
-        LIMIT 1
-        """,
-        email,
-    )
+    user = await User.fetch_by(email=email)
 
-    if row is None:
+    if user is None:
         raise BadInput("Email not found")
 
-    await send_username_recovery_email(row["username"], row["email"])
+    await send_username_recovery_email(user.name, user.email)
     return "", 204

@@ -2,7 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
-from typing import Dict, Union, Any, Optional
+from typing import Dict, Union
 
 from quart import current_app as app
 
@@ -134,23 +134,3 @@ async def delete_user(user_id: int, delete: bool = False):
     return app.sched.spawn(
         full_file_delete, [user_id, delete], job_id=f"full_delete:{user_id}"
     )
-
-
-# TODO better typing
-async def get_basic_user(user_id: int) -> Optional[Dict[str, Any]]:
-    """Get a basic user dictionary from the users table."""
-    user = await app.db.fetchrow(
-        """
-        SELECT user_id::text, username, active, email,
-            consented, admin, subdomain, domain, paranoid,
-            shorten_domain, shorten_subdomain
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    if user is None:
-        return None
-
-    return dict(user)

@@ -8,7 +8,7 @@ from typing import Dict, List
 
 from quart import Blueprint, request, current_app as app, jsonify
 
-from api.errors import FailedAuth, FeatureDisabled, BadInput, APIError
+from api.errors import FeatureDisabled, BadInput
 from api.common.auth import token_check, password_check, pwd_hash, check_admin
 from api.common.email import (
     gen_email_token,
@@ -24,10 +24,11 @@ from api.schema import (
     PASSWORD_RESET_SCHEMA,
     PASSWORD_RESET_CONFIRM_SCHEMA,
 )
-from api.common.user import delete_user, get_basic_user
-from api.common.profile import get_limits, get_counts, fetch_dumps, wrap_dump_job_state
+from api.common.user import delete_user
+from api.common.profile import fetch_dumps, wrap_dump_job_state
 from api.common.domain import get_basic_domain, is_domain_admin_only
 from api.common.auth import pwd_check
+from api.models import User
 
 bp = Blueprint("profile", __name__)
 log = logging.getLogger(__name__)
@@ -55,23 +56,17 @@ async def profile_handler():
     """Get your basic information as a user."""
     user_id = await token_check()
 
-    user = await get_basic_user(user_id)
-    if user is None:
-        raise FailedAuth("Unknown user")
+    user = await User.fetch(user_id)
+    assert user is not None
 
-    limits = await get_limits(user_id)
-    if limits is None:
-        raise APIError("Failed to fetch limits")
-
-    user["limits"] = limits
-
-    counts = await get_counts(user_id)
-    user["stats"] = counts
+    user_dict = user.to_dict()
+    user_dict["limits"] = await user.fetch_limits()
+    user_dict["stats"] = await user.fetch_stats()
 
     jobs = await fetch_dumps(user_id, current=True)
-    user["dump_status"] = wrap_dump_job_state(jobs[0]["state"] if jobs else None)
+    user_dict["dump_status"] = wrap_dump_job_state(jobs[0]["state"] if jobs else None)
 
-    return jsonify(user)
+    return jsonify(user_dict)
 
 
 async def _try_domain_patch(user_id: int, domain_id: int) -> None:
@@ -140,11 +135,13 @@ def to_update(user: dict, payload: dict, field: str) -> bool:
 async def validate_semantics(user_id: int, payload: dict) -> dict:
     """Validate input errors in the payload."""
     errors: Dict[str, List[str]] = defaultdict(list)
-    user = await get_basic_user(user_id)
-    assert user is not None
 
-    _field_must_password = ("username", "email", "new_password")
-    _field_must_unique_user = ("username", "email")
+    user_obj = await User.fetch(user_id)
+    assert user_obj is not None
+    user = user_obj.to_dict()
+
+    _field_must_password = ("name", "email", "new_password")
+    _field_must_unique_user = ("name", "email")
 
     for field in _field_must_password:
         if to_update(user, payload, field):
@@ -156,12 +153,14 @@ async def validate_semantics(user_id: int, payload: dict) -> dict:
             continue
 
         existing_user = await app.db.fetchrow(
-            f"SELECT user_id FROM users WHERE {field} = $1", payload[field]
+            "SELECT user_id FROM users WHERE "
+            f"{'username' if field == 'name' else field} = $1",
+            payload[field],
         )
 
         if existing_user is not None:
             msg = {
-                "username": "Username is already taken",
+                "name": "Username is already taken",
                 "email": "Email is already being used by another user",
             }[field]
 
@@ -186,11 +185,12 @@ async def validate_semantics(user_id: int, payload: dict) -> dict:
 
 
 async def finish_update(conn, user_id: int, payload: dict):
-    user = await get_basic_user(user_id)
+    user = await User.fetch(user_id)
     assert user is not None
+    user_dict = user.to_dict()
 
-    if to_update(user, payload, "username"):
-        await _try_username_patch(user_id, payload["username"])
+    if to_update(user_dict, payload, "name"):
+        await _try_username_patch(user_id, payload["name"])
 
     _simple_fields = (
         "email",
@@ -202,17 +202,17 @@ async def finish_update(conn, user_id: int, payload: dict):
     )
 
     for field in _simple_fields:
-        if not to_update(user, payload, field):
+        if not to_update(user_dict, payload, field):
             continue
 
         await conn.execute(
             f"UPDATE users SET {field} = $1 WHERE user_id = $2", payload[field], user_id
         )
 
-    if to_update(user, payload, "domain"):
+    if to_update(user_dict, payload, "domain"):
         await _try_domain_patch(user_id, payload["domain"])
 
-    if to_update(user, payload, "new_password"):
+    if to_update(user_dict, payload, "new_password"):
         await _update_password(user_id, payload["new_password"])
 
 
@@ -223,7 +223,8 @@ async def change_profile_handler():
 
     user_id = await token_check()
     payload = validate(await request.get_json(), PATCH_PROFILE)
-    payload["username"] = payload["username"].lower()
+    if "name" in payload:
+        payload["name"] = payload["name"].lower()
 
     # check the semantic validity of payload before running UPDATEs
     errors = await validate_semantics(user_id, payload)
@@ -234,8 +235,9 @@ async def change_profile_handler():
         async with conn.transaction():
             await finish_update(conn, user_id, payload)
 
-    user = await get_basic_user(user_id)
-    return jsonify(user)
+    user = await User.fetch(user_id)
+    assert user is not None
+    return jsonify(user.to_dict())
 
 
 @bp.route("", methods=["DELETE"])
@@ -295,22 +297,11 @@ async def reset_password_req():
     payload = validate(await request.get_json(), PASSWORD_RESET_SCHEMA)
     username = payload["username"].lower()
 
-    udata = await app.db.fetchrow(
-        """
-        SELECT email, user_id
-        FROM users
-        WHERE username = $1
-        """,
-        username,
-    )
-
-    if not udata:
+    user = await User.fetch_by(username=username)
+    if user is None:
         raise BadInput("User not found")
 
-    user_email = udata["email"]
-    user_id = udata["user_id"]
-
-    email_token = await gen_email_token(user_id, "email_pwd_reset_tokens")
+    email_token = await gen_email_token(user.id, "email_pwd_reset_tokens")
 
     await app.db.execute(
         """
@@ -318,10 +309,10 @@ async def reset_password_req():
         VALUES ($1, $2)
         """,
         email_token,
-        user_id,
+        user.id,
     )
 
-    await send_password_reset_email(user_email, email_token)
+    await send_password_reset_email(user.email, email_token)
     return "", 204
 
 
