@@ -38,7 +38,7 @@ class User:
         "shorten_domain",
     )
 
-    def __init__(self, row):
+    def __init__(self, row) -> None:
         self.id: int = row["user_id"]
         self.name: str = row["username"]
         self.active: bool = row["active"]
@@ -54,7 +54,7 @@ class User:
         self.subdomain: str = row["subdomain"]
         self.shorten_subdomain: str = row["shorten_subdomain"]
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.id == other.id
 
     @classmethod
@@ -78,7 +78,7 @@ class User:
     async def fetch_by(
         cls, *, username: str = None, email: str = None
     ) -> Optional["User"]:
-        """Search a user by some uniquely identifieng field.
+        """Fetch a user by some uniquely identifying field.
 
         Only one of the fields may be searched at a time.
         """
