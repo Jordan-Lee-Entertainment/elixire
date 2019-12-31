@@ -4,8 +4,7 @@
 
 from typing import Any
 from quart.json import JSONEncoder
-
-JS_MAX_SAFE_INT = 9007199254740991
+from api.snowflake import EPOCH
 
 
 def stringify_snowflakes(obj):
@@ -17,8 +16,7 @@ def stringify_snowflakes(obj):
             stringify_snowflakes(value)
             continue
 
-        # TODO how do we safely determine a snowflake..
-        if key == "id" and isinstance(value, int) and value > JS_MAX_SAFE_INT:
+        if key == "id" and isinstance(value, int) and value > EPOCH:
             obj[key] = str(value)
 
 
