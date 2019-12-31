@@ -6,14 +6,16 @@ from typing import Optional, Dict, Any
 from quart import current_app as app
 
 
-async def _get_counts(table: str, user_id: int, extra: str = "") -> int:
+async def _get_uploaded_count_from(
+    user_id: int, *, table: str, extra_sql: str = ""
+) -> int:
     return (
         await app.db.fetchval(
             f"""
             SELECT COUNT(*)
             FROM {table}
             WHERE uploader = $1
-            {extra}
+            {extra_sql}
             """,
             user_id,
         )
@@ -153,9 +155,11 @@ class User:
 
     async def fetch_stats(self) -> Dict[str, int]:
         """Fetch general statistics about the user."""
-        total_files = await _get_counts("files", self.id)
-        total_shortens = await _get_counts("shortens", self.id)
-        total_deleted = await _get_counts("files", self.id, "AND deleted = true")
+        total_files = await _get_uploaded_count_from(self.id, table="files")
+        total_shortens = await _get_uploaded_count_from(self.id, table="shortens")
+        total_deleted = await _get_uploaded_count_from(
+            self.id, table="files", extra_sql="AND deleted = true"
+        )
 
         total_bytes = (
             await app.db.fetchval(
