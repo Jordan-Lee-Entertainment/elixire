@@ -15,8 +15,8 @@ from api.models.user import User
 async def fetch_dumps(
     user_id: int, *, current: bool = True, future: bool = False
 ) -> Optional[List[Record]]:
-    """Fetch a list of violet job records reffering to datadump jobs
-    that match the given parameters."""
+    """Fetch a list of Violet job records in the datadump queue
+    according to the given parameters."""
     where = {
         (False, False): "",
         (False, True): "scheduled_at >= (now() at time zone 'utc')",
