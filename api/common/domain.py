@@ -190,53 +190,20 @@ async def is_domain_admin_only(domain_id: int) -> bool:
 
 async def get_domain_info(domain_id: int) -> Optional[dict]:
     """Get domain information."""
-    raw_info = await app.db.fetchrow(
-        """
-        SELECT domain, permissions
-        FROM domains
-        WHERE domain_id = $1
-        """,
-        domain_id,
-    )
-
-    dinfo = dict_(raw_info)
-    if dinfo is None:
+    domain = await Domain.fetch(domain_id)
+    if domain is None:
         return None
 
-    stats = {}
-
-    # doing batch queries should help us speed up the overall request time
-    rows = await app.db.fetchrow(
-        """
-        SELECT
-            (SELECT COUNT(*) FROM users WHERE domain = $1),
-            (SELECT COUNT(*) FROM shortens WHERE domain = $1)
-        """,
-        domain_id,
-    )
-
-    stats["users"] = rows[0]
-    stats["shortens"] = rows[1]
-
-    filestats = await _domain_file_stats(domain_id, ignore_consented=True)
-    stats["files"], stats["size"] = filestats
+    domain_dict = domain.to_dict()
+    domain_dict["stats"] = await domain.fetch_stats()
+    domain_dict["public_stats"] = await domain.fetch_stats(public=True)
 
     owner_id = await app.db.fetchval(
         "SELECT user_id FROM domain_owners WHERE domain_id = $1", domain_id
     )
     owner = await User.fetch(owner_id)
 
-    return {
-        "info": {
-            **dinfo,
-            **{
-                "owner": None if owner is None else owner.to_dict(),
-                "tags": await get_domain_tags(domain_id),
-            },
-        },
-        "stats": stats,
-        "public_stats": await get_domain_public(domain_id),
-    }
+    return {**domain_dict, **{"owner": owner.to_dict() if owner else None}}
 
 
 async def get_domain_public(domain_id: int) -> Optional[dict]:
