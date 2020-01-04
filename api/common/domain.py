@@ -8,8 +8,8 @@ from quart import current_app as app
 from asyncpg import UniqueViolationError
 
 from api.storage import solve_domain
-from api.errors import NotFound, BadInput
-from api.models import User, Domain
+from api.errors import BadInput
+from api.models import Domain
 
 
 async def create_domain(
