@@ -11,8 +11,7 @@ from api.common import delete_file, delete_shorten, delete_many
 from api.common.auth import token_check, password_check
 from api.errors import BadInput  # , JobExistsError
 from api.schema import validate, DELETE_ALL_SCHEMA, isotimestamp_or_int
-
-from api.common.domain import get_domain_info
+from api.models import Domain
 
 bp = Blueprint("files", __name__)
 log = logging.getLogger(__name__)
@@ -35,7 +34,7 @@ async def purge_all_content():
 
     # semantic validation
     if "delete_from_domain" in j:
-        domain = await get_domain_info(j["delete_from_domain"])
+        domain = await Domain.fetch(j["delete_from_domain"])
         if domain is None:
             raise BadInput("Invalid domain ID")
 
