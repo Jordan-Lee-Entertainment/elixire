@@ -127,27 +127,6 @@ async def delete_domain(domain_id: int) -> dict:
     }
 
 
-async def _domain_file_stats(domain_id, *, ignore_consented: bool = False) -> tuple:
-    """Get domain file stats (count and sum of all bytes)."""
-
-    consented_clause = "" if ignore_consented else "AND users.consented = true"
-
-    row = await app.db.fetchrow(
-        f"""
-        SELECT COUNT(*), SUM(file_size)
-        FROM files
-        JOIN users
-        ON users.user_id = files.uploader
-        WHERE files.domain = $1
-        AND files.deleted = false
-        {consented_clause}
-        """,
-        domain_id,
-    )
-
-    return row["count"], int(row["sum"] or 0)
-
-
 async def get_domain_tag_ids(domain_id: int) -> Optional[List[int]]:
     """Get a domain's tag IDs."""
     return [
@@ -203,34 +182,6 @@ async def get_domain_info(domain_id: int) -> Optional[dict]:
     owner = await User.fetch(owner_id)
 
     return {**domain_dict, **{"owner": owner.to_dict() if owner else None}}
-
-
-async def get_domain_public(domain_id: int) -> Optional[dict]:
-    """Get public information about a domain."""
-    public_stats = {}
-
-    rows = await app.db.fetchrow(
-        """
-        SELECT
-            (SELECT COUNT(*) FROM users
-            WHERE domain = $1 AND consented = true),
-            (SELECT COUNT(*) FROM shortens
-            JOIN users ON users.user_id = shortens.uploader
-            WHERE shortens.domain = $1 AND users.consented = true)
-        """,
-        domain_id,
-    )
-
-    if rows is None:
-        return None
-
-    public_stats["users"] = rows[0]
-    public_stats["shortens"] = rows[1]
-
-    filestats = await _domain_file_stats(domain_id)
-    public_stats["files"], public_stats["size"] = filestats
-
-    return public_stats
 
 
 async def set_domain_owner(domain_id: int, owner_id: int) -> None:
