@@ -127,22 +127,6 @@ async def delete_domain(domain_id: int) -> dict:
     }
 
 
-async def get_domain_tag_ids(domain_id: int) -> Optional[List[int]]:
-    """Get a domain's tag IDs."""
-    return [
-        r["tag_id"]
-        for r in await app.db.fetch(
-            """
-            SELECT tag_id
-            FROM domain_tag_mappings
-            WHERE domain_id = $1
-            ORDER BY tag_id ASC
-            """,
-            domain_id,
-        )
-    ]
-
-
 async def get_domain_info(domain_id: int) -> Optional[dict]:
     """Get domain information."""
     domain = await Domain.fetch(domain_id)
