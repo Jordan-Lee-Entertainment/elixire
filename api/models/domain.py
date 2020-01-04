@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from typing import Optional, Dict, Any
-from quart import current_app as app
 from collections import namedtuple
+from quart import current_app as app
+from .user import User
 
 
 class Tag(namedtuple("Tag", ["id", "label"])):
@@ -141,3 +142,14 @@ class Domain:
         }
 
         return stats
+
+    async def fetch_owner(self) -> Optional[User]:
+        """Fetch the owner of a domain."""
+        owner_id = await app.db.fetchval(
+            "SELECT user_id FROM domain_owners WHERE domain_id = $1", self.id
+        )
+
+        if owner_id is None:
+            return None
+
+        return await User.fetch(owner_id)
