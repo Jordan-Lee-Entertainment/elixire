@@ -93,3 +93,51 @@ class Domain:
         have full control over the DNS records of.
         """
         return "official" in self.tags
+
+    async def fetch_stats(self, *, public: bool = False) -> dict:
+        """Fetch statistics about a domain. Returns a dictionary containing
+         - the total count of users using the domain
+         - the total count of shortens
+         - the total count of files
+         - the total size of the files in the domain
+        """
+        stats = {}
+
+        consented_clause = "" if not public else "AND users.consented = true"
+
+        row = await app.db.fetchrow(
+            f"""
+            SELECT
+                (SELECT COUNT(*) FROM users
+                WHERE domain = $1 {consented_clause}) AS user_count,
+                (SELECT COUNT(*) FROM shortens
+                JOIN users ON users.user_id = shortens.uploader
+                WHERE shortens.domain = $1 {consented_clause}) AS shorten_count
+            """,
+            self.id,
+        )
+
+        assert row is not None
+
+        stats["user_count"] = row["user_count"]
+        stats["shorten_count"] = row["shorten_count"]
+
+        row = await app.db.fetchrow(
+            f"""
+            SELECT COUNT(*), SUM(file_size)
+            FROM files
+            JOIN users
+            ON users.user_id = files.uploader
+            WHERE files.domain = $1
+            AND files.deleted = false
+            {consented_clause}
+            """,
+            self.id,
+        )
+
+        stats["files"] = {
+            "count": row["count"],
+            "total_file_bytes": int(row["sum"] or 0),
+        }
+
+        return stats
