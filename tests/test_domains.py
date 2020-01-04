@@ -3,10 +3,12 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .common import hexs
 
 from api.storage import solve_domain
-from api.common.domain import create_domain, delete_domain, get_domain_tags
+from api.common.domain import create_domain, delete_domain
+from api.models import Domain
+
+from .common import hexs
 
 pytestmark = pytest.mark.asyncio
 
@@ -48,9 +50,10 @@ async def test_domains_common_functions(test_cli_admin):
 
         # assert tags are empty for new domains
         async with test_cli_admin.app.app_context():
-            tags = await get_domain_tags(domain_id)
+            domain = await Domain.fetch(domain_id)
+            assert domain is not None
 
-        assert not tags
+        assert not domain.tags
     finally:
         async with test_cli_admin.app.app_context():
             results = await delete_domain(domain_id)
