@@ -19,11 +19,6 @@ LANGUAGE PLPGSQL;
 
 CREATE TABLE IF NOT EXISTS domains (
     domain_id serial PRIMARY KEY,
-
-    -- if domain can *only* be used by admins
-    admin_only boolean DEFAULT false,
-    
-    official boolean DEFAULT false,
     domain text,
     
     -- permissions' bits:
