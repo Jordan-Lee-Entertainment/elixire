@@ -27,6 +27,7 @@ from api.common.auth import token_check, check_admin
 from api.common.email import send_email_to_user
 from api.common.pagination import Pagination
 from api.errors import BadInput, NotFound
+from api.models import Domain
 
 from api.bp.admin.audit_log_actions.domain import (
     DomainAddAction,
@@ -65,13 +66,9 @@ async def add_domain():
     async with DomainAddAction() as action:
         action.update(domain_id=domain_id)
 
-        try:
-            owner_id = j["owner_id"]
-            action.update(owner_id=owner_id)
-        except KeyError:
-            pass
-
-    return jsonify({"success": True, "new_id": domain_id})
+    domain = await Domain.fetch(domain_id)
+    assert domain is not None
+    return jsonify({"domain": domain.to_dict()})
 
 
 async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
