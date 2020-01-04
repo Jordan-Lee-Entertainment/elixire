@@ -153,12 +153,9 @@ async def get_domain_info(domain_id: int) -> Optional[dict]:
     domain_dict["stats"] = await domain.fetch_stats()
     domain_dict["public_stats"] = await domain.fetch_stats(public=True)
 
-    owner_id = await app.db.fetchval(
-        "SELECT user_id FROM domain_owners WHERE domain_id = $1", domain_id
-    )
-    owner = await User.fetch(owner_id)
-
-    return {**domain_dict, **{"owner": owner.to_dict() if owner else None}}
+    owner = await domain.fetch_owner()
+    domain_dict["owner"] = owner.to_dict() if owner else None
+    return domain_dict
 
 
 async def set_domain_owner(domain_id: int, owner_id: int) -> None:
