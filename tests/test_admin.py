@@ -279,35 +279,6 @@ async def test_user_patch(test_cli_user, test_cli_admin):
     # TODO check the set values here
 
 
-async def test_my_stats_as_admin(test_cli_admin):
-    """Test the personal domain stats route but as an admin."""
-    resp = await test_cli_admin.get("/api/stats/my_domains")
-    assert resp.status_code == 200
-
-    rjson = await resp.json
-    assert isinstance(rjson, dict)
-
-    try:
-        domain_id = next(iter(rjson.keys()))
-    except StopIteration:
-        # we can't test if the admin user doesn't own any domains
-        # and that is a possible case of the environment.
-        return
-
-    dom = rjson[domain_id]
-
-    info = dom["info"]
-    assert isinstance(info["domain"], str)
-    assert isinstance(info["permissions"], int)
-    assert isinstance(info["tags"], list)
-
-    stats = dom["stats"]
-    assert isinstance(stats["users"], int)
-    assert isinstance(stats["files"], int)
-    assert isinstance(stats["size"], int)
-    assert isinstance(stats["shortens"], int)
-
-
 async def test_domain_tag_create_delete(test_cli_admin):
     """Test the personal domain stats route but as an admin."""
     resp = await test_cli_admin.put(
