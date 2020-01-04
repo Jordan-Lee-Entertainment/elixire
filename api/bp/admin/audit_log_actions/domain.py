@@ -23,7 +23,7 @@ class DomainAddAction(Action):
             "Domain data:",
             f"\tid: {domain.id}",
             f"\tname: {domain.domain}",
-            f"\ttags: {','.join(t.id for t in domain.tags)}",
+            f"\ttags: {','.join(t.id for t in domain.tags) or '<no tags>'}",
             f"\tpermissions number: {domain.permissions}\n",
             f"set owner on add: {owner_str}",
         ]
