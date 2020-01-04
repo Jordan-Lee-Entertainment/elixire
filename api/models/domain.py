@@ -2,7 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Optional, Dict, Union, List
+from typing import Optional, Dict, Any
 from quart import current_app as app
 from collections import namedtuple
 
@@ -70,7 +70,7 @@ class Domain:
             else None
         )
 
-    def to_dict(self) -> Dict[str, Union[int, str, List[Dict[str, Union[int, str]]]]]:
+    def to_dict(self) -> Dict[str, Any]:
         """Return the domain as a dictionary."""
         return {
             "id": self.id,
