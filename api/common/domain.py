@@ -320,31 +320,6 @@ async def get_basic_domain(
     return domain_info
 
 
-async def get_basic_domain_by_domain(
-    domain: str, *, raise_notfound: bool = False
-) -> Optional[dict]:
-    """Fetch a domain's info by the domain name."""
-
-    domains_to_check = solve_domain(domain)
-    assert len(domains_to_check) == 3
-
-    domain_info = await app.db.fetchrow(
-        """
-        SELECT *
-        FROM domains
-        WHERE domain = $1
-        OR domain = $2
-        OR domain = $3
-        """,
-        *domains_to_check,
-    )
-
-    if raise_notfound and not domain_info:
-        raise NotFound("This domain does not exist in this elixire instance.")
-
-    return domain_info
-
-
 async def add_domain_tag(domain_id: int, tag_id: int) -> None:
     """Add a tag to a domain."""
     try:
