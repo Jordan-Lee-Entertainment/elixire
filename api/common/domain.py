@@ -174,25 +174,6 @@ async def set_domain_owner(domain_id: int, owner_id: int) -> None:
     )
 
 
-async def get_basic_domain(
-    domain_id: int, *, raise_notfound: bool = False
-) -> Optional[dict]:
-    """Fetch a domain by ID."""
-    domain_info = await app.db.fetchrow(
-        """
-        SELECT *
-        FROM domains
-        WHERE domain_id = $1
-        """,
-        domain_id,
-    )
-
-    if raise_notfound and domain_info is None:
-        raise NotFound("This domain does not exist.")
-
-    return domain_info
-
-
 async def add_domain_tag(domain_id: int, tag_id: int) -> None:
     """Add a tag to a domain."""
     try:
