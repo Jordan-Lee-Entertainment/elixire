@@ -149,9 +149,7 @@ async def test_domain_search(test_cli_admin):
     json = await resp.json
     assert_standard_response(json)
 
-    assert all(
-        "elix" in domain["info"]["domain"] for domain in json["results"].values()
-    )
+    assert all("elix" in domain["domain"] for domain in json["results"].values())
 
 
 async def test_domain_stats(test_cli_admin):
@@ -165,8 +163,7 @@ async def test_domain_stats(test_cli_admin):
     assert isinstance(rjson, dict)
     for domain in rjson.values():
         assert isinstance(domain, dict)
-        assert isinstance(domain["info"], dict)
-        assert isinstance(domain["info"]["tags"], list)
+        assert isinstance(domain["tags"], list)
         assert isinstance(domain["stats"], dict)
         assert isinstance(domain["public_stats"], dict)
 
@@ -206,12 +203,10 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     rjson = await resp.json
 
     assert isinstance(rjson, dict)
-    dinfo = rjson["info"]
-    assert isinstance(dinfo, dict)
-    if dinfo.get("owner"):
-        assert dinfo["owner"]["id"] == user_id
-    assert dinfo["permissions"] == 0
-    assert [tag["id"] for tag in dinfo["tags"]] == [1, 2]
+    if rjson.get("owner"):
+        assert rjson["owner"]["id"] == user_id
+    assert rjson["permissions"] == 0
+    assert [tag["id"] for tag in rjson["tags"]] == [1, 2]
 
     # reset the domain properties
     # to sane defaults
@@ -237,12 +232,10 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     rjson = await resp.json
 
     assert isinstance(rjson, dict)
-    dinfo = rjson["info"]
-    assert isinstance(dinfo, dict)
-    if dinfo.get("owner"):
-        assert dinfo["owner"]["id"] == admin_id
-    assert dinfo["permissions"] == 3
-    assert not dinfo["tags"]
+    if rjson.get("owner"):
+        assert rjson["owner"]["id"] == admin_id
+    assert rjson["permissions"] == 3
+    assert not rjson["tags"]
 
 
 async def test_user_patch(test_cli_user, test_cli_admin):
