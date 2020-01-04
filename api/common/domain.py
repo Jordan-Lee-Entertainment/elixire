@@ -165,24 +165,6 @@ async def get_domain_tag_ids(domain_id: int) -> Optional[List[int]]:
     ]
 
 
-async def get_domain_tags(domain_id: int) -> Optional[List[Dict[str, Union[int, str]]]]:
-    """Get a domain's tags as a list of objects containing ID and label."""
-    return [
-        {"id": r["tag_id"], "label": r["label"]}
-        for r in await app.db.fetch(
-            """
-            SELECT domain_tags.tag_id, domain_tags.label
-            FROM domain_tag_mappings
-            JOIN domain_tags
-            ON domain_tags.tag_id = domain_tag_mappings.tag_id
-            WHERE domain_id = $1
-            ORDER BY domain_tags.tag_id ASC
-            """,
-            domain_id,
-        )
-    ]
-
-
 async def is_domain_tags_label(domain_id: int, *, label: str) -> bool:
     """Returns if the given domain has any tags that have the given label"""
     matching_tags = await app.db.fetch(
