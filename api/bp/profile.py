@@ -26,7 +26,6 @@ from api.schema import (
 )
 from api.common.user import delete_user
 from api.common.profile import fetch_dumps, wrap_dump_job_state
-from api.common.domain import get_basic_domain
 from api.common.auth import pwd_check
 from api.models import User, Domain
 
