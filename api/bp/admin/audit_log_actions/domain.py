@@ -4,7 +4,7 @@
 import logging
 from typing import Union
 
-from api.common.domain import get_domain_info, get_domain_tag_ids
+from api.common.domain import get_domain_info
 from api.bp.admin.audit_log import Action, EditAction, DeleteAction
 from api.models import Domain
 
