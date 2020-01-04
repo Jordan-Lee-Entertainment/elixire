@@ -7,7 +7,7 @@ import logging
 from quart import Blueprint, current_app as app, jsonify
 
 from api.common.auth import token_check
-from api.common.domain import get_domain_public, get_domain_tags
+from api.models import Domain
 
 
 bp = Blueprint("personal_stats", __name__)
@@ -29,26 +29,15 @@ async def personal_domain_stats():
         user_id,
     )
 
-    res = {}
+    res = []
 
     for row in domain_ids:
-        domain_id = row["domain_id"]
+        domain = await Domain.fetch(row["domain_id"])
+        assert domain is not None
 
-        domain_info = await db.fetchrow(
-            """
-            SELECT domain, permissions
-            FROM domains
-            WHERE domain_id = $1
-            """,
-            domain_id,
-        )
+        domain_dict = domain.to_dict()
+        # TODO
+        # domain_dict["stats"] = await domain.fetch_stats(public=True)
+        res.append(domain_dict)
 
-        dinfo = dict(domain_info)
-
-        public = await get_domain_public(domain_id)
-        res[domain_id] = {
-            "info": {**dinfo, **{"tags": await get_domain_tags(domain_id)}},
-            "stats": public,
-        }
-
-    return jsonify(res)
+    return jsonify({"domains": res})
