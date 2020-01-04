@@ -380,22 +380,6 @@ async def delete_domain_tag(tag_id: int) -> None:
     await app.db.execute("DELETE FROM domain_tags WHERE tag_id = $1", tag_id)
 
 
-async def get_all_domains_basic() -> List[dict]:
-    """Fetch a list of all domains (but only their IDs and domain names)."""
-    return list(
-        map(
-            dict,
-            await app.db.fetch(
-                """
-                SELECT domain_id, domain
-                FROM domains
-                ORDER BY domain_id ASC
-                """
-            ),
-        )
-    )
-
-
 async def update_domain_tag(tag_id: int, **kwargs) -> Dict[str, Union[int, str]]:
     """Update a domain tag. Receives values to update in the form of
     keyword arguments. The key of the argument MUST be a field in the
