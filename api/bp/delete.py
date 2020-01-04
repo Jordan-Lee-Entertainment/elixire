@@ -47,9 +47,9 @@ async def mass_delete_handler(ctx, user_id, raw: dict):
     base_args = [user_id]
 
     domain_where = "true"
-    if "delete_on_domain" in raw:
+    if "delete_from_domain" in raw:
         domain_where = "domain = $2"
-        base_args.append(raw["delete_on_domain"])
+        base_args.append(raw["delete_from_domain"])
 
     file_args = list(base_args)
     shorten_args = list(base_args)
