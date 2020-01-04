@@ -10,7 +10,7 @@ from asyncpg import UniqueViolationError
 from api.storage import solve_domain
 from api.common.utils import dict_
 from api.errors import NotFound, BadInput
-from api.models import User
+from api.models import User, Domain
 
 
 async def create_domain(
@@ -351,10 +351,10 @@ async def remove_domain_tag(domain_id: int, tag_id: int) -> None:
 
 async def set_domain_tags(domain_id: int, tags: List[int]) -> None:
     """Set tags for a given domain and delete the previously assigned ones."""
-    existing_tags = await get_domain_tag_ids(domain_id)
-    assert existing_tags is not None
+    domain = await Domain.fetch(domain_id)
+    assert domain is not None
 
-    existing_set = set(existing_tags)
+    existing_set = {tag.id for tag in domain.tags}
     tags_set = set(tags)
 
     to_add = tags_set - existing_set
