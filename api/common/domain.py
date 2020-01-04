@@ -8,7 +8,6 @@ from quart import current_app as app
 from asyncpg import UniqueViolationError
 
 from api.storage import solve_domain
-from api.common.utils import dict_
 from api.errors import NotFound, BadInput
 from api.models import User, Domain
 
