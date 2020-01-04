@@ -36,8 +36,7 @@ async def personal_domain_stats():
         assert domain is not None
 
         domain_dict = domain.to_dict()
-        # TODO
-        # domain_dict["stats"] = await domain.fetch_stats(public=True)
+        domain_dict["stats"] = await domain.fetch_stats(public=True)
         res.append(domain_dict)
 
     return jsonify({"domains": res})
