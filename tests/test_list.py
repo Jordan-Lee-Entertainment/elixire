@@ -6,7 +6,7 @@ import pytest
 import os
 import tempfile
 
-from ..api.snowflake import get_snowflake
+from winter import get_snowflake
 from ..api.common.profile import gen_user_shortname
 
 pytestmark = pytest.mark.asyncio

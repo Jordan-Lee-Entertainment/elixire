@@ -5,10 +5,10 @@ import logging
 from typing import Dict, Union
 
 from quart import current_app as app
+from winter import get_snowflake
 
 from api.common.auth import pwd_hash
 from api.common.common import delete_many
-from api.snowflake import get_snowflake
 
 log = logging.getLogger(__name__)
 
