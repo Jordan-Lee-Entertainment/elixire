@@ -191,16 +191,6 @@ class Storage:
 
         return StorageValue(typ(val), flag=StorageFlag.FOUND)
 
-    async def get_multi(self, keys: List[str], typ: type = str) -> List[StorageValue]:
-        """Fetch multiple keys."""
-        res = []
-
-        for key in keys:
-            val = await self.get(key, typ)
-            res.append(val)
-
-        return res
-
     async def set(self, key: str, value: Optional[Any]) -> None:
         """Set a key in Redis.
 
