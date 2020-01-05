@@ -8,12 +8,12 @@ import time
 from typing import Any, Dict, Optional
 
 from quart import Blueprint, jsonify, current_app as app, request
+from winter import get_snowflake
 
 from api.storage import object_key
 from api.common import transform_wildcard, FileNameType
 from api.common.auth import check_admin, token_check
 from api.common.utils import resolve_domain
-from api.snowflake import get_snowflake
 from api.common.profile import gen_user_shortname
 from api.models import User
 from .context import UploadContext

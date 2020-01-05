@@ -5,7 +5,7 @@
 import datetime
 
 from quart import Quart
-from api.snowflake import snowflake_time
+from winter import snowflake_time
 from .errors import ArgError
 
 

@@ -4,7 +4,7 @@
 
 from typing import Any
 from quart.json import JSONEncoder
-from api.snowflake import EPOCH
+from winter import EPOCH
 
 
 def stringify_snowflakes(obj):
