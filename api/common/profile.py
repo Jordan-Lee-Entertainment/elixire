@@ -71,5 +71,6 @@ async def gen_user_shortname(user_id: int, table: str = "files") -> Tuple[str, i
     """
 
     user = await User.fetch(user_id)
+    assert user is not None
     shortname_len = 8 if user.paranoid else app.econfig.SHORTNAME_LEN
     return await gen_shortname(shortname_len, table)
