@@ -499,12 +499,12 @@
         "violet": {
             "editable": true,
             "git": "https://gitlab.com/elixire/violet.git",
-            "ref": "248d0fbcf7bddf209595ce22da96d79043e9039a"
+            "ref": "246437a8ef592a5f2f6175fe94f3a08847fa7b49"
         },
         "winter": {
             "editable": true,
             "git": "https://gitlab.com/elixire/winter.git",
-            "ref": "4f63bcfcbc77267464595f04b314e0b3a4f5e3f6"
+            "ref": "8ce818479ea42a28010671b12a1225c9d3c7c2b7"
         },
         "wsproto": {
             "hashes": [
