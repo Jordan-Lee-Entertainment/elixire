@@ -6,12 +6,12 @@ import pathlib
 import urllib.parse
 
 from quart import Blueprint, jsonify, current_app as app, request
+from winter import get_snowflake
 
 from api.common.auth import token_check, check_admin
 from api.errors import QuotaExploded, BadInput, FeatureDisabled
 from api.common import FileNameType
 from api.common.utils import resolve_domain
-from api.snowflake import get_snowflake
 from api.common.profile import gen_user_shortname
 from api.storage import object_key
 
