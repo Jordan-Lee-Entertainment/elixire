@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 
 class DomainAddAction(Action):
-    async def details(self) -> list:
+    async def details(self):
         owner_id = self["owner_id"]
         domain_id = self["domain_id"]
         owner_name = await self.app.storage.get_username(owner_id)
@@ -67,7 +67,7 @@ class DomainEditAction(EditAction):
 
         return domain
 
-    async def details(self) -> list:
+    async def details(self):
         # if no keys were actually edited, don't make it an action.
         if not self.different_keys():
             return False
