@@ -5,7 +5,7 @@
 import copy
 import logging
 import asyncio
-from typing import Optional
+from typing import Optional, Union, List
 
 from quart import current_app as app, request
 
@@ -36,19 +36,21 @@ class Action:
         """Return the full textual representation of this action."""
 
         try:
-            action_text = await self.details()
+            details: Union[str, list, bool] = await self.details()
         except NotImplementedError:
-            action_text = "<no text set for action>"
+            details = "<no text set for action>"
 
         # actions can decide to "cancel themselves" if they return False
         # (this allows actions to only count as actions under certain conditions)
-        if action_text is False:
+        if isinstance(details, bool) and details is False:
             return None
 
-        if isinstance(action_text, list):
-            action_text = "\n".join(action_text)
+        if isinstance(details, list):
+            action_text = "\n".join(details)
+        elif isinstance(details, str):
+            action_text = details
 
-        lines = [action_text, f"\naction context (for debugging purposes):"]
+        lines: List[str] = [action_text, f"\naction context (for debugging purposes):"]
 
         for key, val in self.context.items():
             lines.append(f"\t{key!r}: {val!r}")
