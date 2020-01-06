@@ -21,18 +21,18 @@ python-magic = "==0.4.15"
 parsedatetime = "==2.5"
 dnspython = "==1.16.0"
 Quart = "==0.10.0"
-Pillow = "==6.2.1"
+Pillow = "==7.0.0"
 violet = {editable = true,git = "https://gitlab.com/elixire/violet.git"}
 python-dateutil = "*"
 winter = {editable = true,git = "https://gitlab.com/elixire/winter.git"}
 
 [dev-packages]
-pytest = "==5.0.1"
+pytest = "==5.3.2"
 pytest-asyncio = "==0.10.0"
-pytest-cov = "==2.7.1"
-flake8 = "==3.7.8"
+pytest-cov = "==2.8.1"
+flake8 = "==3.7.9"
 black = "==19.3b0"
-mypy = "==0.720"
+mypy = "==0.761"
 
 [requires]
 python_version = "3.7"

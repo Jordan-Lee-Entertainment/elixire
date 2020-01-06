@@ -2,6 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
+from typing import Optional
 
 from api.bp.admin.audit_log import EditAction, DeleteAction
 from api.common.fetch import OBJ_MAPPING
@@ -9,11 +10,11 @@ from api.common.fetch import OBJ_MAPPING
 log = logging.getLogger(__name__)
 
 
-async def _generic_get(action, object_id: int) -> dict:
+async def _generic_get(action, object_id: int) -> Optional[dict]:
     """Fetches an object (shorten or file) from the database from an action."""
     try:
         _, getter = OBJ_MAPPING[action.type]
-        return await getter(action.app.db, object_id)
+        return await getter(object_id)
     except KeyError:
         raise TypeError("Object type specified in Action is invalid.")
 
