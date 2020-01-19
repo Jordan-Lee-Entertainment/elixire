@@ -148,7 +148,9 @@ class User:
 
         return {
             "file_byte_limit": limits["blimit"],
-            "file_byte_used": bytes_used or 0,
+            # Forcibly cast to `int` because asyncpg might return a value of
+            # type `decimal.Decimal`.
+            "file_byte_used": int(bytes_used) if bytes_used else 0,
             "shorten_limit": limits["shlimit"],
             "shorten_used": shortens_used,
         }
