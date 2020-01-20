@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "757e3ea52968f805204a018fb8fffa07c5cce21eded4192557dbb498e557351f"
+            "sha256": "4c008e5b8c48d5b0feef79dd7b53628722651495ce33ac858800d4c7a4c4eb8f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -242,6 +242,11 @@
             ],
             "version": "==3.1.1"
         },
+        "hail": {
+            "editable": true,
+            "git": "https://gitlab.com/elixire/hail.git",
+            "ref": "e91fd67d5e841a4fd92829cbf3a1d89c1a2fd3b8"
+        },
         "hiredis": {
             "hashes": [
                 "sha256:01b577f84c20ecc9c07fc4c184231b08e3c3942de096fa99978e053de231c423",
@@ -429,6 +434,12 @@
             ],
             "version": "==1.3.0"
         },
+        "pybase62": {
+            "hashes": [
+                "sha256:0fbbe8474fc5fb020cc7f94dc88adfd12ef9bf38640c46612568ea07f046438c"
+            ],
+            "version": "==0.4.3"
+        },
         "pycparser": {
             "hashes": [
                 "sha256:a988718abfad80b6b157acce7bf130a30876d27603738ac39f140993246b25b3"
@@ -461,10 +472,10 @@
         },
         "six": {
             "hashes": [
-                "sha256:1f1b7d42e254082a9db6279deae68afb421ceba6158efa6131de7b3003ee93fd",
-                "sha256:30f610279e8b2578cab6db20741130331735c781b56053c59c4076da27f06b66"
+                "sha256:236bdbdce46e6e6a3d61a337c0f8b763ca1e8717c03b369e87a7ec7ce1319c0a",
+                "sha256:8f3cd2e254d8f793e7f3d6d9df77b92252b52637291d0f0da013c76ea2724b6c"
             ],
-            "version": "==1.13.0"
+            "version": "==1.14.0"
         },
         "sortedcontainers": {
             "hashes": [
@@ -491,12 +502,12 @@
         "violet": {
             "editable": true,
             "git": "https://gitlab.com/elixire/violet.git",
-            "ref": "5c38aaeb5f47159bcb347a800df864fde68c4ec9"
+            "ref": "bcd706ebede0d56208f340dd991ac6d8df409900"
         },
         "winter": {
             "editable": true,
             "git": "https://gitlab.com/elixire/winter.git",
-            "ref": "c265df768899da0be2e25333444b73f58dae6523"
+            "ref": "988c6ca438663c30c6b617bdb16fd6be6c4226ba"
         },
         "wsproto": {
             "hashes": [
@@ -726,10 +737,10 @@
         },
         "six": {
             "hashes": [
-                "sha256:1f1b7d42e254082a9db6279deae68afb421ceba6158efa6131de7b3003ee93fd",
-                "sha256:30f610279e8b2578cab6db20741130331735c781b56053c59c4076da27f06b66"
+                "sha256:236bdbdce46e6e6a3d61a337c0f8b763ca1e8717c03b369e87a7ec7ce1319c0a",
+                "sha256:8f3cd2e254d8f793e7f3d6d9df77b92252b52637291d0f0da013c76ea2724b6c"
             ],
-            "version": "==1.13.0"
+            "version": "==1.14.0"
         },
         "toml": {
             "hashes": [
@@ -781,10 +792,10 @@
         },
         "zipp": {
             "hashes": [
-                "sha256:3718b1cbcd963c7d4c5511a8240812904164b7f381b647143a89d3b98f9bcd8e",
-                "sha256:f06903e9f1f43b12d371004b4ac7b06ab39a44adc747266928ae6debfa7b3335"
+                "sha256:57147f6b0403b59f33fd357f169f860e031303415aeb7d04ede4839d23905ab8",
+                "sha256:7ae5ccaca427bafa9760ac3cd8f8c244bfc259794b5b6bb9db4dda2241575d09"
             ],
-            "version": "==0.6.0"
+            "version": "==2.0.0"
         }
     }
 }

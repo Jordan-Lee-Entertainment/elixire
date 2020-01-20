@@ -47,5 +47,5 @@ def start_janitor() -> None:
         dump_janitor,
         [],
         period=app.econfig.DUMP_JANITOR_PERIOD,
-        job_id="datadump:janitor",
+        name="datadump:janitor",
     )
