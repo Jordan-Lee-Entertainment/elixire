@@ -60,6 +60,10 @@ async def profile_handler():
     assert user is not None
 
     user_dict = user.to_dict()
+
+    if "bare" in request.args:
+        return {key: user_dict[key] for key in user_dict if key in {"id", "name"}}
+
     user_dict["limits"] = await user.fetch_limits()
     user_dict["stats"] = await user.fetch_stats()
 
