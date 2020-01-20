@@ -115,6 +115,17 @@ async def test_profile_wrong_token(test_cli):
     assert resp.status_code == 403
 
 
+async def test_profile_bare(test_cli_user):
+    """Test the profile route with ?bare=true."""
+    resp = await test_cli_user.get("/api/profile", query_string={"bare": "true"})
+    assert resp.status_code == 200
+    json = await resp.json
+    assert json == {
+        "id": str(test_cli_user["user_id"]),
+        "name": test_cli_user["username"],
+    }
+
+
 async def test_patch_profile_wrong(test_cli_user):
     random_username = username()
     random_email = email()
