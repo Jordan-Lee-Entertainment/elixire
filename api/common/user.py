@@ -132,5 +132,5 @@ async def delete_user(user_id: int, delete: bool = False):
     # since there is a lot of db load
     # when calling delete_file, we create a task that deletes them.
     return app.sched.spawn(
-        full_file_delete, [user_id, delete], job_id=f"full_delete:{user_id}"
+        full_file_delete, [user_id, delete], name=f"full_delete:{user_id}"
     )

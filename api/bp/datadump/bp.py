@@ -51,7 +51,7 @@ async def list_dumps():
     jobs = await app.db.fetch(
         """
         SELECT
-            job_id, state, inserted_at, taken_at, internal_state,
+            job_id, name, state, inserted_at, taken_at, internal_state,
             COUNT(*) OVER () AS total_count
         FROM violet_jobs
         WHERE
@@ -95,7 +95,7 @@ async def data_dump_global_status():
 
     queue = await app.db.fetch(
         """
-        SELECT job_id, args::json->0 AS user_id, inserted_at, scheduled_at
+        SELECT job_id, name, args::json->0 AS user_id, inserted_at, scheduled_at
         FROM violet_jobs
         WHERE state = 0
         ORDER BY scheduled_at ASC
@@ -107,7 +107,7 @@ async def data_dump_global_status():
     current = (
         await app.db.fetchrow(
             """
-        SELECT job_id, args::json->0 AS user_id, inserted_at, scheduled_at
+        SELECT job_id, name, args::json->0 AS user_id, inserted_at, scheduled_at
         FROM violet_jobs
         WHERE state = 1
         """

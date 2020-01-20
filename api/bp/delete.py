@@ -138,11 +138,11 @@ async def mass_delete_handler(ctx, user_id, raw: dict, delete_content: bool = Tr
         )
         return file_count, shorten_count
 
-    log.info("job %r got selectors %r", ctx.job_id, j)
+    log.info("job %s got selectors %r", ctx.job_id, j)
 
     if file_wheres:
         file_ids = [r["file_id"] for r in await app.db.fetch(file_stmt, *file_args)]
-        log.info("job %r got %d files", ctx.job_id, len(file_ids))
+        log.info("job %s got %d files", ctx.job_id, len(file_ids))
 
         await delete_many(file_ids, user_id=user_id)
 
@@ -150,7 +150,7 @@ async def mass_delete_handler(ctx, user_id, raw: dict, delete_content: bool = Tr
         shorten_ids = [
             r["shorten_id"] for r in await app.db.fetch(shorten_stmt, *shorten_args)
         ]
-        log.info("job %r got %d shortens", ctx.job_id, len(shorten_ids))
+        log.info("job %s got %d shortens", ctx.job_id, len(shorten_ids))
 
         await _mass_shorten_delete(user_id, shorten_ids)
 

@@ -30,7 +30,7 @@ async def fetch_dumps(
     return await app.db.fetch(
         f"""
         SELECT
-            job_id, state, taken_at, internal_state
+            job_id, name, state, taken_at, internal_state
         FROM violet_jobs
         WHERE
             queue = 'datadump'
