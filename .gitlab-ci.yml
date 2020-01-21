@@ -24,6 +24,7 @@ run_backend:
       - .cache/
       - /var/cache/apk
   before_script:
+    - rm -rf .tox
     - python -V
     - pip -V
     - apk --update add build-base git python3-dev libffi-dev jpeg-dev zlib-dev
