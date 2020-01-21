@@ -8,5 +8,14 @@ from .domain import bp as domain_bp
 from .misc import bp as misc_bp
 from .settings import bp as settings_bp
 from .bans import bp as bans_bp
+from .violet_jobs import bp as violet_jobs_bp
 
-__all__ = ["user_bp", "object_bp", "domain_bp", "misc_bp", "settings_bp", "bans_bp"]
+__all__ = [
+    "user_bp",
+    "object_bp",
+    "domain_bp",
+    "misc_bp",
+    "settings_bp",
+    "bans_bp",
+    "violet_jobs_bp",
+]

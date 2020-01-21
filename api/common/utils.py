@@ -2,13 +2,15 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import json
 import asyncio
-from typing import Optional, Any, TypeVar
+from typing import Optional, Any, TypeVar, Tuple, List
 from collections import defaultdict
+
 from quart import request, send_file as quart_send_file, current_app as app
+
 from api.common import get_user_domain_info, transform_wildcard, FileNameType
 from api.permissions import Permissions, domain_permissions
-from typing import Tuple
 
 T = TypeVar("T")
 
@@ -135,3 +137,21 @@ async def send_file(path: str, *, mimetype: Optional[str] = None):
     response.headers["content-security-policy"] = "sandbox; frame-src 'None'"
 
     return response
+
+
+async def postgres_set_json_codecs(con):
+    """Set JSON and JSONB codecs for an asyncpg connection."""
+    await con.set_type_codec(
+        "json", encoder=json.dumps, decoder=json.loads, schema="pg_catalog"
+    )
+
+    await con.set_type_codec(
+        "jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog"
+    )
+
+
+async def fetch_json_rows(db, query: str, *args) -> List[Any]:
+    """Fetch many rows with JSON/JSONB support."""
+    async with db.acquire() as con:
+        await postgres_set_json_codecs(con)
+        return await con.fetch(query, *args)

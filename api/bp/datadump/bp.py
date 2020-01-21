@@ -11,6 +11,7 @@ from api.errors import BadInput, FeatureDisabled
 from api.bp.datadump.janitor import start_janitor
 from api.common.auth import token_check, check_admin
 from api.common.profile import fetch_dumps
+from api.common.violet_jobs import violet_jobs_to_json
 from api.common.pagination import Pagination
 from api.models import User
 
@@ -33,8 +34,8 @@ async def request_data_dump():
 
     user_id = await token_check()
 
-    jobs = await fetch_dumps(user_id, future=True)
-    if jobs:
+    violet_jobs = await fetch_dumps(user_id, future=True)
+    if violet_jobs:
         raise BadInput("Your data dump is currently being processed or in the queue.")
 
     job_id = await app.sched.push_queue("datadump", [user_id])
@@ -44,11 +45,9 @@ async def request_data_dump():
 @bp.route("")
 async def list_dumps():
     user_id = await token_check()
-    jobs = await fetch_dumps(user_id)
-
     pagination = Pagination()
 
-    jobs = await app.db.fetch(
+    violet_jobs = await app.db.fetch(
         """
         SELECT
             job_id, name, state, inserted_at, taken_at, internal_state,
@@ -66,23 +65,9 @@ async def list_dumps():
         user_id,
     )
 
-    total_count = 0 if not jobs else jobs[0]["total_count"]
+    total_count = 0 if not violet_jobs else violet_jobs[0]["total_count"]
     return jsonify(
-        pagination.response(
-            [
-                {
-                    **dict(r),
-                    **{
-                        "inserted_at": r["inserted_at"].isoformat(),
-                        "taken_at": r["taken_at"].isoformat()
-                        if r["taken_at"] is not None
-                        else None,
-                    },
-                }
-                for r in jobs
-            ],
-            total_count=total_count,
-        )
+        pagination.response(violet_jobs_to_json(violet_jobs), total_count=total_count)
     )
 
 
