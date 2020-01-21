@@ -21,8 +21,6 @@ run_backend:
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
-      - .tox/
-      - venv/
       - .cache/
       - /var/cache/apk
   before_script:
