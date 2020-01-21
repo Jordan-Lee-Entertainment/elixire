@@ -42,7 +42,9 @@ async def fetch_dumps(
     )
 
 
-def wrap_dump_job_state(job_record: Optional[Record]) -> Optional[dict]:
+def wrap_dump_violet_job_state(job_record: Optional[Record]) -> Optional[dict]:
+    """Convert a Violet job record *from the datadump queue* to a dictionary for
+    serialization purposes."""
     if job_record is None:
         return None
 

@@ -245,7 +245,7 @@
         "hail": {
             "editable": true,
             "git": "https://gitlab.com/elixire/hail.git",
-            "ref": "e91fd67d5e841a4fd92829cbf3a1d89c1a2fd3b8"
+            "ref": "d72895019ef68eb96bb775f939182dd9344de367"
         },
         "hiredis": {
             "hashes": [
@@ -502,7 +502,7 @@
         "violet": {
             "editable": true,
             "git": "https://gitlab.com/elixire/violet.git",
-            "ref": "bcd706ebede0d56208f340dd991ac6d8df409900"
+            "ref": "9c6ad23c5fb436acfc4dd1b7caaa0c44754b57e6"
         },
         "winter": {
             "editable": true,

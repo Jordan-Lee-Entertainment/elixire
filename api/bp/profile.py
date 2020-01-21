@@ -25,7 +25,7 @@ from api.schema import (
     PASSWORD_RESET_CONFIRM_SCHEMA,
 )
 from api.common.user import delete_user
-from api.common.profile import fetch_dumps, wrap_dump_job_state
+from api.common.profile import fetch_dumps, wrap_dump_violet_job_state
 from api.common.domain import get_basic_domain, is_domain_admin_only
 from api.common.auth import pwd_check
 from api.models import User
@@ -67,8 +67,10 @@ async def profile_handler():
     user_dict["limits"] = await user.fetch_limits()
     user_dict["stats"] = await user.fetch_stats()
 
-    jobs = await fetch_dumps(user_id, current=True)
-    user_dict["dump_status"] = wrap_dump_job_state(jobs[0]["state"] if jobs else None)
+    violet_jobs = await fetch_dumps(user_id, current=True)
+    user_dict["dump_status"] = wrap_dump_violet_job_state(
+        violet_jobs[0]["state"] if violet_jobs else None
+    )
 
     return jsonify(user_dict)
 
