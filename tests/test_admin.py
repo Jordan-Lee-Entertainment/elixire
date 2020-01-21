@@ -1,6 +1,9 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+
+import random
+from uuid import UUID
 
 import pytest
 
@@ -310,3 +313,56 @@ async def test_domain_tag_create_delete(test_cli_admin):
     finally:
         resp = await test_cli_admin.delete(f"/api/admin/domains/tag/{tag_id}")
         assert resp.status_code == 204
+
+
+async def do_list_jobs(test_cli_user, *, before=None, after=None, rest: str = ""):
+    before = f"before={before}" if before is not None else ""
+    after = f"&after={after}" if after is not None else ""
+
+    resp = await test_cli_user.get(f"/api/admin/violet_jobs?{before}{after}{rest}")
+    assert resp.status_code == 200
+    rjson = await resp.json
+
+    objects = rjson["results"]
+    assert isinstance(objects, list)
+
+    ids = [UUID(job["job_id"]) for job in objects]
+    return objects, ids
+
+
+async def test_sensible_uuid():
+    val_int = random.randint(0, 1000)
+    val = UUID(int=val_int)
+    assert UUID(int=val.int + 1).int == val_int + 1
+
+
+async def test_violet_jobs(test_cli_admin):
+    # NOTE: assumes at least more than 10 jobs exist
+    jobs, ids = await do_list_jobs(test_cli_admin, rest="limit=10")
+    assert all(a.int >= b.int for a, b in zip(ids, ids[1:]))
+
+    first_id = ids[0]
+    last_id = ids[-1]
+    jobs, ids = await do_list_jobs(test_cli_admin, after=first_id.hex, rest="&limit=10")
+    assert not jobs
+
+    jobs, ids = await do_list_jobs(
+        test_cli_admin, before=UUID(int=first_id.int - 1).hex, rest="&limit=10"
+    )
+    assert first_id not in ids
+
+    jobs, ids = await do_list_jobs(test_cli_admin, before=last_id.hex, rest="&limit=10")
+    assert last_id not in ids
+
+    jobs, ids = await do_list_jobs(test_cli_admin, after=last_id.hex, rest="&limit=10")
+    assert last_id not in ids
+    assert ids[0] == first_id
+
+    jobs, ids = await do_list_jobs(
+        test_cli_admin,
+        before=UUID(int=first_id.int - 1).hex,
+        after=UUID(int=last_id.int + 1).hex,
+        rest="&limit=10",
+    )
+    assert first_id not in ids
+    assert last_id not in ids

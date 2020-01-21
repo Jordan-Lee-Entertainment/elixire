@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 """
@@ -70,7 +70,7 @@ async def email_broadcast():
     subject, body = fmt_email(subject), fmt_email(body)
 
     # we do it in the background for webscale
-    app.sched.spawn(_do_broadcast, [subject, body], job_id="admin_broadcast")
+    app.sched.spawn(_do_broadcast, [subject, body], name="admin_broadcast")
     return "", 204
 
 

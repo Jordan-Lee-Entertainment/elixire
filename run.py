@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
@@ -105,6 +105,7 @@ def set_blueprints(app_):
         api.bp.admin.settings_bp: "/admin/settings",
         api.bp.admin.bans_bp: "/admin/bans",
         api.bp.admin.misc_bp: "/admin",
+        api.bp.admin.violet_jobs_bp: "/admin/violet_jobs",
         api.bp.shorten.bp: -1,
         api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,

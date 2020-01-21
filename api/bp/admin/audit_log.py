@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import copy
@@ -154,7 +154,7 @@ class AuditLog:
             self._sender_task.cancel()
 
         self._sender_task = self.app.sched.spawn(
-            self._sender, [], job_id="global_sender_task"
+            self._sender, [], name="global_sender_task"
         )
 
     async def push(self, action: Action):

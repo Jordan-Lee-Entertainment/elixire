@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
@@ -32,23 +32,21 @@ def start_tasks():
     if not app.econfig.ENABLE_METRICS:
         return
 
+    app.sched.spawn_periodic(second_tasks, [app], period=1, name="metrics:second_tasks")
+
     app.sched.spawn_periodic(
-        second_tasks, [app], period=1, job_id="metrics:second_tasks"
+        hourly_tasks, [app], period=3600, name="metrics:hourly_tasks"
     )
 
     app.sched.spawn_periodic(
-        hourly_tasks, [app], period=3600, job_id="metrics:hourly_tasks"
-    )
-
-    app.sched.spawn_periodic(
-        upload_uniq_task, [app], period=86400, job_id="metrics:unique_uploads"
+        upload_uniq_task, [app], period=86400, name="metrics:unique_uploads"
     )
 
     app.sched.spawn_periodic(
         compact_task,
         [app],
         period=app.econfig.METRICS_COMPACT_GENERALIZE,
-        job_id="metrics:compactor",
+        name="metrics:compactor",
     )
 
 

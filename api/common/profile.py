@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from typing import Optional, Tuple, List
@@ -30,7 +30,7 @@ async def fetch_dumps(
     return await app.db.fetch(
         f"""
         SELECT
-            job_id, state, taken_at, internal_state
+            job_id, name, state, taken_at, internal_state
         FROM violet_jobs
         WHERE
             queue = 'datadump'
@@ -42,7 +42,9 @@ async def fetch_dumps(
     )
 
 
-def wrap_dump_job_state(job_record: Optional[Record]) -> Optional[dict]:
+def wrap_dump_violet_job_state(job_record: Optional[Record]) -> Optional[dict]:
+    """Convert a Violet job record *from the datadump queue* to a dictionary for
+    serialization purposes."""
     if job_record is None:
         return None
 

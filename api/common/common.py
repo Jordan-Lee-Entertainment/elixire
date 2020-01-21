@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import asyncio
@@ -305,7 +305,7 @@ async def delete_many(file_ids: List[int], *, user_id: Optional[int] = None):
 
     for file_id in file_ids:
         task = app.sched.spawn(
-            delete_file_user_lock, [user_id, file_id], job_id=f"delete_file:{file_id}"
+            delete_file_user_lock, [user_id, file_id], name=f"delete_file:{file_id}"
         )
         tasks.append(task)
 

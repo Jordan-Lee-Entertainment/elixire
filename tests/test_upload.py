@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
@@ -175,6 +175,16 @@ async def test_delete_file(test_cli_user):
 async def test_delete_file_many(test_cli_user):
     rjson = await _upload(test_cli_user)
     shortname = rjson["shortname"]
+
+    resp = await test_cli_user.get(
+        "/api/compute_purge_all", query_string={"delete_files_after": 0}
+    )
+
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert rjson["file_count"] == 1
+    assert rjson["shorten_count"] == 0
 
     resp_del = await test_cli_user.post(
         "/api/purge_all_content",

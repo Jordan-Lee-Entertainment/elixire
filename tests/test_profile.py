@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
@@ -113,6 +113,17 @@ async def test_profile_wrong_token(test_cli):
     """Test the profile route with wrong tokens."""
     resp = await test_cli.get("/api/profile", headers={"Authorization": token()})
     assert resp.status_code == 403
+
+
+async def test_profile_bare(test_cli_user):
+    """Test the profile route with ?bare=true."""
+    resp = await test_cli_user.get("/api/profile", query_string={"bare": "true"})
+    assert resp.status_code == 200
+    json = await resp.json
+    assert json == {
+        "id": str(test_cli_user["user_id"]),
+        "name": test_cli_user["username"],
+    }
 
 
 async def test_patch_profile_wrong(test_cli_user):

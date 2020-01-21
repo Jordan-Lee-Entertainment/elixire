@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
@@ -10,8 +10,14 @@ from quart import Blueprint, jsonify, request, current_app as app
 from api.common import delete_file, delete_shorten, delete_many
 from api.common.auth import token_check, password_check
 from api.errors import BadInput  # , JobExistsError
-from api.schema import validate, DELETE_ALL_SCHEMA, isotimestamp_or_int
+from api.schema import (
+    validate,
+    PURGE_ALL_BASE_SCHEMA,
+    PURGE_ALL_SCHEMA,
+    isotimestamp_or_int,
+)
 from api.models import Domain
+
 
 bp = Blueprint("files", __name__)
 log = logging.getLogger(__name__)
@@ -27,7 +33,7 @@ async def purge_all_content():
     """selectively delete content from the user."""
     user_id = await token_check()
     raw = await request.get_json()
-    j = validate(raw, DELETE_ALL_SCHEMA)
+    j = validate(raw, PURGE_ALL_SCHEMA)
     await password_check(user_id, j["password"])
 
     raw.pop("password")
@@ -42,7 +48,17 @@ async def purge_all_content():
     return jsonify({"job_id": job_id})
 
 
-async def mass_delete_handler(ctx, user_id, raw: dict):
+@bp.route("/compute_purge_all", methods=["GET"])
+async def compute_purge_all_content():
+    """Calculate the total amount of files to be deleted"""
+    user_id = await token_check()
+    raw = dict(request.args)
+    validate(raw, PURGE_ALL_BASE_SCHEMA)
+    file_count, shorten_count = await mass_delete_handler(None, user_id, raw, False)
+    return jsonify({"file_count": file_count, "shorten_count": shorten_count})
+
+
+async def mass_delete_handler(ctx, user_id, raw: dict, delete_content: bool = True):
     base_args = [user_id]
 
     domain_where = "true"
@@ -95,32 +111,47 @@ async def mass_delete_handler(ctx, user_id, raw: dict):
         wheres.append(f"{column} {compare_symbol} ${len(args) + 1}")
         args.append(j[field])
 
+    col_file = "file_id" if delete_content else "COUNT(file_id)"
+    col_shorten = "shorten_id" if delete_content else "COUNT(shorten_id)"
+    order_by_file = "order by file_id desc" if delete_content else ""
+    order_by_shorten = "order by shorten_id desc" if delete_content else ""
+
     file_stmt = f"""
-        SELECT file_id
+        SELECT {col_file}
         FROM files
         WHERE uploader = $1 AND {domain_where} AND {" AND ".join(file_wheres)}
-        ORDER BY file_id ASC
+        {order_by_file}
         """
 
     shorten_stmt = f"""
-        SELECT shorten_id
+        SELECT {col_shorten}
         FROM shortens
         WHERE uploader = $1 AND {domain_where} {" AND ".join(shorten_wheres)}
         ORDER BY shorten_id ASC
+        {order_by_shorten}
         """
 
-    log.info("job %r got selectors %r", ctx.job_id, j)
+    if not delete_content:
+        file_count = await app.db.fetchval(file_stmt, *file_args) if file_wheres else 0
+        shorten_count = (
+            await app.db.fetchval(shorten_stmt, *shorten_args) if shorten_wheres else 0
+        )
+        return file_count, shorten_count
+
+    log.info("job %s got selectors %r", ctx.job_id, j)
 
     if file_wheres:
         file_ids = [r["file_id"] for r in await app.db.fetch(file_stmt, *file_args)]
-        log.info("job %r got %d files", ctx.job_id, len(file_ids))
+        log.info("job %s got %d files", ctx.job_id, len(file_ids))
+
         await delete_many(file_ids, user_id=user_id)
 
     if shorten_wheres:
         shorten_ids = [
             r["shorten_id"] for r in await app.db.fetch(shorten_stmt, *shorten_args)
         ]
-        log.info("job %r got %d shortens", ctx.job_id, len(shorten_ids))
+        log.info("job %s got %d shortens", ctx.job_id, len(shorten_ids))
+
         await _mass_shorten_delete(user_id, shorten_ids)
 
 

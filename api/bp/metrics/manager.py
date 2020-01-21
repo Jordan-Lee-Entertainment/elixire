@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
@@ -44,7 +44,7 @@ class MetricsManager:
 
         if app.econfig.ENABLE_METRICS:
             self.app.sched.spawn_periodic(
-                self._work, [], period=self._period, job_id="metrics_worker"
+                self._work, [], period=self._period, name="metrics_worker"
             )
 
     def _start_influx(self):

@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
@@ -25,7 +25,7 @@ from api.schema import (
     PASSWORD_RESET_CONFIRM_SCHEMA,
 )
 from api.common.user import delete_user
-from api.common.profile import fetch_dumps, wrap_dump_job_state
+from api.common.profile import fetch_dumps, wrap_dump_violet_job_state
 from api.common.auth import pwd_check
 from api.models import User, Domain
 
@@ -59,11 +59,17 @@ async def profile_handler():
     assert user is not None
 
     user_dict = user.to_dict()
+
+    if "bare" in request.args:
+        return {key: user_dict[key] for key in user_dict if key in {"id", "name"}}
+
     user_dict["limits"] = await user.fetch_limits()
     user_dict["stats"] = await user.fetch_stats()
 
-    jobs = await fetch_dumps(user_id, current=True)
-    user_dict["dump_status"] = wrap_dump_job_state(jobs[0]["state"] if jobs else None)
+    violet_jobs = await fetch_dumps(user_id, current=True)
+    user_dict["dump_status"] = wrap_dump_violet_job_state(
+        violet_jobs[0]["state"] if violet_jobs else None
+    )
 
     return jsonify(user_dict)
 

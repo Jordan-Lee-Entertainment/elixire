@@ -1,5 +1,5 @@
 # elixire: Image Host software
-# Copyright 2018-2019, elixi.re Team and the elixire contributors
+# Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from typing import Optional, Dict, Any
@@ -148,7 +148,9 @@ class User:
 
         return {
             "file_byte_limit": limits["blimit"],
-            "file_byte_used": bytes_used or 0,
+            # Forcibly cast to `int` because asyncpg might return a value of
+            # type `decimal.Decimal`.
+            "file_byte_used": int(bytes_used) if bytes_used else 0,
             "shorten_limit": limits["shlimit"],
             "shorten_used": shortens_used,
         }

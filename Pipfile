@@ -12,7 +12,7 @@ cerberus = "==1.3.2"
 # when changing these dependencies, make sure to change them in .gitlab-ci.yml,
 # too.
 aioredis = "==1.2"
-asyncpg = "==0.20.0"
+asyncpg = "==0.20.1"
 # -------------------------------------------------------------------------------
 aiohttp = "==3.6.2"
 aioinflux = "==0.9.0"
@@ -25,6 +25,7 @@ Pillow = "==7.0.0"
 violet = {editable = true,git = "https://gitlab.com/elixire/violet.git"}
 python-dateutil = "*"
 winter = {editable = true,git = "https://gitlab.com/elixire/winter.git"}
+hail = {editable = true,git = "https://gitlab.com/elixire/hail.git"}
 
 [dev-packages]
 pytest = "==5.3.2"
