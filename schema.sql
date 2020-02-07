@@ -192,7 +192,7 @@ INSERT INTO domain_tags (label) VALUES ('admin_only');
 INSERT INTO domain_tags (label) VALUES ('official');
 
 CREATE TABLE IF NOT EXISTS violet_jobs (
-    job_id text primary key,
+    job_id uuid primary key,
     name text UNIQUE,
 
     queue text default null,

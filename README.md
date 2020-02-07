@@ -18,7 +18,6 @@ elixire is an open source image host and link shortener written in [Python].
 - libmagic
 
 [python]: https://www.python.org
-[pipenv]: https://pipenv.kennethreitz.org/en/latest/
 [postgresql]: https://www.postgresql.org
 [redis]: https://redis.io
 [node.js]: https://nodejs.org
@@ -57,11 +56,21 @@ Create some necessary directories:
 mkdir -p images dumps thumbnails
 ```
 
-Install [Python] dependencies using [pipenv]:
+Install [Python] dependencies using any of:
+
+#### bare virtualenvs
 
 ```bash
-# or --dev if you're developing for elixire
-pipenv install
+python3 -m venv env
+env/bin/python3 -m pip install -U --editable .
+```
+
+#### virtualfish
+
+```bash
+vf new -p python3 elixire
+vf activate elixire
+python3 -m pip install -U --editable .
 ```
 
 Create the [PostgreSQL] database if it doesn't already exist:
@@ -121,10 +130,10 @@ Run the app:
 
 ```bash
 # bind to any wanted address
-pipenv run hypercorn --access-log - run:app --bind 0.0.0.0:8081
+hypercorn --access-log - run:app --bind 0.0.0.0:8081
 
 # when running in production, set the PYTHON_ENV variable to prod
-env PYTHON_ENV=production pipenv run hypercorn --access-log - run:app --bind 0.0.0.0:8081
+env PYTHON_ENV=production hypercorn --access-log - run:app --bind 0.0.0.0:8081
 ```
 
 ## Operator's Manual
