@@ -393,7 +393,6 @@ async def _create_random_jobs(test_cli, count: int) -> List[str]:
 
 
 async def test_violet_jobs(test_cli_admin):
-    # NOTE: assumes at least more than 10 jobs exist
     await _create_random_jobs(test_cli_admin, 20)
     jobs, ids = await do_list_jobs(test_cli_admin, rest="limit=10")
     assert all(a.int >= b.int for a, b in zip(ids, ids[1:]))
