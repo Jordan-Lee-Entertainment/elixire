@@ -4,6 +4,7 @@
 
 import random
 from uuid import UUID
+from typing import List
 
 import pytest
 
@@ -336,8 +337,27 @@ async def test_sensible_uuid():
     assert UUID(int=val.int + 1).int == val_int + 1
 
 
+async def _null_handler(_ctx, _i):
+    pass
+
+
+async def _create_random_jobs(test_cli, count: int) -> List[str]:
+    """Create random violet jobs to fill the table."""
+    test_cli.app.sched.create_job_queue(
+        "__test", args=(int,), handler=_null_handler, takes=5, period=0.5
+    )
+
+    job_ids: List[str] = []
+
+    for i in range(count):
+        job_id = await test_cli.app.sched.push_queue("__test", (i,))
+        job_ids.append(job_id)
+
+    return job_ids
+
+
 async def test_violet_jobs(test_cli_admin):
-    # NOTE: assumes at least more than 10 jobs exist
+    await _create_random_jobs(test_cli_admin, 20)
     jobs, ids = await do_list_jobs(test_cli_admin, rest="limit=10")
     assert all(a.int >= b.int for a, b in zip(ids, ids[1:]))
 
