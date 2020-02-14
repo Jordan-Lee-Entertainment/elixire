@@ -2,24 +2,8 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Optional, Dict, Union
+from typing import Dict, Union
 from quart import current_app as app
-from api.models import Domain
-
-
-async def get_domain_info(domain_id: int) -> Optional[dict]:
-    """Get domain information."""
-    domain = await Domain.fetch(domain_id)
-    if domain is None:
-        return None
-
-    domain_dict = domain.to_dict()
-    domain_dict["stats"] = await domain.fetch_stats()
-    domain_dict["public_stats"] = await domain.fetch_stats(public=True)
-
-    owner = await domain.fetch_owner()
-    domain_dict["owner"] = owner.to_dict() if owner else None
-    return domain_dict
 
 
 async def create_domain_tag(label: str) -> int:
