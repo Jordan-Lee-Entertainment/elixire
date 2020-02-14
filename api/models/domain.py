@@ -56,6 +56,12 @@ class Domain:
             domain_id,
         )
 
+        return (
+            cls(row, tags=await cls.fetch_tags(domain_id)) if row is not None else None
+        )
+
+    @classmethod
+    async def fetch_tags(self, domain_id: int) -> Tags:
         tag_rows = await app.db.fetch(
             """
             SELECT domain_tags.tag_id, domain_tags.label
@@ -68,11 +74,7 @@ class Domain:
             domain_id,
         )
 
-        return (
-            Domain(row, tags=Tags([Tag.from_row(r) for r in tag_rows]))
-            if row is not None
-            else None
-        )
+        return Tags([Tag.from_row(r) for r in tag_rows])
 
     def to_dict(self) -> Dict[str, Any]:
         """Return the domain as a dictionary."""
