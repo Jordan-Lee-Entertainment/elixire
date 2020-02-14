@@ -14,11 +14,7 @@ from api.schema import (
     ADMIN_PUT_DOMAIN,
 )
 from api.common.domain import (
-    create_domain,
-    delete_domain,
-    set_domain_tags,
     get_domain_info,
-    set_domain_owner,
     create_domain_tag,
     delete_domain_tag,
     update_domain_tag,
@@ -61,26 +57,24 @@ async def add_domain():
     if "owner_id" in j:
         kwargs.update(owner_id=j["owner_id"])
 
-    domain_id = await create_domain(domain, **kwargs)
+    domain = await Domain.create(domain, **kwargs)
 
     async with DomainAddAction() as action:
-        action.update(domain_id=domain_id)
+        action.update(domain_id=domain.id)
 
-    domain = await Domain.fetch(domain_id)
-    assert domain is not None
     return jsonify({"domain": domain.to_dict()})
 
 
-async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
+async def _patch_domain_handler(domain: Domain, j: dict) -> List[str]:
     fields: List[str] = []
 
     if "owner_id" in j:
-        await set_domain_owner(domain_id, j["owner_id"])
+        await domain.set_owner(j["owner_id"])
         fields.append("owner_id")
         j.pop("owner_id")
 
     if "tags" in j:
-        await set_domain_tags(domain_id, j["tags"])
+        await domain.set_domain_tags(j["tags"])
         fields.append("tags")
         j.pop("tags")
 
@@ -94,7 +88,7 @@ async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
             WHERE domain_id = $2
             """,
             value,
-            domain_id,
+            domain.id,
         )
 
         fields.append(field)
@@ -111,7 +105,10 @@ async def patch_domain(domain_id: int):
     j = validate(await request.get_json(), ADMIN_MODIFY_DOMAIN)
 
     async with DomainEditAction(request, domain_id):
-        fields = await _patch_domain_handler(domain_id, j)
+        domain = await Domain.fetch(domain_id)
+        assert domain is not None
+
+        fields = await _patch_domain_handler(domain, j)
         return jsonify({"updated": fields})
 
 
@@ -177,9 +174,12 @@ async def remove_domain(domain_id: int):
     await check_admin(admin_id, True)
 
     async with DomainRemoveAction(request, domain_id):
-        results = await delete_domain(domain_id)
+        domain = await Domain.fetch(domain_id)
+        assert domain is not None
+        domain_stats = await domain.delete()
 
-    return jsonify({"success": True, **results})
+    # TODO just return the domain stats, no need for success
+    return jsonify({"success": True, **domain_stats})
 
 
 @bp.route("/<int:domain_id>", methods=["GET"])
