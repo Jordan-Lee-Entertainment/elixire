@@ -13,12 +13,7 @@ from api.schema import (
     ADMIN_SEND_DOMAIN_EMAIL,
     ADMIN_PUT_DOMAIN,
 )
-from api.common.domain import (
-    get_domain_info,
-    create_domain_tag,
-    delete_domain_tag,
-    update_domain_tag,
-)
+from api.common.domain import create_domain_tag, delete_domain_tag, update_domain_tag
 from api.common.auth import token_check, check_admin
 from api.common.email import send_email_to_user
 from api.common.pagination import Pagination
@@ -188,11 +183,11 @@ async def get_domain_stats(domain_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    info = await get_domain_info(domain_id)
-    if info is None:
+    domain = await Domain.fetch(domain_id)
+    if domain is None:
         raise NotFound("Domain not found")
 
-    return jsonify(info)
+    return jsonify(await domain.fetch_info_dict())
 
 
 @bp.route("", methods=["GET"])
@@ -210,9 +205,9 @@ async def get_domain_stats_all():
         if page < 0:
             raise BadInput("Negative page not allowed.")
 
-        domain_ids = await app.db.fetch(
+        rows = await app.db.fetch(
             f"""
-            SELECT domain_id, COUNT(*) OVER() as total_count
+            SELECT domain_id, domain, permissions, COUNT(*) OVER() as total_count
             FROM domains
             ORDER BY domain_id ASC
             LIMIT {per_page}
@@ -222,9 +217,9 @@ async def get_domain_stats_all():
         )
     except KeyError:
         page = -1
-        domain_ids = await app.db.fetch(
+        rows = await app.db.fetch(
             """
-            SELECT domain_id, COUNT(*) OVER() as total_count
+            SELECT domain_id, domain, permissions, COUNT(*) OVER() as total_count
             FROM domains
             ORDER BY domain_id ASC
             """
@@ -234,12 +229,11 @@ async def get_domain_stats_all():
 
     res = {}
 
-    for row in domain_ids:
-        domain_id = row["domain_id"]
-        info = await get_domain_info(domain_id)
-        res[domain_id] = info
+    for row in rows:
+        domain = Domain(row, tags=await Domain.fetch_tags(row["domain_id"]))
+        res[domain.id] = await domain.fetch_info_dict()
 
-    total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
+    total_count = 0 if not rows else rows[0]["total_count"]
 
     # page being -1 serves as a signal that the client
     # isn't paginated, so we shouldn't even add the extra
@@ -281,8 +275,9 @@ async def domains_search():
     results = {}
 
     for row in domain_ids:
-        domain_id = row["domain_id"]
-        results[domain_id] = await get_domain_info(domain_id)
+        domain = await Domain.fetch(row["domain_id"])
+        assert domain is not None
+        results[domain.id] = await domain.fetch_info_dict()
 
     total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
     return jsonify(pagination.response(results, total_count=total_count))

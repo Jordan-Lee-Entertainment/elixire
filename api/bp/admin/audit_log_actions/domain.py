@@ -4,7 +4,6 @@
 import logging
 from typing import Union
 
-from api.common.domain import get_domain_info
 from api.bp.admin.audit_log import Action, EditAction, DeleteAction
 from api.models import Domain
 
@@ -63,7 +62,9 @@ class DomainEditAction(EditAction):
 
 class DomainRemoveAction(DeleteAction):
     async def get_object(self, domain_id):
-        return await get_domain_info(domain_id)
+        domain = await Domain.fetch(domain_id)
+        assert domain is not None
+        return await domain.fetch_info_dict()
 
     async def details(self) -> list:
         lines = [f"Domain ID {self.id} was deleted.", "Domain information:"]
