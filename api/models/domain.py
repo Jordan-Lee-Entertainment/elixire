@@ -357,3 +357,13 @@ class Domain:
                 )
 
         self.tags = tags
+
+    async def fetch_info_dict(self) -> dict:
+        # TODO make this a namedtuple?
+        domain_dict = self.to_dict()
+        domain_dict["stats"] = await self.fetch_stats()
+        domain_dict["public_stats"] = await self.fetch_stats(public=True)
+
+        owner = await self.fetch_owner()
+        domain_dict["owner"] = owner.to_dict() if owner else None
+        return domain_dict
