@@ -136,9 +136,17 @@ async def test_cli_admin(test_cli):
     )
 
     async with app.app_context():
-        await set_domain_owner(0, test_user["user_id"])
+        root_domain = await Domain.fetch(0)
+        assert root_domain is not None
+
+        old_owner = await root_domain.fetch_owner()
+
+    async with app.app_context():
+        await root_domain.set_owner(test_user["user_id"])
 
     yield TestClient(test_cli, test_user)
 
     async with app.app_context():
         await _user_fixture_teardown(test_user)
+        if old_owner is not None:
+            await root_domain.set_owner(old_owner.id)
