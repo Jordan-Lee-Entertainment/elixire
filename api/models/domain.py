@@ -2,10 +2,13 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from collections import namedtuple
 from quart import current_app as app
+from asyncpg import UniqueViolationError
 from .user import User
+from api.storage import solve_domain
+from api.errors import BadInput
 
 
 class Tag(namedtuple("Tag", ["id", "label"])):
