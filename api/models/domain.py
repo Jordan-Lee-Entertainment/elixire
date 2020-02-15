@@ -2,7 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Iterable, Tuple
 from collections import namedtuple
 from quart import current_app as app
 from asyncpg import UniqueViolationError
@@ -342,8 +342,16 @@ class Domain:
             tag_id,
         )
 
-        tag_index = next(idx for idx, tag in enumerate(self.tags) if tag.id == tag_id)
-        self.tags.remove(tag_index)
+        def _filter_func(item: Tuple[int, Tag]) -> bool:
+            _index, tag = item
+            return tag.id == tag_id
+
+        index_tuples: Iterable[Tuple[int, Tag]] = filter(
+            _filter_func, enumerate(self.tags)
+        )
+
+        for index, _tag in index_tuples:
+            self.tags.remove(index)
 
     async def set_domain_tags(self, tags: Tags) -> None:
         """Set tags for a given domain and delete the previously assigned ones.
