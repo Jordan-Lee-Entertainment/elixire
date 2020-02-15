@@ -13,12 +13,11 @@ from api.schema import (
     ADMIN_SEND_DOMAIN_EMAIL,
     ADMIN_PUT_DOMAIN,
 )
-from api.common.domain import create_domain_tag, delete_domain_tag, update_domain_tag
 from api.common.auth import token_check, check_admin
 from api.common.email import send_email_to_user
 from api.common.pagination import Pagination
 from api.errors import BadInput, NotFound
-from api.models import Domain
+from api.models import Domain, Tag, Tags
 
 from api.bp.admin.audit_log_actions.domain import (
     DomainAddAction,
@@ -69,7 +68,14 @@ async def _patch_domain_handler(domain: Domain, j: dict) -> List[str]:
         j.pop("owner_id")
 
     if "tags" in j:
-        await domain.set_domain_tags(j["tags"])
+        new_tags: Tags = Tags()
+
+        for tag_id in j["tags"]:
+            tag = await Tag.fetch(tag_id)
+            assert tag is not None
+            new_tags.append(tag)
+
+        await domain.set_domain_tags(new_tags)
         fields.append("tags")
         j.pop("tags")
 
@@ -289,8 +295,8 @@ async def create_tag():
     await check_admin(admin_id, True)
 
     j = validate(await request.get_json(), {"label": {"type": "string"}})
-    tag_id = await create_domain_tag(j["label"])
-    return jsonify({"id": tag_id})
+    tag = await Tag.create(j["label"])
+    return jsonify(tag.to_dict())
 
 
 @bp.route("/tags", methods=["GET"])
@@ -305,7 +311,9 @@ async def delete_tag(tag_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    await delete_domain_tag(tag_id)
+    tag = await Tag.fetch(tag_id)
+    assert tag is not None
+    await tag.delete()
     return "", 204
 
 
@@ -322,4 +330,7 @@ async def patch_tag(tag_id: int):
     if "label" in j:
         kwargs["label"] = j["label"]
 
-    return jsonify(await update_domain_tag(tag_id, **kwargs))
+    tag = await Tag.fetch(tag_id)
+    assert tag is not None
+    await tag.update(**kwargs)
+    return jsonify(tag.to_dict())
