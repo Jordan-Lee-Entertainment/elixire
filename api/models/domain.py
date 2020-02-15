@@ -60,8 +60,8 @@ class Domain:
             cls(row, tags=await cls.fetch_tags(domain_id)) if row is not None else None
         )
 
-    @classmethod
-    async def fetch_tags(self, domain_id: int) -> Tags:
+    @staticmethod
+    async def fetch_tags(domain_id: int) -> Tags:
         tag_rows = await app.db.fetch(
             """
             SELECT domain_tags.tag_id, domain_tags.label
