@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from typing import Optional, Dict, Any, List, Iterable, Tuple
-from collections import namedtuple
 from quart import current_app as app
 from asyncpg import UniqueViolationError
 from .user import User
@@ -11,11 +10,85 @@ from api.storage import solve_domain
 from api.errors import BadInput
 
 
-class Tag(namedtuple("Tag", ["id", "label"])):
+class Tag:
+    """Represents an elixire domain tag."""
+
+    __slots__ = ("id", "label")
+
+    def __init__(self, id: int, label: str):
+        self.id = id
+        self.label = label
+
     @classmethod
     def from_row(cls, row):
         """Create a tag object from a row"""
         return cls(row["tag_id"], row["label"])
+
+    def to_dict(self) -> dict:
+        return {"id": self.id, "label": self.label}
+
+    @staticmethod
+    async def fetch(tag_id: int) -> Optional["Tag"]:
+        label = await app.db.fetchval(
+            """
+            SELECT label
+            FROM domain_tags
+            WHERE tag_id = $1
+            """,
+            tag_id,
+        )
+
+        if label is None:
+            return None
+
+        return Tag(tag_id, label)
+
+    @staticmethod
+    async def create(label: str) -> "Tag":
+        """Create a new tag."""
+        tag_id: int = await app.db.fetchval(
+            """
+            INSERT INTO domain_tags
+                (label)
+            VALUES
+                ($1)
+            RETURNING tag_id
+            """,
+            label,
+        )
+
+        return Tag(tag_id, label)
+
+    async def delete(self) -> None:
+        """Delete the tag."""
+        await app.db.execute("DELETE FROM domain_tags WHERE tag_id = $1", self.id)
+
+    async def update(self, **kwargs):
+        """Update a domain tag. Receives values to update in the form of
+        keyword arguments. The key of the argument MUST be a field in the
+        tag table.
+
+        You can not update the tag ID of a tag.
+
+        Updates the model.
+        """
+        assert "tag_id" not in kwargs
+
+        async with app.db.acquire() as conn:
+            async with conn.transaction():
+                for field, value in kwargs.items():
+                    await conn.execute(
+                        f"""
+                        UPDATE domain_tags
+                        SET {field} = $1
+                        WHERE tag_id = $2
+                        """,
+                        value,
+                        self.id,
+                    )
+
+                    if field == "label":
+                        self.label == value
 
 
 class Tags(list):
