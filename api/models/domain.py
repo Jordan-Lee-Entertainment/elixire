@@ -159,9 +159,8 @@ class Domain:
 
         return await User.fetch(owner_id)
 
-    @classmethod
+    @staticmethod
     async def create(
-        _,
         name: str,
         *,
         tags: Optional[List[int]] = None,
