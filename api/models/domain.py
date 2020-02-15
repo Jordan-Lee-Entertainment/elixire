@@ -257,20 +257,16 @@ class Domain:
                     permissions,
                 )
 
-                domain = Domain(
-                    {
-                        "domain_id": domain_id,
-                        "domain": name,
-                        "permissions": permissions,
-                    },
-                    tags=Tags([]),
-                )
+                domain = await Domain.fetch(domain_id)
+                assert domain is not None
 
                 if owner_id:
                     await domain.set_owner(owner_id)
 
                 for tag_id in tags:
-                    await domain.add_tag(tag_id)
+                    tag = await Tag.fetch(tag_id)
+                    assert tag is not None
+                    await domain.add_tag(tag)
 
         # invalidate cache
         possibilities = solve_domain(domain.domain)
