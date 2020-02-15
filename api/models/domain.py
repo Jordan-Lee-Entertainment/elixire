@@ -325,7 +325,7 @@ class Domain:
         assert tag_label is not None
         self.tags.append(Tag.from_row({"tag_id": tag_id, "label": tag_label}))
 
-    async def remove_domain_tag(self, tag_id: int) -> None:
+    async def remove_tag(self, tag_id: int) -> None:
         """Remove a tag from a domain.
 
         Updates the model.

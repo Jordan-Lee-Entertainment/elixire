@@ -26,7 +26,7 @@ async def add_tag(_ctx, args):
 async def remove_tag(_ctx, args):
     domain = await Domain.fetch(args.domain_id)
     assert domain is not None
-    await domain.remove_domain_tag(args.tag_id)
+    await domain.remove_tag(args.tag_id)
     print("OK")
 
 
