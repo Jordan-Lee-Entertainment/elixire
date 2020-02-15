@@ -342,6 +342,12 @@ class Domain:
             tag_id,
         )
 
+        # while it is 99% impossible to have repeated
+        # tags in the Tags array (because the database has a
+        # PRIMARY KEY set on it), someone messing with the
+        # internals might. I'll take my chances and do it the
+        # resilient way.
+
         def _filter_func(item: Tuple[int, Tag]) -> bool:
             _index, tag = item
             return tag.id == tag_id
