@@ -2,31 +2,40 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from api.common.domain import create_domain_tag, delete_domain_tag
-from api.models import Domain
+from api.models import Domain, Tag
 
 
 async def create_tag(_ctx, args):
-    tag_id = await create_domain_tag(args.label)
-    print("created tag with id", tag_id)
+    tag = await Tag.create(args.label)
+    print("created tag with id", tag.id)
 
 
 async def delete_tag(_ctx, args):
-    await delete_domain_tag(args.tag_id)
+    tag = await Tag.fetch(args.tag_id)
+    assert tag is not None
+    await tag.delete()
     print("OK")
 
 
 async def add_tag(_ctx, args):
+    tag = await Tag.fetch(args.tag_id)
+    assert tag is not None
+
     domain = await Domain.fetch(args.domain_id)
     assert domain is not None
-    await domain.add_tag(args.tag_id)
+
+    await domain.add_tag(tag)
     print("OK")
 
 
 async def remove_tag(_ctx, args):
+    tag = await Tag.fetch(args.tag_id)
+    assert tag is not None
+
     domain = await Domain.fetch(args.domain_id)
     assert domain is not None
-    await domain.remove_tag(args.tag_id)
+
+    await domain.remove_tag(tag)
     print("OK")
 
 
