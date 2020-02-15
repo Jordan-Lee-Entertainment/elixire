@@ -328,7 +328,7 @@ class Domain:
     async def remove_domain_tag(self, tag_id: int) -> None:
         """Remove a tag from a domain.
 
-        Keep in mind to refetch your model on update.
+        Updates the model.
         """
 
         await app.db.execute(
@@ -339,6 +339,9 @@ class Domain:
             self.id,
             tag_id,
         )
+
+        tag_index = next(idx for idx, tag in enumerate(self.tags) if tag.id == tag_id)
+        self.tags.remove(tag_index)
 
     async def set_domain_tags(self, tags: Tags) -> None:
         """Set tags for a given domain and delete the previously assigned ones.
