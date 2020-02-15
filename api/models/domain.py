@@ -367,7 +367,7 @@ class Domain:
             owner_id,
         )
 
-    async def add_tag(self, tag_id: int) -> None:
+    async def add_tag(self, tag: Tag) -> None:
         """Add a tag to a domain.
 
         Updates the model.
@@ -381,26 +381,16 @@ class Domain:
                     ($1, $2)
                 """,
                 self.id,
-                tag_id,
+                tag.id,
             )
-
         except UniqueViolationError:
             # if tag was already inserted, there isn't
             # any requirement to update the model.
             return
 
-        tag_label: str = await app.db.fetchval(
-            """
-            SELECT label
-            FROM domain_tags
-            WHERE tag_id = $1
-            """,
-            tag_id,
-        )
-        assert tag_label is not None
-        self.tags.append(Tag.from_row({"tag_id": tag_id, "label": tag_label}))
+        self.tags.append(tag)
 
-    async def remove_tag(self, tag_id: int) -> None:
+    async def remove_tag(self, tag: Tag) -> None:
         """Remove a tag from a domain.
 
         Updates the model.
@@ -412,7 +402,7 @@ class Domain:
             WHERE domain_id = $1 AND tag_id = $2
             """,
             self.id,
-            tag_id,
+            tag.id,
         )
 
         # while it is 99% impossible to have repeated
@@ -422,8 +412,8 @@ class Domain:
         # resilient way.
 
         def _filter_func(item: Tuple[int, Tag]) -> bool:
-            _index, tag = item
-            return tag.id == tag_id
+            _index, upstream_tag = item
+            return upstream_tag.id == tag.id
 
         index_tuples: Iterable[Tuple[int, Tag]] = filter(
             _filter_func, enumerate(self.tags)
@@ -438,7 +428,7 @@ class Domain:
         Updates the model.
         """
         existing_set = {tag.id for tag in self.tags}
-        tags_set = set(tags)
+        tags_set = {tag.id for tag in tags}
 
         to_add = tags_set - existing_set
         to_remove = existing_set - tags_set
