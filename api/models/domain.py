@@ -297,7 +297,7 @@ class Domain:
     async def add_tag(self, tag_id: int) -> None:
         """Add a tag to a domain.
 
-        Keep in mind to refetch your model on update.
+        Updates the model.
         """
         try:
             await app.db.execute(
@@ -310,8 +310,20 @@ class Domain:
                 self.id,
                 tag_id,
             )
+
         except UniqueViolationError:
             pass
+
+        tag_label: str = await app.db.fetchval(
+            """
+            SELECT label
+            FROM domain_tags
+            WHERE tag_id = $1
+            """,
+            tag_id,
+        )
+        assert tag_label is not None
+        self.tags.append(Tag.from_row({"tag_id": tag_id, "label": tag_label}))
 
     async def remove_domain_tag(self, tag_id: int) -> None:
         """Remove a tag from a domain.
