@@ -312,7 +312,9 @@ class Domain:
             )
 
         except UniqueViolationError:
-            pass
+            # if tag was already inserted, there isn't
+            # any requirement to update the model.
+            return
 
         tag_label: str = await app.db.fetchval(
             """
