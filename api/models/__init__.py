@@ -3,6 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from .user import User
-from .domain import Domain
+from .domain import Domain, Tag, Tags
 
-__all__ = ["User", "Domain"]
+__all__ = ["User", "Domain", "Tag", "Tags"]
