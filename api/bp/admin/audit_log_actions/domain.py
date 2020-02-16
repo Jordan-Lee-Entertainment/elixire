@@ -2,72 +2,43 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
+from typing import Union
 
-from api.common.domain import get_domain_info, get_domain_tag_ids
 from api.bp.admin.audit_log import Action, EditAction, DeleteAction
+from api.models import Domain
 
 log = logging.getLogger(__name__)
 
 
 class DomainAddAction(Action):
-    async def details(self):
-        owner_id = self["owner_id"]
-        domain_id = self["domain_id"]
-        owner_name = await self.app.storage.get_username(owner_id)
+    async def details(self) -> list:
+        domain = await Domain.fetch(self["domain_id"])
+        assert domain is not None
 
-        domain = await self.app.db.fetchrow(
-            """
-        SELECT domain, permissions
-        FROM domains
-        WHERE domain_id = $1
-        """,
-            domain_id,
-        )
+        owner = await domain.fetch_owner()
+        owner_str = f"{owner.id} {owner.name}" if owner else "<no owner set>"
 
-        lines = [
+        return [
             "Domain data:",
-            f"\tid: {domain_id}",
-            f'\tname: {domain["domain"]}',
-            f"\ttags: {await get_domain_tag_ids(domain_id)}",
-            f'\tpermissions number: {domain["permissions"]}\n',
-            f"set owner on add: {owner_name} ({owner_id})",
+            f"\tid: {domain.id}",
+            f"\tname: {domain.domain}",
+            f"\ttags: {','.join(t.id for t in domain.tags) or '<no tags>'}",
+            f"\tpermissions number: {domain.permissions}\n",
+            f"set owner on add: {owner_str}",
         ]
 
-        return "\n".join(lines)
-
     def __repr__(self):
-        return f'<DomainAddAction domain_id={self["domain_id"]} owner_id={self["owner_id"]}'
+        return f'<DomainAddAction domain_id={self["domain_id"]}'
 
 
 class DomainEditAction(EditAction):
     async def get_object(self, domain_id) -> dict:
-        domain = await self.app.db.fetchrow(
-            """
-        SELECT domain, permissions
-        FROM domains
-        WHERE domain_id = $1
-        """,
-            domain_id,
-        )
+        domain = await Domain.fetch(domain_id)
+        assert domain is not None
+        owner = await domain.fetch_owner()
+        return {**domain.to_dict(), **{"owner_id": owner.id if owner else None}}
 
-        domain = dict(domain) if domain is not None else {}
-
-        domain_owner = await self.app.db.fetchval(
-            """
-        SELECT user_id
-        FROM domain_owners
-        WHERE domain_id = $1
-        """,
-            domain_id,
-        )
-
-        domain["owner_id"] = domain_owner
-
-        domain["tags"] = await get_domain_tag_ids(domain_id)
-
-        return domain
-
-    async def details(self):
+    async def details(self) -> Union[list, bool]:
         # if no keys were actually edited, don't make it an action.
         if not self.different_keys():
             return False
@@ -91,7 +62,9 @@ class DomainEditAction(EditAction):
 
 class DomainRemoveAction(DeleteAction):
     async def get_object(self, domain_id):
-        return await get_domain_info(domain_id)
+        domain = await Domain.fetch(domain_id)
+        assert domain is not None
+        return await domain.fetch_info_dict()
 
     async def details(self) -> list:
         lines = [f"Domain ID {self.id} was deleted.", "Domain information:"]

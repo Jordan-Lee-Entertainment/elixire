@@ -8,9 +8,8 @@ elixire - index routes
     because those provide public functionality (where as /api/hello
     isn't used by a client).
 """
-from quart import Blueprint, jsonify
-
-from api.common.domain import get_domain_tags, get_all_domains_basic
+from quart import Blueprint, jsonify, current_app as app
+from api.models import Domain
 
 bp = Blueprint("index", __name__)
 
@@ -18,15 +17,18 @@ bp = Blueprint("index", __name__)
 @bp.route("/domains")
 async def domainlist_handler():
     """Gets the domain list."""
-    domain_data = await get_all_domains_basic()
 
-    result = [
+    domain_ids = await app.db.fetch(
+        """
+        SELECT domain_id
+        FROM domains
+        """
+    )
+
+    return jsonify(
         {
-            "id": drow["domain_id"],
-            "domain": drow["domain"],
-            "tags": await get_domain_tags(drow["domain_id"]),
+            "domains": [
+                (await Domain.fetch(row["domain_id"])).to_dict() for row in domain_ids
+            ]
         }
-        for drow in domain_data
-    ]
-
-    return jsonify({"domains": result})
+    )
