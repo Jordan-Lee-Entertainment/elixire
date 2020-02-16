@@ -3,11 +3,13 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from typing import Optional, Dict, Any, List, Iterable, Tuple
+
 from quart import current_app as app
-from asyncpg import UniqueViolationError
-from .user import User
+from asyncpg import UniqueViolationError, Record
+
 from api.storage import solve_domain
 from api.errors import BadInput
+from .user import User
 
 
 class Tag:
@@ -20,8 +22,8 @@ class Tag:
         self.label = label
 
     @classmethod
-    def from_row(cls, row):
-        """Create a tag object from a row"""
+    def from_row(cls, row: Record):
+        """Create a tag object from an asyncpg record"""
         return cls(row["tag_id"], row["label"])
 
     def to_dict(self) -> dict:
