@@ -13,20 +13,11 @@ from api.schema import (
     ADMIN_SEND_DOMAIN_EMAIL,
     ADMIN_PUT_DOMAIN,
 )
-from api.common.domain import (
-    create_domain,
-    delete_domain,
-    set_domain_tags,
-    get_domain_info,
-    set_domain_owner,
-    create_domain_tag,
-    delete_domain_tag,
-    update_domain_tag,
-)
 from api.common.auth import token_check, check_admin
 from api.common.email import send_email_to_user
 from api.common.pagination import Pagination
 from api.errors import BadInput, NotFound
+from api.models import Domain, Tag, Tags
 
 from api.bp.admin.audit_log_actions.domain import (
     DomainAddAction,
@@ -60,30 +51,31 @@ async def add_domain():
     if "owner_id" in j:
         kwargs.update(owner_id=j["owner_id"])
 
-    domain_id = await create_domain(domain, **kwargs)
+    domain = await Domain.create(domain, **kwargs)
 
     async with DomainAddAction() as action:
-        action.update(domain_id=domain_id)
+        action.update(domain_id=domain.id)
 
-        try:
-            owner_id = j["owner_id"]
-            action.update(owner_id=owner_id)
-        except KeyError:
-            pass
-
-    return jsonify({"success": True, "new_id": domain_id})
+    return jsonify({"domain": domain.to_dict()})
 
 
-async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
+async def _patch_domain_handler(domain: Domain, j: dict) -> List[str]:
     fields: List[str] = []
 
     if "owner_id" in j:
-        await set_domain_owner(domain_id, j["owner_id"])
+        await domain.set_owner(j["owner_id"])
         fields.append("owner_id")
         j.pop("owner_id")
 
     if "tags" in j:
-        await set_domain_tags(domain_id, j["tags"])
+        new_tags: Tags = Tags()
+
+        for tag_id in j["tags"]:
+            tag = await Tag.fetch(tag_id)
+            assert tag is not None
+            new_tags.append(tag)
+
+        await domain.set_domain_tags(new_tags)
         fields.append("tags")
         j.pop("tags")
 
@@ -97,7 +89,7 @@ async def _patch_domain_handler(domain_id: int, j: dict) -> List[str]:
             WHERE domain_id = $2
             """,
             value,
-            domain_id,
+            domain.id,
         )
 
         fields.append(field)
@@ -114,7 +106,10 @@ async def patch_domain(domain_id: int):
     j = validate(await request.get_json(), ADMIN_MODIFY_DOMAIN)
 
     async with DomainEditAction(request, domain_id):
-        fields = await _patch_domain_handler(domain_id, j)
+        domain = await Domain.fetch(domain_id)
+        assert domain is not None
+
+        fields = await _patch_domain_handler(domain, j)
         return jsonify({"updated": fields})
 
 
@@ -180,9 +175,12 @@ async def remove_domain(domain_id: int):
     await check_admin(admin_id, True)
 
     async with DomainRemoveAction(request, domain_id):
-        results = await delete_domain(domain_id)
+        domain = await Domain.fetch(domain_id)
+        assert domain is not None
+        domain_stats = await domain.delete()
 
-    return jsonify({"success": True, **results})
+    # TODO just return the domain stats, no need for success
+    return jsonify({"success": True, **domain_stats})
 
 
 @bp.route("/<int:domain_id>", methods=["GET"])
@@ -191,11 +189,11 @@ async def get_domain_stats(domain_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    info = await get_domain_info(domain_id)
-    if info is None:
+    domain = await Domain.fetch(domain_id)
+    if domain is None:
         raise NotFound("Domain not found")
 
-    return jsonify(info)
+    return jsonify(await domain.fetch_info_dict())
 
 
 @bp.route("", methods=["GET"])
@@ -213,9 +211,9 @@ async def get_domain_stats_all():
         if page < 0:
             raise BadInput("Negative page not allowed.")
 
-        domain_ids = await app.db.fetch(
+        rows = await app.db.fetch(
             f"""
-            SELECT domain_id, COUNT(*) OVER() as total_count
+            SELECT domain_id, domain, permissions, COUNT(*) OVER() as total_count
             FROM domains
             ORDER BY domain_id ASC
             LIMIT {per_page}
@@ -225,9 +223,9 @@ async def get_domain_stats_all():
         )
     except KeyError:
         page = -1
-        domain_ids = await app.db.fetch(
+        rows = await app.db.fetch(
             """
-            SELECT domain_id, COUNT(*) OVER() as total_count
+            SELECT domain_id, domain, permissions, COUNT(*) OVER() as total_count
             FROM domains
             ORDER BY domain_id ASC
             """
@@ -237,12 +235,11 @@ async def get_domain_stats_all():
 
     res = {}
 
-    for row in domain_ids:
-        domain_id = row["domain_id"]
-        info = await get_domain_info(domain_id)
-        res[domain_id] = info
+    for row in rows:
+        domain = Domain(row, tags=await Domain.fetch_tags(row["domain_id"]))
+        res[domain.id] = await domain.fetch_info_dict()
 
-    total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
+    total_count = 0 if not rows else rows[0]["total_count"]
 
     # page being -1 serves as a signal that the client
     # isn't paginated, so we shouldn't even add the extra
@@ -284,8 +281,9 @@ async def domains_search():
     results = {}
 
     for row in domain_ids:
-        domain_id = row["domain_id"]
-        results[domain_id] = await get_domain_info(domain_id)
+        domain = await Domain.fetch(row["domain_id"])
+        assert domain is not None
+        results[domain.id] = await domain.fetch_info_dict()
 
     total_count = 0 if not domain_ids else domain_ids[0]["total_count"]
     return jsonify(pagination.response(results, total_count=total_count))
@@ -297,8 +295,8 @@ async def create_tag():
     await check_admin(admin_id, True)
 
     j = validate(await request.get_json(), {"label": {"type": "string"}})
-    tag_id = await create_domain_tag(j["label"])
-    return jsonify({"id": tag_id})
+    tag = await Tag.create(j["label"])
+    return jsonify(tag.to_dict())
 
 
 @bp.route("/tags", methods=["GET"])
@@ -313,7 +311,9 @@ async def delete_tag(tag_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    await delete_domain_tag(tag_id)
+    tag = await Tag.fetch(tag_id)
+    assert tag is not None
+    await tag.delete()
     return "", 204
 
 
@@ -330,4 +330,7 @@ async def patch_tag(tag_id: int):
     if "label" in j:
         kwargs["label"] = j["label"]
 
-    return jsonify(await update_domain_tag(tag_id, **kwargs))
+    tag = await Tag.fetch(tag_id)
+    assert tag is not None
+    await tag.update(**kwargs)
+    return jsonify(tag.to_dict())

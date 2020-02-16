@@ -26,9 +26,8 @@ from api.schema import (
 )
 from api.common.user import delete_user
 from api.common.profile import fetch_dumps, wrap_dump_violet_job_state
-from api.common.domain import get_basic_domain, is_domain_admin_only
 from api.common.auth import pwd_check
-from api.models import User
+from api.models import User, Domain
 
 bp = Blueprint("profile", __name__)
 log = logging.getLogger(__name__)
@@ -177,14 +176,12 @@ async def validate_semantics(user_id: int, payload: dict) -> dict:
         if not to_update(user, payload, field):
             continue
 
-        domain = await get_basic_domain(payload[field])
+        domain = await Domain.fetch(payload[field])
 
         if domain is None:
             errors[field].append("Unknown domain")
         else:
-            if await is_domain_admin_only(
-                domain["domain_id"]
-            ) and not await check_admin(user_id):
+            if domain.admin_only and not await check_admin(user_id):
                 errors[field].append("You can't use admin-only domains")
 
     return errors

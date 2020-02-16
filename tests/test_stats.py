@@ -15,14 +15,20 @@ async def test_domains(test_cli_admin):
     rjson = await resp.json
 
     assert isinstance(rjson, dict)
-    assert isinstance(rjson["0"], dict)
+    assert isinstance(rjson["domains"], list)
 
-    info = rjson["0"]["info"]
-    assert isinstance(info["domain"], str)
-    assert isinstance(info["permissions"], int)
-    assert isinstance(info["tags"], list)
+    # NOTE: this test expects domain 0 to be linked to admin ownership
 
-    pub = rjson["0"]["stats"]
-    assert isinstance(pub["users"], int)
-    assert isinstance(pub["files"], int)
-    assert isinstance(pub["shortens"], int)
+    domain = rjson["domains"][0]
+    assert isinstance(domain["id"], int)
+    assert isinstance(domain["domain"], str)
+    assert isinstance(domain["permissions"], int)
+    assert isinstance(domain["tags"], list)
+
+    pub = domain["stats"]
+    assert isinstance(pub["user_count"], int)
+    assert isinstance(pub["shorten_count"], int)
+
+    assert isinstance(pub["files"], dict)
+    assert isinstance(pub["files"]["count"], int)
+    assert isinstance(pub["files"]["total_file_bytes"], int)

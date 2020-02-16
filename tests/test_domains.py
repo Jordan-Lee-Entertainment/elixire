@@ -3,10 +3,11 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .common import hexs
 
 from api.storage import solve_domain
-from api.common.domain import create_domain, delete_domain, get_domain_tags
+from api.models import Domain
+
+from .common import hexs
 
 pytestmark = pytest.mark.asyncio
 
@@ -16,7 +17,7 @@ async def test_domains_common_functions(test_cli_admin):
 
     # create a domain
     async with test_cli_admin.app.app_context():
-        domain_id = await create_domain(name, owner_id=test_cli_admin.user["user_id"])
+        domain = await Domain.create(name, owner_id=test_cli_admin.user["user_id"])
 
     try:
         # test that it exists with the correct info
@@ -26,7 +27,7 @@ async def test_domains_common_functions(test_cli_admin):
             FROM domains
             WHERE domain_id = $1
             """,
-            domain_id,
+            domain.id,
         )
 
         assert row is not None
@@ -40,20 +41,17 @@ async def test_domains_common_functions(test_cli_admin):
             FROM domain_owners
             WHERE domain_id = $1
             """,
-            domain_id,
+            domain.id,
         )
 
         assert row is not None
         assert row["user_id"] == test_cli_admin.user["user_id"]
 
         # assert tags are empty for new domains
-        async with test_cli_admin.app.app_context():
-            tags = await get_domain_tags(domain_id)
-
-        assert not tags
+        assert not domain.tags
     finally:
         async with test_cli_admin.app.app_context():
-            results = await delete_domain(domain_id)
+            results = await domain.delete()
 
     assert isinstance(results, dict)
     assert results["result"] == "DELETE 1"
@@ -69,7 +67,7 @@ async def test_domains_common_functions(test_cli_admin):
         FROM domain_owners
         WHERE domain_id = $1
         """,
-        domain_id,
+        domain.id,
     )
 
     assert row is None

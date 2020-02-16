@@ -2,45 +2,60 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from api.common.domain import (
-    create_domain_tag,
-    delete_domain_tag,
-    add_domain_tag,
-    remove_domain_tag,
-    get_all_domains_basic,
-    get_domain_tags,
-)
+from api.models import Domain, Tag
 
 
 async def create_tag(_ctx, args):
-    tag_id = await create_domain_tag(args.label)
-    print("created tag with id", tag_id)
+    tag = await Tag.create(args.label)
+    print("created tag with id", tag.id)
 
 
 async def delete_tag(_ctx, args):
-    await delete_domain_tag(args.tag_id)
+    tag = await Tag.fetch(args.tag_id)
+    assert tag is not None
+    await tag.delete()
     print("OK")
 
 
 async def add_tag(_ctx, args):
-    await add_domain_tag(args.domain_id, args.tag_id)
+    tag = await Tag.fetch(args.tag_id)
+    assert tag is not None
+
+    domain = await Domain.fetch(args.domain_id)
+    assert domain is not None
+
+    await domain.add_tag(tag)
     print("OK")
 
 
 async def remove_tag(_ctx, args):
-    await remove_domain_tag(args.domain_id, args.tag_id)
+    tag = await Tag.fetch(args.tag_id)
+    assert tag is not None
+
+    domain = await Domain.fetch(args.domain_id)
+    assert domain is not None
+
+    await domain.remove_tag(tag)
     print("OK")
 
 
 async def list_domains(ctx, _args):
-    domains = await get_all_domains_basic()
+    domains = await ctx.db.fetch(
+        """
+        SELECT domain_id, domain
+        FROM domains
+        """
+    )
+
     for domain in domains:
         domain_id = domain["domain_id"]
         print("id:", domain_id, "name:", domain["domain"])
 
-        tags = await get_domain_tags(domain_id)
-        for tag in tags:
-            print("\ttag", tag["id"], "label", tag["label"])
+        domain = await Domain.fetch(domain_id)
+        assert domain is not None
+
+        for tag in domain.tags:
+            print("\ttag", tag.id, "label", tag.label)
 
 
 def setup(subparser):

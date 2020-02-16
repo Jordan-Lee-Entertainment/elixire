@@ -84,7 +84,7 @@ async def test_upload_png(test_cli_user, test_domain):
 
     url = f"/i/{shortname}.png"
 
-    host_without_wildcard = test_domain.name.replace("*.", "")
+    host_without_wildcard = test_domain.domain.replace("*.", "")
     # (browsers won't be accessing "*.domain.tld", they will access "domain.tld"
     # -- "*.domain.tld" is how they are represented internally)
 
@@ -134,7 +134,7 @@ async def test_legacy_file_resolution(test_cli_user, test_domain):
     )
     assert resp == "UPDATE 1"
 
-    host_without_wildcard = test_domain.name.replace("*.", "")
+    host_without_wildcard = test_domain.domain.replace("*.", "")
     url = f"/i/{shortname}.png"
 
     resp = await test_cli_user.get(url, headers={"host": host_without_wildcard})
