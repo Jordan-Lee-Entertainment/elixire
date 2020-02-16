@@ -90,7 +90,7 @@ class Tag:
                     )
 
                     if field == "label":
-                        self.label == value
+                        self.label = value
 
 
 class Tags(list):
