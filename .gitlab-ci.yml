@@ -1,5 +1,6 @@
 variables:
   PIP_CACHE_DIR: '$CI_PROJECT_DIR/.cache'
+  POSTGRES_HOST_AUTH_METHOD: 'trust'
 #   GIT_SUBMODULE_STRATEGY: recursive
 
 # build_frontend:
