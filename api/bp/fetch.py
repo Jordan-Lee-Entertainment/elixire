@@ -7,10 +7,10 @@ import os
 import time
 from typing import Optional, Tuple
 
-from quart import Blueprint, current_app as app, request, redirect
+from quart import Blueprint, current_app as app, request, redirect, jsonify
 from api.common.utils import send_file
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from api.errors import NotFound
 from api.storage import StorageValue
@@ -109,7 +109,19 @@ async def thumbnail_handler(filename):
     if not os.path.isfile(thumbpath):
         tstart = time.monotonic()
 
-        image = Image.open(fspath)
+        try:
+            image = Image.open(fspath)
+        except UnidentifiedImageError:
+            return (
+                jsonify(
+                    {
+                        "error": True,
+                        "message": "Failed to open file with PIL. Is it an image?",
+                    }
+                ),
+                415,
+            )
+
         image.thumbnail(appcfg.THUMBNAIL_SIZES[thumbtype])
         image.save(thumbpath)
 
