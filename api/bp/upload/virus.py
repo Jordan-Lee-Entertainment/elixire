@@ -102,7 +102,8 @@ async def _delete_file_from_scan(ctx) -> None:
         log.warning(f"File {ctx.shortname} deleted before virus-triggered deletion")
 
     try:
-        os.remove(fspath)
+        if fspath is not None:
+            os.remove(fspath)
     except OSError:
         log.warning(f"File path {fspath!r} deleted before virus-triggered deletion")
 
