@@ -118,9 +118,7 @@ async def scan_bg_waiter(ctx, scan_task: asyncio.Task) -> Any:
     # if we add a timeout=, make sure to check if scan_task has anything
     log.debug("waiting for scan task...")
     _done, pending = await asyncio.wait([scan_task])
-
-    if pending:
-        raise AssertionError("scan task still pending")
+    assert not pending
 
     try:
         return scan_task.result()
