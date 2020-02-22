@@ -62,7 +62,7 @@ async def _post_webhook(
 
             raise WebhookError("Webhook is ratelimited")
 
-        if status == 200:
+        if status in (200, 204):
             return
 
         try:
@@ -70,17 +70,8 @@ async def _post_webhook(
         except Exception as exc:
             data = f"Failed to read/parse JSON ({exc!r})"
 
-        err_code, err_msg = data["code"], data["message"]
-        log.warning(
-            "Failed to dispatch webhook, status=%d, code=%d, msg=%r",
-            status,
-            err_code,
-            err_msg,
-        )
-
-        raise WebhookError(
-            f"Failed to send webhook ({status}, {err_code}, {err_msg!r})"
-        )
+        log.warning("Failed to dispatch webhook, status=%d, data=%r", status, data)
+        raise WebhookError(f"Failed to send webhook ({status}, {data!r})")
 
 
 async def ban_webhook(user_id: int, reason: str, period: str):
