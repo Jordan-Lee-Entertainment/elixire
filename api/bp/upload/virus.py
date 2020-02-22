@@ -12,7 +12,7 @@ from quart import current_app as app
 
 from api.common import delete_file
 from api.common.webhook import scan_webhook
-from api.errors import BadImage, APIError
+from api.errors import BadImage
 
 log = logging.getLogger(__name__)
 
@@ -71,14 +71,17 @@ async def run_scan(ctx) -> None:
         process.returncode,
     )
 
+    assert process.returncode in (0, 1, 2)
+
     if process.returncode == 0:
         return
     elif process.returncode == 1:
         log.warning("user id %d got caught in virus scan", ctx.user_id)
         await scan_webhook(ctx, total_out)
         raise BadImage("Image contains a virus.")
-    else:
-        raise APIError("clamdscan returned unknown error code")
+    elif process.returncode == 2:
+        log.warning("clamdscan FAILED: %r")
+        raise BadImage("clamdscan raised error.")
 
 
 async def _delete_file_from_scan(ctx) -> None:
