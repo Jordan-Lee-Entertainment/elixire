@@ -10,6 +10,7 @@ __all__ = [
     "username",
     "email",
     "png_request",
+    "aiohttp_form",
 ]
 
 import base64
@@ -98,13 +99,15 @@ class FormData:
         }
 
 
+async def aiohttp_form(data, filename: str, mimetype: str):
+    fd = FormData()
+    fd.add_field("file", data, filename=filename, content_type=mimetype)
+    await fd.write()
+    return fd.request
+
+
 async def png_request() -> dict:
     """Generate keyword arguments to pass to an HTTP method function that would
     specify a multipart form body to upload a random PNG file.
     """
-    fd = FormData()
-    fd.add_field(
-        "file", png_data(), filename=f"{hexs(10)}.png", content_type="image/png"
-    )
-    await fd.write()
-    return fd.request
+    return await aiohttp_form(png_data(), f"hexs(10).png", "image/png")

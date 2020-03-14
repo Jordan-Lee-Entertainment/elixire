@@ -68,7 +68,7 @@ async def profile_handler():
 
     violet_jobs = await fetch_dumps(user_id, current=True)
     user_dict["dump_status"] = wrap_dump_violet_job_state(
-        violet_jobs[0]["state"] if violet_jobs else None
+        violet_jobs[0] if violet_jobs else None
     )
 
     return jsonify(user_dict)

@@ -2,11 +2,13 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import io
+import secrets
 import pytest
 import os.path
 from urllib.parse import urlparse
 
-from .common import png_request, hexs
+from .common import png_request, hexs, aiohttp_form
 
 pytestmark = pytest.mark.asyncio
 
@@ -56,6 +58,12 @@ async def check_exists(test_cli, shortname, *, reverse=False):
         f"/i/{shortname}{extension}", headers={"host": "undefined.com"}
     )
     assert resp.status_code == 404
+
+    # check thumbnail can be generated successfully
+    resp = await test_cli.get(
+        f"/t/s{shortname}{extension}", headers={"host": url.netloc}
+    )
+    assert resp.status_code == 200
 
 
 async def test_upload_png(test_cli_user, test_domain):
@@ -111,6 +119,49 @@ async def test_upload_png(test_cli_user, test_domain):
         url, headers={"host": f"nope.{host_without_wildcard}"}
     )
     assert resp.status_code == 404
+
+    # trying to upload the same file will bring
+    # the same url (deduplication)
+    #
+    # NOTE: png_request must always return the same data.
+
+    subdomain = hexs(10)
+    resp = await test_cli_user.post(
+        "/api/upload",
+        **(await png_request()),
+        query_string={"domain": test_domain.id, "subdomain": subdomain},
+    )
+
+    assert resp.status_code == 200
+    json = await resp.json
+
+    new_shortname = json["shortname"]
+    assert new_shortname == shortname
+
+    assert isinstance(json, dict)
+    assert isinstance(json["url"], str)
+    await check_exists(test_cli_user, shortname)
+
+
+async def test_bogus_data(test_cli_user, test_domain):
+    """Test that uploading random data fails.
+
+    Assumes we won't get some identifying filetype from random noise.
+    lol.
+    """
+    random_data = secrets.token_bytes(20)
+    request_kwargs = await aiohttp_form(
+        io.BytesIO(random_data), f"{hexs(10)}.bin", "application/octet-stream"
+    )
+
+    subdomain = hexs(10)
+    resp = await test_cli_user.post(
+        "/api/upload",
+        **request_kwargs,
+        query_string={"domain": test_domain.id, "subdomain": subdomain},
+    )
+
+    assert resp.status_code == 415
 
 
 async def test_legacy_file_resolution(test_cli_user, test_domain):
