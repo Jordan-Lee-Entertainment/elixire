@@ -247,6 +247,7 @@ async def handler(ctx, user_id: int) -> None:
 
     state["zip"] = not state["zip"]
     await app.sched.set_job_state(ctx.job_id, state)
+    ctx.set_start()
 
     try:
         if user_name is None:
