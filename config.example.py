@@ -44,8 +44,12 @@ SUPPORT_EMAIL = "support@elixi.re"
 
 ################################################################################
 
-# SMTP credentials for instance emails.
-# (account deletion, Data Dump, etc.)
+# SMTP credentials for sending emails. (Used during account creation, sending
+# data dumps, etc.)
+#
+# NOTE: If this is set to `None`, then no emails will be sent at all. If you
+#       want this, then make sure to disable account approvals, as those send
+#       emails.
 SMTP_CONFIG = {
     "from": "elixi.re <automated@somewhere>",
     "host": "smtp.mailgun.org",
