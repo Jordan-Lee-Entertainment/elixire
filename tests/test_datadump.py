@@ -17,6 +17,8 @@ async def test_datadump(test_cli_user):
     resp = await test_cli_user.post("/api/dump")
     assert resp.status_code == 200
 
+    zipdump = None
+
     try:
         rjson = await resp.json
         assert isinstance(rjson, dict)
@@ -82,7 +84,9 @@ async def test_datadump(test_cli_user):
             assert user_data["id"] == test_cli_user.user["user_id"]
 
     finally:
-        zipdump.close()
+        if zipdump:
+            zipdump.close()
+
         try:
             os.unlink(path)
         except Exception as err:
