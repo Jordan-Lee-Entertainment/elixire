@@ -5,6 +5,7 @@ import json
 import zipfile
 import os.path
 import logging
+import asyncio
 
 from typing import Tuple, Optional
 from quart import current_app as app
@@ -255,6 +256,14 @@ async def handler(ctx, user_id: int) -> None:
 
         await dump_json(zipdump, user_id)
         await dump_files(ctx, state, zipdump, user_id)
-        await dispatch_dump(user_id, user_name)
+
+        try:
+            await asyncio.wait_for(dispatch_dump(user_id, user_name), 40)
+        except asyncio.TimeoutError:
+            log.warning("Failed to send email to user, reached timeout")
+            pass
+
     finally:
         zipdump.close()
+
+    log.debug("finished datadump for %r %d", user_name, user_id)
