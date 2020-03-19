@@ -36,7 +36,7 @@ async def test_datadump(test_cli_user):
         assert "total" in rjson["pagination"]
         assert "current" in rjson["pagination"]
 
-        await test_cli_user.app.sched.wait_job_start(job_id)
+        await test_cli_user.app.sched.wait_job_start(job_id, timeout=20)
 
         resp = await test_cli_user.get("/api/profile")
         assert resp.status_code == 200
@@ -47,7 +47,7 @@ async def test_datadump(test_cli_user):
         assert dump["state"] == "processing"
         assert dump["job_id"] == job_id
 
-        await test_cli_user.app.sched.wait_job(job_id)
+        await test_cli_user.app.sched.wait_job(job_id, timeout=20)
 
         status = await test_cli_user.app.sched.fetch_queue_job_status(job_id)
         assert status.queue_name == "datadump"
