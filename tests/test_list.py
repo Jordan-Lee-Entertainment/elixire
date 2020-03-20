@@ -42,7 +42,7 @@ async def _create_file(app, user_id):
 async def _create_shorten(app, user_id):
     redir_id = get_snowflake()
     async with app.app_context():
-        shortname, _ = await gen_user_shortname(user_id)
+        shortname, _ = await gen_user_shortname(user_id, table="shortens")
 
     await app.db.execute(
         """

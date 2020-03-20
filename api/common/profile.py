@@ -67,7 +67,7 @@ def wrap_dump_violet_job_state(job_record: Optional[Record]) -> Optional[dict]:
     return {"state": "not_in_queue"}
 
 
-async def gen_user_shortname(user_id: int, table: str = "files") -> Tuple[str, int]:
+async def gen_user_shortname(user_id: int, *, table: str = "files") -> Tuple[str, int]:
     """Generate a shortname for a file.
 
     Checks if the user is in paranoid mode and acts accordingly
