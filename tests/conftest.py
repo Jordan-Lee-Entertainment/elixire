@@ -50,19 +50,6 @@ async def app_fixture(event_loop):
     await app_.shutdown()
 
 
-@pytest.fixture(name="test_domain")
-async def test_domain_fixture(app):
-    domain_name = f"*.test-{hexs(10)}.tld"
-
-    async with app.app_context():
-        domain = await Domain.create(domain_name)
-
-    yield domain
-
-    async with app.app_context():
-        await domain.delete()
-
-
 @pytest.fixture(name="test_cli")
 def test_cli_fixture(app):
     return app.test_client()
@@ -112,7 +99,9 @@ async def test_user_fixture(app):
 async def test_cli_user(test_cli, test_user):
     """Yield a TestClient instance that contains a randomly generated
     user."""
-    yield TestClient(test_cli, test_user)
+    client = TestClient(test_cli, test_user)
+    yield client
+    await client.cleanup()
 
 
 @pytest.fixture
@@ -144,7 +133,9 @@ async def test_cli_admin(test_cli):
     async with app.app_context():
         await root_domain.set_owner(test_user["user_id"])
 
-    yield TestClient(test_cli, test_user)
+    client = TestClient(test_cli, test_user)
+    yield client
+    await client.cleanup()
 
     async with app.app_context():
         await _user_fixture_teardown(test_user)

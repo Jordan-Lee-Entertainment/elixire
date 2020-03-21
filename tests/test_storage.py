@@ -37,7 +37,9 @@ async def test_user_storage(test_cli_user):
     ]
 
 
-async def test_domain_storage(test_domain, app):
+async def test_domain_storage(test_cli_user):
     # TODO maybe copy test_domain.domain and replace by a
     # subdomain, then compare it to get_domain_id(..)[1]
-    assert (await app.storage.get_domain_id(test_domain.domain))[0] == test_domain.id
+    test_domain = await test_cli_user.create_domain()
+    storage_id = await test_cli_user.app.storage.get_domain_id(test_domain.domain)
+    assert storage_id[0] == test_domain.id
