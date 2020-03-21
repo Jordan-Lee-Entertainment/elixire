@@ -7,9 +7,9 @@ from typing import List
 
 from quart import Blueprint, jsonify, request, current_app as app
 
-from api.common import delete_file, delete_shorten
+from api.common import delete_shorten
 from api.common.auth import token_check, password_check
-from api.errors import BadInput  # , JobExistsError
+from api.errors import BadInput, NotFound  # , JobExistsError
 from api.schema import (
     validate,
     PURGE_ALL_BASE_SCHEMA,
@@ -157,10 +157,20 @@ async def mass_delete_handler(ctx, user_id, raw: dict, delete_content: bool = Tr
 
 @bp.route("/files/<shortname>", methods=["DELETE"])
 @bp.route("/files/<shortname>/delete", methods=["GET"])
-async def delete_single(shortname):
+async def delete_single(shortname: str):
     """Delete a single file."""
     user_id = await token_check()
-    await delete_file(user_id, by_name=shortname)
+
+    elixire_file = await File.fetch_by(shortname=shortname)
+    if elixire_file is None:
+        raise NotFound("File not found")
+
+    if elixire_file.uploader != user_id:
+        raise NotFound("File not found")
+
+    # really want to keep this up.
+    assert elixire_file.uploader == user_id
+    await elixire_file.delete()
     return "", 204
 
 
