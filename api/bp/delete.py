@@ -7,16 +7,15 @@ from typing import List
 
 from quart import Blueprint, jsonify, request, current_app as app
 
-from api.common import delete_file, delete_shorten, delete_many
 from api.common.auth import token_check, password_check
-from api.errors import BadInput  # , JobExistsError
+from api.errors import BadInput, NotFound  # , JobExistsError
 from api.schema import (
     validate,
     PURGE_ALL_BASE_SCHEMA,
     PURGE_ALL_SCHEMA,
     isotimestamp_or_int,
 )
-from api.models import Domain
+from api.models import Domain, File, Shorten
 
 
 bp = Blueprint("files", __name__)
@@ -25,7 +24,9 @@ log = logging.getLogger(__name__)
 
 async def _mass_shorten_delete(user_id: int, shorten_ids: List[int]):
     for shorten_id in shorten_ids:
-        await delete_shorten(user_id, by_id=shorten_id)
+        shorten = await Shorten.fetch(shorten_id)
+        assert shorten is not None
+        await shorten.delete()
 
 
 @bp.route("/purge_all_content", methods=["POST"])
@@ -144,7 +145,7 @@ async def mass_delete_handler(ctx, user_id, raw: dict, delete_content: bool = Tr
         file_ids = [r["file_id"] for r in await app.db.fetch(file_stmt, *file_args)]
         log.info("job %s got %d files", ctx.job_id, len(file_ids))
 
-        await delete_many(file_ids, user_id=user_id)
+        await File.delete_many(file_ids, user_id=user_id)
 
     if shorten_wheres:
         shorten_ids = [
@@ -157,10 +158,17 @@ async def mass_delete_handler(ctx, user_id, raw: dict, delete_content: bool = Tr
 
 @bp.route("/files/<shortname>", methods=["DELETE"])
 @bp.route("/files/<shortname>/delete", methods=["GET"])
-async def delete_single(shortname):
+async def delete_single(shortname: str):
     """Delete a single file."""
     user_id = await token_check()
-    await delete_file(user_id, by_name=shortname)
+
+    elixire_file = await File.fetch_by(shortname=shortname)
+    if elixire_file is None or elixire_file.uploader_id != user_id:
+        raise NotFound("File not found")
+
+    # really want to keep this up.
+    assert elixire_file.uploader_id == user_id
+    await elixire_file.delete()
     return "", 204
 
 
@@ -168,5 +176,10 @@ async def delete_single(shortname):
 async def shortendelete_handler(user_id, shorten_name):
     """Invalidate a shorten."""
     user_id = await token_check()
-    await delete_shorten(user_id, by_name=shorten_name)
+    shorten = await Shorten.fetch_by(shortname=shorten_name)
+
+    if shorten is None or shorten.uploader_id != user_id:
+        raise NotFound("Shorten not found")
+
+    await shorten.delete()
     return "", 204

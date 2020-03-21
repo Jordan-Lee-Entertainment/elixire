@@ -150,7 +150,7 @@ async def test_bogus_data(test_cli_user):
     lol.
     """
     test_domain = await test_cli_user.create_domain()
-    random_data = secrets.token_bytes(20)
+    random_data = secrets.token_bytes(50)
 
     request_kwargs = await aiohttp_form(
         io.BytesIO(random_data), f"{hexs(10)}.bin", "application/octet-stream"

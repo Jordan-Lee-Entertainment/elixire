@@ -6,8 +6,8 @@ from os.path import splitext
 from pathlib import Path
 from decimal import Decimal
 
-from api.common import delete_file
 from manage.errors import PrintException
+from api.models import File
 
 
 def byte_to_mibstring(bytecount: int) -> str:
@@ -296,7 +296,8 @@ async def undelete_file_cmd(ctx, args):
 async def nuke_file_cmd(ctx, args):
     shortname = args.shortname
     domain_id = await _extract_file_info(ctx, shortname)
-    await delete_file(None, by_name=shortname, full_delete=True)
+    elixire_file = await File.fetch_by(shortname=shortname)
+    await elixire_file.delete(full=True)
     print("OK", shortname, "DOMAIN", domain_id)
 
 
@@ -335,7 +336,7 @@ to a version of the backend that deletes files.
     parser_undel.set_defaults(func=undelete_file_cmd)
 
     parser_nuke = subparsers.add_parser(
-        "nuke", help="delete a file, including filesystem"
+        "nuke", help="delete a file, including from the filesystem"
     )
 
     parser_nuke.add_argument("shortname", help="shortname for the file to be nuked")

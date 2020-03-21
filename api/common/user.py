@@ -8,7 +8,7 @@ from quart import current_app as app
 from winter import get_snowflake
 
 from api.common.auth import pwd_hash
-from api.common.common import delete_many
+from api.models import File
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ async def full_file_delete(user_id: int, delete_user_after: bool = False):
         user_id,
     )
 
-    await delete_many(file_ids, user_id=user_id)
+    await File.delete_many(file_ids, user_id=user_id)
     log.info("delete user? %r", delete_user_after)
 
     if delete_user_after:
