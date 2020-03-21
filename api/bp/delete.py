@@ -7,7 +7,6 @@ from typing import List
 
 from quart import Blueprint, jsonify, request, current_app as app
 
-from api.common import delete_shorten
 from api.common.auth import token_check, password_check
 from api.errors import BadInput, NotFound  # , JobExistsError
 from api.schema import (
@@ -16,7 +15,7 @@ from api.schema import (
     PURGE_ALL_SCHEMA,
     isotimestamp_or_int,
 )
-from api.models import Domain, File
+from api.models import Domain, File, Shorten
 
 
 bp = Blueprint("files", __name__)
@@ -25,7 +24,9 @@ log = logging.getLogger(__name__)
 
 async def _mass_shorten_delete(user_id: int, shorten_ids: List[int]):
     for shorten_id in shorten_ids:
-        await delete_shorten(user_id, by_id=shorten_id)
+        shorten = await Shorten.fetch(shorten_id)
+        assert shorten is not None
+        await shorten.delete()
 
 
 @bp.route("/purge_all_content", methods=["POST"])
@@ -178,5 +179,13 @@ async def delete_single(shortname: str):
 async def shortendelete_handler(user_id, shorten_name):
     """Invalidate a shorten."""
     user_id = await token_check()
-    await delete_shorten(user_id, by_name=shorten_name)
+    shorten = await Shorten.fetch_by(shortname=shorten_name)
+
+    if shorten is None:
+        raise NotFound("Shorten not found")
+
+    if shorten.uploader_id != user_id:
+        raise NotFound("Shorten not found")
+
+    await shorten.delete()
     return "", 204
