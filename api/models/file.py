@@ -53,7 +53,7 @@ class File:
         self.mimetype: str = row["mimetype"]
         self.shortname: str = row["filename"]
         self.file_size: int = row["file_size"]
-        self.uploader: int = row["uploader"]
+        self.uploader_id: int = row["uploader"]
         self.fspath: str = row["fspath"]
         self.deleted: bool = row["deleted"]
         self.domain_id: int = row["domain"]
@@ -99,7 +99,7 @@ class File:
             "mimetype": self.mimetype,
             "shortname": self.shortname,
             "size": self.file_size,
-            "uploader": self.uploader,
+            "uploader": self.uploader_id,
             "fspath": self.fspath,
             "deleted": self.deleted,
             "domain": self.domain_id,
@@ -192,7 +192,7 @@ class File:
                   AND file_id = $2
                 AND deleted = false
                 """,
-                self.uploader,
+                self.uploader_id,
                 self.id,
             )
         else:
