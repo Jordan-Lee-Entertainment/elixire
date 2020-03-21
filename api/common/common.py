@@ -148,36 +148,6 @@ async def calculate_hash(fhandle) -> str:
     return await app.loop.run_in_executor(None, _calculate_hash, fhandle)
 
 
-async def delete_shorten(
-    user_id: int, *, by_name: Optional[str] = None, by_id: Optional[int] = None
-):
-    """Delete a shorten."""
-    if by_id and by_name:
-        raise ValueError("Please elect either ID or name to delete")
-
-    column = "shorten_id" if by_id is not None else "filename"
-    # TODO set redirto to empty string?
-    row = await app.db.fetchrow(
-        f"""
-        UPDATE shortens
-        SET deleted = true
-        WHERE uploader = $1
-          AND {column} = $2
-          AND deleted = false
-        RETURNING domain, subdomain, filename
-        """,
-        user_id,
-        by_id or by_name,
-    )
-
-    if row is None:
-        raise NotFound("You have no shortens with this name.")
-
-    await app.storage.raw_invalidate(
-        object_key("redir", row["domain"], row["subdomain"], row["filename"])
-    )
-
-
 async def check_bans(user_id: Optional[int] = None):
     """Check if the current user is already banned.
 
