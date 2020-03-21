@@ -2,7 +2,6 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import os
 import logging
 from typing import Tuple, Union
 
@@ -10,6 +9,7 @@ from quart import Blueprint, jsonify, request, current_app as app
 
 from api.common.auth import token_check
 from api.errors import BadInput
+from api.models import File
 
 bp = Blueprint("list", __name__)
 log = logging.getLogger(__name__)
@@ -78,11 +78,11 @@ async def list_files():
     """List user files"""
     before, after, limit = _get_before_after()
     user_id = await token_check()
-    domains = await domain_list()
 
     user_files = await app.db.fetch(
         """
-        SELECT file_id, filename, file_size, fspath, mimetype, domain, subdomain
+        SELECT file_id, mimetype, filename, file_size, uploader, fspath,
+               deleted, domain, subdomain
         FROM files
         WHERE uploader = $1
           AND deleted = false
@@ -97,36 +97,14 @@ async def list_files():
         limit,
     )
 
+    elixire_files = [File(file_row) for file_row in user_files]
+    urls = await File.construct_urls(elixire_files)
+
     files = []
 
-    for file_row in user_files:
-        shortname = file_row["filename"]
-        mime = file_row["mimetype"]
-
-        # files *can* have subdomains for them (as of !58) so
-        # we construct a domain based off the given file row
-        domain = construct_domain(domains, file_row)
-
-        # create file + extension as the urls require extensions
-        basename = os.path.basename(file_row["fspath"])
-        ext = basename.split(".")[-1]
-        file_in_url = f"{shortname}.{ext}"
-        file_url = construct_url(domain, file_in_url)
-
-        file_object = {
-            "id": str(file_row["file_id"]),
-            "shortname": shortname,
-            "size": file_row["file_size"],
-            "mimetype": mime,
-            "url": file_url,
-        }
-
-        # only images have thumbnails, and, by default, we give
-        # the small thumbnail url for them while listing
-        if mime.startswith("image/"):
-            file_object["thumbnail"] = construct_url(domain, f"s{shortname}", scope="t")
-
-        files.append(file_object)
+    for index, elixire_file in enumerate(elixire_files):
+        file_urls = urls[index]
+        files.append({**elixire_file.to_dict(public=True), **file_urls})
 
     return jsonify({"files": files})
 
