@@ -7,7 +7,7 @@ from typing import List
 
 from quart import Blueprint, jsonify, request, current_app as app
 
-from api.common import delete_file, delete_shorten, delete_many
+from api.common import delete_file, delete_shorten
 from api.common.auth import token_check, password_check
 from api.errors import BadInput  # , JobExistsError
 from api.schema import (
@@ -16,7 +16,7 @@ from api.schema import (
     PURGE_ALL_SCHEMA,
     isotimestamp_or_int,
 )
-from api.models import Domain
+from api.models import Domain, File
 
 
 bp = Blueprint("files", __name__)
@@ -144,7 +144,7 @@ async def mass_delete_handler(ctx, user_id, raw: dict, delete_content: bool = Tr
         file_ids = [r["file_id"] for r in await app.db.fetch(file_stmt, *file_args)]
         log.info("job %s got %d files", ctx.job_id, len(file_ids))
 
-        await delete_many(file_ids, user_id=user_id)
+        await File.delete_many(file_ids, user_id=user_id)
 
     if shorten_wheres:
         shorten_ids = [
