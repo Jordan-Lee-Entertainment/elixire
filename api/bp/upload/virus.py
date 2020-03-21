@@ -10,9 +10,9 @@ from typing import Any
 
 from quart import current_app as app
 
-from api.common import delete_file
 from api.common.webhook import scan_webhook
 from api.errors import BadImage
+from api.models import File
 
 log = logging.getLogger(__name__)
 
@@ -86,31 +86,27 @@ async def run_scan(ctx) -> None:
 
 async def _delete_file_from_scan(ctx) -> None:
     """
-    This is a "wrapper" around "delete_file()" tailored
+    This is a "wrapper" around File.delete tailored
     for the end result of virus scanning.
 
     It deletes the file by doing os.remove(), then asks delete_file
     to remove it from the database.
     """
-    fspath = await app.db.fetchval(
-        """
-        SELECT fspath
-        FROM files
-        WHERE filename = $1
-        """,
-        ctx.shortname,
-    )
 
-    if fspath is None:
-        log.warning(f"File {ctx.shortname} deleted before virus-triggered deletion")
+    elixire_file = await File.fetch_by(shortname=ctx.shortname)
+    if elixire_file is None:
+        log.warning(f"File %r deleted before virus-triggered deletion", ctx.shortname)
+        return
 
     try:
-        if fspath is not None:
-            os.remove(fspath)
+        if elixire_file.fspath is not None:
+            os.remove(elixire_file.fspath)
     except OSError:
-        log.warning(f"File path {fspath!r} deleted before virus-triggered deletion")
+        log.warning(
+            "File path %r deleted before virus-triggered deletion", elixire_file.fspath
+        )
 
-    await delete_file(None, by_name=ctx.shortname, full_delete=True)
+    await elixire_file.delete(full=True)
     log.info(f"Deleted file {ctx.shortname} (virus found)")
 
 

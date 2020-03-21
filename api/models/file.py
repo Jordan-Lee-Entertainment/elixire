@@ -77,7 +77,7 @@ class File:
         return cls(row)
 
     @classmethod
-    async def fetch_by(cls, *, filename: str) -> Optional["File"]:
+    async def fetch_by(cls, *, shortname: str) -> Optional["File"]:
         row = await app.db.fetchrow(
             """
             SELECT file_id, mimetype, filename, file_size, uploader, fspath,
@@ -85,7 +85,7 @@ class File:
             FROM files
             WHERE filename = $1
             """,
-            filename,
+            shortname,
         )
 
         if row is None:
