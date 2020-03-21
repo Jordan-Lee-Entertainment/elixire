@@ -7,7 +7,6 @@ import secrets
 import hashlib
 import logging
 import time
-from pathlib import Path
 from typing import Tuple, Optional, Dict, List, Union
 
 from quart import current_app as app, request
