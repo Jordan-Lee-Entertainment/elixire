@@ -3,8 +3,14 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import os.path
+import logging
+from pathlib import Path
 from typing import Optional, Dict, Any, List
 from quart import current_app as app
+
+from api.common import object_key
+
+log = logging.getLogger(__name__)
 
 
 async def domain_list():
@@ -112,3 +118,78 @@ class File:
             urls.append(url_dict)
 
         return urls
+
+    async def _remove_fspath(self):
+        # fetch all files with the same fspath
+        # and on the hash system, means the same hash
+        row = await app.db.fetchrow(
+            """
+            SELECT fspath, COUNT(*)
+            FROM files
+            WHERE fspath = (SELECT fspath FROM files WHERE file_id = $1)
+              AND deleted = false
+            GROUP BY fspath
+            """,
+            self.id,
+        )
+
+        if row is None:
+            return
+
+        fspath, same_fspath = row["fspath"], row["count"]
+
+        if same_fspath != 0:
+            log.info(
+                "there are still %d files with the same fspath %r, not deleting",
+                same_fspath,
+                fspath,
+            )
+            return
+
+        path = Path(fspath)
+        try:
+            path.unlink()
+            log.info("Deleted %r since no files refer to it", fspath)
+        except FileNotFoundError:
+            log.warning("fspath %s does not exist", fspath)
+
+    async def delete(self, *, full: bool = False):
+        """Delete a file.
+
+        Parameters
+        ----------
+        full, optional: bool
+            Move the ownership of the file to the doll user.
+        """
+
+        if not full:
+            row = await app.db.fetchrow(
+                """
+                UPDATE files
+                SET deleted = true
+                WHERE uploader = $1
+                  AND file_id = $2
+                AND deleted = false
+                """,
+                self.uploader,
+                self.id,
+            )
+        else:
+            row = await app.db.fetchrow(
+                """
+                UPDATE files
+                SET uploader = 0,
+                    file_size = 0,
+                    fspath = '',
+                    deleted = true,
+                    domain = 0
+                WHERE
+                    file_id = $1
+                """,
+                self.id,
+            )
+
+        await self._remove_fspath()
+        await app.storage.raw_invalidate(
+            object_key("fspath", row["domain"], row["subdomain"], row["filename"])
+        )
