@@ -48,6 +48,18 @@ def construct_url(domain: str, url_basename: str, *, scope: str = "i") -> str:
 class File:
     """File model."""
 
+    __slots__ = (
+        "id",
+        "mimetype",
+        "shortname",
+        "file_size",
+        "uploader_id",
+        "fspath",
+        "deleted",
+        "domain_id",
+        "subdomain",
+    )
+
     def __init__(self, row):
         self.id: int = row["file_id"]
         self.mimetype: str = row["mimetype"]

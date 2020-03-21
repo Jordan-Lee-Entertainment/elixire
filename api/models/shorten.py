@@ -8,6 +8,16 @@ from api.storage import object_key
 
 
 class Shorten:
+    __slots__ = (
+        "id",
+        "shortname",
+        "redirto",
+        "uploader_id",
+        "deleted",
+        "domain_id",
+        "subdomain",
+    )
+
     def __init__(self, row):
         self.id: int = row["shorten_id"]
         self.shortname: str = row["filename"]
