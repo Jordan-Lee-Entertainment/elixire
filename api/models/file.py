@@ -59,7 +59,7 @@ class File:
         self.subdomain: Optional[str] = row["subdomain"]
 
     @classmethod
-    async def fetch(cls, file_id: int) -> "File":
+    async def fetch(cls, file_id: int) -> Optional["File"]:
         row = await app.db.fetchrow(
             """
             SELECT file_id, mimetype, filename, file_size, uploader, fspath,
@@ -69,6 +69,26 @@ class File:
             """,
             file_id,
         )
+
+        if row is None:
+            return None
+
+        return cls(row)
+
+    @classmethod
+    async def fetch_by(*, filename: str) -> Optional["File"]:
+        row = await app.db.fetchrow(
+            """
+            SELECT file_id, mimetype, filename, file_size, uploader, fspath,
+                   deleted, domain, subdomain
+            FROM files
+            WHERE filename = $1
+            """,
+            filename,
+        )
+
+        if row is None:
+            return None
 
         return cls(row)
 
