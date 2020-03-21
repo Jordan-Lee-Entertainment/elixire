@@ -294,41 +294,6 @@ async def delete_shorten(
     )
 
 
-async def delete_file_user_lock(user_id: Optional[int], file_id: int):
-    lock = app.locks["delete_files"][user_id]
-    async with lock:
-        await delete_file(user_id, by_id=file_id, full_delete=True)
-
-
-async def delete_many(file_ids: List[int], *, user_id: Optional[int] = None):
-    tasks = []
-
-    for file_id in file_ids:
-        task = app.sched.spawn(
-            delete_file_user_lock, [user_id, file_id], name=f"delete_file:{file_id}"
-        )
-        tasks.append(task)
-
-    if not tasks:
-        log.warning("no tasks")
-        return
-
-    log.info("waiting for %d file tasks", len(tasks))
-    done, pending = await asyncio.wait(tasks)
-    log.info(
-        "waited for %d file tasks, %d done, %d pending",
-        len(tasks),
-        len(done),
-        len(pending),
-    )
-    assert not pending
-    for task in done:
-        try:
-            task.result()
-        except Exception:
-            log.exception("exception while deleting file")
-
-
 async def check_bans(user_id: Optional[int] = None):
     """Check if the current user is already banned.
 
