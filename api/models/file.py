@@ -6,10 +6,10 @@ import os.path
 import logging
 import asyncio
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Set
+from typing import Optional, Dict, Any, List, Set, Awaitable
 from quart import current_app as app
 
-from api.common import object_key
+from api.storage import object_key
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class File:
         return cls(row)
 
     @classmethod
-    async def fetch_by(*, filename: str) -> Optional["File"]:
+    async def fetch_by(cls, *, filename: str) -> Optional["File"]:
         row = await app.db.fetchrow(
             """
             SELECT file_id, mimetype, filename, file_size, uploader, fspath,
@@ -227,7 +227,7 @@ class File:
     @classmethod
     async def delete_many(
         cls, file_ids: List[int], *, user_id: int, timeout: Optional[int] = None
-    ) -> Set[asyncio.Future[Any]]:
+    ) -> Set[Awaitable[Any]]:
         """Delete many files. Requires the user_id for locking.
 
         Returns a list of tasks that are still waiting to delete. If
