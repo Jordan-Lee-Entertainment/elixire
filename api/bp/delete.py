@@ -165,11 +165,11 @@ async def delete_single(shortname: str):
     if elixire_file is None:
         raise NotFound("File not found")
 
-    if elixire_file.uploader != user_id:
+    if elixire_file.uploader_id != user_id:
         raise NotFound("File not found")
 
     # really want to keep this up.
-    assert elixire_file.uploader == user_id
+    assert elixire_file.uploader_id == user_id
     await elixire_file.delete()
     return "", 204
 
