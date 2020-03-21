@@ -4,8 +4,9 @@
 
 import os.path
 import logging
+import asyncio
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Set
 from quart import current_app as app
 
 from api.common import object_key
@@ -183,7 +184,7 @@ class File:
         """
 
         if not full:
-            row = await app.db.fetchrow(
+            await app.db.fetchrow(
                 """
                 UPDATE files
                 SET deleted = true
@@ -195,7 +196,7 @@ class File:
                 self.id,
             )
         else:
-            row = await app.db.fetchrow(
+            await app.db.fetchrow(
                 """
                 UPDATE files
                 SET uploader = 0,
@@ -211,5 +212,56 @@ class File:
 
         await self._remove_fspath()
         await app.storage.raw_invalidate(
-            object_key("fspath", row["domain"], row["subdomain"], row["filename"])
+            object_key("fspath", self.domain_id, self.subdomain, self.shortname)
         )
+
+    @classmethod
+    async def delete_file_user_lock(self, user_id: int, file_id: int) -> None:
+        """Delete a file using the user's specific delete semaphore."""
+        lock = app.locks["delete_files"][user_id]
+        async with lock:
+            elixire_file = await File.fetch(file_id)
+            assert elixire_file is not None
+            await elixire_file.delete(full=True)
+
+    @classmethod
+    async def delete_many(
+        cls, file_ids: List[int], *, user_id: int, timeout: Optional[int] = None
+    ) -> Set[asyncio.Future[Any]]:
+        """Delete many files. Requires the user_id for locking.
+
+        Returns a list of tasks that are still waiting to delete. If
+        ``timeout`` is None, the returned list must be empty.
+        """
+
+        assert file_ids
+
+        tasks = [
+            app.sched.spawn(
+                cls.delete_file_user_lock,
+                [user_id, file_id],
+                name=f"delete_file:{file_id}",
+            )
+            for file_id in file_ids
+        ]
+
+        log.info("waiting for %d file tasks", len(tasks))
+        done, pending = await asyncio.wait(tasks, timeout=timeout)
+
+        log.info(
+            "waited for %d file tasks, %d done, %d pending",
+            len(tasks),
+            len(done),
+            len(pending),
+        )
+
+        for task in done:
+            try:
+                task.result()
+            except Exception:
+                log.exception("exception while deleting file")
+
+        if timeout is None:
+            assert not pending
+
+        return pending
