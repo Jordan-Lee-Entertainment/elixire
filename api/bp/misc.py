@@ -9,20 +9,15 @@ bp = Blueprint("misc", __name__)
 
 
 def _make_feature_list(cfg):
-    res = []
+    feature_mapping = {
+        "uploads": cfg.UPLOADS_ENABLED,
+        "shortens": cfg.SHORTENS_ENABLED,
+        "registrations": cfg.REGISTRATIONS_ENABLED,
+        "pfupdate": cfg.PATCH_API_PROFILE_ENABLED,
+        "require_approvals": cfg.REQUIRE_ACCOUNT_APPROVALS,
+    }
 
-    if cfg.UPLOADS_ENABLED:
-        res.append("uploads")
-    elif cfg.SHORTENS_ENABLED:
-        res.append("shortens")
-    elif cfg.REGISTRATIONS_ENABLED:
-        res.append("registrations")
-    elif cfg.PATCH_API_PROFILE_ENABLED:
-        res.append("pfupdate")
-    elif cfg.REQUIRE_ACCOUNT_APPROVALS:
-        res.append("require_approvals")
-
-    return res
+    return [feature for feature in feature_mapping if feature_mapping[feature]]
 
 
 @bp.route("/hello")
