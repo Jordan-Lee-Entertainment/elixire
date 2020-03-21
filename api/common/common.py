@@ -11,8 +11,7 @@ from typing import Tuple, Optional, Dict, List, Union
 
 from quart import current_app as app, request
 
-from api.errors import FailedAuth, NotFound
-from api.storage import object_key
+from api.errors import FailedAuth
 
 ALPHABET = string.ascii_lowercase + string.digits
 log = logging.getLogger(__name__)
