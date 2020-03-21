@@ -50,7 +50,7 @@ class File:
         self.fspath: str = row["fspath"]
         self.deleted: bool = row["deleted"]
         self.domain_id: int = row["domain"]
-        self.subdomain: Optional[str] = row["sudomain"]
+        self.subdomain: Optional[str] = row["subdomain"]
 
     @classmethod
     async def fetch(cls, file_id: int) -> "File":
@@ -88,7 +88,8 @@ class File:
 
         return file_dict
 
-    async def construct_urls(self, files: List["File"]) -> List[Dict[str, str]]:
+    @classmethod
+    async def construct_urls(cls, files: List["File"]) -> List[Dict[str, str]]:
         urls = []
 
         domain_data = await domain_list()
@@ -97,15 +98,15 @@ class File:
             domain = construct_domain(domain_data, elixire_file)
 
             # extract extension from the fspath's basename
-            fspath_basename = os.path.basename(self.fspath)
+            fspath_basename = os.path.basename(elixire_file.fspath)
             fspath_extension = fspath_basename.split(".")[-1]
-            concatenated_url_basename = f"{self.shortname}.{fspath_extension}"
+            concatenated_url_basename = f"{elixire_file.shortname}.{fspath_extension}"
 
             url_dict = {"url": construct_url(domain, concatenated_url_basename)}
 
             if elixire_file.mimetype.startswith("image/"):
                 url_dict["thumbnail"] = construct_url(
-                    domain, f"s{self.shortname}", scope="t"
+                    domain, f"s{elixire_file.shortname}", scope="t"
                 )
 
             urls.append(url_dict)

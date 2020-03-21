@@ -4,5 +4,6 @@
 
 from .user import User
 from .domain import Domain, Tag, Tags
+from .file import File
 
-__all__ = ["User", "Domain", "Tag", "Tags"]
+__all__ = ["User", "Domain", "Tag", "Tags", "File"]
