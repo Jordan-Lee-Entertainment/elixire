@@ -6,7 +6,6 @@ import asyncpg
 
 from quart import Blueprint, current_app as app, request, jsonify
 
-from api.common import delete_file, delete_shorten
 from api.common.auth import token_check, check_admin
 from api.schema import validate, ADMIN_MODIFY_FILE
 from api.errors import BadInput, NotFound
@@ -14,6 +13,7 @@ from api.errors import BadInput, NotFound
 from api.bp.admin.audit_log_actions.object import ObjectEditAction, ObjectDeleteAction
 
 from api.common.fetch import OBJ_MAPPING
+from api.models import File, Shorten
 
 bp = Blueprint("admin_object", __name__)
 
@@ -146,28 +146,15 @@ async def delete_file_handler(file_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    row = await app.db.fetchrow(
-        """
-        SELECT filename, uploader
-        FROM files
-        WHERE file_id = $1
-        """,
-        file_id,
-    )
+    elixire_file = await File.fetch(file_id)
 
-    if row is None:
+    if elixire_file is None:
         raise BadInput("File not found")
 
     async with ObjectDeleteAction(request, file_id, "file"):
-        await delete_file(row["uploader"], by_name=row["filename"])
+        await elixire_file.delete()
 
-    return jsonify(
-        {
-            "shortname": row["filename"],
-            "uploader": str(row["uploader"]),
-            "success": True,
-        }
-    )
+    return jsonify(elixire_file.to_dict())
 
 
 @bp.route("/shorten/<int:shorten_id>", methods=["DELETE"])
@@ -176,25 +163,11 @@ async def delete_shorten_handler(shorten_id: int):
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    row = await app.db.fetchrow(
-        """
-        SELECT filename, uploader
-        FROM shortens
-        WHERE shorten_id = $1
-        """,
-        shorten_id,
-    )
-
-    if row is None:
+    shorten = await Shorten.fetch(shorten_id)
+    if shorten is None:
         raise BadInput("Shorten not found")
 
     async with ObjectDeleteAction(request, shorten_id, "shorten"):
-        await delete_shorten(row["uploader"], by_name=row["filename"])
+        await shorten.delete()
 
-    return jsonify(
-        {
-            "shortname": row["filename"],
-            "uploader": str(row["uploader"]),
-            "success": True,
-        }
-    )
+    return jsonify(shorten.to_dict())

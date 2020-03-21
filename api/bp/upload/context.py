@@ -92,6 +92,7 @@ class UploadContext:
             # TODO check failure, return None
             mime_function = functools.partial(magic.from_buffer, mime=True)
             self._mime = await app.loop.run_in_executor(None, mime_function, chunk)
+            log.debug("calculated mime: %r", self._mime)
 
         return self._mime
 

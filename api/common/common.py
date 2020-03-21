@@ -2,19 +2,16 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import asyncio
 import string
 import secrets
 import hashlib
 import logging
 import time
-from pathlib import Path
 from typing import Tuple, Optional, Dict, List, Union
 
 from quart import current_app as app, request
 
-from api.errors import FailedAuth, NotFound
-from api.storage import object_key
+from api.errors import FailedAuth
 
 ALPHABET = string.ascii_lowercase + string.digits
 log = logging.getLogger(__name__)
@@ -148,185 +145,6 @@ async def calculate_hash(fhandle) -> str:
     the application doesn't lock up on large files.
     """
     return await app.loop.run_in_executor(None, _calculate_hash, fhandle)
-
-
-async def remove_fspath(file_id: Optional[int]) -> None:
-    """Delete the given file shortname from the database.
-
-    Checks if any other files are sharing fspath, and if there are none,
-    the underlying fspath is deleted.
-    """
-    if file_id is None:
-        return
-
-    # fetch all files with the same fspath
-    # and on the hash system, means the same hash
-    row = await app.db.fetchrow(
-        """
-        SELECT fspath, COUNT(*)
-        FROM files
-        WHERE fspath = (SELECT fspath FROM files WHERE file_id = $1)
-          AND deleted = false
-        GROUP BY fspath
-        """,
-        file_id,
-    )
-
-    if row is None:
-        return
-
-    fspath, same_fspath = row["fspath"], row["count"]
-
-    if same_fspath != 0:
-        log.info(
-            "there are still %d files with the same fspath %r, not deleting",
-            same_fspath,
-            fspath,
-        )
-        return
-
-    path = Path(fspath)
-    try:
-        path.unlink()
-        log.info("Deleted %r since no files refer to it", fspath)
-    except FileNotFoundError:
-        log.warning("fspath %s does not exist", fspath)
-
-
-async def delete_file(
-    user_id: Optional[int] = None,
-    *,
-    by_name: Optional[str] = None,
-    by_id: Optional[int] = None,
-    full_delete: bool = False,
-):
-    """Delete a file.
-
-    Parameters
-    ----------
-    user_id: int
-        User ID making the request, so we
-        crosscheck that information with the file's uploader.
-    full_delete, optional: bool
-        Move the ownership of the file to the doll user.
-
-    Raises
-    ------
-    NotFound
-        If no file is found.
-    """
-
-    column = "file_id" if by_id is not None else "filename"
-    selector = by_id or by_name
-
-    if not full_delete:
-        row = await app.db.fetchrow(
-            f"""
-            UPDATE files
-            SET deleted = true
-            WHERE uploader = $1
-            AND {column} = $2
-            AND deleted = false
-            RETURNING domain, subdomain, file_id, filename
-            """,
-            user_id,
-            selector,
-        )
-
-        if row is None:
-            raise NotFound("You have no files with this name.")
-
-        await remove_fspath(row["file_id"])
-    else:
-        uploader = "AND uploader = $2" if user_id else ""
-
-        row = await app.db.fetchrow(
-            f"""
-            UPDATE files
-            SET uploader = 0,
-                file_size = 0,
-                fspath = '',
-                deleted = true,
-                domain = 0
-            WHERE
-                {column} = $1
-                {uploader}
-            RETURNING domain, subdomain, file_id, filename
-            """,
-            selector,
-            *([user_id] if user_id else []),
-        )
-
-        await remove_fspath(row["file_id"])
-
-    await app.storage.raw_invalidate(
-        object_key("fspath", row["domain"], row["subdomain"], row["filename"])
-    )
-
-
-async def delete_shorten(
-    user_id: int, *, by_name: Optional[str] = None, by_id: Optional[int] = None
-):
-    """Delete a shorten."""
-    if by_id and by_name:
-        raise ValueError("Please elect either ID or name to delete")
-
-    column = "shorten_id" if by_id is not None else "filename"
-    # TODO set redirto to empty string?
-    row = await app.db.fetchrow(
-        f"""
-        UPDATE shortens
-        SET deleted = true
-        WHERE uploader = $1
-          AND {column} = $2
-          AND deleted = false
-        RETURNING domain, subdomain, filename
-        """,
-        user_id,
-        by_id or by_name,
-    )
-
-    if row is None:
-        raise NotFound("You have no shortens with this name.")
-
-    await app.storage.raw_invalidate(
-        object_key("redir", row["domain"], row["subdomain"], row["filename"])
-    )
-
-
-async def delete_file_user_lock(user_id: Optional[int], file_id: int):
-    lock = app.locks["delete_files"][user_id]
-    async with lock:
-        await delete_file(user_id, by_id=file_id, full_delete=True)
-
-
-async def delete_many(file_ids: List[int], *, user_id: Optional[int] = None):
-    tasks = []
-
-    for file_id in file_ids:
-        task = app.sched.spawn(
-            delete_file_user_lock, [user_id, file_id], name=f"delete_file:{file_id}"
-        )
-        tasks.append(task)
-
-    if not tasks:
-        log.warning("no tasks")
-        return
-
-    log.info("waiting for %d file tasks", len(tasks))
-    done, pending = await asyncio.wait(tasks)
-    log.info(
-        "waited for %d file tasks, %d done, %d pending",
-        len(tasks),
-        len(done),
-        len(pending),
-    )
-    assert not pending
-    for task in done:
-        try:
-            task.result()
-        except Exception:
-            log.exception("exception while deleting file")
 
 
 async def check_bans(user_id: Optional[int] = None):
