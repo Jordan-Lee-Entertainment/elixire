@@ -2,11 +2,13 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import io
+import secrets
 import pytest
 import os.path
 from urllib.parse import urlparse
 
-from .common import png_request, hexs
+from .common import png_request, hexs, aiohttp_form
 
 pytestmark = pytest.mark.asyncio
 
@@ -57,8 +59,14 @@ async def check_exists(test_cli, shortname, *, reverse=False):
     )
     assert resp.status_code == 404
 
+    # check thumbnail can be generated successfully
+    resp = await test_cli.get(
+        f"/t/s{shortname}{extension}", headers={"host": url.netloc}
+    )
+    assert resp.status_code == 200
 
-async def test_upload_png(test_cli_user, test_domain):
+
+async def test_upload_png(test_cli_user):
     """Test that the upload route works given test data"""
     # file uploads aren't natively available under QuartClient, see:
     # https://gitlab.com/pgjones/quart/issues/147
@@ -66,7 +74,7 @@ async def test_upload_png(test_cli_user, test_domain):
     # instead we use aiohttp.FormData to generate a body that is valid
     # for the post() call
 
-    # TODO set to some random domain_id and subdomain for nicer testing
+    test_domain = await test_cli_user.create_domain()
 
     subdomain = hexs(10)
     resp = await test_cli_user.post(
@@ -112,8 +120,58 @@ async def test_upload_png(test_cli_user, test_domain):
     )
     assert resp.status_code == 404
 
+    # trying to upload the same file will bring
+    # the same url (deduplication)
+    #
+    # NOTE: png_request must always return the same data.
 
-async def test_legacy_file_resolution(test_cli_user, test_domain):
+    subdomain = hexs(10)
+    resp = await test_cli_user.post(
+        "/api/upload",
+        **(await png_request()),
+        query_string={"domain": test_domain.id, "subdomain": subdomain},
+    )
+
+    assert resp.status_code == 200
+    json = await resp.json
+
+    new_shortname = json["shortname"]
+    assert new_shortname == shortname
+
+    assert isinstance(json, dict)
+    assert isinstance(json["url"], str)
+    await check_exists(test_cli_user, shortname)
+
+
+async def test_bogus_data(test_cli_user):
+    """Test that uploading random data fails.
+
+    Assumes we won't get some identifying filetype from random noise.
+    lol.
+    """
+    test_domain = await test_cli_user.create_domain()
+    random_data = secrets.token_bytes(20)
+
+    request_kwargs = await aiohttp_form(
+        io.BytesIO(random_data), f"{hexs(10)}.bin", "application/octet-stream"
+    )
+
+    subdomain = hexs(10)
+    resp = await test_cli_user.post(
+        "/api/upload",
+        **request_kwargs,
+        query_string={"domain": test_domain.id, "subdomain": subdomain},
+    )
+
+    assert resp.status_code == 415
+
+
+async def test_legacy_file_resolution(test_cli_user):
+    """Upload a test file and force it to be in legacy v2 domain behavior. Then
+    test that behavior is funcional."""
+
+    test_domain = await test_cli_user.create_domain()
+
     resp = await test_cli_user.post(
         "/api/upload", **(await png_request()), query_string={"domain": test_domain.id}
     )

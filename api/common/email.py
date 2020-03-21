@@ -8,7 +8,7 @@ import logging
 import smtplib
 from smtplib import SMTP, SMTP_SSL
 from email.message import EmailMessage
-from typing import Tuple
+from typing import Tuple, Optional
 
 from quart import current_app as app
 
@@ -79,8 +79,12 @@ async def gen_email_token(user_id, table: str, _count: int = 0) -> str:
     return possible
 
 
-def raw_send_email(cfg: dict, to: str, subject: str, content: str):
+def raw_send_email(cfg: Optional[dict], to: str, subject: str, content: str):
     """Send an email via SMTP."""
+
+    if cfg is None:
+        log.warning("SMTP config is not declared, email %r is ignored.", subject)
+        return
 
     msg = EmailMessage()
     msg.set_content(content)

@@ -53,20 +53,21 @@ def wrap_dump_violet_job_state(job_record: Optional[Record]) -> Optional[dict]:
         return {"state": "in_queue"}
     elif job_record["state"] == JobState.Taken:
         taken_at = job_record["taken_at"]
-        state = job_record["internal_state"]
+        internal_state = job_record["internal_state"]
 
         return {
             "state": "processing",
+            "job_id": job_record["job_id"].hex,
             "start_timestamp": taken_at.isoformat() if taken_at is not None else None,
-            "current_id": str(state["cur_file"]),
-            "files_total": state["files_total"],
-            "files_done": state["files_done"],
+            "current_id": str(internal_state["current_file_id"]),
+            "files_total": internal_state["files_total"],
+            "files_done": internal_state["files_done"],
         }
 
     return {"state": "not_in_queue"}
 
 
-async def gen_user_shortname(user_id: int, table: str = "files") -> Tuple[str, int]:
+async def gen_user_shortname(user_id: int, *, table: str = "files") -> Tuple[str, int]:
     """Generate a shortname for a file.
 
     Checks if the user is in paranoid mode and acts accordingly

@@ -72,6 +72,7 @@ def main(config):
     ctx.storage = Storage(ctx)
     app = ctx.make_app()
     ctx.sched = JobManager(loop=ctx.loop, db=ctx.db, context_function=app.app_context)
+    app.sched = ctx.sched
 
     # aiohttp warns us when making ClientSession out of
     # a coroutine, so yeah.

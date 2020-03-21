@@ -1,6 +1,9 @@
 # elixire: Image Host software
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+from typing import TypeVar, List, Optional
+from api.models import Domain
+from tests.common.generators import hexs
 
 __all__ = ["TestClient"]
 
@@ -15,6 +18,9 @@ def _wrapped_method(method: str):
     return _method
 
 
+T = TypeVar("T")
+
+
 class TestClient:
     """Test client that wraps quart's TestClient and a test
     user and adds authorization headers to test requests."""
@@ -23,6 +29,7 @@ class TestClient:
         self.cli = test_cli
         self.app = test_cli.app
         self.user = test_user
+        self._resources: List[T] = []
 
     def __getitem__(self, key):
         return self.user[key]
@@ -51,3 +58,20 @@ class TestClient:
     patch = _wrapped_method("patch")
     delete = _wrapped_method("delete")
     head = _wrapped_method("head")
+
+    async def _create_resource(self, _classmethod, *args, **kwargs):
+        async with self.app.app_context():
+            resource = await _classmethod(*args, **kwargs)
+
+        self._resources.append(resource)
+        return resource
+
+    async def create_domain(self, domain_str: Optional[str] = None):
+        domain_str = domain_str or f"*.test-{hexs(10)}.test"
+        return await self._create_resource(Domain.create, domain_str)
+
+    async def cleanup(self):
+        """Delete all allocated test resources."""
+        for resource in self._resources:
+            async with self.app.app_context():
+                await resource.delete()

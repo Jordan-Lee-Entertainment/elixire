@@ -88,7 +88,7 @@ async def shorten_handler():
                 f"This shorten blows the weekly limit of {shorten_limit} shortens"
             )
 
-    redir_rname, tries = await gen_user_shortname(user_id, "shortens")
+    redir_rname, tries = await gen_user_shortname(user_id, table="shortens")
     await app.metrics.submit("shortname_gen_tries", tries)
 
     redir_id = get_snowflake()

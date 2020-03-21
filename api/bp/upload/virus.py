@@ -12,7 +12,7 @@ from quart import current_app as app
 
 from api.common import delete_file
 from api.common.webhook import scan_webhook
-from api.errors import BadImage, APIError
+from api.errors import BadImage
 
 log = logging.getLogger(__name__)
 
@@ -71,14 +71,17 @@ async def run_scan(ctx) -> None:
         process.returncode,
     )
 
+    assert process.returncode in (0, 1, 2)
+
     if process.returncode == 0:
         return
     elif process.returncode == 1:
         log.warning("user id %d got caught in virus scan", ctx.user_id)
         await scan_webhook(ctx, total_out)
         raise BadImage("Image contains a virus.")
-    else:
-        raise APIError("clamdscan returned unknown error code")
+    elif process.returncode == 2:
+        log.warning("clamdscan FAILED: %r")
+        raise BadImage("clamdscan raised error.")
 
 
 async def _delete_file_from_scan(ctx) -> None:
@@ -102,7 +105,8 @@ async def _delete_file_from_scan(ctx) -> None:
         log.warning(f"File {ctx.shortname} deleted before virus-triggered deletion")
 
     try:
-        os.remove(fspath)
+        if fspath is not None:
+            os.remove(fspath)
     except OSError:
         log.warning(f"File path {fspath!r} deleted before virus-triggered deletion")
 
@@ -117,9 +121,7 @@ async def scan_bg_waiter(ctx, scan_task: asyncio.Task) -> Any:
     # if we add a timeout=, make sure to check if scan_task has anything
     log.debug("waiting for scan task...")
     _done, pending = await asyncio.wait([scan_task])
-
-    if pending:
-        raise AssertionError("scan task still pending")
+    assert not pending
 
     try:
         return scan_task.result()

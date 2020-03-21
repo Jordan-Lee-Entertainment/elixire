@@ -344,7 +344,7 @@ async def _null_handler(_ctx, _i):
 async def _create_random_jobs(test_cli, count: int) -> List[str]:
     """Create random violet jobs to fill the table."""
     test_cli.app.sched.create_job_queue(
-        "__test", args=(int,), handler=_null_handler, takes=5, period=0.5
+        "__test", args=(int,), handler=_null_handler, workers=5
     )
 
     job_ids: List[str] = []
