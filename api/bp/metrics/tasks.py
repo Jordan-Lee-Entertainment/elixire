@@ -42,8 +42,8 @@ async def file_total_counts(app):
         """
         SELECT COUNT(*)
         FROM files
-        JOIN users on files.uploader = users.user_id
-        WHERE users.consented = true
+        JOIN user_settings ON files.uploader = user_settings.user_id
+        WHERE user_settings.consented = true
         """
     )
 
@@ -69,8 +69,8 @@ async def file_size_counts(app):
             """
     SELECT SUM(file_size) / 1048576
     FROM files
-    JOIN users ON files.uploader = users.user_id
-    WHERE users.consented = true
+    JOIN user_settings ON files.uploader = user_settings.user_id
+    WHERE user_settings.consented = true
     """
         )
         or 0.0
@@ -141,9 +141,9 @@ async def upload_uniq_task(app):
         """
         SELECT COUNT(DISTINCT uploader)
         FROM files
-        JOIN users ON users.user_id = files.uploader
+        JOIN user_settings ON files.uploader = user_settings.user_id
         WHERE file_id > time_snowflake(now() - interval '24 hours')
-            AND users.consented = true
+            AND user_settings.consented = true
         """
     )
 
