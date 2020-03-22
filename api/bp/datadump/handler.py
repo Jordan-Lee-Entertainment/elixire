@@ -46,7 +46,12 @@ async def dump_json_user(zipdump, user_id) -> None:
     """Insert user information into the dump."""
     user = await User.fetch(user_id)
     assert user is not None
-    _write_json(zipdump, "user_data.json", user.to_dict())
+
+    user_dict = user.to_dict()
+    user_dict["limits"] = await user.fetch_limits()
+    user_dict["stats"] = await user.fetch_stats()
+
+    _write_json(zipdump, "user_data.json", user_dict)
 
 
 async def dump_json_bans(zipdump: zipfile.ZipFile, user_id: int) -> None:
@@ -71,20 +76,6 @@ async def dump_json_bans(zipdump: zipfile.ZipFile, user_id: int) -> None:
         treated.append(goodrow)
 
     _write_json(zipdump, "bans.json", treated)
-
-
-async def dump_json_limits(zipdump: zipfile.ZipFile, user_id: int) -> None:
-    """Write the current limits for the user in the dump."""
-    limits = await app.db.fetchrow(
-        """
-        SELECT user_id, blimit, shlimit
-        FROM limits
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
-
-    _write_json(zipdump, "limits.json", dict(limits))
 
 
 async def dump_json_files(zipdump: zipfile.ZipFile, user_id: int) -> None:
