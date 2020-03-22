@@ -7,6 +7,7 @@ import datetime
 from quart import Quart
 from winter import snowflake_time
 from .errors import ArgError
+from api.models import User
 
 
 class Context:
@@ -67,14 +68,10 @@ async def get_user(ctx: Context, username: str) -> int:
 
 async def get_counts(ctx: Context, user_id: int) -> str:
     """Show consent and count information in a string."""
-    consented = await ctx.db.fetchval(
-        """
-        SELECT consented
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
+    user = await User.fetch(user_id)
+
+    assert user is not None
+    consented = user.settings.consented
 
     files = await ctx.db.fetchval(
         """

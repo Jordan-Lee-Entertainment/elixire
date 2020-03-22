@@ -95,6 +95,7 @@ async def user_counts(app):
         """
         SELECT COUNT(*)
         FROM users
+        JOIN user_settings ON user_settings.user_id = users.user_id
         WHERE active = true AND consented = true
         """
     )

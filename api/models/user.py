@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from typing import Optional, Dict, Any
+from asyncpg import Record
 from quart import current_app as app
 
 
@@ -23,16 +24,12 @@ async def _get_uploaded_count_from(
     )
 
 
-class User:
-    """Represents an elixire user."""
+class UserSettings:
+    """Represents user settings."""
 
     __slots__ = (
-        "id",
-        "name",
-        "active",
-        "email",
+        "user_id",
         "consented",
-        "admin",
         "paranoid",
         "subdomain",
         "domain",
@@ -40,14 +37,10 @@ class User:
         "shorten_domain",
     )
 
-    def __init__(self, row) -> None:
-        self.id: int = row["user_id"]
-        self.name: str = row["username"]
-        self.active: bool = row["active"]
-        # self.password_hash: str = row["password_hash"]
-        self.email: str = row["email"]
+    def __init__(self, row):
+        self.user_id = row["user_id"]
+
         self.consented: Optional[bool] = row["consented"]
-        self.admin: bool = row["admin"]
         self.paranoid: bool = row["paranoid"]
 
         self.domain: int = row["domain"]
@@ -56,17 +49,55 @@ class User:
         self.subdomain: str = row["subdomain"]
         self.shorten_subdomain: str = row["shorten_subdomain"]
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "consented": self.consented,
+            "paranoid": self.paranoid,
+            "subdomain": self.subdomain,
+            "domain": self.domain,
+            "shorten_subdomain": self.shorten_subdomain,
+            "shorten_domain": self.shorten_domain,
+        }
+
+
+class User:
+    """Represents an elixire user."""
+
+    __slots__ = ("id", "name", "active", "email", "admin", "settings")
+
+    def __init__(self, row, settings_row) -> None:
+        self.id: int = row["user_id"]
+        self.name: str = row["username"]
+        self.active: bool = row["active"]
+        self.email: str = row["email"]
+        self.admin: bool = row["admin"]
+        # self.password_hash: str = row["password_hash"]
+
+        assert settings_row is not None
+        self.settings: UserSettings = UserSettings(settings_row)
+
     def __eq__(self, other) -> bool:
         return self.id == other.id
 
     @classmethod
+    async def _fetch_settings(cls, user_id: int) -> Optional[Record]:
+        """Fetch user settings."""
+        return await app.db.fetchrow(
+            """
+            SELECT
+                user_id, consented, paranoid, subdomain, domain,
+                shorten_subdomain, shorten_domain
+            FROM user_settings
+            WHERE user_id = $1
+            """,
+            user_id,
+        )
+
+    @classmethod
     async def fetch(cls, user_id: int) -> Optional["User"]:
         row = await app.db.fetchrow(
-            f"""
-            SELECT
-                user_id, username, active, email, consented,
-                admin, paranoid, subdomain, domain, shorten_subdomain,
-                shorten_domain
+            """
+            SELECT user_id, username, active, email, admin
             FROM users
             WHERE user_id = $1
             LIMIT 1
@@ -74,7 +105,10 @@ class User:
             user_id,
         )
 
-        return User(row) if row is not None else None
+        if row is None:
+            return None
+
+        return User(row, await cls._fetch_settings(row["user_id"]))
 
     @classmethod
     async def fetch_by(
@@ -93,10 +127,7 @@ class User:
 
         row = await app.db.fetchrow(
             f"""
-            SELECT
-                users.user_id, username, active, email, consented,
-                admin, paranoid, subdomain, domain, shorten_subdomain,
-                shorten_domain
+            SELECT user_id, username, active, email, admin
             FROM users
             WHERE {search_field} = $1
             LIMIT 1
@@ -104,14 +135,22 @@ class User:
             value,
         )
 
-        return User(row) if row is not None else None
+        if row is None:
+            return None
+
+        return User(row, await cls._fetch_settings(row["user_id"]))
 
     def to_dict(self) -> Dict[str, Any]:
         """Get the user as a dictionary."""
-        user_dict: Dict[str, Any] = {}
-        for field in User.__slots__:
-            user_dict[field] = getattr(self, field)
+        user_dict = {
+            "id": self.id,
+            "name": self.name,
+            "active": self.active,
+            "email": self.email,
+            "admin": self.admin,
+        }
 
+        user_dict.update(self.settings.to_dict())
         return user_dict
 
     async def fetch_limits(self) -> Dict[str, int]:

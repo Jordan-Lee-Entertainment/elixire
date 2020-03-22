@@ -41,6 +41,14 @@ async def create_user(
         user_id,
     )
 
+    await app.db.execute(
+        """
+        INSERT INTO user_settings (user_id)
+        VALUES ($1)
+        """,
+        user_id,
+    )
+
     await app.redis.delete(f"uid:{username}")
 
     return {"user_id": user_id, "password_hash": password_hash}
