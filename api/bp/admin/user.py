@@ -179,7 +179,7 @@ async def users_search():
 
     users = await app.db.fetch(
         f"""
-        SELECT user_id, username, active, admin, consented,
+        SELECT user_id, username, active, admin,
                COUNT(*) OVER() as total_count
         FROM users
         WHERE

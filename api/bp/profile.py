@@ -208,8 +208,12 @@ async def finish_update(conn, user_id: int, payload: dict):
         if not to_update(user_dict, payload, field):
             continue
 
+        table = "users" if field == "email" else "user_settings"
+
         await conn.execute(
-            f"UPDATE users SET {field} = $1 WHERE user_id = $2", payload[field], user_id
+            f"UPDATE {table} SET {field} = $1 WHERE user_id = $2",
+            payload[field],
+            user_id,
         )
 
     if to_update(user_dict, payload, "domain"):

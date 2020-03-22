@@ -184,15 +184,17 @@ class Domain:
         """
         stats = {}
 
-        consented_clause = "" if not public else "AND users.consented = true"
+        consented_clause = "" if not public else "AND user_settings.consented = true"
 
         row = await app.db.fetchrow(
             f"""
             SELECT
                 (SELECT COUNT(*) FROM users
+                JOIN user_settings ON user_settings.user_id = users.user_id
                 WHERE domain = $1 {consented_clause}) AS user_count,
                 (SELECT COUNT(*) FROM shortens
                 JOIN users ON users.user_id = shortens.uploader
+                JOIN user_settings ON user_settings.user_id = users.user_id
                 WHERE shortens.domain = $1 {consented_clause}) AS shorten_count
             """,
             self.id,
@@ -207,8 +209,8 @@ class Domain:
             f"""
             SELECT COUNT(*), SUM(file_size)
             FROM files
-            JOIN users
-            ON users.user_id = files.uploader
+            JOIN users ON users.user_id = files.uploader
+            JOIN user_settings ON user_settings.user_id = users.user_id
             WHERE files.domain = $1
             AND files.deleted = false
             {consented_clause}
@@ -309,14 +311,18 @@ class Domain:
 
         users_count = await app.db.execute(
             """
-            UPDATE users set domain = 0 WHERE domain = $1
+            UPDATE user_settings
+            SET domain = 0
+            WHERE domain = $1
             """,
             self.id,
         )
 
         users_shorten_count = await app.db.execute(
             """
-            UPDATE users set shorten_domain = 0 WHERE shorten_domain = $1
+            UPDATE user_settings
+            SET shorten_domain = 0
+            WHERE shorten_domain = $1
             """,
             self.id,
         )

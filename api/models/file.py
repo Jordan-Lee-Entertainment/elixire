@@ -246,7 +246,8 @@ class File:
         ``timeout`` is None, the returned list must be empty.
         """
 
-        assert file_ids
+        if not file_ids:
+            return set()
 
         tasks = [
             app.sched.spawn(

@@ -12,6 +12,7 @@ from typing import Tuple, Optional, Dict, List, Union
 from quart import current_app as app, request
 
 from api.errors import FailedAuth
+from api.models import User
 
 ALPHABET = string.ascii_lowercase + string.digits
 log = logging.getLogger(__name__)
@@ -188,14 +189,8 @@ async def get_user_domain_info(
     tuple
         with 3 values: domain id, subdomain and the domain string
     """
-    domain_id, subdomain_name = await app.db.fetchrow(
-        """
-        SELECT domain, subdomain
-        FROM users
-        WHERE user_id = $1
-        """,
-        user_id,
-    )
+    user = await User.fetch(user_id)
+    assert user is not None
 
     domain = await app.db.fetchval(
         """
@@ -203,33 +198,29 @@ async def get_user_domain_info(
         FROM domains
         WHERE domain_id = $1
         """,
-        domain_id,
+        user.settings.domain,
     )
 
-    if dtype == FileNameType.SHORTEN:
-        shorten_domain_id, shorten_subdomain = await app.db.fetchrow(
+    if dtype == FileNameType.SHORTEN and user.settings.shorten_domain is not None:
+        shorten_domain = await app.db.fetchval(
             """
-            SELECT shorten_domain, shorten_subdomain
-            FROM users
-            WHERE user_id = $1
+            SELECT domain
+            FROM domains
+            WHERE domain_id = $1
             """,
-            user_id,
+            user.settings.shorten_domain,
         )
 
-        if shorten_domain_id is not None:
-            shorten_domain = await app.db.fetchval(
-                """
-                SELECT domain
-                FROM domains
-                WHERE domain_id = $1
-                """,
-                shorten_domain_id,
-            )
+        assert shorten_domain is not None
 
-            # if we have all the data on shorten subdomain, return it
-            return shorten_domain_id, shorten_subdomain, shorten_domain
+        # if we have all the data on shorten subdomain, return it
+        return (
+            user.settings.shorten_domain,
+            user.settings.shorten_subdomain,
+            shorten_domain,
+        )
 
-    return domain_id, subdomain_name, domain
+    return user.settings.domain, user.settings.subdomain, domain
 
 
 def transform_wildcard(domain: str, subdomain_name: str) -> str:
