@@ -13,8 +13,7 @@ def _make_feature_list(cfg):
         "uploads": cfg.UPLOADS_ENABLED,
         "shortens": cfg.SHORTENS_ENABLED,
         "registrations": cfg.REGISTRATIONS_ENABLED,
-        "pfupdate": cfg.PATCH_API_PROFILE_ENABLED,
-        "require_approvals": cfg.REQUIRE_ACCOUNT_APPROVALS,
+        "profile_editing": cfg.PATCH_API_PROFILE_ENABLED,
     }
 
     return [feature for feature in feature_mapping if feature_mapping[feature]]
@@ -29,13 +28,16 @@ async def hello():
         {
             "name": cfg.INSTANCE_NAME,
             "version": VERSION,
-            "api": API_VERSION,
-            "invite": cfg.MAIN_INVITE,
+            "api_version": API_VERSION,
+            "discord_invite": cfg.MAIN_INVITE,
             "support_email": cfg.SUPPORT_EMAIL,
-            "ban_period": cfg.BAN_PERIOD,
-            "ip_ban_period": cfg.IP_BAN_PERIOD,
-            "rl_threshold": cfg.RL_THRESHOLD,
             "accepted_mimes": cfg.ACCEPTED_MIMES,
+            "ratelimits": {
+                "ban_period": cfg.BAN_PERIOD,
+                "ip_ban_period": cfg.IP_BAN_PERIOD,
+                "threshold": cfg.RL_THRESHOLD,
+            },
             "features": _make_feature_list(cfg),
+            "approval_required": cfg.REQUIRE_ACCOUNT_APPROVALS,
         }
     )
