@@ -130,7 +130,7 @@ async def test_password_reset(test_cli_user):
     )
     assert resp.status_code == 204
 
-    email_data = test_cli_user.app._email_list[0]
+    email_data = test_cli_user.app._email_list[-1]
     urls = re.findall(r"(https?://\S+)", email_data["content"])
 
     assert urls
