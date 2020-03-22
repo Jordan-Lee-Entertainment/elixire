@@ -1,4 +1,4 @@
 - [x] add test for password recovery
 - [x] add test for username recovery
-- [ ] add test for register
+- [x] add test for register
 - [ ] add edge-case tests for shorten (broken urls, long urls, maybe we can test quota explosion by setting it low for test user?)

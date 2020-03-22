@@ -5,7 +5,8 @@
 import re
 import pytest
 from urllib.parse import urlparse
-from .common import token, username
+from .common import token, username, email
+from api.models import User
 
 pytestmark = pytest.mark.asyncio
 
@@ -172,4 +173,40 @@ async def test_password_reset(test_cli_user):
         json={"user": test_cli_user.user["username"], "password": new_password},
     )
 
+    assert resp.status_code == 200
+
+
+async def test_register(test_cli):
+    """Test the registration of a user"""
+    user_name = username()
+    user_pass = username()
+
+    resp = await test_cli.post(
+        "/api/auth/register",
+        json={
+            "name": user_name,
+            "password": user_pass,
+            "email": email(),
+            "discord_user": "asd#1234",
+        },
+    )
+
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["user_id"], str)
+    assert isinstance(rjson["require_approvals"], bool)
+    assert rjson["require_approvals"] == test_cli.app.econfig.REQUIRE_ACCOUNT_APPROVALS
+
+    async with test_cli.app.app_context():
+        user = await User.fetch(int(rjson["user_id"]))
+        assert user is not None
+
+    await test_cli.app.db.execute(
+        "update users set active = true where user_id = $1", user.id
+    )
+
+    resp = await test_cli.post(
+        "/api/auth/login", json={"user": user_name, "password": user_pass}
+    )
     assert resp.status_code == 200
