@@ -15,11 +15,13 @@ async def test_hello(test_cli):
 
     assert isinstance(rjson["name"], str)
     assert isinstance(rjson["version"], str)
-    assert isinstance(rjson["api"], str)
+    assert isinstance(rjson["api_version"], str)
     assert isinstance(rjson["support_email"], str)
-    assert isinstance(rjson["ban_period"], str)
-    assert isinstance(rjson["ip_ban_period"], str)
-    assert isinstance(rjson["rl_threshold"], int)
+
+    assert isinstance(rjson["ratelimits"], dict)
+    assert isinstance(rjson["ratelimits"]["ban_period"], str)
+    assert isinstance(rjson["ratelimits"]["ip_ban_period"], str)
+    assert isinstance(rjson["ratelimits"]["threshold"], int)
 
     assert isinstance(rjson["accepted_mimes"], list)
     assert isinstance(rjson["features"], list)
