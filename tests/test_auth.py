@@ -118,7 +118,15 @@ async def test_login_deactivated(test_cli_user):
 
 async def test_username_recovery(test_cli_user):
     """Test username recovery"""
-    assert 1 == 1
+    resp = await test_cli_user.post(
+        "/api/auth/recover_username",
+        do_token=False,
+        json={"email": test_cli_user.user["email"]},
+    )
+    assert resp.status_code == 204
+
+    email_data = test_cli_user.app._email_list[-1]
+    assert test_cli_user.user["username"] in email_data["content"]
 
 
 async def test_password_reset(test_cli_user):
