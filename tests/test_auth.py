@@ -2,7 +2,9 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import re
 import pytest
+from urllib.parse import urlparse
 from .common import token, username
 
 pytestmark = pytest.mark.asyncio
@@ -112,3 +114,54 @@ async def test_login_deactivated(test_cli_user):
     )
 
     assert resp.status_code == 403
+
+
+async def test_username_recovery(test_cli_user):
+    """Test username recovery"""
+    assert 1 == 1
+
+
+async def test_password_reset(test_cli_user):
+    """Test password recovery logic"""
+    resp = await test_cli_user.post(
+        "/api/profile/reset_password",
+        do_token=False,
+        json={"name": test_cli_user.user["username"]},
+    )
+    assert resp.status_code == 204
+
+    email_data = test_cli_user.app._email_list[0]
+    urls = re.findall(r"(https?://\S+)", email_data["content"])
+
+    assert urls
+    password_url = urlparse(urls[0])
+    assert password_url
+    email_token = password_url.fragment
+
+    new_password = username()
+    resp = await test_cli_user.post(
+        "/api/profile/reset_password_confirm",
+        do_token=False,
+        json={"token": email_token, "new_password": new_password},
+    )
+
+    assert resp.status_code == 204
+
+    resp = await test_cli_user.post(
+        "/api/auth/login",
+        do_token=False,
+        json={
+            "user": test_cli_user.user["username"],
+            "password": test_cli_user.user["password"],
+        },
+    )
+
+    assert resp.status_code == 403
+
+    resp = await test_cli_user.post(
+        "/api/auth/login",
+        do_token=False,
+        json={"user": test_cli_user.user["username"], "password": new_password},
+    )
+
+    assert resp.status_code == 200
