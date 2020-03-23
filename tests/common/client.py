@@ -82,4 +82,5 @@ class TestClient:
                 if isinstance(resource, User):
                     task = await delete_user(resource.id, delete=True)
                     await asyncio.shield(task)
-                await resource.delete()
+                else:
+                    await resource.delete()
