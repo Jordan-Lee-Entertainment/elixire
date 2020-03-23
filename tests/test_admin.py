@@ -3,10 +3,14 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import random
+import asyncio
 from uuid import UUID
 from typing import List
 
 import pytest
+
+from api.models import Domain
+from tests.common.generators import username
 
 pytestmark = pytest.mark.asyncio
 
@@ -386,3 +390,50 @@ async def test_violet_jobs(test_cli_admin):
     )
     assert first_id not in ids
     assert last_id not in ids
+
+
+@pytest.mark.skip(
+    reason="breaks due to request context not being found. dunno if issue in violet, or smth else"
+)
+async def _disabled_test_broadcast(test_cli_admin):
+    body = username()
+    subject = username()
+    resp = await test_cli_admin.post(
+        "/api/admin/broadcast", json={"subject": subject, "body": body}
+    )
+    assert resp.status_code == 204
+
+    # TODO convert broadcast code into a violet job queue so we can wait_job
+    await asyncio.sleep(1)
+
+    email = test_cli_admin.app._email_list[-1]
+    assert email["subject"] == subject
+    assert body in email["content"]
+
+
+async def test_domain_create(test_cli_admin):
+    domain_name = "{username()}.com"
+    resp = await test_cli_admin.put(
+        "/api/admin/domains",
+        json={"domain": domain_name, "owner_id": test_cli_admin.user["user_id"]},
+    )
+    assert resp.status_code == 200
+
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["domain"], dict)
+    domain = rjson["domain"]
+    assert isinstance(domain["id"], int)
+
+    # TODO assert more fields from domain?
+
+    async with test_cli_admin.app.app_context():
+        domain = await Domain.fetch(domain["id"])
+    assert domain is not None
+    test_cli_admin.add_resource(domain)
+
+    assert domain.domain == domain_name
+    async with test_cli_admin.app.app_context():
+        owner = await domain.fetch_owner()
+    assert owner is not None
+    assert owner.id == test_cli_admin.user["user_id"]
