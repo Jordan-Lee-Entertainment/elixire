@@ -20,6 +20,8 @@ async def test_datadump(test_cli_user):
     resp = await test_cli_user.post("/api/dump")
     assert resp.status_code == 200
 
+    shorten = await test_cli_user.create_shorten()
+
     zipdump = None
 
     try:
@@ -74,6 +76,10 @@ async def test_datadump(test_cli_user):
         with zipdump.open("user_data.json") as user_data_file:
             user_data = json.load(user_data_file)
             assert user_data["id"] == test_cli_user.user["user_id"]
+
+        with zipdump.open("shortens.json") as shortens_file:
+            shortens = json.load(shortens_file)
+            assert any(s for s in shortens if s["shorten_id"] == shorten.id)
 
     finally:
         if zipdump:
