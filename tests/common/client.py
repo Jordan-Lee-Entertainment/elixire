@@ -1,8 +1,10 @@
 # elixire: Image Host software
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+import asyncio
 from typing import TypeVar, List, Optional
-from api.models import Domain
+from api.models import Domain, User
+from api.common.user import delete_user
 from tests.common.generators import hexs
 
 __all__ = ["TestClient"]
@@ -77,4 +79,7 @@ class TestClient:
         """Delete all allocated test resources."""
         for resource in self._resources:
             async with self.app.app_context():
+                if isinstance(resource, User):
+                    task = await delete_user(resource.id, delete=True)
+                    await asyncio.shield(task)
                 await resource.delete()
