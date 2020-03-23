@@ -3,8 +3,13 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import asyncio
 from typing import TypeVar, List, Optional
-from api.models import Domain, User
+
+from winter import get_snowflake
+
+from api.models import Domain, User, Shorten
 from api.common.user import delete_user
+from api.common.profile import gen_user_shortname
+
 from tests.common.generators import hexs
 
 __all__ = ["TestClient"]
@@ -71,9 +76,46 @@ class TestClient:
     def add_resource(self, resource) -> None:
         self._resources.append(resource)
 
-    async def create_domain(self, domain_str: Optional[str] = None):
+    async def create_domain(self, domain_str: Optional[str] = None) -> Domain:
         domain_str = domain_str or f"*.test-{hexs(10)}.test"
         return await self._create_resource(Domain.create, domain_str)
+
+    async def create_shorten(
+        self,
+        redirto: Optional[str] = None,
+        user_id: Optional[int] = None,
+        domain_id: Optional[int] = None,
+        subdomain: Optional[str] = None,
+    ) -> Shorten:
+        redirto = redirto or "https://example.test"
+        user_id = user_id or self.user["user_id"]
+        domain_id = domain_id or 0
+        subdomain = subdomain or ""
+
+        shorten_id = get_snowflake()
+        async with self.app.app_context():
+            shortname, _ = await gen_user_shortname(user_id, table="shortens")
+
+        await self.app.db.execute(
+            """
+            INSERT INTO shortens (shorten_id, filename,
+                uploader, redirto, domain, subdomain)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            """,
+            shorten_id,
+            shortname,
+            user_id,
+            redirto,
+            domain_id,
+            subdomain,
+        )
+
+        async with self.app.app_context():
+            shorten = await Shorten.fetch(shorten_id)
+
+        assert shorten is not None
+        self._resources.append(shorten)
+        return shorten
 
     async def cleanup(self):
         """Delete all allocated test resources."""
