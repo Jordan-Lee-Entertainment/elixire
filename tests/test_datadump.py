@@ -8,6 +8,9 @@ import zipfile
 import logging
 import pytest
 
+from urllib.parse import parse_qs
+from tests.common.utils import extract_first_url
+
 pytestmark = pytest.mark.asyncio
 
 log = logging.getLogger(__name__)
@@ -56,20 +59,9 @@ async def test_datadump(test_cli_user):
         assert not status.errors
 
         # TODO check email, and then see if /get gives the actual dump
-        assert test_cli_user.app._email_list
-
-        # TODO use model for test_cli_user.user
-        dump_token = await test_cli_user.app.db.fetchval(
-            """
-            SELECT hash
-            FROM email_dump_tokens
-            WHERE user_id = $1
-            ORDER BY expiral
-            """,
-            test_cli_user.user["user_id"],
-        )
-
-        assert dump_token is not None
+        email = test_cli_user.app._email_list[-1]
+        url = extract_first_url(email["content"])
+        dump_token = parse_qs(url.query)["key"][0]
 
         resp = await test_cli_user.get(
             "/api/dump/get", query_string={"key": dump_token}
