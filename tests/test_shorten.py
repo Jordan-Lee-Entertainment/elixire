@@ -2,9 +2,12 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from .common import token, username
+from .common.generators import rand_utf8
 
 pytestmark = pytest.mark.asyncio
 
@@ -68,7 +71,11 @@ async def test_shorten_wrong_scheme(test_cli_user):
     # bad idea but whatever
     wrong = []
     for scheme in some_schemes:
-        wrong += [f"{scheme}{token()}.{token()}" for _ in range(5)]
+        # random components
+        c1 = rand_utf8(15)
+        c2 = rand_utf8(15)
+        c3 = rand_utf8(15)
+        wrong.extend([f"{scheme}{c1}.{c2}/{c3}" for _ in range(5)])
 
     for wrong_url in wrong:
         resp = await test_cli_user.post("/api/shorten", json={"url": wrong_url})
