@@ -4,3 +4,4 @@
 
 from .generators import *  # NOQA
 from .client import *  # NOQA
+from .utils import extract_first_url  # NOQA
