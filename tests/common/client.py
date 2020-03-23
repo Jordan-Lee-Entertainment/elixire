@@ -66,6 +66,9 @@ class TestClient:
         self._resources.append(resource)
         return resource
 
+    def add_resource(self, resource) -> None:
+        self._resources.append(resource)
+
     async def create_domain(self, domain_str: Optional[str] = None):
         domain_str = domain_str or f"*.test-{hexs(10)}.test"
         return await self._create_resource(Domain.create, domain_str)
