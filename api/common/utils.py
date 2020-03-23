@@ -9,7 +9,8 @@ from collections import defaultdict
 
 from quart import request, send_file as quart_send_file, current_app as app
 
-from api.common import get_user_domain_info, transform_wildcard, FileNameType
+from api.common import get_user_domain_info, transform_wildcard
+from api.enums import FileNameType
 from api.permissions import Permissions, domain_permissions
 
 T = TypeVar("T")

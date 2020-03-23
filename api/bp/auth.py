@@ -4,7 +4,7 @@
 
 from quart import Blueprint, jsonify, current_app as app, request
 
-from api.common import TokenType
+from api.enums import TokenType
 from api.common.auth import login_user, gen_token, pwd_hash
 from api.schema import validate, REVOKE_SCHEMA
 
