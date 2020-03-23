@@ -8,9 +8,9 @@ batch 2:
 
 datadump:
     - [x] remove email_dump_tokens peeking from datadump test
-    - [ ] add File and Shorten as resources
-    - [ ] make datadump user have at least one file and shorten
-- [ ] change mtime of zip file and tick janitor, check it went away
+    - [/] add File and Shorten as resources
+    - [/] make datadump user have at least one file and shorten
+- [x] change mtime of zip file and tick janitor, check it went away
 
 admin:
  - [ ] add test for admin broadcast and admin sendmail (requires email mock)

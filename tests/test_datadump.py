@@ -10,6 +10,7 @@ import pytest
 
 from urllib.parse import parse_qs
 from tests.common.utils import extract_first_url
+from api.bp.datadump.janitor import dump_janitor
 
 pytestmark = pytest.mark.asyncio
 
@@ -80,6 +81,12 @@ async def test_datadump(test_cli_user):
         with zipdump.open("shortens.json") as shortens_file:
             shortens = json.load(shortens_file)
             assert any(s for s in shortens if s["shorten_id"] == shorten.id)
+
+        zip_stat = os.stat(path)
+        os.utime(path, times=(zip_stat.st_atime, zip_stat.st_mtime - 22600))
+        async with test_cli_user.app.app_context():
+            await dump_janitor()
+        assert not os.path.exists(path)
 
     finally:
         if zipdump:
