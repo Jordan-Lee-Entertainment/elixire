@@ -9,7 +9,7 @@ import logging
 import time
 from typing import Tuple, Dict, List, Union
 
-from quart import current_app as app, request
+from quart import current_app as app
 
 from api.models import User
 from api.enums import FileNameType

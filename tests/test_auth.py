@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from urllib.parse import urlparse
 from .common import token, username, email, extract_first_url
 from api.models import User
 
