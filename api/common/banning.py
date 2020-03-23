@@ -4,13 +4,13 @@
 
 import logging
 import enum
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Optional
 
 from quart import request, current_app as app
-from api.common import get_ip_addr
+from api.common.utils import get_ip_addr
 from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.storage import calc_ttl
-from api.errors import WebhookError
+from api.errors import WebhookError, FailedAuth
 
 log = logging.getLogger(__name__)
 

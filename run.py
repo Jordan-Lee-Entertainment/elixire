@@ -40,7 +40,7 @@ import api.bp.delete
 from api.json import ElixireJSONEncoder
 
 from api.errors import APIError, Banned
-from api.common import get_ip_addr
+from api.common.utils import get_ip_addr
 from api.common.utils import LockStorage
 from api.storage import Storage
 from api.bp.metrics.counters import MetricsCounters

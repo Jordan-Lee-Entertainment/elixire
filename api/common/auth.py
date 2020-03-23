@@ -16,7 +16,8 @@ from quart import request, current_app as app
 
 from api.errors import FailedAuth
 from api.schema import validate, LOGIN_SCHEMA
-from .common import TokenType, check_bans
+from api.enums import TokenType
+from api.common.banning import check_bans
 
 log = logging.getLogger(__name__)
 

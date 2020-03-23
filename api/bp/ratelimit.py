@@ -9,7 +9,8 @@ from typing import Optional
 from quart import Blueprint, request, current_app as app
 from api.ratelimit import RatelimitManager, RatelimitBucket
 from api.errors import Ratelimited, Banned, FailedAuth
-from api.common import get_ip_addr, check_bans
+from api.common.utils import get_ip_addr
+from api.common.banning import check_bans
 from api.common.auth import token_check
 
 bp = Blueprint("ratelimit", __name__)
