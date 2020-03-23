@@ -2,10 +2,9 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import re
 import pytest
 from urllib.parse import urlparse
-from .common import token, username, email
+from .common import token, username, email, extract_first_url
 from api.models import User
 
 pytestmark = pytest.mark.asyncio
@@ -140,11 +139,7 @@ async def test_password_reset(test_cli_user):
     assert resp.status_code == 204
 
     email_data = test_cli_user.app._email_list[-1]
-    urls = re.findall(r"(https?://\S+)", email_data["content"])
-
-    assert urls
-    password_url = urlparse(urls[0])
-    assert password_url
+    password_url = extract_first_url(email_data["content"])
     email_token = password_url.fragment
 
     new_password = username()
