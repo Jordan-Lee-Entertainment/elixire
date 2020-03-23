@@ -171,13 +171,14 @@ async def test_password_reset(test_cli_user):
     assert resp.status_code == 200
 
 
-async def test_register(test_cli):
+async def test_register(test_cli_user):
     """Test the registration of a user"""
     user_name = username()
     user_pass = username()
 
-    resp = await test_cli.post(
+    resp = await test_cli_user.post(
         "/api/auth/register",
+        do_token=False,
         json={
             "name": user_name,
             "password": user_pass,
@@ -190,18 +191,29 @@ async def test_register(test_cli):
     rjson = await resp.json
     assert isinstance(rjson, dict)
     assert isinstance(rjson["user_id"], str)
-    assert isinstance(rjson["require_approvals"], bool)
-    assert rjson["require_approvals"] == test_cli.app.econfig.REQUIRE_ACCOUNT_APPROVALS
 
-    async with test_cli.app.app_context():
+    async with test_cli_user.app.app_context():
         user = await User.fetch(int(rjson["user_id"]))
-        assert user is not None
 
-    await test_cli.app.db.execute(
+    assert user is not None
+    test_cli_user.add_resource(user)
+
+    assert isinstance(rjson["require_approvals"], bool)
+    assert (
+        rjson["require_approvals"]
+        == test_cli_user.app.econfig.REQUIRE_ACCOUNT_APPROVALS
+    )
+
+    await test_cli_user.app.db.execute(
         "update users set active = true where user_id = $1", user.id
     )
 
-    resp = await test_cli.post(
-        "/api/auth/login", json={"user": user_name, "password": user_pass}
+    resp = await test_cli_user.post(
+        "/api/auth/login",
+        do_token=False,
+        json={"user": user_name, "password": user_pass},
     )
     assert resp.status_code == 200
+
+    assert test_cli_user.app._email_list
+    assert test_cli_user.app._webhook_list
