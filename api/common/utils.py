@@ -156,3 +156,14 @@ async def fetch_json_rows(db, query: str, *args) -> List[Any]:
     async with db.acquire() as con:
         await postgres_set_json_codecs(con)
         return await con.fetch(query, *args)
+
+
+def get_ip_addr() -> str:
+    """Fetch the IP address for a request.
+
+    Handles the cloudflare headers responsible to set
+    the client's IP.
+    """
+    if "X-Forwarded-For" not in request.headers:
+        return request.remote_addr
+    return request.headers["X-Forwarded-For"]
