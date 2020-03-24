@@ -5,6 +5,7 @@
 import io
 import asyncio
 from typing import TypeVar, List, Optional
+from time import monotonic
 
 from winter import get_snowflake
 
@@ -12,6 +13,7 @@ from api.models import Domain, User, Shorten, File
 from api.common.user import create_user, delete_user
 from api.common.profile import gen_user_shortname
 from api.bp.upload.file import UploadFile
+from api.bp.upload.context import UploadContext
 
 from tests.common.generators import hexs, email
 
@@ -106,14 +108,13 @@ class TestClient:
         self,
         filename: str,
         stream: io.BytesIO,
-        mimetype: str,
+        given_mimetype: str,
         *,
         author_id: Optional[int] = None,
         domain_id: Optional[int] = None,
         subdomain: Optional[str] = None,
     ) -> File:
-        upload_file = UploadFile.from_stream(filename, stream, mimetype)
-
+        upload_file = UploadFile.from_stream(filename, stream, given_mimetype)
         author_id = author_id or self.user["user_id"]
         domain_id = domain_id or 0
         subdomain = subdomain or ""
@@ -121,6 +122,12 @@ class TestClient:
         file_id = get_snowflake()
         async with self.app.app_context():
             shortname, _ = await gen_user_shortname(author_id, table="files")
+
+            upload_ctx = UploadContext(
+                upload_file, author_id, shortname, False, int(monotonic())
+            )
+            mimetype, extension = await upload_ctx.resolve_mime()
+            await upload_file.resolve(extension)
 
         with open(upload_file.raw_path, "wb") as output:
             # instead of copying the entire stream and writing
