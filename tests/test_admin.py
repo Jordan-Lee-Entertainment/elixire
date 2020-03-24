@@ -6,11 +6,13 @@ import random
 import asyncio
 from uuid import UUID
 from typing import List
+from urllib.parse import parse_qs
 
 import pytest
 
-from api.models import Domain
+from api.models import Domain, User
 from tests.common.generators import username
+from tests.common.utils import extract_first_url
 
 pytestmark = pytest.mark.asyncio
 
@@ -437,3 +439,29 @@ async def test_domain_create(test_cli_admin):
         owner = await domain.fetch_owner()
     assert owner is not None
     assert owner.id == test_cli_admin.user["user_id"]
+
+
+async def test_activation_email(test_cli, test_cli_admin):
+    user = await test_cli_admin.create_user(active=False)
+    resp = await test_cli_admin.post(f"/api/admin/users/activate_email/{user.id}")
+    assert resp.status_code == 204
+
+    email = test_cli_admin.app._email_list[-1]
+    url = extract_first_url(email["content"])
+    email_key = parse_qs(url.query)["key"][0]
+
+    async with test_cli.app.app_context():
+        user = await User.fetch(user.id)
+        assert user is not None
+        assert not user.active
+
+    # TODO fix the path
+    resp = await test_cli.get(
+        "/api/admin/users/api/activate_email", query_string={"key": email_key}
+    )
+    assert resp.status_code == 200
+
+    async with test_cli.app.app_context():
+        user = await User.fetch(user.id)
+        assert user is not None
+        assert user.active
