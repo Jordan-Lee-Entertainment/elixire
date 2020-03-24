@@ -4,6 +4,7 @@
 import logging
 from typing import Dict, Union
 
+import asyncpg
 from quart import current_app as app
 from winter import get_snowflake
 
@@ -143,3 +144,40 @@ async def delete_user(user_id: int, delete: bool = False):
     return app.sched.spawn(
         full_file_delete, [user_id, delete], name=f"full_delete:{user_id}"
     )
+
+
+async def create_doll_user() -> None:
+
+    # NOTE: the doll user is made for anonymization of files. when deleting
+    # a file, we keep its record up on the files table to prevent shortname
+    # reuse, so we move the ownership of the file to the doll.
+    try:
+        await app.db.execute(
+            """
+            INSERT INTO users (user_id, username, active, password_hash, email)
+            VALUES (0, 'doll', false, 'blah', 'd o l l')
+            """
+        )
+        log.info("doll user with ID 0 successfully created")
+    except asyncpg.UniqueViolationError:
+        log.info("doll user with ID 0 already created")
+
+    try:
+        await app.db.execute(
+            """
+            INSERT INTO limits (user_id)
+            VALUES (0)
+            """
+        )
+    except asyncpg.UniqueViolationError:
+        pass
+
+    try:
+        await app.db.execute(
+            """
+            INSERT INTO user_settings (user_id)
+            VALUES (0)
+            """
+        )
+    except asyncpg.UniqueViolationError:
+        pass

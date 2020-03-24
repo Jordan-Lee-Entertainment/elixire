@@ -40,8 +40,8 @@ import api.bp.delete
 from api.json import ElixireJSONEncoder
 
 from api.errors import APIError, Banned
-from api.common.utils import get_ip_addr
-from api.common.utils import LockStorage
+from api.common.utils import get_ip_addr, LockStorage
+from api.common.user import create_doll_user
 from api.storage import Storage
 from api.bp.metrics.counters import MetricsCounters
 from api.bp.admin.audit_log import AuditLog
@@ -277,20 +277,7 @@ async def app_before_serving():
         app.audit_log = AuditLog(app)
 
     await api.bp.cors.setup()
-
-    # NOTE: the doll user is made for anonymization of files. when deleting
-    # a file, we keep its record up on the files table to prevent shortname
-    # reuse, so we move the ownership of the file to the doll.
-    try:
-        await app.db.execute(
-            """
-            INSERT INTO users (user_id, username, active, password_hash, email)
-            VALUES (0, 'doll', false, 'blah', 'd o l l')
-            """
-        )
-        log.info("doll user with ID 0 successfully created")
-    except asyncpg.UniqueViolationError:
-        log.info("doll user with ID 0 already created")
+    await create_doll_user()
 
 
 @app.after_serving

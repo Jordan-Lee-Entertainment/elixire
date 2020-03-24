@@ -16,4 +16,4 @@ admin:
  - [/] add test for admin broadcast and admin sendmail (requires email mock)
  - [x] add test to add a domain (requires resource management, we have Domain)
  - [x] add test for activating a user via email (requires email mock)
- - [ ] add test when deleting doll user (assert its not possible)
+ - [x] add test when deleting doll user (assert its not possible)
