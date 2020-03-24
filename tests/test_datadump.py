@@ -10,6 +10,7 @@ import pytest
 
 from urllib.parse import parse_qs
 from tests.common.utils import extract_first_url
+from tests.common.generators import png_data
 from api.bp.datadump.janitor import dump_janitor
 
 pytestmark = pytest.mark.asyncio
@@ -18,10 +19,11 @@ log = logging.getLogger(__name__)
 
 
 async def test_datadump(test_cli_user):
+    shorten = await test_cli_user.create_shorten()
+    elixire_file = await test_cli_user.create_file("test.jpg", png_data(), "image/png")
+
     resp = await test_cli_user.post("/api/dump")
     assert resp.status_code == 200
-
-    shorten = await test_cli_user.create_shorten()
 
     zipdump = None
 
@@ -81,6 +83,16 @@ async def test_datadump(test_cli_user):
         with zipdump.open("shortens.json") as shortens_file:
             shortens = json.load(shortens_file)
             assert any(s for s in shortens if s["shorten_id"] == shorten.id)
+
+        with zipdump.open("files.json") as files_file:
+            files = json.load(files_file)
+            assert any(f for f in files if f["file_id"] == elixire_file.id)
+
+        with zipdump.open(
+            f"files/{elixire_file.id}_{elixire_file.shortname}.png"
+        ) as raw_file:
+            assert raw_file
+            assert raw_file.read() == png_data().getvalue()
 
         zip_stat = os.stat(path)
         os.utime(path, times=(zip_stat.st_atime, zip_stat.st_mtime - 22600))
