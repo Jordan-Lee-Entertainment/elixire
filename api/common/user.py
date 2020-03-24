@@ -9,6 +9,7 @@ from winter import get_snowflake
 
 from api.common.auth import pwd_hash
 from api.models import File
+from api.errors import BadInput
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +107,7 @@ async def delete_user(user_id: int, delete: bool = False):
     # instance admins should proceed to deleting the doll user via psql shell
     # if wanted.
     if user_id == 0:
-        raise ValueError("doll user is not delete-able")
+        raise BadInput("doll user is not delete-able")
 
     await app.db.execute(
         """

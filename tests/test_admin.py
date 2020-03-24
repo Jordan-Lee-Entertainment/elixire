@@ -465,3 +465,8 @@ async def test_activation_email(test_cli, test_cli_admin):
         user = await User.fetch(user.id)
         assert user is not None
         assert user.active
+
+
+async def test_doll_user_removal(test_cli_admin):
+    resp = await test_cli_admin.delete("/api/admin/users/0")
+    assert resp.status_code == 400
