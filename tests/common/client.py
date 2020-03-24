@@ -1,14 +1,17 @@
 # elixire: Image Host software
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+
+import io
 import asyncio
 from typing import TypeVar, List, Optional
 
 from winter import get_snowflake
 
-from api.models import Domain, User, Shorten
+from api.models import Domain, User, Shorten, File
 from api.common.user import create_user, delete_user
 from api.common.profile import gen_user_shortname
+from api.bp.upload.file import UploadFile
 
 from tests.common.generators import hexs, email
 
@@ -98,6 +101,61 @@ class TestClient:
             self.add_resource(user)
 
         return user
+
+    async def create_file(
+        self,
+        filename: str,
+        stream: io.BytesIO,
+        mimetype: str,
+        *,
+        author_id: Optional[int] = None,
+        domain_id: Optional[int] = None,
+        subdomain: Optional[str] = None,
+    ) -> File:
+        upload_file = UploadFile.from_stream(filename, stream, mimetype)
+
+        author_id = author_id or self.user["user_id"]
+        domain_id = domain_id or 0
+        subdomain = subdomain or ""
+
+        file_id = get_snowflake()
+        async with self.app.app_context():
+            shortname, _ = await gen_user_shortname(author_id, table="files")
+
+        with open(upload_file.raw_path, "wb") as output:
+            # instead of copying the entire stream and writing
+            # we copy ~128kb chunks to decrease total memory usage
+            while True:
+                chunk = upload_file.stream.read(128 * 1024)
+                if not chunk:
+                    break
+
+                output.write(chunk)
+
+        await self.app.db.execute(
+            """
+            INSERT INTO files (
+                file_id, mimetype, filename,
+                file_size, uploader, fspath, domain, subdomain
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            """,
+            file_id,
+            mimetype,
+            shortname,
+            upload_file.size,
+            author_id,
+            upload_file.raw_path,
+            domain_id,
+            subdomain,
+        )
+
+        async with self.app.app_context():
+            elixire_file = await File.fetch(file_id)
+
+        assert elixire_file is not None
+        self._resources.append(elixire_file)
+        return elixire_file
 
     async def create_shorten(
         self,
