@@ -7,10 +7,10 @@ from typing import TypeVar, List, Optional
 from winter import get_snowflake
 
 from api.models import Domain, User, Shorten
-from api.common.user import delete_user
+from api.common.user import create_user, delete_user
 from api.common.profile import gen_user_shortname
 
-from tests.common.generators import hexs
+from tests.common.generators import hexs, email
 
 __all__ = ["TestClient"]
 
@@ -79,6 +79,25 @@ class TestClient:
     async def create_domain(self, domain_str: Optional[str] = None) -> Domain:
         domain_str = domain_str or f"*.test-{hexs(10)}.test"
         return await self._create_resource(Domain.create, domain_str)
+
+    async def create_user(
+        self,
+        *,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        user_email: Optional[str] = None,
+        active: bool = True,
+    ):
+        username = username or hexs(6)
+        password = password or hexs(6)
+        user_email = user_email or email()
+
+        async with self.app.app_context():
+            user_data = await create_user(username, password, user_email, active=active)
+            user = await User.fetch(int(user_data["user_id"]))
+            self.add_resource(user)
+
+        return user
 
     async def create_shorten(
         self,
