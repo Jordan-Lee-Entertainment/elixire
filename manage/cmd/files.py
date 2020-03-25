@@ -58,29 +58,13 @@ async def rename_file(ctx, args):
     shortname = args.shortname
     renamed = args.renamed
 
-    domain = await ctx.db.fetchval(
-        """
-        SELECT domain
-        FROM files
-        WHERE filename = $1 AND deleted = false
-        """,
-        shortname,
-    )
-
-    if domain is None:
+    old_file = await File.fetch_by(shortname=shortname)
+    if old_file is None or old_file.deleted:
         return print(f"no files found with shortname {shortname!r}")
 
-    existing_id = await ctx.db.fetchval(
-        """
-        SELECT file_id
-        FROM files
-        WHERE filename = $1
-        """,
-        renamed,
-    )
-
-    if existing_id:
-        return print(f"file {renamed} already exists, stopping!")
+    maybe_file = await File.fetch_by(shortname=renamed)
+    if maybe_file is not None:
+        return print(f"file {renamed!r} already exists, stopping!")
 
     exec_out = await ctx.db.execute(
         """
@@ -94,6 +78,7 @@ async def rename_file(ctx, args):
     )
 
     # invalidate etc
+    domain = old_file.domain_id
     await ctx.redis.delete(f"fspath:{domain}:{shortname}")
     await ctx.redis.delete(f"fspath:{domain}:{renamed}")
 
@@ -235,7 +220,7 @@ Weekly Counts, ND: {nd_shorten_count_week}, D: {d_shorten_count_week}
 async def _extract_file_info(ctx, shortname) -> int:
     """Extract the domain ID for a file.
 
-    Does checking against dummy user.
+    Does checking against doll user.
     """
     row = await ctx.db.fetchrow(
         """
@@ -252,7 +237,7 @@ async def _extract_file_info(ctx, shortname) -> int:
     uploader_id, domain_id = row["uploader"], row["domain"]
 
     if uploader_id == 0:
-        raise PrintException("file is from dummy user")
+        raise PrintException("file is from doll user")
 
     return domain_id
 
