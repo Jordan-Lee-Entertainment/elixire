@@ -79,7 +79,7 @@ async def amain(loop, config, argv: List[str]):
             await args.func(ctx, args)
 
     try:
-        if len(argv) < 2:
+        if not argv:
             parser.print_help()
             return 0
 
