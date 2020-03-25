@@ -245,42 +245,6 @@ async def _extract_file_info(ctx, shortname) -> int:
 async def delete_file_cmd(ctx, args):
     shortname = args.shortname
     domain_id = await _extract_file_info(ctx, shortname)
-
-    await ctx.db.execute(
-        """
-        UPDATE files
-        SET deleted = true
-        WHERE filename = $1
-        """,
-        shortname,
-    )
-
-    await ctx.storage.raw_invalidate(f"fspath:{domain_id}:{shortname}")
-
-    print("OK", shortname)
-
-
-async def undelete_file_cmd(ctx, args):
-    shortname = args.shortname
-    domain_id = await _extract_file_info(ctx, shortname)
-
-    await ctx.db.execute(
-        """
-        UPDATE files
-        SET deleted = false
-        WHERE filename = $1
-        """,
-        shortname,
-    )
-
-    await ctx.storage.raw_invalidate(f"fspath:{domain_id}:{shortname}")
-
-    print("OK", shortname)
-
-
-async def nuke_file_cmd(ctx, args):
-    shortname = args.shortname
-    domain_id = await _extract_file_info(ctx, shortname)
     elixire_file = await File.fetch_by(shortname=shortname)
     await elixire_file.delete(full=True)
     print("OK", shortname, "DOMAIN", domain_id)
@@ -299,30 +263,15 @@ to a version of the backend that deletes files.
     parser_cleanup.set_defaults(func=deletefiles)
 
     parser_rename = subparsers.add_parser("rename_file", help="Rename a single file")
-
     parser_rename.add_argument("shortname", help="old shortname for the file")
     parser_rename.add_argument("renamed", help="new shortname for the file")
     parser_rename.set_defaults(func=rename_file)
 
     parser_stats = subparsers.add_parser("stats", help="Statistics about the instance")
-
     parser_stats.set_defaults(func=show_stats)
 
-    parser_del = subparsers.add_parser("delete", help="mark a file as deleted")
-
+    parser_del = subparsers.add_parser(
+        "delete", help="delete a file. this action is non-recoverable"
+    )
     parser_del.add_argument("shortname", help="shortname for the file to be deleted")
     parser_del.set_defaults(func=delete_file_cmd)
-
-    parser_undel = subparsers.add_parser("undelete", help="mark a file as not deleted")
-
-    parser_undel.add_argument(
-        "shortname", help="shortname for the file to be undeleted"
-    )
-    parser_undel.set_defaults(func=undelete_file_cmd)
-
-    parser_nuke = subparsers.add_parser(
-        "nuke", help="delete a file, including from the filesystem"
-    )
-
-    parser_nuke.add_argument("shortname", help="shortname for the file to be nuked")
-    parser_nuke.set_defaults(func=nuke_file_cmd)
