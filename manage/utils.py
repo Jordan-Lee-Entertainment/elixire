@@ -6,7 +6,6 @@ import datetime
 
 from quart import Quart
 from winter import snowflake_time
-from .errors import ArgError
 from api.models import User
 
 
