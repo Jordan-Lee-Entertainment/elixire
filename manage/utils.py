@@ -55,23 +55,6 @@ class Context:
         await self.session.close()
 
 
-async def get_user(ctx: Context, username: str) -> int:
-    """Fetch a user's ID, given username"""
-    user_id = await ctx.db.fetchval(
-        """
-        SELECT user_id
-        FROM users
-        WHERE username = $1
-        """,
-        username,
-    )
-
-    if not user_id:
-        raise ArgError("no user found")
-
-    return user_id
-
-
 async def get_counts(ctx: Context, user_id: int) -> str:
     """Show consent and count information in a string."""
     user = await User.fetch(user_id)
