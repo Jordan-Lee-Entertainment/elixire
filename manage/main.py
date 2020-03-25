@@ -5,7 +5,7 @@
 import argparse
 import asyncio
 import logging
-import sys
+from typing import List
 
 import aiohttp
 import asyncpg
@@ -57,26 +57,18 @@ def set_parser() -> argparse.ArgumentParser:
     return parser
 
 
-async def _make_sess(ctx: Context) -> None:
-    ctx.session = aiohttp.ClientSession()
-
-
-def main(config):
-    loop = asyncio.get_event_loop()
-
-    conn, redis = loop.run_until_complete(connect_db(config, loop))
+async def amain(loop, config, argv: List[str]):
+    conn, redis = await connect_db(config, loop)
     ctx = Context(config, conn, redis, loop, LockStorage())
 
     # this needs an actual connection to the database and redis
     # so we first instantiate Context, then set the attribute
     ctx.storage = Storage(ctx)
+    ctx.session = aiohttp.ClientSession()
+
     app = ctx.make_app()
     ctx.sched = JobManager(loop=ctx.loop, db=ctx.db, context_function=app.app_context)
     app.sched = ctx.sched
-
-    # aiohttp warns us when making ClientSession out of
-    # a coroutine, so yeah.
-    loop.run_until_complete(_make_sess(ctx))
 
     # load our setup() calls on manage/cmd files
     parser = set_parser()
@@ -87,12 +79,12 @@ def main(config):
             await args.func(ctx, args)
 
     try:
-        if len(sys.argv) < 2:
+        if len(argv) < 2:
             parser.print_help()
-            return
+            return 0
 
-        args = parser.parse_args()
-        loop.run_until_complete(_ctx_wrapper(ctx, args))
+        args = parser.parse_args(argv)
+        await (_ctx_wrapper(ctx, args))
     except PrintException as exc:
         print(exc.args[0])
     except ArgError as exc:
@@ -102,6 +94,6 @@ def main(config):
         log.exception("oops.")
         return 1
     finally:
-        loop.run_until_complete(close_ctx(ctx))
+        await ctx.close()
 
     return 0

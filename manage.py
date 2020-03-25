@@ -4,9 +4,10 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
+import asyncio
 import sys
 
-from manage.main import main
+from manage.main import amain
 
 import config
 
@@ -18,4 +19,8 @@ def _setup_logging():
 
 if __name__ == "__main__":
     _setup_logging()
-    sys.exit(main(config))
+
+    loop = asyncio.get_event_loop()
+    status = loop.run_until_complete(amain(loop, config, sys.argv))
+
+    sys.exit(status)

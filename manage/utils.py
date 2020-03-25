@@ -48,6 +48,12 @@ class Context:
         app.econfig = self.econfig
         return app
 
+    async def close(self):
+        await self.db.close()
+        self.redis.close()
+        await self.redis.wait_closed()
+        await self.session.close()
+
 
 async def get_user(ctx: Context, username: str) -> int:
     """Fetch a user's ID, given username"""
