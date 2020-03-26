@@ -161,9 +161,6 @@ async def fetch_json_rows(db, query: str, *args) -> List[Any]:
 def get_ip_addr() -> str:
     """Fetch the IP address for a request.
 
-    Handles the cloudflare headers responsible to set
-    the client's IP.
+    Returns the value given in the x-forwaded-for header if it exists.
     """
-    if "X-Forwarded-For" not in request.headers:
-        return request.remote_addr
-    return request.headers["X-Forwarded-For"]
+    return request.headers.get("x-forwarded-for", request.remote_addr)
