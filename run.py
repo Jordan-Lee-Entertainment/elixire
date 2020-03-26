@@ -283,6 +283,13 @@ async def app_before_serving():
 @app.after_serving
 async def close_db():
     """Close all database connections."""
+    try:
+        await app.sched.stop_all(wait=True, timeout=10)
+    except asyncio.TimeoutError:
+        log.warning("timed out waiting for tasks. ignoring and closing")
+
+    await api.bp.metrics.blueprint.close_worker()
+
     log.info("closing db")
     await app.db.close()
 
@@ -290,9 +297,7 @@ async def close_db():
     app.redis.close()
     await app.redis.wait_closed()
 
-    app.sched.stop_all()
     await app.session.close()
-    await api.bp.metrics.blueprint.close_worker()
 
 
 set_blueprints(app)
