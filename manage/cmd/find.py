@@ -22,7 +22,7 @@ async def find_inactive_users(ctx, args):
 
     for row in uids:
         delta = account_delta(row["user_id"])
-        cinfo = await get_counts(ctx, row["user_id"])
+        cinfo = await get_counts(row["user_id"])
         print(f'\t- {row["username"]} {row["user_id"]}, ' f"{cinfo}, created {delta}")
 
     print(f"{len(uids)} users were found")
@@ -60,7 +60,7 @@ async def find_unused_accs(ctx, _args):
             continue
 
         delta = account_delta(row["user_id"])
-        counts = await get_counts(ctx, row["user_id"])
+        counts = await get_counts(row["user_id"])
         print(f'\t- {row["username"]} {row["user_id"]}, ' f"{counts}, created {delta}")
         count += 1
 

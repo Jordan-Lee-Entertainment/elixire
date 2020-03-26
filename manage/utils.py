@@ -4,7 +4,7 @@
 
 import datetime
 
-from quart import Quart
+from quart import Quart, current_app as app
 from winter import snowflake_time
 from api.models import User
 
@@ -36,16 +36,16 @@ class Context:
         self.sched = None
 
     def make_app(self) -> Quart:
-        app = Quart(__name__)
-        app.db = self.db
-        app.redis = self.redis
-        app.loop = self.loop
-        app.locks = self.locks
-        app.session = self.session
-        app.storage = self.storage
-        app.sched = self.sched
-        app.econfig = self.econfig
-        return app
+        app_ = Quart(__name__)
+        app_.db = self.db
+        app_.redis = self.redis
+        app_.loop = self.loop
+        app_.locks = self.locks
+        app_.session = self.session
+        app_.storage = self.storage
+        app_.sched = self.sched
+        app_.econfig = self.econfig
+        return app_
 
     async def close(self):
         await self.db.close()
@@ -54,14 +54,14 @@ class Context:
         await self.session.close()
 
 
-async def get_counts(ctx: Context, user_id: int) -> str:
+async def get_counts(user_id: int) -> str:
     """Show consent and count information in a string."""
     user = await User.fetch(user_id)
 
     assert user is not None
     consented = user.settings.consented
 
-    files = await ctx.db.fetchval(
+    files = await app.db.fetchval(
         """
         SELECT COUNT(*)
         FROM files
@@ -70,7 +70,7 @@ async def get_counts(ctx: Context, user_id: int) -> str:
         user_id,
     )
 
-    shortens = await ctx.db.fetchval(
+    shortens = await app.db.fetchval(
         """
         SELECT COUNT(*)
         FROM files
