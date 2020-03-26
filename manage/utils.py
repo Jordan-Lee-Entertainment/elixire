@@ -4,54 +4,9 @@
 
 import datetime
 
-from quart import Quart, current_app as app
+from quart import current_app as app
 from winter import snowflake_time
 from api.models import User
-
-
-class Context:
-    """manage.py's Context class.
-
-    The Context class is the main class
-    holding important information for integration
-    of manage.py with current functions on
-    the elixi.re codebase.
-
-    Since the current functions take an app instance
-    instead of a db connection instance, we pass Context
-    instead of having to instantiate the sanic App object.
-    """
-
-    def __init__(self, econfig, db, redis, loop, locks):
-        self.db = db
-        self.redis = redis
-        self.loop = loop
-        self.locks = locks
-        self.econfig = econfig
-
-        # those are set later
-        self.args = None
-        self.session = None
-        self.storage = None
-        self.sched = None
-
-    def make_app(self) -> Quart:
-        app_ = Quart(__name__)
-        app_.db = self.db
-        app_.redis = self.redis
-        app_.loop = self.loop
-        app_.locks = self.locks
-        app_.session = self.session
-        app_.storage = self.storage
-        app_.sched = self.sched
-        app_.econfig = self.econfig
-        return app_
-
-    async def close(self):
-        await self.db.close()
-        self.redis.close()
-        await self.redis.wait_closed()
-        await self.session.close()
 
 
 async def get_counts(user_id: int) -> str:
