@@ -13,6 +13,7 @@ from violet import JobManager
 
 from api.storage import Storage
 from api.common.utils import LockStorage
+from tests.conftest import setup_test_app
 
 from manage.cmd import ban, files, find, user, migration, domains
 from .errors import PrintException, ArgError
@@ -56,7 +57,7 @@ def set_parser() -> argparse.ArgumentParser:
     return parser
 
 
-async def amain(loop, config, argv: List[str]):
+async def amain(loop, config, argv: List[str], *, test: bool = False):
     conn, redis = await connect_db(config, loop)
     ctx = Context(config, conn, redis, loop, LockStorage())
 
@@ -66,6 +67,9 @@ async def amain(loop, config, argv: List[str]):
     ctx.session = aiohttp.ClientSession()
 
     app = ctx.make_app()
+    if test:
+        setup_test_app(loop, app)
+
     ctx.sched = JobManager(loop=ctx.loop, db=ctx.db, context_function=app.app_context)
     app.sched = ctx.sched
 
