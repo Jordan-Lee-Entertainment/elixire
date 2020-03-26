@@ -79,12 +79,13 @@ async def amain(loop, config, argv: List[str], *, test: bool = False):
     async def _ctx_wrapper(ctx, args):
         # app = ctx.make_app()
         async with app.app_context():
+            app._test = test
             await args.func(ctx, args)
 
     try:
         if not argv:
             parser.print_help()
-            return 0
+            return app, 0
 
         args = parser.parse_args(argv)
         await (_ctx_wrapper(ctx, args))
@@ -92,11 +93,11 @@ async def amain(loop, config, argv: List[str], *, test: bool = False):
         print(exc.args[0])
     except ArgError as exc:
         print(f'argument error: {",".join(exc.args)}')
-        return 1
+        return app, 1
     except Exception:
         log.exception("oops.")
-        return 1
+        return app, 1
     finally:
         await ctx.close()
 
-    return 0
+    return app, 0

@@ -21,6 +21,6 @@ if __name__ == "__main__":
     _setup_logging()
 
     loop = asyncio.get_event_loop()
-    status = loop.run_until_complete(amain(loop, config, sys.argv[1:]))
+    _, status = loop.run_until_complete(amain(loop, config, sys.argv[1:]))
 
     sys.exit(status)
