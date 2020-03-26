@@ -10,6 +10,7 @@ import aiohttp
 import asyncpg
 import aioredis
 from violet import JobManager
+from quart import Quart
 
 from api.storage import Storage
 from api.common.utils import LockStorage
@@ -17,7 +18,6 @@ from tests.common.helpers import setup_test_app
 
 from manage.cmd import ban, files, find, user, migration, domains
 from .errors import PrintException, ArgError
-from .utils import Context
 
 
 log = logging.getLogger(__name__)
@@ -31,14 +31,6 @@ async def connect_db(config, loop):
     )
 
     return pool, redis
-
-
-async def close_ctx(ctx: Context) -> None:
-    """Close database connections."""
-    await ctx.db.close()
-    ctx.redis.close()
-    await ctx.redis.wait_closed()
-    await ctx.session.close()
 
 
 def set_parser() -> argparse.ArgumentParser:
@@ -57,21 +49,28 @@ def set_parser() -> argparse.ArgumentParser:
     return parser
 
 
+async def shutdown(app):
+    await app.db.close()
+    app.redis.close()
+    await app.redis.wait_closed()
+    await app.session.close()
+
+
 async def amain(loop, config, argv: List[str], *, test: bool = False):
+    app = Quart(__name__)
     conn, redis = await connect_db(config, loop)
-    ctx = Context(config, conn, redis, loop, LockStorage())
+    app.db = conn
+    app.redis = redis
+    app.loop = loop
+    app.locks = LockStorage()
+    app.econfig = config
 
-    # this needs an actual connection to the database and redis
-    # so we first instantiate Context, then set the attribute
-    ctx.storage = Storage(ctx)
-    ctx.session = aiohttp.ClientSession()
+    app.storage = Storage(app)
+    app.session = aiohttp.ClientSession()
+    app.sched = JobManager(loop=loop, db=conn, context_function=app.app_context)
 
-    app = ctx.make_app()
     if test:
         setup_test_app(loop, app)
-
-    ctx.sched = JobManager(loop=ctx.loop, db=ctx.db, context_function=app.app_context)
-    app.sched = ctx.sched
 
     # load our setup() calls on manage/cmd files
     parser = set_parser()
@@ -98,6 +97,6 @@ async def amain(loop, config, argv: List[str], *, test: bool = False):
         log.exception("oops.")
         return app, 1
     finally:
-        await ctx.close()
+        await shutdown(app)
 
     return app, 0
