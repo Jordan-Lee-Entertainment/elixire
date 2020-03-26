@@ -127,7 +127,7 @@ async def get_bans(
     return list(map(dict, rows))
 
 
-async def check_bans(user_id: Optional[int] = None):
+async def check_bans(user_id: Optional[int] = None) -> None:
     """Check if the current user is already banned.
 
     Raises
