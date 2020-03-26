@@ -25,8 +25,7 @@ def event_loop_fixture():
     loop.close()
 
 
-@pytest.fixture(name="app", scope="session")
-async def app_fixture(event_loop):
+def setup_test_app(event_loop, app_) -> None:
     app_._test = True
     app_.loop = event_loop
     app_.econfig.RATELIMITS = {"*": (10000, 1)}
@@ -40,6 +39,11 @@ async def app_fixture(event_loop):
     # used in internal email/webhook functions for testing
     app_._email_list = []
     app_._webhook_list = []
+
+
+@pytest.fixture(name="app", scope="session")
+async def app_fixture(event_loop):
+    setup_test_app(event_loop, app_)
 
     # event_loop.run_until_complete(app_.startup())
     await app_.startup()
