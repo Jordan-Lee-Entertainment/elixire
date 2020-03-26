@@ -5,6 +5,8 @@
 import asyncio
 import secrets
 
+from quart import current_app as app
+
 from api.bp.profile import delete_user
 from api.common.user import create_user
 from api.common.auth import pwd_hash
@@ -12,7 +14,7 @@ from api.common.email import send_email_to_user
 from api.models import User
 
 
-async def adduser(_ctx, args):
+async def adduser(args):
     """Add a user."""
     email = args.email
     username = args.username
@@ -34,7 +36,7 @@ async def adduser(_ctx, args):
     )
 
 
-async def del_user(ctx, args):
+async def del_user(args):
     """Delete a user."""
     user = await User.fetch_by(username=args.username)
     assert user is not None
@@ -45,7 +47,7 @@ async def del_user(ctx, args):
     print("OK")
 
 
-async def resetpass(ctx, args):
+async def resetpass(args):
     """Reset the password of the given user."""
     user = await User.fetch_by(username=args.username)
     assert user is not None
@@ -53,7 +55,7 @@ async def resetpass(ctx, args):
     password = secrets.token_urlsafe(25)
     password_hash = await pwd_hash(password)
 
-    dbout = await ctx.db.execute(
+    dbout = await app.db.execute(
         """
         UPDATE users
         SET password_hash = $1
@@ -64,8 +66,8 @@ async def resetpass(ctx, args):
     )
 
     # invalidate
-    await ctx.redis.delete(f"uid:{user.id}:password_hash")
-    await ctx.redis.delete(f"uid:{user.id}:active")
+    await app.redis.delete(f"uid:{user.id}:password_hash")
+    await app.redis.delete(f"uid:{user.id}:active")
 
     # print the user & password
     print(
@@ -77,7 +79,7 @@ new password: {password!r}
     )
 
 
-async def sendmail(ctx, args):
+async def sendmail(args):
     """Send email to a user"""
     user = await User.fetch_by(username=args.username)
     assert user is not None

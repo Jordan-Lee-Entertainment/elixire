@@ -76,11 +76,11 @@ async def amain(loop, config, argv: List[str], *, test: bool = False):
     # load our setup() calls on manage/cmd files
     parser = set_parser()
 
-    async def _ctx_wrapper(ctx, args):
+    async def _ctx_wrapper(args):
         # app = ctx.make_app()
         async with app.app_context():
             app._test = test
-            await args.func(ctx, args)
+            await args.func(args)
 
     try:
         if not argv:
@@ -88,7 +88,7 @@ async def amain(loop, config, argv: List[str], *, test: bool = False):
             return app, 0
 
         args = parser.parse_args(argv)
-        await (_ctx_wrapper(ctx, args))
+        await _ctx_wrapper(args)
     except PrintException as exc:
         print(exc.args[0])
     except ArgError as exc:

@@ -19,7 +19,7 @@ async def _extract_ban_actor(args) -> Tuple[TargetType, Union[str, int]]:
     return target_type, value
 
 
-async def unban_any(ctx, args):
+async def unban_any(args):
     target_type, value = await _extract_ban_actor(args)
 
     unban_function = unban_user if target_type == TargetType.User else unban_ip
@@ -27,7 +27,7 @@ async def unban_any(ctx, args):
     print("OK")
 
 
-async def getbans_cmd(ctx, args):
+async def getbans_cmd(args):
     target_type, value = await _extract_ban_actor(args)
 
     bans = await get_bans(value, target_type=target_type, page=args.page)

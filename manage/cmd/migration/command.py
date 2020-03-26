@@ -7,10 +7,13 @@ elixire db migration script.
 """
 import importlib
 import logging
+
 from pathlib import Path
 from inspect import stack
 from collections import namedtuple
 from enum import Enum
+
+from quart import current_app as app
 
 import asyncpg
 
@@ -99,11 +102,11 @@ class MigrationContext:
         return max(self.scripts.keys())
 
 
-async def _ensure_changelog(ctx, mctx) -> int:
+async def _ensure_changelog(mctx) -> int:
     """Ensure a migration log exists
     in the database."""
     try:
-        await ctx.db.execute(
+        await app.db.execute(
             """
         CREATE TABLE migration_log (
             change_id bigint PRIMARY KEY,
@@ -119,7 +122,7 @@ async def _ensure_changelog(ctx, mctx) -> int:
         # if we are just creating the table,
         # then we'll assume the current database is
         # in latest schema.sql.
-        await ctx.db.execute(
+        await app.db.execute(
             """
         INSERT INTO migration_log
             (change_id, description)
@@ -135,7 +138,7 @@ async def _ensure_changelog(ctx, mctx) -> int:
         log.debug("existing migration log")
 
     return (
-        await ctx.db.fetchval(
+        await app.db.fetchval(
             """
     SELECT MAX(change_id)
     FROM migration_log
@@ -145,24 +148,24 @@ async def _ensure_changelog(ctx, mctx) -> int:
     )
 
 
-async def _apply_sql(ctx, migration):
+async def _apply_sql(migration):
     # get this migration's raw sql to apply
     raw_sql = migration.path.read_text(encoding="utf-8")
-    await ctx.db.execute(raw_sql)
+    await app.db.execute(raw_sql)
 
 
-async def _apply_py(ctx, migration):
+async def _apply_py(migration):
     module = importlib.import_module(
         "manage.cmd.migration.scripts." + migration.path.name.replace(".py", "")
     )
-    await module.run(ctx)
+    await module.run(app)
 
 
-async def apply_migration(ctx, migration: Migration):
+async def apply_migration(migration: Migration):
     """Apply a single migration to the database."""
 
     # check if we already applied
-    apply_ts = await ctx.db.fetchval(
+    apply_ts = await app.db.fetchval(
         """
     SELECT apply_ts
     FROM migration_log
@@ -177,11 +180,11 @@ async def apply_migration(ctx, migration: Migration):
 
     try:
         if migration.type == ScriptType.SQL:
-            await _apply_sql(ctx, migration)
+            await _apply_sql(migration)
         elif migration.type == ScriptType.Python:
-            await _apply_py(ctx, migration)
+            await _apply_py(migration)
 
-        await ctx.db.execute(
+        await app.db.execute(
             """
             INSERT INTO migration_log
                 (change_id, description)
@@ -199,7 +202,7 @@ async def apply_migration(ctx, migration: Migration):
         log.exception("error while applying migration")
 
 
-async def migrate_cmd(ctx, _args):
+async def migrate_cmd(_args):
     """Migration command."""
 
     mctx = MigrationContext()
@@ -212,7 +215,7 @@ async def migrate_cmd(ctx, _args):
     # it returns the current database's local
     # latest change id, so we can compare
     # this value against MigrationContext.latest.
-    local_latest = await _ensure_changelog(ctx, mctx)
+    local_latest = await _ensure_changelog(mctx)
 
     log.debug("%d migrations loaded", len(mctx.scripts))
 
@@ -239,7 +242,7 @@ async def migrate_cmd(ctx, _args):
             print("skipping migration", mig_id, "not found")
             continue
 
-        await apply_migration(ctx, migration)
+        await apply_migration(migration)
 
     print("OK")
 
