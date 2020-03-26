@@ -92,7 +92,7 @@ class TestClient:
         password: Optional[str] = None,
         user_email: Optional[str] = None,
         active: bool = True,
-    ):
+    ) -> User:
         username = username or hexs(6)
         password = password or hexs(6)
         user_email = user_email or email()
