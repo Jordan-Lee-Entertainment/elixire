@@ -4,13 +4,13 @@
 
 import logging
 import enum
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Optional
 
 from quart import request, current_app as app
-from api.common import get_ip_addr
+from api.common.utils import get_ip_addr
 from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.storage import calc_ttl
-from api.errors import WebhookError
+from api.errors import WebhookError, FailedAuth
 
 log = logging.getLogger(__name__)
 
@@ -125,3 +125,24 @@ async def get_bans(
     )
 
     return list(map(dict, rows))
+
+
+async def check_bans(user_id: Optional[int] = None) -> None:
+    """Check if the current user is already banned.
+
+    Raises
+    ------
+    FailedAuth
+        When a user is banned, or their
+        IP address is banned.
+    """
+    if user_id is not None:
+        reason = await app.storage.get_ban(user_id)
+
+        if reason:
+            raise FailedAuth(f"User is banned. {reason}")
+
+    ip_addr = get_ip_addr()
+    ip_ban_reason = await app.storage.get_ipban(ip_addr)
+    if ip_ban_reason:
+        raise FailedAuth(f"IP address is banned. {ip_ban_reason}")

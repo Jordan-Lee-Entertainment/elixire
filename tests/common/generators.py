@@ -11,6 +11,7 @@ __all__ = [
     "email",
     "png_request",
     "aiohttp_form",
+    "rand_utf8",
 ]
 
 import base64
@@ -111,3 +112,12 @@ async def png_request() -> dict:
     specify a multipart form body to upload a random PNG file.
     """
     return await aiohttp_form(png_data(), f"hexs(10).png", "image/png")
+
+
+def rand_utf8(chars: int) -> str:
+    return "".join(
+        random.sample(
+            "".join(tuple(chr(i) for i in range(32, 0x110000) if chr(i).isprintable())),
+            chars,
+        )
+    )

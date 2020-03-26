@@ -79,7 +79,10 @@ async def register_user():
 
     await register_webhook(user_id, username, discord_user, email)
     return jsonify(
-        {"user_id": user_id, "require_approvals": app.econfig.REQUIRE_ACCOUNT_APPROVALS}
+        {
+            "user_id": str(user_id),
+            "require_approvals": app.econfig.REQUIRE_ACCOUNT_APPROVALS,
+        }
     )
 
 

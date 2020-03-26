@@ -9,7 +9,8 @@ from collections import defaultdict
 
 from quart import request, send_file as quart_send_file, current_app as app
 
-from api.common import get_user_domain_info, transform_wildcard, FileNameType
+from api.common import get_user_domain_info, transform_wildcard
+from api.enums import FileNameType
 from api.permissions import Permissions, domain_permissions
 
 T = TypeVar("T")
@@ -155,3 +156,11 @@ async def fetch_json_rows(db, query: str, *args) -> List[Any]:
     async with db.acquire() as con:
         await postgres_set_json_codecs(con)
         return await con.fetch(query, *args)
+
+
+def get_ip_addr() -> str:
+    """Fetch the IP address for a request.
+
+    Returns the value given in the x-forwaded-for header if it exists.
+    """
+    return request.headers.get("x-forwarded-for", request.remote_addr)

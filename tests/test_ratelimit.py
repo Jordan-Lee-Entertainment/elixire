@@ -2,6 +2,8 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import time
+import asyncio
 import pytest
 
 from api.bp.ratelimit import setup_ratelimits
@@ -25,11 +27,20 @@ async def test_ratelimits(test_cli):
 
         assert resp.headers["x-ratelimit-limit"] == "2"
         assert resp.headers["x-ratelimit-remaining"] == "0"
+        assert "x-ratelimit-reset" in resp.headers
 
         # TODO validate x-ratelimit-reset?
 
         resp = await test_cli.get("/api/hello")
         assert resp.status_code == 429
+
+        cur_ts = time.time()
+        reset_ts = float(resp.headers["x-ratelimit-reset"])
+        sleep_secs = reset_ts - cur_ts
+        await asyncio.sleep(sleep_secs)
+
+        resp = await test_cli.get("/api/hello")
+        assert resp.status_code == 200
     finally:
         # We reset the ratelimits back to a big one because the app
         # fixture is session scoped, so it'll live throughout the lifetime of

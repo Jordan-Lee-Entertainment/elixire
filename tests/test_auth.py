@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .common import token, username
+from .common import token, username, email, extract_first_url
+from api.models import User
 
 pytestmark = pytest.mark.asyncio
 
@@ -112,3 +113,106 @@ async def test_login_deactivated(test_cli_user):
     )
 
     assert resp.status_code == 403
+
+
+async def test_username_recovery(test_cli_user):
+    """Test username recovery"""
+    resp = await test_cli_user.post(
+        "/api/auth/recover_username",
+        do_token=False,
+        json={"email": test_cli_user.user["email"]},
+    )
+    assert resp.status_code == 204
+
+    email_data = test_cli_user.app._email_list[-1]
+    assert test_cli_user.user["username"] in email_data["content"]
+
+
+async def test_password_reset(test_cli_user):
+    """Test password recovery logic"""
+    resp = await test_cli_user.post(
+        "/api/profile/reset_password",
+        do_token=False,
+        json={"name": test_cli_user.user["username"]},
+    )
+    assert resp.status_code == 204
+
+    email_data = test_cli_user.app._email_list[-1]
+    password_url = extract_first_url(email_data["content"])
+    email_token = password_url.fragment
+
+    new_password = username()
+    resp = await test_cli_user.post(
+        "/api/profile/reset_password_confirm",
+        do_token=False,
+        json={"token": email_token, "new_password": new_password},
+    )
+
+    assert resp.status_code == 204
+
+    resp = await test_cli_user.post(
+        "/api/auth/login",
+        do_token=False,
+        json={
+            "user": test_cli_user.user["username"],
+            "password": test_cli_user.user["password"],
+        },
+    )
+
+    assert resp.status_code == 403
+
+    resp = await test_cli_user.post(
+        "/api/auth/login",
+        do_token=False,
+        json={"user": test_cli_user.user["username"], "password": new_password},
+    )
+
+    assert resp.status_code == 200
+
+
+async def test_register(test_cli_user):
+    """Test the registration of a user"""
+    user_name = username()
+    user_pass = username()
+
+    resp = await test_cli_user.post(
+        "/api/auth/register",
+        do_token=False,
+        json={
+            "name": user_name,
+            "password": user_pass,
+            "email": email(),
+            "discord_user": "asd#1234",
+        },
+    )
+
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["user_id"], str)
+
+    async with test_cli_user.app.app_context():
+        user = await User.fetch(int(rjson["user_id"]))
+
+    assert user is not None
+    test_cli_user.add_resource(user)
+
+    assert isinstance(rjson["require_approvals"], bool)
+    assert (
+        rjson["require_approvals"]
+        == test_cli_user.app.econfig.REQUIRE_ACCOUNT_APPROVALS
+    )
+
+    await test_cli_user.app.db.execute(
+        "update users set active = true where user_id = $1", user.id
+    )
+
+    resp = await test_cli_user.post(
+        "/api/auth/login",
+        do_token=False,
+        json={"user": user_name, "password": user_pass},
+    )
+    assert resp.status_code == 200
+
+    assert test_cli_user.app._email_list
+    assert test_cli_user.app._webhook_list

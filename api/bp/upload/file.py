@@ -7,11 +7,14 @@ import io
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass
+from collections import namedtuple
 
 from quart import request, current_app as app
 
 from api.common import calculate_hash
 from api.errors import BadUpload
+
+BaseFile = namedtuple("BaseFile", "filename stream mimetype")
 
 
 @dataclass
@@ -79,6 +82,13 @@ class UploadFile:
             raise BadUpload("No images given")
 
         return cls(files[key])
+
+    @classmethod
+    def from_stream(
+        cls, filename: str, stream: io.BytesIO, mimetype: str
+    ) -> "UploadFile":
+        wrapped_file = BaseFile(filename=filename, stream=stream, mimetype=mimetype)
+        return cls(wrapped_file)
 
     async def _gen_hash(self):
         """Hash the given file. The output hash is given via the

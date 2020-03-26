@@ -7,40 +7,15 @@ import secrets
 import hashlib
 import logging
 import time
-from typing import Tuple, Optional, Dict, List, Union
+from typing import Tuple, Dict, List, Union
 
-from quart import current_app as app, request
+from quart import current_app as app
 
-from api.errors import FailedAuth
 from api.models import User
+from api.enums import FileNameType
 
 ALPHABET = string.ascii_lowercase + string.digits
 log = logging.getLogger(__name__)
-
-
-class TokenType:
-    """Token type "enum"."""
-
-    NONTIMED = 1
-    TIMED = 2
-
-
-class FileNameType:
-    """Represents a type of a filename."""
-
-    FILE = 0
-    SHORTEN = 1
-
-
-def get_ip_addr() -> str:
-    """Fetch the IP address for a request.
-
-    Handles the cloudflare headers responsible to set
-    the client's IP.
-    """
-    if "X-Forwarded-For" not in request.headers:
-        return request.remote_addr
-    return request.headers["X-Forwarded-For"]
 
 
 def _gen_sname(length: int) -> str:
@@ -146,27 +121,6 @@ async def calculate_hash(fhandle) -> str:
     the application doesn't lock up on large files.
     """
     return await app.loop.run_in_executor(None, _calculate_hash, fhandle)
-
-
-async def check_bans(user_id: Optional[int] = None):
-    """Check if the current user is already banned.
-
-    Raises
-    ------
-    FailedAuth
-        When a user is banned, or their
-        IP address is banned.
-    """
-    if user_id is not None:
-        reason = await app.storage.get_ban(user_id)
-
-        if reason:
-            raise FailedAuth(f"User is banned. {reason}")
-
-    ip_addr = get_ip_addr()
-    ip_ban_reason = await app.storage.get_ipban(ip_addr)
-    if ip_ban_reason:
-        raise FailedAuth(f"IP address is banned. {ip_ban_reason}")
 
 
 async def get_user_domain_info(

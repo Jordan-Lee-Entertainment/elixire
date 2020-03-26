@@ -5,7 +5,7 @@
 from quart import Blueprint, current_app as app, request, jsonify
 from cryptography.fernet import Fernet, InvalidToken
 
-from api.common import get_ip_addr
+from api.common.utils import get_ip_addr
 from api.errors import BadInput
 
 bp = Blueprint("d1check", __name__)

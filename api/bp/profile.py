@@ -302,7 +302,7 @@ async def deactivate_user_from_email():
 async def reset_password_req():
     """Send a password reset request."""
     payload = validate(await request.get_json(), PASSWORD_RESET_SCHEMA)
-    username = payload["username"].lower()
+    username = payload["name"].lower()
 
     user = await User.fetch_by(username=username)
     if user is None:
