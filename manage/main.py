@@ -13,7 +13,7 @@ from violet import JobManager
 
 from api.storage import Storage
 from api.common.utils import LockStorage
-from tests.conftest import setup_test_app
+from tests.common.helpers import setup_test_app
 
 from manage.cmd import ban, files, find, user, migration, domains
 from .errors import PrintException, ArgError
