@@ -14,6 +14,7 @@ import asyncpg
 from ..errors import FailedAuth, NotFound
 
 ALPHABET = string.ascii_lowercase + string.digits
+CF_HEADER = 'CF-Connecting-IP'
 log = logging.getLogger(__name__)
 
 
@@ -35,9 +36,11 @@ def get_ip_addr(request) -> str:
     Handles the cloudflare headers responsible to set
     the client's IP.
     """
-    if 'X-Forwarded-For' not in request.headers:
+    if request.app.econfig.CLOUDFLARE:
+        assert CF_HEADER in request.headers
+        return request.headers[CF_HEADER]
+    else:
         return request.ip
-    return request.headers['X-Forwarded-For']
 
 
 def _gen_fname(length) -> str:
