@@ -36,8 +36,7 @@ def get_ip_addr(request) -> str:
     Handles the cloudflare headers responsible to set
     the client's IP.
     """
-    if request.app.econfig.CLOUDFLARE:
-        assert CF_HEADER in request.headers
+    if request.app.econfig.CLOUDFLARE and CF_HEADER in request.headers:
         return request.headers[CF_HEADER]
     else:
         return request.ip
