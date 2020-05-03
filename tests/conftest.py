@@ -17,6 +17,7 @@ from .mock import MockAuditLog
 def app():
     app_ = mainapp
     app_.test = True
+    app_.econfig.CLOUDFLARE = False
     app_.econfig.RATELIMITS = {
         '/': {
             'requests': 10000,
