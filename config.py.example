@@ -10,6 +10,7 @@
 # === BASIC SETTINGS ===
 HOST = 'localhost'
 PORT = 8080
+CLOUDFLARE = True
 
 # basic configuration about the instance
 INSTANCE_NAME = 'elixi.re'
