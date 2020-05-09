@@ -24,6 +24,10 @@
 HOST = "localhost"
 PORT = 8080
 
+# If the elixire instance is being served behind Cloudflare.
+# This setting toggles how elixire fetches the request IP.
+CLOUDFLARE = False
+
 ################################################################################
 
 # The name of this elixire instance. This will appear in `/api/hello` and in
