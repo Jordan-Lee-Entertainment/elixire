@@ -165,7 +165,7 @@ def get_ip_addr() -> str:
 
     Returns the value given in the CF_IP_HEADER header if it exists.
     """
-    if app.econfig.CLOUDLFARE:
+    if app.econfig.CLOUDFLARE:
         return request.headers.get(CF_IP_HEADER, request.remote_addr)
     else:
         return request.remote_addr
