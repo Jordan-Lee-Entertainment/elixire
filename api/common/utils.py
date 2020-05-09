@@ -15,6 +15,8 @@ from api.permissions import Permissions, domain_permissions
 
 T = TypeVar("T")
 
+CF_IP_HEADER = "cf-connecting-ip"
+
 
 def _maybe_type(typ: type, value: Any, default: Optional[T] = None) -> Optional[T]:
     """Tries to convert the given value to the given type.
@@ -161,6 +163,9 @@ async def fetch_json_rows(db, query: str, *args) -> List[Any]:
 def get_ip_addr() -> str:
     """Fetch the IP address for a request.
 
-    Returns the value given in the x-forwaded-for header if it exists.
+    Returns the value given in the CF_IP_HEADER header if it exists.
     """
-    return request.headers.get("x-forwarded-for", request.remote_addr)
+    if app.econfig.CLOUDLFARE:
+        return request.headers.get(CF_IP_HEADER, request.remote_addr)
+    else:
+        return request.remote_addr
