@@ -30,6 +30,7 @@ async def app_fixture(event_loop):
     app_._test = True
     app_.loop = event_loop
     app_.econfig.RATELIMITS = {"*": (10000, 1)}
+    app_.econfig.CLOUDFLARE = False
 
     # TODO should we keep this as false?
     app_.econfig.ENABLE_METRICS = False
