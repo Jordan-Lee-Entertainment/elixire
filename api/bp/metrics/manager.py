@@ -77,7 +77,7 @@ class MetricsManager:
         # default mode is unauthenticated influx connection
         # at localhost.
         log.warning("Unauthenticated InfluxDB connection")
-        self.influx = InfluxDBClient(db=cfg.METRICS_DATABASE, loop=self.loop)
+        self.influx = InfluxDBClient(db=database, loop=self.loop)
 
     def _fetch_points(self, limit=None) -> list:
         """Fetch datapoints to properly send to InfluxDB."""
