@@ -32,3 +32,13 @@ async def test_sendmail(test_cli_user):
     email = app._email_list[-1]
     assert email["subject"] == subject
     assert email["content"] == body
+
+
+async def test_find_inactive(test_cli_user):
+    app, status = await _run(test_cli_user, ["find_inactive"])
+    assert status == 0
+
+
+async def test_find_unused(test_cli_user):
+    app, status = await _run(test_cli_user, ["find_unused"])
+    assert status == 0
