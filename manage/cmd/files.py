@@ -190,7 +190,11 @@ async def show_stats(_args):
         ORDER BY file_size DESC
         """
     )
-    biggest_ext = splitext(biggest_file["fspath"])[-1]
+    if biggest_file is not None:
+        biggest_ext = splitext(biggest_file["fspath"])[-1]
+        biggest_file_str = biggest_file["filename"] + biggest_ext
+    else:
+        biggest_file_str = "<none>"
 
     print(
         f"""Users
@@ -207,7 +211,7 @@ D: {byte_to_mibstring(total_d_file_size)}
 Weekly sizes, ND: {byte_to_mibstring(total_nd_file_size_week)}, \
 D: {byte_to_mibstring(total_d_file_size_week)}
 
-Biggest file: '{biggest_file['filename']}{biggest_ext}' \
+Biggest file: '{biggest_file_str}' \
 at {byte_to_mibstring(biggest_file['file_size'])}
 
 Shortens
