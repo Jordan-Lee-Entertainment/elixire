@@ -7,6 +7,7 @@ import pathlib
 import time
 from typing import Any, Dict, Optional
 
+import metomi.isodatetime.parsers as parse
 from quart import Blueprint, jsonify, current_app as app, request
 from winter import get_snowflake
 
@@ -84,6 +85,11 @@ async def upload_metrics(ctx):
     delta = round((end - ctx.start_timestamp) * 1000, 5)
 
     await metrics.submit("upload_latency", delta)
+
+
+async def _maybe_schedule_deletion(ctx: UploadContext) -> None:
+    duration_str: str = request.args.get("file_duration")
+    duration = parse.DurationParser().parse(duration_str)
 
 
 @bp.route("/upload", methods=["POST"])
@@ -187,6 +193,8 @@ async def upload_handler():
                 break
 
             output.write(chunk)
+
+    await _maybe_schedule_deletion(ctx)
 
     await upload_metrics(ctx)
     return jsonify(
