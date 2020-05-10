@@ -5,10 +5,12 @@
 import logging
 import pathlib
 import time
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 import metomi.isodatetime.parsers as parse
 from quart import Blueprint, jsonify, current_app as app, request
+from hail import Flake
 from winter import get_snowflake
 
 from api.storage import object_key
@@ -87,12 +89,18 @@ async def upload_metrics(ctx):
     await metrics.submit("upload_latency", delta)
 
 
-async def _maybe_schedule_deletion(ctx: UploadContext) -> None:
+async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
     duration_str: Optional[str] = request.args.get("file_duration")
     if duration_str is None:
-        return
+        return None
 
     duration = parse.DurationParser().parse(duration_str)  # ignore: F841
+    now = datetime.utcnow()
+    scheduled_at = now + duration
+    job_id = await app.sched.push_queue(
+        "scheduled_deletes", [ctx.file_id], scheduled_at=scheduled_at
+    )
+    return job_id
 
 
 @bp.route("/upload", methods=["POST"])
