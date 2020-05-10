@@ -88,8 +88,11 @@ async def upload_metrics(ctx):
 
 
 async def _maybe_schedule_deletion(ctx: UploadContext) -> None:
-    duration_str: str = request.args.get("file_duration")
-    duration = parse.DurationParser().parse(duration_str)
+    duration_str: Optional[str] = request.args.get("file_duration")
+    if duration_str is None:
+        return
+
+    duration = parse.DurationParser().parse(duration_str)  # ignore: F841
 
 
 @bp.route("/upload", methods=["POST"])
