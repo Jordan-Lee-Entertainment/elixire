@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from quart import current_app as app
+from violet.fail_modes import RaiseErr
 
 from api.common.webhook import scan_webhook
 from api.errors import BadImage
@@ -134,7 +135,7 @@ async def scan_file(ctx) -> Any:
         return
 
     task = app.sched.spawn(
-        run_scan, [ctx], name=f"virus_scan:{ctx.file.id}", fail_mode="raise_error"
+        run_scan, [ctx], name=f"virus_scan:{ctx.file.id}", fail_mode=RaiseErr()
     )
 
     # if the task is on pending, we return and let it continue in the background
