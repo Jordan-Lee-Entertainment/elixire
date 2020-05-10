@@ -81,8 +81,8 @@ async def run_scan(ctx) -> None:
         await scan_webhook(ctx, total_out)
         raise BadImage("Image contains a virus.")
     elif process.returncode == 2:
-        log.warning("clamdscan FAILED: %r")
-        raise BadImage("clamdscan raised error.")
+        log.warning("clamdscan FAILED: %r", total_out)
+        raise BadImage(f"clamdscan failed: {total_out}")
 
 
 async def _delete_file_from_scan(ctx) -> None:
