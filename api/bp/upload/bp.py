@@ -5,13 +5,14 @@
 import logging
 import pathlib
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 import metomi.isodatetime.parsers as parse
 from quart import Blueprint, jsonify, current_app as app, request
 from hail import Flake
 from winter import get_snowflake
+from dateutil.relativedelta import relativedelta
 
 from api.storage import object_key
 from api.enums import FileNameType
@@ -89,6 +90,21 @@ async def upload_metrics(ctx):
     await metrics.submit("upload_latency", delta)
 
 
+def _to_relativedelta(duration) -> relativedelta:
+    """
+    Convert metomi's Duration object into a dateutil's relativedelta object.
+    """
+    return relativedelta(
+        years=duration.years,
+        months=duration.months,
+        weeks=duration.weeks,
+        days=duration.days,
+        hours=duration.hours,
+        minutes=duration.minutes,
+        seconds=duration.seconds,
+    )
+
+
 async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
     duration_str: Optional[str] = request.args.get("file_duration")
     if duration_str is None:
@@ -96,11 +112,20 @@ async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
 
     duration = parse.DurationParser().parse(duration_str)
     now = datetime.utcnow()
-    scheduled_at = now + duration
+    relative_delta = _to_relativedelta(duration)
+    scheduled_at = now + relative_delta
+
     job_id = await app.sched.push_queue(
         "scheduled_deletes", ["file", ctx.file_id], scheduled_at=scheduled_at
     )
     return job_id
+
+
+def _check_duration():
+    duration_str = request.args.get("duration")
+    if duration_str is not None:
+        _ = parse.DurationParser().parse(duration_str)
+        # TODO: check if negative
 
 
 @bp.route("/upload", methods=["POST"])
@@ -109,6 +134,8 @@ async def upload_handler():
     user_id = await token_check()
     user = await User.fetch(user_id)
     assert user is not None
+
+    _check_duration()
 
     # if admin is set on request.args, we will # do an "admin upload", without
     # any checking for viruses, weekly limits, MIME, etc.
