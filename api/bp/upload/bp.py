@@ -94,11 +94,11 @@ async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
     if duration_str is None:
         return None
 
-    duration = parse.DurationParser().parse(duration_str)  # ignore: F841
+    duration = parse.DurationParser().parse(duration_str)
     now = datetime.utcnow()
     scheduled_at = now + duration
     job_id = await app.sched.push_queue(
-        "scheduled_deletes", [ctx.file_id], scheduled_at=scheduled_at
+        "scheduled_deletes", ["file", ctx.file_id], scheduled_at=scheduled_at
     )
     return job_id
 
