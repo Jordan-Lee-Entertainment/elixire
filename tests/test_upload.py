@@ -208,8 +208,8 @@ async def test_legacy_file_resolution(test_cli_user):
     assert resp.status_code == 404
 
 
-async def _upload(test_cli_user) -> dict:
-    resp = await test_cli_user.post("/api/upload", **(await png_request()))
+async def _upload(test_cli_user, **kwargs) -> dict:
+    resp = await test_cli_user.post("/api/upload", **(await png_request()), **kwargs)
 
     assert resp.status_code == 200
     respjson = await resp.json
@@ -269,3 +269,12 @@ async def test_delete_nonexist(test_cli_user):
     # ensure sharex compatibility endpoint works too
     resp_del = await test_cli_user.get(f"/api/files/{rand_file}/delete")
     assert resp_del.status_code == 404
+
+
+async def test_upload_ephmeral(test_cli_user):
+    upload = await _upload(test_cli_user, query_string={"file_duration": "PT5S"})
+    await check_exists(test_cli_user, upload["shortname"])
+
+    # XXX: ensure that a job exists for the file
+
+    # XXX: check if file exists after waiting for job
