@@ -437,7 +437,7 @@ class Domain:
         )
 
         for index, _tag in index_tuples:
-            self.tags.remove(index)
+            del self.tags[index]
 
     async def set_domain_tags(self, tags: Tags) -> None:
         """Set tags for a given domain and delete the previously assigned ones.
