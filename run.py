@@ -233,10 +233,14 @@ async def app_before_serving():
     app.sched = JobManager(loop=app.loop, db=app.db, context_function=app.app_context)
     app.sched.register_job_queue(api.bp.datadump.handler.DatadumpQueue)
     app.sched.register_job_queue(api.bp.delete.MassDeleteQueue)
+
+    async def _dummy_handle(_):
+        pass
+
     app.sched.create_job_queue(
         "scheduled_deletes",
         args=(str, int),
-        # XXX: handler=???
+        handler=_dummy_handle,
         workers=1,
         custom_start_event=True,
     )
