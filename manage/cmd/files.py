@@ -192,7 +192,9 @@ async def show_stats(_args):
     )
     if biggest_file is not None:
         biggest_ext = splitext(biggest_file["fspath"])[-1]
-        biggest_file_str = biggest_file["filename"] + biggest_ext
+        biggest_file_name = biggest_file["filename"] + biggest_ext
+        biggest_file_size = byte_to_mibstring(biggest_file["file_size"])
+        biggest_file_str = f"{biggest_file_name} at {biggest_file_size}"
     else:
         biggest_file_str = "<none>"
 
@@ -211,8 +213,7 @@ D: {byte_to_mibstring(total_d_file_size)}
 Weekly sizes, ND: {byte_to_mibstring(total_nd_file_size_week)}, \
 D: {byte_to_mibstring(total_d_file_size_week)}
 
-Biggest file: '{biggest_file_str}' \
-at {byte_to_mibstring(biggest_file['file_size'])}
+Biggest file: {biggest_file_str}
 
 Shortens
 ========
