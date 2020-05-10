@@ -46,6 +46,13 @@ async def test_find_unused(test_cli_user):
 
 
 async def test_file_operations(test_cli_user):
+
+    # I'm not in the mood to add stdout checking and ensure that a new
+    # file appears on the stats output. just making it sure it doesn't have
+    # a type and executes well is enough.
+    app, status = await _run(test_cli_user, ["stats"])
+    assert status == 0
+
     sent_file = await test_cli_user.create_file("test.png", png_data(), "image/png")
     wanted_shortname = username()
 
