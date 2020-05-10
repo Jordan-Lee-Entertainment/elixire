@@ -34,6 +34,6 @@ setup(
         "violet @ git+https://gitlab.com/elixire/violet.git@9b18caeed72b3b5c03ef92a48efe427c02eb372d#egg=violet",
         "winter @ git+https://gitlab.com/elixire/winter.git@988c6ca438663c30c6b617bdb16fd6be6c4226ba#egg=winter",
         "hail @ git+https://gitlab.com/elixire/hail.git@d72895019ef68eb96bb775f939182dd9344de36#egg=hail",
-        "isodatetime @ git+https://github.com/metomi/isodatetime.git@a7c9d7d66318032a26bebca2264267cd1f9370f1#egg=metomi-isodatetime",
+        "metomi-isodatetime @ git+https://github.com/metomi/isodatetime.git@a7c9d7d66318032a26bebca2264267cd1f9370f1#egg=metomi-isodatetime",
     ],
 )
