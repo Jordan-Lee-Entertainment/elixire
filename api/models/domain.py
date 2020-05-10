@@ -47,6 +47,7 @@ class Tag:
 
     @staticmethod
     async def fetch_many_by(*, label: str) -> List["Tag"]:
+        """Fetch many domain tags via given criteria."""
         rows = await app.db.fetch(
             """
             SELECT tag_id, label
