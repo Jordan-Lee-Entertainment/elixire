@@ -6,7 +6,7 @@ import pytest
 from manage.main import amain
 
 from tests.common.generators import username, png_data
-from api.models import File
+from api.models import File, Tag, Domain
 
 pytestmark = pytest.mark.asyncio
 
@@ -71,3 +71,43 @@ async def test_file_operations(test_cli_user):
     async with test_cli_user.app.app_context():
         wanted_file = await File.fetch_by(shortname=wanted_shortname)
         assert wanted_file.deleted
+
+
+async def test_domain_operations(test_cli_user):
+    domain = await test_cli_user.create_domain(f"{username()}.test")
+
+    app, status = await _run(test_cli_user, ["list_domains"])
+    assert status == 0
+
+    tag_label = username()
+
+    app, status = await _run(test_cli_user, ["create_tag", tag_label])
+    assert status == 0
+
+    async with test_cli_user.app.app_context():
+        tags = await Tag.fetch_many_by(label=tag_label)
+        assert tags
+
+        tag = tags[0]
+
+    try:
+        app, status = await _run(
+            test_cli_user, ["add_tag", str(domain.id), str(tag.id)]
+        )
+        assert status == 0
+
+        async with test_cli_user.app.app_context():
+            upstream_domain = await Domain.fetch(domain.id)
+            assert upstream_domain is not None
+            assert tag.id in [t.id for t in upstream_domain.tags]
+
+        app, status = await _run(
+            test_cli_user, ["remove_tag", str(domain.id), str(tag.id)]
+        )
+        assert status == 0
+
+        app, status = await _run(test_cli_user, ["delete_tag", str(tag.id)])
+        assert status == 0
+    finally:
+        async with test_cli_user.app.app_context():
+            await tag.delete()
