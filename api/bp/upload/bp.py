@@ -5,7 +5,7 @@
 import logging
 import pathlib
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 import metomi.isodatetime.parsers as parse
@@ -94,15 +94,16 @@ def _to_relativedelta(duration) -> relativedelta:
     """
     Convert metomi's Duration object into a dateutil's relativedelta object.
     """
-    return relativedelta(
-        years=duration.years,
-        months=duration.months,
-        weeks=duration.weeks,
-        days=duration.days,
-        hours=duration.hours,
-        minutes=duration.minutes,
-        seconds=duration.seconds,
-    )
+    fields = ("years", "months", "weeks", "days", "hours", "minutes", "seconds")
+
+    # I'm not supposed to pass None to relativedelta or else it oofs
+    kwargs = {}
+    for field in fields:
+        value = getattr(duration, field)
+        if value is not None:
+            kwargs[field] = value
+
+    return relativedelta(**kwargs)
 
 
 async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
