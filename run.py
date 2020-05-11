@@ -241,6 +241,7 @@ async def app_before_serving():
         handler=scheduled_delete_handler,
         workers=1,
         custom_start_event=True,
+        poller_seconds=8,
     )
 
     log.info("connecting to redis")
