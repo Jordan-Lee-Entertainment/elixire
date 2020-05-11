@@ -47,6 +47,7 @@ from api.bp.metrics.counters import MetricsCounters
 from api.bp.admin.audit_log import AuditLog
 from api.common.banning import ban_request
 from api.mode import ElixireMode
+from api.job_queue.auto_deletes import scheduled_delete_handler
 
 import config
 
@@ -234,13 +235,10 @@ async def app_before_serving():
     app.sched.register_job_queue(api.bp.datadump.handler.DatadumpQueue)
     app.sched.register_job_queue(api.bp.delete.MassDeleteQueue)
 
-    async def _dummy_handle(_):
-        pass
-
     app.sched.create_job_queue(
         "scheduled_deletes",
         args=(str, int),
-        handler=_dummy_handle,
+        handler=scheduled_delete_handler,
         workers=1,
         custom_start_event=True,
     )
