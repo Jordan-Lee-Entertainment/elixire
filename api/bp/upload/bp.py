@@ -234,9 +234,10 @@ async def upload_handler():
 
             output.write(chunk)
 
-    await _maybe_schedule_deletion(ctx)
+    res = {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
+    deletion_job_id = await _maybe_schedule_deletion(ctx)
+    if deletion_job_id:
+        res["auto_delete_job_id"] = str(deletion_job_id)
 
     await upload_metrics(ctx)
-    return jsonify(
-        {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
-    )
+    return jsonify(res)
