@@ -11,11 +11,15 @@ from manage.main import main
 import config
 
 
-def _setup_logging():
+def _setup_logging() -> None:
     level = getattr(config, "LOGGING_LEVEL", "INFO")
     logging.basicConfig(level=level)
 
 
-if __name__ == "__main__":
+def run() -> None:
     _setup_logging()
     sys.exit(main(config))
+
+
+if __name__ == "__main__":
+    run()
