@@ -182,7 +182,7 @@ async def dump_files(ctx, state: dict, zipdump: zipfile.ZipFile, user_id: int) -
             log.warning("File not found: %s %r", current_id, filename)
 
         state["files_done"] += 1
-        await app.sched.set_job_state(ctx.job_id, state)
+        await DatadumpQueue.set_job_state(ctx.job_id, state)
 
         # fetch next id
         current_id = await _fetch_next(user_id, current_id)
@@ -228,7 +228,7 @@ class DatadumpQueue(JobQueue):
     async def setup(cls, ctx) -> None:
         user_id = ctx.args
 
-        state = await app.sched.fetch_job_state(ctx.job_id)
+        state = await cls.fetch_job_state(ctx.job_id)
         if not state:
             row = await app.db.fetchrow(
                 """
@@ -245,7 +245,7 @@ class DatadumpQueue(JobQueue):
                 "files_done": 0,
                 "files_total": row["count"],
             }
-            await app.sched.set_job_state(ctx.job_id, state)
+            await cls.set_job_state(ctx.job_id, state)
 
         log.info(
             "start datadump, resume %s, min %d, total %d",
@@ -256,12 +256,12 @@ class DatadumpQueue(JobQueue):
 
         zipdump, user_name = await open_zipdump(user_id, resume=state["zip"])
         state["zip"] = not state["zip"]
-        await app.sched.set_job_state(ctx.job_id, state)
+        await cls.set_job_state(ctx.job_id, state)
 
     @classmethod
-    async def handle(_, ctx):
+    async def handle(cls, ctx):
         user_id = ctx.args
-        state = await app.sched.fetch_job_state(ctx.job_id)
+        state = await cls.fetch_job_state(ctx.job_id)
         zipdump, user_name = await open_zipdump(user_id, resume=state["zip"])
 
         try:
