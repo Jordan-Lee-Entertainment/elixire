@@ -13,6 +13,7 @@ from quart import current_app as app
 from api.common.email import gen_email_token, send_datadump_email
 from api.errors import EmailError
 from api.models import User
+from violet import JobQueue
 
 log = logging.getLogger(__name__)
 
@@ -208,53 +209,69 @@ async def dispatch_dump(user_id: int, user_name: str) -> None:
         log.warning("failed to send datadump: %r", exc)
 
 
-async def handler(ctx, user_id: int) -> None:
-    state = await app.sched.fetch_job_state(ctx.job_id)
-    if not state:
-        row = await app.db.fetchrow(
-            """
-            SELECT MIN(file_id), COUNT(*)
-            FROM files
-            WHERE uploader = $1
-            """,
-            user_id,
+class DatadumpQueue(JobQueue):
+    """Elixire datadump job queue."""
+
+    name = "datadump_queue"
+
+    @classmethod
+    def create_args(_, row) -> int:
+        return row["user_id"]
+
+    @classmethod
+    async def setup(cls, ctx) -> None:
+        user_id = ctx.args
+
+        state = await app.sched.fetch_job_state(ctx.job_id)
+        if not state:
+            row = await app.db.fetchrow(
+                """
+                SELECT MIN(file_id), COUNT(*)
+                FROM files
+                WHERE uploader = $1
+                """,
+                user_id,
+            )
+
+            state = {
+                "zip": False,
+                "current_file_id": row["min"] or 0,
+                "files_done": 0,
+                "files_total": row["count"],
+            }
+            await app.sched.set_job_state(ctx.job_id, state)
+
+        log.info(
+            "start datadump, resume %s, min %d, total %d",
+            state["zip"],
+            state["current_file_id"],
+            state["files_total"],
         )
 
-        state = {
-            "zip": False,
-            "current_file_id": row["min"] or 0,
-            "files_done": 0,
-            "files_total": row["count"],
-        }
+        zipdump, user_name = await open_zipdump(user_id, resume=state["zip"])
+        state["zip"] = not state["zip"]
         await app.sched.set_job_state(ctx.job_id, state)
 
-    log.info(
-        "start datadump, resume %s, min %d, total %d",
-        state["zip"],
-        state["current_file_id"],
-        state["files_total"],
-    )
-
-    zipdump, user_name = await open_zipdump(user_id, resume=state["zip"])
-
-    state["zip"] = not state["zip"]
-    await app.sched.set_job_state(ctx.job_id, state)
-    ctx.set_start()
-
-    try:
-        if user_name is None:
-            return
-
-        await dump_json(zipdump, user_id)
-        await dump_files(ctx, state, zipdump, user_id)
+    @classmethod
+    async def handle(_, ctx):
+        user_id = ctx.args
+        state = await app.sched.fetch_job_state(ctx.job_id)
+        zipdump, user_name = await open_zipdump(user_id, resume=state["zip"])
 
         try:
-            await asyncio.wait_for(dispatch_dump(user_id, user_name), 40)
-        except asyncio.TimeoutError:
-            log.warning("Failed to send email to user, reached timeout")
-            pass
+            if user_name is None:
+                return
 
-    finally:
-        zipdump.close()
+            await dump_json(zipdump, user_id)
+            await dump_files(ctx, state, zipdump, user_id)
 
-    log.debug("finished datadump for %r %d", user_name, user_id)
+            try:
+                await asyncio.wait_for(dispatch_dump(user_id, user_name), 40)
+            except asyncio.TimeoutError:
+                log.warning("Failed to send email to user, reached timeout")
+                pass
+
+        finally:
+            zipdump.close()
+
+        log.debug("finished datadump for %r %d", user_name, user_id)
