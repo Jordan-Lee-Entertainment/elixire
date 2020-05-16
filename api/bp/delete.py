@@ -47,7 +47,7 @@ async def purge_all_content():
         if domain is None:
             raise BadInput("Invalid domain ID")
 
-    job_id = await app.sched.push_queue("mass_delete", (user_id, raw))
+    job_id = await MassDeleteQueue.push(user_id, raw)
     return jsonify({"job_id": job_id})
 
 
@@ -73,7 +73,7 @@ async def compute_purge_all_content():
 class MassDeleteQueue(JobQueue):
     """Delete files en-masse for a user."""
 
-    name = "mass_deletes"
+    name = "mass_delete_queue"
     args = ("user_id", "query")
 
     @classmethod
@@ -85,7 +85,7 @@ class MassDeleteQueue(JobQueue):
         return await cls._sched.raw_push(cls, (user_id, query), **kwargs)
 
     @classmethod
-    async def mass_delete_handler(cls, ctx, *, delete_content: bool = True):
+    async def handle(cls, ctx, *, delete_content: bool = True):
         user_id, raw = ctx.args
         base_args = [user_id]
 
