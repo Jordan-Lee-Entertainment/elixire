@@ -272,7 +272,7 @@ class DatadumpQueue(JobQueue):
             await dump_files(ctx, state, zipdump, user_id)
 
             try:
-                await asyncio.wait_for(dispatch_dump(user_id, user_name), 40)
+                await asyncio.wait_for(dispatch_dump(user_id, user_name), 60)
             except asyncio.TimeoutError:
                 log.warning("Failed to send email to user, reached timeout")
                 pass
