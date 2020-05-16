@@ -217,7 +217,7 @@ class DatadumpQueue(JobQueue):
     args = ("user_id",)
 
     @classmethod
-    def create_args(_, row) -> int:
+    def map_persisted_row(_, row) -> int:
         return row["user_id"]
 
     @classmethod
