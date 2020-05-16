@@ -40,9 +40,9 @@ def _get_before_after() -> Tuple[Flake, Flake, int]:
     return before, after, limit
 
 
-@bp.route("")
-async def list_jobs():
-    """List scheduled jobs in the violet_jobs table.
+@bp.route("/<queue>")
+async def list_jobs(queue: str):
+    """List scheduled jobs in the wanted queue.
 
     This is an introspective way for instance admins to peek at the queues,
     debug, etc.
@@ -51,28 +51,21 @@ async def list_jobs():
     admin_id = await token_check()
     await check_admin(admin_id, True)
 
-    queue = request.args.get("queue")
-
-    args = [] if not queue else [queue]
-    queue_where = "AND queue = $4" if queue else ""
-
     jobs = await fetch_json_rows(
         app.db,
         f"""
         SELECT
             job_id, name, state, errors, inserted_at, taken_at, internal_state,
             COUNT(*) OVER () AS total_count
-        FROM violet_jobs
+        FROM {queue}
         WHERE job_id > $1
           AND job_id < $2
-          {queue_where}
         ORDER BY job_id DESC
         LIMIT $3::integer
         """,
         after.as_uuid,
         before.as_uuid,
         limit,
-        *args,
     )
 
     total_count = 0 if not jobs else jobs[0]["total_count"]
