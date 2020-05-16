@@ -31,7 +31,7 @@ setup(
         "Quart==0.10.0",
         "Pillow==7.0.0",
         "python-dateutil==2.8.1",
-        "violet @ git+https://gitlab.com/elixire/violet.git@854c3f203b1eeefa60506d193f6f23461d2adc55#egg=violet",
+        "violet @ git+https://gitlab.com/elixire/violet.git@2749d09fd6f2f17ccd19060e279e230bcbcb62e4#egg=violet",
         "winter @ git+https://gitlab.com/elixire/winter.git@988c6ca438663c30c6b617bdb16fd6be6c4226ba#egg=winter",
         "hail @ git+https://gitlab.com/elixire/hail.git@d72895019ef68eb96bb775f939182dd9344de36#egg=hail",
     ],
