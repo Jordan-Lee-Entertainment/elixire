@@ -9,6 +9,7 @@ from typing import List
 from urllib.parse import parse_qs
 
 import pytest
+from violet import JobQueue
 
 from api.models import Domain, User
 from tests.common.generators import username
@@ -326,7 +327,9 @@ async def do_list_jobs(test_cli_user, *, before=None, after=None, rest: str = ""
     before = f"before={before}" if before is not None else ""
     after = f"&after={after}" if after is not None else ""
 
-    resp = await test_cli_user.get(f"/api/admin/violet_jobs?{before}{after}{rest}")
+    resp = await test_cli_user.get(
+        f"/api/admin/violet_jobs/{JobTestQueue.name}?{before}{after}{rest}"
+    )
     assert resp.status_code == 200
     rjson = await resp.json
 
@@ -347,16 +350,57 @@ async def _null_handler(_ctx, _i):
     pass
 
 
+class JobTestQueue(JobQueue):
+    name = "__test"
+    workers = 5
+
+    args = ("test",)
+
+    @classmethod
+    async def map_persisted_row(_cls, _row):
+        return
+
+    @classmethod
+    async def push(cls, i, **kwargs):
+        return await cls._sched.raw_push(cls, (i,), **kwargs)
+
+    @classmethod
+    async def setup(_, _ctx):
+        pass
+
+    @classmethod
+    async def handle(_, _ctx):
+        pass
+
+
 async def _create_random_jobs(test_cli, count: int) -> List[str]:
     """Create random violet jobs to fill the table."""
-    test_cli.app.sched.create_job_queue(
-        "__test", args=(int,), handler=_null_handler, workers=5
+
+    app = test_cli.app
+    await app.db.execute("DROP TABLE IF EXISTS __test")
+    await app.db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS __test (
+            job_id uuid primary key,
+            name text unique,
+
+            state bigint default 0,
+            errors text default '',
+            inserted_at timestamp without time zone default (now() at time zone 'utc'),
+            scheduled_at timestamp without time zone default (now() at time zone 'utc'),
+            taken_at timestamp without time zone default null,
+            internal_state jsonb default '{}',
+
+            test bigint
+        )
+        """
     )
+    app.sched.register_job_queue(JobTestQueue)
 
     job_ids: List[str] = []
 
     for i in range(count):
-        job_id = await test_cli.app.sched.push_queue("__test", (i,))
+        job_id = await JobTestQueue.push(i)
         job_ids.append(job_id)
 
     return job_ids
