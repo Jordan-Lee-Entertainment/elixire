@@ -9,11 +9,12 @@ import asyncio
 
 from typing import Tuple, Optional
 from quart import current_app as app
+from hail import Flake
+from violet import JobQueue
 
 from api.common.email import gen_email_token, send_datadump_email
 from api.errors import EmailError
 from api.models import User
-from violet import JobQueue
 
 log = logging.getLogger(__name__)
 
@@ -213,10 +214,15 @@ class DatadumpQueue(JobQueue):
     """Elixire datadump job queue."""
 
     name = "datadump_queue"
+    args = ("user_id",)
 
     @classmethod
     def create_args(_, row) -> int:
         return row["user_id"]
+
+    @classmethod
+    async def push(cls, user_id: int, **kwargs) -> Flake:
+        return await cls._sched.raw_push(cls, (user_id,), **kwargs)
 
     @classmethod
     async def setup(cls, ctx) -> None:
