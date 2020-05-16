@@ -7,8 +7,10 @@ import json
 import zipfile
 import logging
 import pytest
-
 from urllib.parse import parse_qs
+
+from violet import JobState
+
 from tests.common.utils import extract_first_url
 from tests.common.generators import png_data
 from api.bp.datadump.janitor import dump_janitor
@@ -61,7 +63,7 @@ async def test_datadump(test_cli_user):
         await DatadumpQueue.wait_job(job_id, timeout=20)
 
         status = await DatadumpQueue.fetch_job_status(job_id)
-        assert status.queue_name == "datadump"
+        assert status.state == JobState.Completed
         assert not status.errors
 
         # TODO check email, and then see if /get gives the actual dump
