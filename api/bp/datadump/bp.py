@@ -54,9 +54,7 @@ async def list_dumps():
             job_id, name, state, inserted_at, taken_at, internal_state,
             COUNT(*) OVER () AS total_count
         FROM datadump_queue
-        WHERE
-            queue = 'datadump'
-        AND user_id = $3
+        WHERE user_id = $3
         ORDER BY inserted_at ASC
         LIMIT $2::integer
         OFFSET ($1::integer * $2::integer)
