@@ -9,6 +9,7 @@ import os.path
 from urllib.parse import urlparse
 
 from .common import png_request, hexs, aiohttp_form
+from api.bp.delete import MassDeleteQueue
 
 pytestmark = pytest.mark.asyncio
 
@@ -253,7 +254,7 @@ async def test_delete_file_many(test_cli_user):
     assert isinstance(rjson, dict)
     assert isinstance(rjson["job_id"], str)
     assert rjson["job_id"]
-    await test_cli_user.app.sched.wait_job(rjson["job_id"])
+    await MassDeleteQueue.wait_job(rjson["job_id"], timeout=30)
 
     await check_exists(test_cli_user, shortname, reverse=True)
 
