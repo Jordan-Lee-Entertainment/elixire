@@ -3,21 +3,22 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from api.models import Domain, Tag
+from quart import current_app as app
 
 
-async def create_tag(_ctx, args):
+async def create_tag(args):
     tag = await Tag.create(args.label)
     print("created tag with id", tag.id)
 
 
-async def delete_tag(_ctx, args):
+async def delete_tag(args):
     tag = await Tag.fetch(args.tag_id)
     assert tag is not None
     await tag.delete()
     print("OK")
 
 
-async def add_tag(_ctx, args):
+async def add_tag(args):
     tag = await Tag.fetch(args.tag_id)
     assert tag is not None
 
@@ -28,7 +29,7 @@ async def add_tag(_ctx, args):
     print("OK")
 
 
-async def remove_tag(_ctx, args):
+async def remove_tag(args):
     tag = await Tag.fetch(args.tag_id)
     assert tag is not None
 
@@ -39,8 +40,8 @@ async def remove_tag(_ctx, args):
     print("OK")
 
 
-async def list_domains(ctx, _args):
-    domains = await ctx.db.fetch(
+async def list_domains(_args):
+    domains = await app.db.fetch(
         """
         SELECT domain_id, domain
         FROM domains

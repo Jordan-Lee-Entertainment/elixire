@@ -46,6 +46,20 @@ class Tag:
         return Tag(tag_id, label)
 
     @staticmethod
+    async def fetch_many_by(*, label: str) -> List["Tag"]:
+        """Fetch many domain tags via given criteria."""
+        rows = await app.db.fetch(
+            """
+            SELECT tag_id, label
+            FROM domain_tags
+            WHERE label = $1
+            """,
+            label,
+        )
+
+        return [Tag(row["tag_id"], row["label"]) for row in rows]
+
+    @staticmethod
     async def create(label: str) -> "Tag":
         """Create a new tag."""
         tag_id: int = await app.db.fetchval(
@@ -424,7 +438,7 @@ class Domain:
         )
 
         for index, _tag in index_tuples:
-            self.tags.remove(index)
+            del self.tags[index]
 
     async def set_domain_tags(self, tags: Tags) -> None:
         """Set tags for a given domain and delete the previously assigned ones.

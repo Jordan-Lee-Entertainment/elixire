@@ -5,6 +5,7 @@
 from os.path import splitext
 from pathlib import Path
 from decimal import Decimal
+from quart import current_app as app
 
 from manage.errors import PrintException
 from api.models import File
@@ -23,9 +24,9 @@ def byte_to_mibstring(bytecount: int) -> str:
     return f"{round(mib, 2)}MiB"
 
 
-async def deletefiles(ctx, _args):
+async def deletefiles(_args):
     """Clean files marked as deleted on the db."""
-    to_delete = await ctx.db.fetch(
+    to_delete = await app.db.fetch(
         """
         SELECT fspath
         FROM files
@@ -53,36 +54,20 @@ async def deletefiles(ctx, _args):
     )
 
 
-async def rename_file(ctx, args):
+async def rename_file(args):
     """Rename a file."""
     shortname = args.shortname
     renamed = args.renamed
 
-    domain = await ctx.db.fetchval(
-        """
-        SELECT domain
-        FROM files
-        WHERE filename = $1 AND deleted = false
-        """,
-        shortname,
-    )
-
-    if domain is None:
+    old_file = await File.fetch_by(shortname=shortname)
+    if old_file is None or old_file.deleted:
         return print(f"no files found with shortname {shortname!r}")
 
-    existing_id = await ctx.db.fetchval(
-        """
-        SELECT file_id
-        FROM files
-        WHERE filename = $1
-        """,
-        renamed,
-    )
+    maybe_file = await File.fetch_by(shortname=renamed)
+    if maybe_file is not None:
+        return print(f"file {renamed!r} already exists, stopping!")
 
-    if existing_id:
-        return print(f"file {renamed} already exists, stopping!")
-
-    exec_out = await ctx.db.execute(
+    exec_out = await app.db.execute(
         """
         UPDATE files
         SET filename = $1
@@ -94,14 +79,15 @@ async def rename_file(ctx, args):
     )
 
     # invalidate etc
-    await ctx.redis.delete(f"fspath:{domain}:{shortname}")
-    await ctx.redis.delete(f"fspath:{domain}:{renamed}")
+    domain = old_file.domain_id
+    await app.redis.delete(f"fspath:{domain}:{shortname}")
+    await app.redis.delete(f"fspath:{domain}:{renamed}")
 
     print(f"SQL out: {exec_out}")
 
 
-async def show_stats(ctx, _args):
-    db = ctx.db
+async def show_stats(_args):
+    db = app.db
 
     nd_file_count, d_file_count = await db.fetchrow(
         """
@@ -204,7 +190,13 @@ async def show_stats(ctx, _args):
         ORDER BY file_size DESC
         """
     )
-    biggest_ext = splitext(biggest_file["fspath"])[-1]
+    if biggest_file is not None:
+        biggest_ext = splitext(biggest_file["fspath"])[-1]
+        biggest_file_name = biggest_file["filename"] + biggest_ext
+        biggest_file_size = byte_to_mibstring(biggest_file["file_size"])
+        biggest_file_str = f"{biggest_file_name} at {biggest_file_size}"
+    else:
+        biggest_file_str = "<none>"
 
     print(
         f"""Users
@@ -221,8 +213,7 @@ D: {byte_to_mibstring(total_d_file_size)}
 Weekly sizes, ND: {byte_to_mibstring(total_nd_file_size_week)}, \
 D: {byte_to_mibstring(total_d_file_size_week)}
 
-Biggest file: '{biggest_file['filename']}{biggest_ext}' \
-at {byte_to_mibstring(biggest_file['file_size'])}
+Biggest file: {biggest_file_str}
 
 Shortens
 ========
@@ -232,12 +223,12 @@ Weekly Counts, ND: {nd_shorten_count_week}, D: {d_shorten_count_week}
     )
 
 
-async def _extract_file_info(ctx, shortname) -> int:
+async def _extract_file_info(shortname: str) -> int:
     """Extract the domain ID for a file.
 
-    Does checking against dummy user.
+    Does checking against doll user.
     """
-    row = await ctx.db.fetchrow(
+    row = await app.db.fetchrow(
         """
         SELECT uploader, domain
         FROM files
@@ -252,50 +243,14 @@ async def _extract_file_info(ctx, shortname) -> int:
     uploader_id, domain_id = row["uploader"], row["domain"]
 
     if uploader_id == 0:
-        raise PrintException("file is from dummy user")
+        raise PrintException("file is from doll user")
 
     return domain_id
 
 
-async def delete_file_cmd(ctx, args):
+async def delete_file_cmd(args):
     shortname = args.shortname
-    domain_id = await _extract_file_info(ctx, shortname)
-
-    await ctx.db.execute(
-        """
-        UPDATE files
-        SET deleted = true
-        WHERE filename = $1
-        """,
-        shortname,
-    )
-
-    await ctx.storage.raw_invalidate(f"fspath:{domain_id}:{shortname}")
-
-    print("OK", shortname)
-
-
-async def undelete_file_cmd(ctx, args):
-    shortname = args.shortname
-    domain_id = await _extract_file_info(ctx, shortname)
-
-    await ctx.db.execute(
-        """
-        UPDATE files
-        SET deleted = false
-        WHERE filename = $1
-        """,
-        shortname,
-    )
-
-    await ctx.storage.raw_invalidate(f"fspath:{domain_id}:{shortname}")
-
-    print("OK", shortname)
-
-
-async def nuke_file_cmd(ctx, args):
-    shortname = args.shortname
-    domain_id = await _extract_file_info(ctx, shortname)
+    domain_id = await _extract_file_info(shortname)
     elixire_file = await File.fetch_by(shortname=shortname)
     await elixire_file.delete(full=True)
     print("OK", shortname, "DOMAIN", domain_id)
@@ -314,30 +269,15 @@ to a version of the backend that deletes files.
     parser_cleanup.set_defaults(func=deletefiles)
 
     parser_rename = subparsers.add_parser("rename_file", help="Rename a single file")
-
     parser_rename.add_argument("shortname", help="old shortname for the file")
     parser_rename.add_argument("renamed", help="new shortname for the file")
     parser_rename.set_defaults(func=rename_file)
 
     parser_stats = subparsers.add_parser("stats", help="Statistics about the instance")
-
     parser_stats.set_defaults(func=show_stats)
 
-    parser_del = subparsers.add_parser("delete", help="mark a file as deleted")
-
+    parser_del = subparsers.add_parser(
+        "delete", help="delete a file. this action is non-recoverable"
+    )
     parser_del.add_argument("shortname", help="shortname for the file to be deleted")
     parser_del.set_defaults(func=delete_file_cmd)
-
-    parser_undel = subparsers.add_parser("undelete", help="mark a file as not deleted")
-
-    parser_undel.add_argument(
-        "shortname", help="shortname for the file to be undeleted"
-    )
-    parser_undel.set_defaults(func=undelete_file_cmd)
-
-    parser_nuke = subparsers.add_parser(
-        "nuke", help="delete a file, including from the filesystem"
-    )
-
-    parser_nuke.add_argument("shortname", help="shortname for the file to be nuked")
-    parser_nuke.set_defaults(func=nuke_file_cmd)

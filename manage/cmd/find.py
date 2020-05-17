@@ -2,16 +2,17 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+from quart import current_app as app
 from ..utils import account_delta, get_counts
 
 
-async def find_inactive_users(ctx, args):
+async def find_inactive_users(args):
     """Find inactive users.
 
     The criteria for inactive users are accounts
     that are deactivated AND are older than 2 weeks.
     """
-    uids = await ctx.db.fetch(
+    uids = await app.db.fetch(
         """
         SELECT username, user_id
         FROM users
@@ -22,20 +23,20 @@ async def find_inactive_users(ctx, args):
 
     for row in uids:
         delta = account_delta(row["user_id"])
-        cinfo = await get_counts(ctx, row["user_id"])
+        cinfo = await get_counts(row["user_id"])
         print(f'\t- {row["username"]} {row["user_id"]}, ' f"{cinfo}, created {delta}")
 
     print(f"{len(uids)} users were found")
 
 
-async def find_unused_accs(ctx, _args):
+async def find_unused_accs(_args):
     """Find unused accounts.
 
     The criteria for unused accounts are users
     that have no files for a month.
     """
 
-    users = await ctx.db.fetch(
+    users = await app.db.fetch(
         """
         SELECT username, user_id
         FROM users
@@ -47,7 +48,7 @@ async def find_unused_accs(ctx, _args):
     for row in users:
         uid = row["user_id"]
 
-        inactive = await ctx.db.fetchval(
+        inactive = await app.db.fetchval(
             """
             SELECT (now() - snowflake_time(MAX(file_id))) > interval '1 month'
             FROM files
@@ -60,7 +61,7 @@ async def find_unused_accs(ctx, _args):
             continue
 
         delta = account_delta(row["user_id"])
-        counts = await get_counts(ctx, row["user_id"])
+        counts = await get_counts(row["user_id"])
         print(f'\t- {row["username"]} {row["user_id"]}, ' f"{counts}, created {delta}")
         count += 1
 

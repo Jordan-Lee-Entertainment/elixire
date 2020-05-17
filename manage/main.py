@@ -3,21 +3,21 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import argparse
-import asyncio
 import logging
-import sys
+from typing import List
 
 import aiohttp
 import asyncpg
 import aioredis
 from violet import JobManager
+from quart import Quart
 
 from api.storage import Storage
 from api.common.utils import LockStorage
+from tests.common.helpers import setup_test_app
 
 from manage.cmd import ban, files, find, user, migration, domains
 from .errors import PrintException, ArgError
-from .utils import Context
 
 
 log = logging.getLogger(__name__)
@@ -31,14 +31,6 @@ async def connect_db(config, loop):
     )
 
     return pool, redis
-
-
-async def close_ctx(ctx: Context) -> None:
-    """Close database connections."""
-    await ctx.db.close()
-    ctx.redis.close()
-    await ctx.redis.wait_closed()
-    await ctx.session.close()
 
 
 def set_parser() -> argparse.ArgumentParser:
@@ -57,51 +49,54 @@ def set_parser() -> argparse.ArgumentParser:
     return parser
 
 
-async def _make_sess(ctx: Context) -> None:
-    ctx.session = aiohttp.ClientSession()
+async def shutdown(app):
+    await app.db.close()
+    app.redis.close()
+    await app.redis.wait_closed()
+    await app.session.close()
 
 
-def main(config):
-    loop = asyncio.get_event_loop()
+async def amain(loop, config, argv: List[str], *, test: bool = False):
+    app = Quart(__name__)
+    conn, redis = await connect_db(config, loop)
+    app.db = conn
+    app.redis = redis
+    app.loop = loop
+    app.locks = LockStorage()
+    app.econfig = config
 
-    conn, redis = loop.run_until_complete(connect_db(config, loop))
-    ctx = Context(config, conn, redis, loop, LockStorage())
+    app.storage = Storage(app)
+    app.session = aiohttp.ClientSession()
+    app.sched = JobManager(loop=loop, db=conn, context_function=app.app_context)
 
-    # this needs an actual connection to the database and redis
-    # so we first instantiate Context, then set the attribute
-    ctx.storage = Storage(ctx)
-    app = ctx.make_app()
-    ctx.sched = JobManager(loop=ctx.loop, db=ctx.db, context_function=app.app_context)
-    app.sched = ctx.sched
-
-    # aiohttp warns us when making ClientSession out of
-    # a coroutine, so yeah.
-    loop.run_until_complete(_make_sess(ctx))
+    if test:
+        setup_test_app(loop, app)
 
     # load our setup() calls on manage/cmd files
     parser = set_parser()
 
-    async def _ctx_wrapper(ctx, args):
+    async def _ctx_wrapper(args):
         # app = ctx.make_app()
         async with app.app_context():
-            await args.func(ctx, args)
+            app._test = test
+            await args.func(args)
 
     try:
-        if len(sys.argv) < 2:
+        if not argv:
             parser.print_help()
-            return
+            return app, 0
 
-        args = parser.parse_args()
-        loop.run_until_complete(_ctx_wrapper(ctx, args))
+        args = parser.parse_args(argv)
+        await _ctx_wrapper(args)
     except PrintException as exc:
         print(exc.args[0])
     except ArgError as exc:
         print(f'argument error: {",".join(exc.args)}')
-        return 1
+        return app, 1
     except Exception:
         log.exception("oops.")
-        return 1
+        return app, 1
     finally:
-        loop.run_until_complete(close_ctx(ctx))
+        await shutdown(app)
 
-    return 0
+    return app, 0

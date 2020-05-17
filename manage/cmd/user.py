@@ -5,14 +5,16 @@
 import asyncio
 import secrets
 
+from quart import current_app as app
+
 from api.bp.profile import delete_user
 from api.common.user import create_user
 from api.common.auth import pwd_hash
 from api.common.email import send_email_to_user
-from ..utils import get_user
+from api.models import User
 
 
-async def adduser(_ctx, args):
+async def adduser(args):
     """Add a user."""
     email = args.email
     username = args.username
@@ -34,54 +36,56 @@ async def adduser(_ctx, args):
     )
 
 
-async def del_user(ctx, args):
+async def del_user(args):
     """Delete a user."""
-    username = args.username
-    userid = await get_user(ctx, username)
+    user = await User.fetch_by(username=args.username)
+    assert user is not None
 
-    task = await delete_user(userid, True)
+    task = await delete_user(user.id, True)
     await asyncio.shield(task)
 
     print("OK")
 
 
-async def resetpass(ctx, args):
+async def resetpass(args):
     """Reset the password of the given user."""
-    username = args.username
-    user_id = await get_user(ctx, username)
+    user = await User.fetch_by(username=args.username)
+    assert user is not None
 
     password = secrets.token_urlsafe(25)
     password_hash = await pwd_hash(password)
 
-    dbout = await ctx.db.execute(
+    dbout = await app.db.execute(
         """
         UPDATE users
         SET password_hash = $1
         WHERE user_id = $2
         """,
         password_hash,
-        user_id,
+        user.id,
     )
 
     # invalidate
-    await ctx.redis.delete(f"uid:{user_id}:password_hash")
-    await ctx.redis.delete(f"uid:{user_id}:active")
+    await app.redis.delete(f"uid:{user.id}:password_hash")
+    await app.redis.delete(f"uid:{user.id}:active")
 
     # print the user & password
     print(
         f"""
 db out: {dbout}
-username: {username!r}, {user_id!r}
+username: {user.name!r}, {user.id!r}
 new password: {password!r}
     """
     )
 
 
-async def sendmail(ctx, args):
+async def sendmail(args):
     """Send email to a user"""
-    user_id = await get_user(ctx, args.username)
+    user = await User.fetch_by(username=args.username)
+    assert user is not None
+
     body = "\n".join(args.body)
-    user_email = await send_email_to_user(user_id, args.subject, body)
+    user_email = await send_email_to_user(user.id, args.subject, body)
     print("OK", user_email)
 
 

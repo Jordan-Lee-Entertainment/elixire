@@ -2,28 +2,35 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from ..utils import get_user
+from typing import Tuple, Union
+from api.models import User
 from api.common.banning import unban_user, unban_ip, TargetType, get_bans
 
 
-async def unban_any(ctx, args):
-    is_user = args.target_type == "user"
+async def _extract_ban_actor(args) -> Tuple[TargetType, Union[str, int]]:
+    target_type = TargetType(args.target_type)
+    value = args.target_value
 
-    unban_function = unban_user if is_user else unban_ip
-    value = await get_user(ctx, args.target_value) if is_user else args.target_value
+    if target_type == TargetType.User:
+        user = await User.fetch_by(username=args.target_value)
+        assert user is not None
+        value = user.id
 
+    return target_type, value
+
+
+async def unban_any(args):
+    target_type, value = await _extract_ban_actor(args)
+
+    unban_function = unban_user if target_type == TargetType.User else unban_ip
     await unban_function(value)
     print("OK")
 
 
-async def getbans_cmd(ctx, args):
-    is_user = args.target_type == "user"
-
-    target_type = TargetType(args.target_type)
-    value = await get_user(ctx, args.target_value) if is_user else args.target_value
+async def getbans_cmd(args):
+    target_type, value = await _extract_ban_actor(args)
 
     bans = await get_bans(value, target_type=target_type, page=args.page)
-
     print("page", args.page, ":")
     for ban in bans:
         print("\t", ban)

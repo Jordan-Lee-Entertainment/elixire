@@ -4,76 +4,19 @@
 
 import datetime
 
-from quart import Quart
+from quart import current_app as app
 from winter import snowflake_time
-from .errors import ArgError
 from api.models import User
 
 
-class Context:
-    """manage.py's Context class.
-
-    The Context class is the main class
-    holding important information for integration
-    of manage.py with current functions on
-    the elixi.re codebase.
-
-    Since the current functions take an app instance
-    instead of a db connection instance, we pass Context
-    instead of having to instantiate the sanic App object.
-    """
-
-    def __init__(self, econfig, db, redis, loop, locks):
-        self.db = db
-        self.redis = redis
-        self.loop = loop
-        self.locks = locks
-        self.econfig = econfig
-
-        # those are set later
-        self.args = None
-        self.session = None
-        self.storage = None
-        self.sched = None
-
-    def make_app(self) -> Quart:
-        app = Quart(__name__)
-        app.db = self.db
-        app.redis = self.redis
-        app.loop = self.loop
-        app.locks = self.locks
-        app.session = self.session
-        app.storage = self.storage
-        app.sched = self.sched
-        app.econfig = self.econfig
-        return app
-
-
-async def get_user(ctx: Context, username: str) -> int:
-    """Fetch a user's ID, given username"""
-    user_id = await ctx.db.fetchval(
-        """
-        SELECT user_id
-        FROM users
-        WHERE username = $1
-        """,
-        username,
-    )
-
-    if not user_id:
-        raise ArgError("no user found")
-
-    return user_id
-
-
-async def get_counts(ctx: Context, user_id: int) -> str:
+async def get_counts(user_id: int) -> str:
     """Show consent and count information in a string."""
     user = await User.fetch(user_id)
 
     assert user is not None
     consented = user.settings.consented
 
-    files = await ctx.db.fetchval(
+    files = await app.db.fetchval(
         """
         SELECT COUNT(*)
         FROM files
@@ -82,7 +25,7 @@ async def get_counts(ctx: Context, user_id: int) -> str:
         user_id,
     )
 
-    shortens = await ctx.db.fetchval(
+    shortens = await app.db.fetchval(
         """
         SELECT COUNT(*)
         FROM files
