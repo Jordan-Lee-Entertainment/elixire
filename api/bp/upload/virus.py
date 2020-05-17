@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from quart import current_app as app
+from violet.fail_modes import RaiseErr
 
 from api.common.webhook import scan_webhook
 from api.errors import BadImage
@@ -80,8 +81,8 @@ async def run_scan(ctx) -> None:
         await scan_webhook(ctx, total_out)
         raise BadImage("Image contains a virus.")
     elif process.returncode == 2:
-        log.warning("clamdscan FAILED: %r")
-        raise BadImage("clamdscan raised error.")
+        log.warning("clamdscan FAILED: %r", total_out)
+        raise BadImage(f"clamdscan failed: {total_out}")
 
 
 async def _delete_file_from_scan(ctx) -> None:
@@ -134,7 +135,7 @@ async def scan_file(ctx) -> Any:
         return
 
     task = app.sched.spawn(
-        run_scan, [ctx], name=f"virus_scan:{ctx.file.id}", fail_mode="raise_error"
+        run_scan, [ctx], name=f"virus_scan:{ctx.file.id}", fail_mode=RaiseErr()
     )
 
     # if the task is on pending, we return and let it continue in the background
