@@ -80,7 +80,7 @@ class UploadContext(namedtuple('UploadContext', [
 
         # get all possible file extensions for this type of file
         pot_extensions = mimetypes.guess_all_extensions(mimetype)
-        
+
         # ban .bat uploads (at least with extension intact)
         if ".bat" in pot_extensions:
             pot_extensions.remove(".bat")
@@ -96,7 +96,7 @@ class UploadContext(namedtuple('UploadContext', [
             else:
                 extension = pot_extensions[0]
 
-        return extension
+        return mimetype, extension
 
     async def check_limits(self, app):
         user_id = self.user_id

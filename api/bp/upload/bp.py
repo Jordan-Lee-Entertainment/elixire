@@ -111,6 +111,7 @@ async def upload_handler(request, user_id):
     # this will be true if the upload is an admin upload, but if it isn't
     # we need to check MIMEs to ensure a proper extension is used for security
     extension = file.given_extension
+    mime = ctx.file.mime
 
     # generate a filename so we can identify later when removing it
     # because of virus scanning.
@@ -131,7 +132,7 @@ async def upload_handler(request, user_id):
     # also check the MIME type, and return the extension that we should be
     # using. (admins get to bypass!)
     if do_checks:
-        extension = await ctx.perform_checks(app)
+        mime, extension = await ctx.perform_checks(app)
 
     # hash the file and give it a path on the filesystem
     # (this sets the path and hash attributes)
@@ -216,7 +217,7 @@ async def upload_handler(request, user_id):
             file_size, uploader, fspath, domain
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7)
-        """, file_id, ctx.file.mime, shortname, file_size, user_id,
+        """, file_id, mime, shortname, file_size, user_id,
         file.raw_path, domain_id)
 
     # write to fs
