@@ -171,9 +171,12 @@ async def validate_semantics(user_id: int, payload: dict) -> dict:
 
             errors[field].append(msg)
 
-    domain_fields = ("domain", "shorten_domain")
-    for field in domain_fields:
+    for field in {"domain", "shorten_domain"}:
         if not to_update(user, payload, field):
+            continue
+
+        if field == "shorten_domain" and payload[field] is None:
+            # null `shorten_domain` = use `domain`
             continue
 
         domain = await Domain.fetch(payload[field])
