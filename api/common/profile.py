@@ -31,10 +31,9 @@ async def fetch_dumps(
         f"""
         SELECT
             job_id, name, state, taken_at, internal_state
-        FROM violet_jobs
+        FROM datadump_queue
         WHERE
-            queue = 'datadump'
-        AND args->0 = $1::bigint::text::jsonb
+            user_id = $1
         {where}
         LIMIT 1
         """,

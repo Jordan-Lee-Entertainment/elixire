@@ -14,6 +14,7 @@ from api.common.profile import fetch_dumps
 from api.common.violet_jobs import violet_jobs_to_json
 from api.common.pagination import Pagination
 from api.models import User
+from api.bp.datadump.handler import DatadumpQueue
 
 log = logging.getLogger(__name__)
 bp = Blueprint("datadump", __name__)
@@ -38,7 +39,7 @@ async def request_data_dump():
     if violet_jobs:
         raise BadInput("Your data dump is currently being processed or in the queue.")
 
-    job_id = await app.sched.push_queue("datadump", [user_id])
+    job_id = await DatadumpQueue.submit(user_id)
     return {"job_id": job_id}
 
 
@@ -52,10 +53,8 @@ async def list_dumps():
         SELECT
             job_id, name, state, inserted_at, taken_at, internal_state,
             COUNT(*) OVER () AS total_count
-        FROM violet_jobs
-        WHERE
-            queue = 'datadump'
-        AND args->0 = $3::bigint::text::jsonb
+        FROM datadump_queue
+        WHERE user_id = $3
         ORDER BY inserted_at ASC
         LIMIT $2::integer
         OFFSET ($1::integer * $2::integer)
@@ -80,8 +79,8 @@ async def data_dump_global_status():
 
     queue = await app.db.fetch(
         """
-        SELECT job_id, name, args::json->0 AS user_id, inserted_at, scheduled_at
-        FROM violet_jobs
+        SELECT job_id, name, user_id, inserted_at, scheduled_at
+        FROM datadump_queue
         WHERE state = 0
         ORDER BY scheduled_at ASC
         """
@@ -92,8 +91,8 @@ async def data_dump_global_status():
     current = (
         await app.db.fetchrow(
             """
-        SELECT job_id, name, args::json->0 AS user_id, inserted_at, scheduled_at
-        FROM violet_jobs
+        SELECT job_id, name, user_id, inserted_at, scheduled_at
+        FROM datadump_queue
         WHERE state = 1
         """
         )
