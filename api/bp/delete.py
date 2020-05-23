@@ -47,7 +47,7 @@ async def purge_all_content():
         if domain is None:
             raise BadInput("Invalid domain ID")
 
-    job_id = await MassDeleteQueue.push(user_id, raw)
+    job_id = await MassDeleteQueue.submit(user_id, raw)
     return jsonify({"job_id": job_id})
 
 
@@ -81,7 +81,7 @@ class MassDeleteQueue(JobQueue):
         return row["user_id"], row["query"]
 
     @classmethod
-    async def push(cls, user_id: int, query: dict, **kwargs) -> Flake:
+    async def submit(cls, user_id: int, query: dict, **kwargs) -> Flake:
         return await cls._sched.raw_push(cls, (user_id, query), **kwargs)
 
     @classmethod

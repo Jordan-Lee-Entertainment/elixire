@@ -39,7 +39,7 @@ async def request_data_dump():
     if violet_jobs:
         raise BadInput("Your data dump is currently being processed or in the queue.")
 
-    job_id = await DatadumpQueue.push(user_id)
+    job_id = await DatadumpQueue.submit(user_id)
     return {"job_id": job_id}
 
 

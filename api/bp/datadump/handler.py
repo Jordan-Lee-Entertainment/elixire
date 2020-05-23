@@ -221,7 +221,7 @@ class DatadumpQueue(JobQueue):
         return row["user_id"]
 
     @classmethod
-    async def push(cls, user_id: int, **kwargs) -> Flake:
+    async def submit(cls, user_id: int, **kwargs) -> Flake:
         return await cls._sched.raw_push(cls, (user_id,), **kwargs)
 
     @classmethod
