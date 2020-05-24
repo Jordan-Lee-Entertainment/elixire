@@ -13,8 +13,8 @@ from api.models import File, Shorten
 log = logging.getLogger(__name__)
 
 
-class AutoDeleteQueue(JobQueue):
-    """Elixire datadump job queue."""
+class ScheduledDeleteQueue(JobQueue):
+    """Scheduled deletions of files by request of the user."""
 
     name = "scheduled_delete_queue"
     # TODO: make it file_id, shorten_id nullable?
