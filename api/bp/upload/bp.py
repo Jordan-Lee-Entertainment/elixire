@@ -21,6 +21,7 @@ from api.common.auth import check_admin, token_check
 from api.common.utils import resolve_domain
 from api.common.profile import gen_user_shortname
 from api.models import User
+from api.scheduled_deletes import ScheduledDeleteQueue
 from .context import UploadContext
 from .file import UploadFile
 
@@ -116,8 +117,8 @@ async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
     relative_delta = _to_relativedelta(duration)
     scheduled_at = now + relative_delta
 
-    job_id = await app.sched.push_queue(
-        "scheduled_deletes", ["file", ctx.file.id], scheduled_at=scheduled_at
+    job_id = await ScheduledDeleteQueue.push_queue(
+        "file", ctx.file.id, scheduled_at=scheduled_at
     )
     log.debug("Created deletion job %r", job_id)
     return job_id
