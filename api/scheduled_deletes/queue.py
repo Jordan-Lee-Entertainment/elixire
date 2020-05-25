@@ -19,6 +19,7 @@ class ScheduledDeleteQueue(JobQueue):
     name = "scheduled_delete_queue"
     # TODO: make it file_id, shorten_id nullable?
     args = ("resource_type", "resource_id")
+    poller_seconds = 8
 
     @classmethod
     def map_persisted_row(_, row) -> Tuple[str, int]:
