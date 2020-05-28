@@ -4,10 +4,11 @@
 from datetime import datetime
 from typing import List, Tuple
 
-from quart import current_app as app
-
+from quart import current_app as app, request
 import metomi.isodatetime.parsers as parse
 from dateutil.relativedelta import relativedelta
+
+from api.errors import BadInput
 
 
 async def fetch_autodelete_jobs(
@@ -38,6 +39,16 @@ def _to_relativedelta(duration) -> relativedelta:
             kwargs[field] = value
 
     return relativedelta(**kwargs)
+
+
+def validate_request_duration() -> None:
+    duration_str = request.args.get("duration")
+    if duration_str is None:
+        return
+
+    now, scheduled_at = extract_scheduled_timestamp(duration_str)
+    if scheduled_at < now:
+        raise BadInput("Invalid duration timestamp.")
 
 
 def extract_scheduled_timestamp(duration_str: str) -> Tuple[datetime, datetime]:

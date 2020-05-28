@@ -18,7 +18,11 @@ from api.common.auth import check_admin, token_check
 from api.common.utils import resolve_domain
 from api.common.profile import gen_user_shortname
 from api.models import User
-from api.scheduled_deletes import ScheduledDeleteQueue, extract_scheduled_timestamp
+from api.scheduled_deletes import (
+    ScheduledDeleteQueue,
+    extract_scheduled_timestamp,
+    validate_request_duration,
+)
 from .context import UploadContext
 from .file import UploadFile
 
@@ -101,16 +105,6 @@ async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
     return job_id
 
 
-def _check_duration():
-    duration_str = request.args.get("duration")
-    if duration_str is None:
-        return
-
-    now, scheduled_at = extract_scheduled_timestamp(duration_str)
-    if scheduled_at < now:
-        raise BadInput("Invalid duration timestamp.")
-
-
 @bp.route("/upload", methods=["POST"])
 async def upload_handler():
     """Main upload handler."""
@@ -118,7 +112,7 @@ async def upload_handler():
     user = await User.fetch(user_id)
     assert user is not None
 
-    _check_duration()
+    validate_request_duration()
 
     # if admin is set on request.args, we will # do an "admin upload", without
     # any checking for viruses, weekly limits, MIME, etc.
