@@ -1,14 +1,19 @@
 # elixire: Image Host software
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+import logging
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
-from quart import current_app as app, request
 import metomi.isodatetime.parsers as parse
+from quart import current_app as app, request
+from hail import Flake
 from dateutil.relativedelta import relativedelta
 
+from api.scheduled_deletes.queue import ScheduledDeleteQueue
 from api.errors import BadInput
+
+log = logging.getLogger(__name__)
 
 
 async def fetch_autodelete_jobs(
@@ -56,3 +61,14 @@ def extract_scheduled_timestamp(duration_str: str) -> Tuple[datetime, datetime]:
     now = datetime.utcnow()
     relative_delta = _to_relativedelta(duration)
     return now, now + relative_delta
+
+
+async def maybe_schedule_deletion(**kwargs) -> Optional[Flake]:
+    duration_str: Optional[str] = request.args.get("duration")
+    if duration_str is None:
+        return None
+
+    _, scheduled_at = extract_scheduled_timestamp(duration_str)
+    job_id = await ScheduledDeleteQueue.submit(**kwargs, scheduled_at=scheduled_at)
+    log.debug("Created deletion job %r", job_id)
+    return job_id

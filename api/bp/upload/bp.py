@@ -8,7 +8,6 @@ import time
 from typing import Any, Dict, Optional
 
 from quart import Blueprint, jsonify, current_app as app, request
-from hail import Flake
 from winter import get_snowflake
 
 from api.storage import object_key
@@ -18,11 +17,7 @@ from api.common.auth import check_admin, token_check
 from api.common.utils import resolve_domain
 from api.common.profile import gen_user_shortname
 from api.models import User
-from api.scheduled_deletes import (
-    ScheduledDeleteQueue,
-    extract_scheduled_timestamp,
-    validate_request_duration,
-)
+from api.scheduled_deletes import validate_request_duration, maybe_schedule_deletion
 from .context import UploadContext
 from .file import UploadFile
 
@@ -90,19 +85,6 @@ async def upload_metrics(ctx):
     delta = round((end - ctx.start_timestamp) * 1000, 5)
 
     await metrics.submit("upload_latency", delta)
-
-
-async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
-    duration_str: Optional[str] = request.args.get("duration")
-    if duration_str is None:
-        return None
-
-    _, scheduled_at = extract_scheduled_timestamp(duration_str)
-    job_id = await ScheduledDeleteQueue.submit(
-        file_id=ctx.file.id, scheduled_at=scheduled_at
-    )
-    log.debug("Created deletion job %r", job_id)
-    return job_id
 
 
 @bp.route("/upload", methods=["POST"])
@@ -210,7 +192,8 @@ async def upload_handler():
             output.write(chunk)
 
     res = {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
-    deletion_job_id = await _maybe_schedule_deletion(ctx)
+
+    deletion_job_id = await maybe_schedule_deletion(file_id=ctx.file.id)
     if deletion_job_id:
         res["scheduled_delete_job_id"] = str(deletion_job_id)
 
