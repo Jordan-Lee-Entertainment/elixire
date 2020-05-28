@@ -2,7 +2,7 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
-from typing import Tuple
+from typing import Tuple, Optional
 
 from quart import current_app as app
 from violet.models import QueueJobContext
@@ -17,16 +17,21 @@ class ScheduledDeleteQueue(JobQueue):
     """Scheduled deletions of files by request of the user."""
 
     name = "scheduled_delete_queue"
-    # TODO: make it file_id, shorten_id nullable?
-    args = ("resource_type", "resource_id")
+    args = ("file_id", "shorten_id")
     poller_seconds = 8
 
     @classmethod
-    def map_persisted_row(_, row) -> Tuple[str, int]:
-        return row["resource_type"], row["resource_id"]
+    def map_persisted_row(_, row) -> Tuple[int, int]:
+        return row["file_id"], row["shorten_id"]
 
     @classmethod
-    async def submit(cls, resource_type: str, resource_id: int, **kwargs) -> Flake:
+    async def submit(
+        cls,
+        *,
+        shorten_id: Optional[int] = None,
+        file_id: Optional[int] = None,
+        **kwargs
+    ) -> Flake:
         return await cls._sched.raw_push(cls, (resource_type, resource_id,), **kwargs)
 
     @classmethod
