@@ -4,12 +4,13 @@
 
 import io
 import secrets
-import pytest
 import os.path
 from urllib.parse import urlparse
 
+import pytest
 from .common import png_request, hexs, aiohttp_form
 from api.bp.delete import MassDeleteQueue
+from api.scheduled_deletes import ScheduledDeleteQueue
 
 pytestmark = pytest.mark.asyncio
 
@@ -272,9 +273,16 @@ async def test_delete_nonexist(test_cli_user):
 
 
 async def test_upload_ephmeral(test_cli_user):
-    upload = await _upload(test_cli_user, query_string={"file_duration": "PT5S"})
+    """Test that uploading a file with a set duration actually works and will
+    leave the file inaccessible afterwards."""
+    upload = await _upload(test_cli_user, query_string={"duration": "PT3S"})
     await check_exists(test_cli_user, upload["shortname"])
 
-    # XXX: ensure that a job exists for the file
+    job_id = upload.get("scheduled_delete_job_id")
+    assert job_id is not None
+    status = await ScheduledDeleteQueue.fetch_job_status(job_id)
+    assert status is not None
 
-    # XXX: check if file exists after waiting for job
+    await ScheduledDeleteQueue.wait_job(job_id)
+
+    await check_exists(test_cli_user, upload["shortname"], reverse=True)
