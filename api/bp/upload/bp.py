@@ -117,8 +117,8 @@ async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
     relative_delta = _to_relativedelta(duration)
     scheduled_at = now + relative_delta
 
-    job_id = await ScheduledDeleteQueue.push_queue(
-        "file", ctx.file.id, scheduled_at=scheduled_at
+    job_id = await ScheduledDeleteQueue.submit(
+        file_id=ctx.file.id, scheduled_at=scheduled_at
     )
     log.debug("Created deletion job %r", job_id)
     return job_id
