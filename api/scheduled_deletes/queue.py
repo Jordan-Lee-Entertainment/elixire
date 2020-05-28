@@ -4,7 +4,6 @@
 import logging
 from typing import Tuple, Optional
 
-from quart import current_app as app
 from violet.models import QueueJobContext
 from hail import Flake
 from violet import JobQueue

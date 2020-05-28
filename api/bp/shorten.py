@@ -119,7 +119,7 @@ async def shorten_handler():
     fpath = dpath / "s" / redir_rname
 
     res = {"url": f"https://{str(fpath)}"}
-    deletion_job_id = await maybe_schedule_deletion(shorten_id=shorten_id)
+    deletion_job_id = await maybe_schedule_deletion(shorten_id=redir_id)
     if deletion_job_id:
         res["scheduled_delete_job_id"] = deletion_job_id
 
