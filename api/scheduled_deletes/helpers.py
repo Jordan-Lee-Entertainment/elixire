@@ -2,7 +2,7 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Tuple
 
 from quart import current_app as app
 
@@ -40,8 +40,8 @@ def _to_relativedelta(duration) -> relativedelta:
     return relativedelta(**kwargs)
 
 
-async def extract_scheduled_timestamp(duration_str: str) -> datetime:
+def extract_scheduled_timestamp(duration_str: str) -> Tuple[datetime, datetime]:
     duration = parse.DurationParser().parse(duration_str)
     now = datetime.utcnow()
     relative_delta = _to_relativedelta(duration)
-    return now + relative_delta
+    return now, now + relative_delta

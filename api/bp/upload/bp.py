@@ -93,7 +93,7 @@ async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
     if duration_str is None:
         return None
 
-    scheduled_at = extract_scheduled_timestamp(duration_str)
+    _, scheduled_at = extract_scheduled_timestamp(duration_str)
     job_id = await ScheduledDeleteQueue.submit(
         file_id=ctx.file.id, scheduled_at=scheduled_at
     )
@@ -103,9 +103,12 @@ async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
 
 def _check_duration():
     duration_str = request.args.get("duration")
-    if duration_str is not None:
-        _ = parse.DurationParser().parse(duration_str)
-        # TODO: check if negative
+    if duration_str is None:
+        return
+
+    now, scheduled_at = extract_scheduled_timestamp(duration_str)
+    if scheduled_at < now:
+        raise BadInput("Invalid duration timestamp.")
 
 
 @bp.route("/upload", methods=["POST"])
@@ -215,7 +218,7 @@ async def upload_handler():
     res = {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
     deletion_job_id = await _maybe_schedule_deletion(ctx)
     if deletion_job_id:
-        res["auto_delete_job_id"] = str(deletion_job_id)
+        res["scheduled_delete_job_id"] = str(deletion_job_id)
 
     await upload_metrics(ctx)
     return jsonify(res)
