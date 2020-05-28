@@ -1,8 +1,13 @@
 # elixire: Image Host software
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
+from datetime import datetime
+from typing import List, Optional
 
-from typing import List
+from quart import current_app as app
+
+import metomi.isodatetime.parsers as parse
+from dateutil.relativedelta import relativedelta
 
 
 async def fetch_autodelete_jobs(
@@ -17,3 +22,26 @@ async def fetch_autodelete_jobs(
         """,
         resource_type,
     )
+
+
+def _to_relativedelta(duration) -> relativedelta:
+    """
+    Convert metomi's Duration object into a dateutil's relativedelta object.
+    """
+    fields = ("years", "months", "weeks", "days", "hours", "minutes", "seconds")
+
+    # I'm not supposed to pass None to relativedelta or else it oofs
+    kwargs = {}
+    for field in fields:
+        value = getattr(duration, field)
+        if value is not None:
+            kwargs[field] = value
+
+    return relativedelta(**kwargs)
+
+
+async def extract_scheduled_timestamp(duration_str: str) -> datetime:
+    duration = parse.DurationParser().parse(duration_str)
+    now = datetime.utcnow()
+    relative_delta = _to_relativedelta(duration)
+    return now + relative_delta

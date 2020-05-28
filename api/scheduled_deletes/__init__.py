@@ -3,5 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from .queue import ScheduledDeleteQueue
+from .helpers import extract_scheduled_timestamp
 
 __all__ = ["ScheduledDeleteQueue"]

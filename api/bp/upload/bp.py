@@ -5,14 +5,11 @@
 import logging
 import pathlib
 import time
-from datetime import datetime
 from typing import Any, Dict, Optional
 
-import metomi.isodatetime.parsers as parse
 from quart import Blueprint, jsonify, current_app as app, request
 from hail import Flake
 from winter import get_snowflake
-from dateutil.relativedelta import relativedelta
 
 from api.storage import object_key
 from api.enums import FileNameType
@@ -21,7 +18,7 @@ from api.common.auth import check_admin, token_check
 from api.common.utils import resolve_domain
 from api.common.profile import gen_user_shortname
 from api.models import User
-from api.scheduled_deletes import ScheduledDeleteQueue
+from api.scheduled_deletes import ScheduledDeleteQueue, extract_scheduled_timestamp
 from .context import UploadContext
 from .file import UploadFile
 
@@ -91,32 +88,12 @@ async def upload_metrics(ctx):
     await metrics.submit("upload_latency", delta)
 
 
-def _to_relativedelta(duration) -> relativedelta:
-    """
-    Convert metomi's Duration object into a dateutil's relativedelta object.
-    """
-    fields = ("years", "months", "weeks", "days", "hours", "minutes", "seconds")
-
-    # I'm not supposed to pass None to relativedelta or else it oofs
-    kwargs = {}
-    for field in fields:
-        value = getattr(duration, field)
-        if value is not None:
-            kwargs[field] = value
-
-    return relativedelta(**kwargs)
-
-
 async def _maybe_schedule_deletion(ctx: UploadContext) -> Optional[Flake]:
-    duration_str: Optional[str] = request.args.get("file_duration")
+    duration_str: Optional[str] = request.args.get("duration")
     if duration_str is None:
         return None
 
-    duration = parse.DurationParser().parse(duration_str)
-    now = datetime.utcnow()
-    relative_delta = _to_relativedelta(duration)
-    scheduled_at = now + relative_delta
-
+    scheduled_at = extract_scheduled_timestamp(duration_str)
     job_id = await ScheduledDeleteQueue.submit(
         file_id=ctx.file.id, scheduled_at=scheduled_at
     )
