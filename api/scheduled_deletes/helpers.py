@@ -47,9 +47,11 @@ def _to_relativedelta(duration) -> relativedelta:
     return relativedelta(**kwargs)
 
 
-def validate_request_duration() -> None:
-    duration_str = request.args.get("duration")
-    if duration_str is None:
+def validate_request_duration(*, required: bool = False) -> None:
+    duration_str = request.args.get("retention_time")
+    if duration_str is None and required:
+        raise BadInput("retention_time is a required query argument")
+    elif duration_str is None:
         return
 
     now, scheduled_at = extract_scheduled_timestamp(duration_str)
