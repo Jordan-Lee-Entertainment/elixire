@@ -10,6 +10,7 @@ from typing import Optional, Dict, Any, List, Set, Awaitable
 from quart import current_app as app
 
 from api.storage import object_key
+from api.errors import NotFound
 
 log = logging.getLogger(__name__)
 
@@ -104,6 +105,29 @@ class File:
             return None
 
         return cls(row)
+
+    @classmethod
+    async def fetch_by_with_uploader(
+        cls,
+        uploader_id: int,
+        *,
+        file_id: Optional[int] = None,
+        shortname: Optional[str] = None,
+    ) -> "File":
+        """Fetch a file but only return it if the given uploader id
+        matches with the file's uploader.
+
+        Raises NotFound if the file isn't found or the uploader mismatches."""
+        assert file_id or shortname
+        if file_id:
+            elixire_file = await cls.fetch(file_id)
+        elif shortname:
+            elixire_file = await cls.fetch_by(shortname=shortname)
+
+        if elixire_file is None or elixire_file.uploader_id != uploader_id:
+            raise NotFound("File not found")
+
+        return elixire_file
 
     def to_dict(self, *, public: bool = False) -> Dict[str, Any]:
         file_dict = {
