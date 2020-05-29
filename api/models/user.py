@@ -90,7 +90,7 @@ class User:
             """
             SELECT
                 user_id, consented, paranoid, subdomain, domain,
-                shorten_subdomain, shorten_domain
+                shorten_subdomain, shorten_domain, default_max_retention
             FROM user_settings
             WHERE user_id = $1
             """,
