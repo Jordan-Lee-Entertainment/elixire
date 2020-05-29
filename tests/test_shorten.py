@@ -110,7 +110,7 @@ async def test_shorten_quota(test_cli_user):
 async def test_shorten_scheduled_delete(test_cli_user):
     url = "https://elixi.re"
     resp = await test_cli_user.post(
-        "/api/shorten", json={"url": url}, query_string={"duration": "PT3S"}
+        "/api/shorten", json={"url": url}, query_string={"retention_time": "PT3S"}
     )
 
     assert resp.status_code == 200

@@ -273,9 +273,9 @@ async def test_delete_nonexist(test_cli_user):
 
 
 async def test_upload_ephmeral(test_cli_user):
-    """Test that uploading a file with a set duration actually works and will
-    leave the file inaccessible afterwards."""
-    upload = await _upload(test_cli_user, query_string={"duration": "PT3S"})
+    """Test that uploading a file with a set retention time
+    actually works and will leave the file inaccessible afterwards."""
+    upload = await _upload(test_cli_user, query_string={"retention_time": "PT3S"})
     await check_exists(test_cli_user, upload["shortname"])
 
     job_id = upload.get("scheduled_delete_job_id")
