@@ -104,3 +104,21 @@ async def test_shorten_quota(test_cli_user):
             "UPDATE limits SET shlimit = 100 WHERE user_id = $1",
             test_cli_user.user["user_id"],
         )
+
+
+async def test_shorten_scheduled_delete(test_cli_user):
+    url = "https://elixi.re"
+    resp = await test_cli_user.post("/api/shorten", json={"url": url})
+
+    assert resp.status_code == 200
+    data = await resp.json
+    assert isinstance(data, dict)
+    assert isinstance(data["url"], str)
+
+    shorten_url = Path(data["url"])
+    domain = shorten_url.parts[1]
+    shorten = shorten_url.parts[-1]
+
+    resp = await test_cli_user.get(f"/s/{shorten}", headers={"host": domain})
+    assert resp.status_code == 302
+    assert resp.headers["location"] == url
