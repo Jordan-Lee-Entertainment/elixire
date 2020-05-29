@@ -35,6 +35,7 @@ class UserSettings:
         "domain",
         "shorten_subdomain",
         "shorten_domain",
+        "default_max_retention",
     )
 
     def __init__(self, row):
@@ -49,6 +50,8 @@ class UserSettings:
         self.subdomain: str = row["subdomain"]
         self.shorten_subdomain: str = row["shorten_subdomain"]
 
+        self.default_max_retention: int = row["default_max_retention"]
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "consented": self.consented,
@@ -57,6 +60,7 @@ class UserSettings:
             "domain": self.domain,
             "shorten_subdomain": self.shorten_subdomain,
             "shorten_domain": self.shorten_domain,
+            "default_max_retention": self.default_max_retention,
         }
 
 

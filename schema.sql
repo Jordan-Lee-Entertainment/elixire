@@ -54,7 +54,9 @@ CREATE TABLE IF NOT EXISTS user_settings (
     domain bigint REFERENCES domains (domain_id) DEFAULT 0 NOT NULL,
 
     shorten_subdomain text DEFAULT '' NOT NULL,
-    shorten_domain bigint REFERENCES domains (domain_id) DEFAULT NULL
+    shorten_domain bigint REFERENCES domains (domain_id) DEFAULT NULL,
+
+    default_max_retention bigint DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS admin_user_settings (
