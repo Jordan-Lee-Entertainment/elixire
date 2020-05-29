@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from api.scheduled_deletes import ScheduledDeleteQueue
 from .common import token, username
 from .common.generators import rand_utf8
 
@@ -108,13 +109,12 @@ async def test_shorten_quota(test_cli_user):
 
 async def test_shorten_scheduled_delete(test_cli_user):
     url = "https://elixi.re"
-    resp = await test_cli_user.post("/api/shorten", json={"url": url})
+    resp = await test_cli_user.post(
+        "/api/shorten", json={"url": url}, query_string={"duration": "PT3S"}
+    )
 
     assert resp.status_code == 200
     data = await resp.json
-    assert isinstance(data, dict)
-    assert isinstance(data["url"], str)
-
     shorten_url = Path(data["url"])
     domain = shorten_url.parts[1]
     shorten = shorten_url.parts[-1]
@@ -122,3 +122,13 @@ async def test_shorten_scheduled_delete(test_cli_user):
     resp = await test_cli_user.get(f"/s/{shorten}", headers={"host": domain})
     assert resp.status_code == 302
     assert resp.headers["location"] == url
+
+    job_id = data.get("scheduled_delete_job_id")
+    assert job_id is not None
+    status = await ScheduledDeleteQueue.fetch_job_status(job_id)
+    assert status is not None
+
+    await ScheduledDeleteQueue.wait_job(job_id)
+
+    resp = await test_cli_user.get(f"/s/{shorten}", headers={"host": domain})
+    assert resp.status_code == 404
