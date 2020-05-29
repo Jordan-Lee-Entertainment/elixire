@@ -37,6 +37,7 @@ import api.bp.cors
 import api.bp.client
 import api.bp.list
 import api.bp.delete
+import api.bp.scheduled_deletes
 from api.json import ElixireJSONEncoder
 
 from api.errors import APIError, Banned
@@ -85,6 +86,11 @@ def make_app() -> Quart:
 def set_blueprints(app_):
     """Set the blueprints on the app."""
     # load blueprints
+    #
+    # prefix of -1: no prefix at all, all routes in the blueprint are relateive
+    # 	to root path.
+    # prefix of empty string: /api
+    # prefix of non-empty string: /api<prefix>
 
     blueprints = {
         api.bp.cors.bp: -1,
@@ -112,6 +118,7 @@ def set_blueprints(app_):
         api.bp.fetch.bp: -1,
         api.bp.wpadmin.bp: -1,
         api.bp.client.bp: -1,
+        api.bp.scheduled_deletes.bp: "",
     }
 
     for blueprint, api_prefix in blueprints.items():
