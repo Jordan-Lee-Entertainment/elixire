@@ -68,6 +68,8 @@ async def maybe_schedule_deletion(user_id: int, **kwargs) -> Optional[Flake]:
     user = await User.fetch(user_id)
     assert user is not None
 
+    scheduled_at = None
+
     default_max_retention: Optional[int] = user.settings.default_max_retention
     if default_max_retention is not None:
         scheduled_at = datetime.utcnow() + timedelta(seconds=default_max_retention)
@@ -75,6 +77,9 @@ async def maybe_schedule_deletion(user_id: int, **kwargs) -> Optional[Flake]:
     duration_str: Optional[str] = request.args.get("retention_time")
     if duration_str is not None:
         _, scheduled_at = extract_scheduled_timestamp(duration_str)
+
+    if scheduled_at is None:
+        return None
 
     job_id = await ScheduledDeleteQueue.submit(**kwargs, scheduled_at=scheduled_at)
     log.debug("Created deletion job %r", job_id)
