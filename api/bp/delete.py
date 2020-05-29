@@ -192,10 +192,7 @@ class MassDeleteQueue(JobQueue):
 async def delete_single(shortname: str):
     """Delete a single file."""
     user_id = await token_check()
-
-    elixire_file = await File.fetch_by(shortname=shortname)
-    if elixire_file is None or elixire_file.uploader_id != user_id:
-        raise NotFound("File not found")
+    elixire_file = await File.fetch_by_with_uploader(user_id, shortname=shortname)
 
     # really want to keep this up.
     assert elixire_file.uploader_id == user_id
