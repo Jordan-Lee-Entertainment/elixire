@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 async def schedule_resource_deletion(fetcher_coroutine, user_id: int, **kwargs):
     validate_request_duration(required=True)
 
-    # make sure the file exists and uploader matches before
+    # make sure the resource exists and uploader matches before
     # scheduling a deletion. method raises NotFound on any mishaps
     # so it will be fine.
     _ = await fetcher_coroutine
@@ -51,7 +51,7 @@ async def schedule_file_deletion(file_id: int):
 async def schedule_shorten_deletion(shorten_id: int):
     user_id = await token_check()
     return await schedule_resource_deletion(
-        Shorten.fetch_by_with_uploader(shorten_id=shorten_id),
+        Shorten.fetch_by_with_uploader(user_id, shorten_id=shorten_id),
         user_id,
         shorten_id=shorten_id,
     )

@@ -5,6 +5,7 @@
 from typing import Optional, Dict, Any
 from quart import current_app as app
 from api.storage import object_key
+from api.errors import NotFound
 
 
 class Shorten:
@@ -58,6 +59,29 @@ class Shorten:
             return None
 
         return Shorten(row)
+
+    @classmethod
+    async def fetch_by_with_uploader(
+        cls,
+        uploader_id: int,
+        *,
+        shorten_id: Optional[int] = None,
+        shortname: Optional[str] = None,
+    ) -> "Shorten":
+        """Fetch a shorten but only return it if the given uploader id
+        matches with the shorten's uploader.
+
+        Raises NotFound if the shorten isn't found or the uploader mismatches."""
+        assert shorten_id or shortname
+        if shorten_id:
+            shorten = await cls.fetch(shorten_id)
+        elif shortname:
+            shorten = await cls.fetch_by(shortname=shortname)
+
+        if shorten is None or shorten.uploader_id != uploader_id:
+            raise NotFound("Shorten not found")
+
+        return shorten
 
     def to_dict(self, *, public: bool = False) -> Dict[str, Any]:
         file_dict = {
