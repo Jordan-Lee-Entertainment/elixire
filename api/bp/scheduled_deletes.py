@@ -35,10 +35,13 @@ async def list_scheduled_deletions():
     wanted_resource = WantedResource(request.args["resource_type"])
     pagination = Pagination()
 
+    # TODO: maybe use before/after instead of pagination?
+
     resource_table = "files" if wanted_resource == WantedResource.File else "shortens"
     rows = await app.db.fetch(
         f"""
-        SELECT *
+        SELECT job_id, state, errors, inserted_at, scheduled_at,
+               file_id, shorten_id
         FROM scheduled_deletion_queue
         JOIN {resource_table} ON {resource_table}.uploader_id = $1
         ORDER BY file_id DESC
@@ -51,7 +54,7 @@ async def list_scheduled_deletions():
         pagination.page,
     )
 
-    return jsonify(rows)
+    return jsonify({"jobs": rows})
 
 
 async def schedule_resource_deletion(fetcher_coroutine, user_id: int, **kwargs):
