@@ -17,7 +17,7 @@ from api.scheduled_deletes import (
 )
 from api.models import File, Shorten
 from api.errors import NotFound
-from api.common.pagination import Pagination
+from api.common.pagination import lazy_paginate
 
 
 bp = Blueprint("scheduled_deletes", __name__)
@@ -33,25 +33,29 @@ class WantedResource(Enum):
 async def list_scheduled_deletions():
     user_id = await token_check()
     wanted_resource = WantedResource(request.args["resource_type"])
-    pagination = Pagination()
+    before, after, limit = lazy_paginate()
 
-    # TODO: maybe use before/after instead of pagination?
+    if wanted_resource == WantedResource.File:
+        resource_table = "files"
+        id_column = "file_id"
+    else:
+        resource_table = "shortens"
+        id_column = "shorten_id"
 
-    resource_table = "files" if wanted_resource == WantedResource.File else "shortens"
     rows = await app.db.fetch(
         f"""
         SELECT job_id, state, errors, inserted_at, scheduled_at,
                file_id, shorten_id
         FROM scheduled_deletion_queue
         JOIN {resource_table} ON {resource_table}.uploader_id = $1
-        ORDER BY file_id DESC
-        ORDER BY shorten_id DESC
-        LIMIT $2
-        OFFSET ($3::integer * $2::integer)
+        WHERE {id_column} < $2 AND {id_column} > $3
+        ORDER BY {id_column} DESC
+        LIMIT $4
         """,
         user_id,
-        pagination.per_page,
-        pagination.page,
+        before,
+        after,
+        limit,
     )
 
     return jsonify({"jobs": rows})
