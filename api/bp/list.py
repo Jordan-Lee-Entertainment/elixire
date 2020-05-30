@@ -8,8 +8,8 @@ from typing import Tuple, Union
 from quart import Blueprint, jsonify, request, current_app as app
 
 from api.common.auth import token_check
-from api.errors import BadInput
 from api.models import File
+from api.common.pagination import lazy_paginate
 
 bp = Blueprint("list", __name__)
 log = logging.getLogger(__name__)
@@ -47,36 +47,10 @@ def construct_url(domain: str, url_basename: str, *, scope: str = "i") -> str:
     return f"{prefix}{domain}/{scope}/{url_basename}"
 
 
-def _get_before_after() -> Tuple[Union[int, float], int, int]:
-    before = request.args.get("before")
-    if before is None:
-        # NOTE the biggest value in int64 is this
-        before = (1 << 63) - 1
-    else:
-        try:
-            before = int(before)
-        except ValueError:
-            raise BadInput("Optional before parameter must be an integer")
-
-    try:
-        after = int(request.args.get("after") or 0)
-    except ValueError:
-        raise BadInput("Optional after parameter must be an integer")
-
-    try:
-        limit = int(request.args.get("limit") or 100)
-        limit = max(1, limit)
-        limit = min(100, limit)
-    except ValueError:
-        limit = 100
-
-    return before, after, limit
-
-
 @bp.route("/files")
 async def list_files():
     """List user files"""
-    before, after, limit = _get_before_after()
+    before, after, limit = lazy_paginate()
     user_id = await token_check()
 
     user_files = await app.db.fetch(
@@ -112,7 +86,7 @@ async def list_files():
 @bp.route("/shortens")
 async def list_shortens():
     """List user shortens"""
-    before, after, limit = _get_before_after()
+    before, after, limit = lazy_paginate()
     user_id = await token_check()
     domains = await domain_list()
 
