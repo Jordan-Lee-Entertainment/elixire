@@ -4,6 +4,7 @@
 
 import logging
 from typing import Optional
+from enum import Enum
 
 from quart import Blueprint, current_app as app, jsonify, request
 
@@ -16,10 +17,41 @@ from api.scheduled_deletes import (
 )
 from api.models import File, Shorten
 from api.errors import NotFound
+from api.common.pagination import Pagination
 
 
 bp = Blueprint("scheduled_deletes", __name__)
 log = logging.getLogger(__name__)
+
+
+class WantedResource(Enum):
+    files = "file"
+    shortens = "shorten"
+
+
+@bp.route("/scheduled_deletions")
+async def list_scheduled_deletions():
+    user_id = await token_check()
+    wanted_resource = WantedResource(request.args["resource_type"])
+    pagination = Pagination()
+
+    resource_table = "files" if wanted_resource == WantedResource.File else "shortens"
+    rows = await app.db.fetch(
+        f"""
+        SELECT *
+        FROM scheduled_deletion_queue
+        JOIN {resource_table} ON {resource_table}.uploader_id = $1
+        ORDER BY file_id DESC
+        ORDER BY shorten_id DESC
+        LIMIT $2
+        OFFSET ($3::integer * $2::integer)
+        """,
+        user_id,
+        pagination.per_page,
+        pagination.page,
+    )
+
+    return jsonify(rows)
 
 
 async def schedule_resource_deletion(fetcher_coroutine, user_id: int, **kwargs):
