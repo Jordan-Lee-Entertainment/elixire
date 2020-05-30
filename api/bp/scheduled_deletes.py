@@ -111,20 +111,12 @@ async def modify_resource_deletion(fetcher_coroutine, user_id, **kwargs):
     assert file_id or shorten_id
     resource_id: int = file_id or shorten_id
 
-    column = None
-    if file_id is not None:
-        column = "file_id"
-    elif shorten_id is not None:
-        column = "shorten_id"
-
-    assert column is not None
-
     _, new_scheduled_at = extract_scheduled_timestamp(request.args["retention_time"])
     job_id = await app.db.fetchval(
-        f"""
+        """
         UPDATE scheduled_delete_queue
         SET scheduled_at = $2
-        WHERE {column} = $1 AND state = 0
+        WHERE (file_id = $1 OR shorten_id = $1) AND state = 0
         RETURNING job_id
         """,
         resource_id,
