@@ -112,6 +112,19 @@ async def modify_resource_deletion(fetcher_coroutine, user_id, **kwargs):
     resource_id: int = file_id or shorten_id
 
     _, new_scheduled_at = extract_scheduled_timestamp(request.args["retention_time"])
+
+    # There are chances for SQL optimization here at the cost of code
+    # readability. We know which one of the columns we'll use on this query
+    # by checking either of file_id or shorten_id aren't None.
+    #
+    # The cost difference between doing ({column} = $1) compared to
+    # (file_id = $1 OR shorten_id = $1) was minimal (even though the former
+    # was less cost), but I don't have enough data to assert which one
+    # would be better.
+    #
+    # For now I chose code readability as the thing that counts here. If we
+    # go hellish on SQL, we can optimize this, and make it very clear why
+    # we're doing so
     job_id = await app.db.fetchval(
         """
         UPDATE scheduled_delete_queue
