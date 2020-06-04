@@ -331,4 +331,4 @@ def gen_token(app, user: dict, token_type=TokenType.TIMED) -> str:
         # treated as an API token
         uid = f'u{uid}'
 
-    return signer.sign(uid)
+    return signer.sign(uid).decode()
