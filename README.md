@@ -20,7 +20,7 @@ we are working on.
 (Merge Requests "fixing" them will be closed.)**
 
 Requirements:
- - Python 3.6+
+ - Python 3.7+ (3.8 recommended)
  - PostgreSQL
  - Redis
  - A decent version of Node
@@ -41,7 +41,7 @@ git submodule init
 git submodule update
 
 # You are able to use a virtual enviroment if you want.
-python3.6 -m pip install -Ur requirements.txt
+python3.7 -m pip install -Ur requirements.txt
 
 # make sure those folders exist
 mkdir images
@@ -51,6 +51,10 @@ mkdir thumbnails
 # Please edit schema.sql before continuing.
 # Specially the "INSERT INTO domains" line.
 psql -U postgres -f schema.sql
+
+# Read carefully over the configuration file
+# to enable/disable instance features (like registration and webhooks).
+cp config.py.example config.py
 
 # Edit frontend/config.json and admin-panel/config.json
 # so they're pointing to your domain.
@@ -66,12 +70,8 @@ make update
 # Build the frontend and the admin-panel.
 make 
 
-# Read carefully over the configuration file
-# to enable/disable instance features (like registration and webhooks).
-cp config.py.example config.py
-
 # Run application, also works under external process managers.
-python3.6 run.py
+python3.7 run.py
 ```
 
 # Operator's Manual
