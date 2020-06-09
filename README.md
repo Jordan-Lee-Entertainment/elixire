@@ -80,7 +80,7 @@ python3.7 run.py
 
 Here's some important notes while this is still a todo:
 
-- If you're proxying the instance (you should), enable host forwarding [like this](https://old-s.ave.zone/fjt.png).
+- If you're reverse proxying the instance (you should), enable Host header forwarding in your reverse proxy (such as `proxy_set_header Host $host;` in nginx).
 - If you get an error saying something like "route already registered", then you forgot to build the frontend, either disable it or build the frontend. **You need a reasonably decent node version.**
 - Ensure that you redirect www to non-www or non-www to www or else the domain checking stuff won't be super happy (you'll not be able to fetch stuff properly).
 
