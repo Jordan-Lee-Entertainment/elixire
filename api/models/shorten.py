@@ -6,9 +6,10 @@ from typing import Optional, Dict, Any
 from quart import current_app as app
 from api.storage import object_key
 from api.errors import NotFound
+from api.models.resource import Resource
 
 
-class Shorten:
+class Shorten(Resource):
     __slots__ = (
         "id",
         "shortname",

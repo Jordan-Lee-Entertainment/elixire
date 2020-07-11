@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List, Set, Awaitable
 from quart import current_app as app
 
+from api.models.resource import Resource
 from api.storage import object_key
 from api.errors import NotFound
 
@@ -46,7 +47,7 @@ def construct_url(domain: str, url_basename: str, *, scope: str = "i") -> str:
     return f"{prefix}{domain}/{scope}/{url_basename}"
 
 
-class File:
+class File(Resource):
     """File model."""
 
     __slots__ = (
