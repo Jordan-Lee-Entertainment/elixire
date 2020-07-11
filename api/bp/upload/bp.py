@@ -16,8 +16,8 @@ from api.common import transform_wildcard
 from api.common.auth import check_admin, token_check
 from api.common.utils import resolve_domain
 from api.common.profile import gen_user_shortname
-from api.models import User
-from api.scheduled_deletes import validate_request_duration, maybe_schedule_deletion
+from api.models import User, File
+from api.scheduled_deletes import validate_request_duration
 from .context import UploadContext
 from .file import UploadFile
 
@@ -193,7 +193,10 @@ async def upload_handler():
 
     res = {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
 
-    deletion_job_id = await ctx.file.schedule_deletion(user)
+    elixire_file = await File.fetch(ctx.file.id)
+    assert elixire_file is not None
+
+    deletion_job_id = await elixire_file.schedule_deletion(user)
     if deletion_job_id:
         res["scheduled_delete_job_id"] = str(deletion_job_id)
 

@@ -14,7 +14,7 @@ from api.enums import FileNameType
 from api.common.utils import resolve_domain
 from api.common.profile import gen_user_shortname
 from api.storage import object_key
-from api.scheduled_deletes import maybe_schedule_deletion, validate_request_duration
+from api.scheduled_deletes import validate_request_duration
 from api.models import User, Shorten
 
 bp = Blueprint("shorten", __name__)
