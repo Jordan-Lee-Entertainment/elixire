@@ -10,7 +10,6 @@ from quart import Blueprint, current_app as app, jsonify, request
 
 from api.common.auth import token_check
 from api.scheduled_deletes import (
-    ScheduledDeleteQueue,
     validate_request_duration,
     maybe_schedule_deletion,
     extract_scheduled_timestamp,

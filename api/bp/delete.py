@@ -10,7 +10,7 @@ from hail import Flake
 from violet import JobQueue
 
 from api.common.auth import token_check, password_check
-from api.errors import BadInput, NotFound  # , JobExistsError
+from api.errors import BadInput
 from api.schema import (
     validate,
     PURGE_ALL_BASE_SCHEMA,

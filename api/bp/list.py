@@ -3,9 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
-from typing import Tuple, Union
 
-from quart import Blueprint, jsonify, request, current_app as app
+from quart import Blueprint, jsonify, current_app as app
 
 from api.common.auth import token_check
 from api.models import File
