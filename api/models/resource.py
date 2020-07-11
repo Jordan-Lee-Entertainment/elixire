@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from quart import request
+from hail import Flake
 
 from api.models import User
 
@@ -19,7 +20,7 @@ class Resource:
     @staticmethod
     async def _internal_schedule_deletion(
         user: User, *, file_id: Optional[int] = None, shorten_id: Optional[int] = None
-    ):
+    ) -> Flake:
         """Generic implementation for scheduled deletions.
 
         How this works is that "interface" methods on File and Shorten are shown

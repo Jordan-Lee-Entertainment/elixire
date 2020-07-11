@@ -4,6 +4,8 @@
 
 from typing import Optional, Dict, Any
 from quart import current_app as app
+from hail import Flake
+
 from api.storage import object_key
 from api.errors import NotFound
 from api.models.resource import Resource
@@ -120,3 +122,6 @@ class Shorten(Resource):
         await app.storage.raw_invalidate(
             object_key("redir", self.domain_id, self.subdomain, self.shortname)
         )
+
+    async def schedule_deletion(self, user) -> Flake:
+        return await self._internal_schedule_deletion(user, shorten_id=self.id)

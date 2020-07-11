@@ -8,6 +8,7 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Set, Awaitable
 from quart import current_app as app
+from hail import Flake
 
 from api.models.resource import Resource
 from api.storage import object_key
@@ -302,4 +303,8 @@ class File(Resource):
         if timeout is None:
             assert not pending
 
+        # mypy kind of fucks up here. sorry.
         return pending
+
+    async def schedule_deletion(self, user) -> Flake:
+        return await self._internal_schedule_deletion(user, file_id=self.id)
