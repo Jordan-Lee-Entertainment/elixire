@@ -15,6 +15,7 @@ from api.common.utils import resolve_domain
 from api.common.profile import gen_user_shortname
 from api.storage import object_key
 from api.scheduled_deletes import maybe_schedule_deletion, validate_request_duration
+from api.models import User, Shorten
 
 bp = Blueprint("shorten", __name__)
 
@@ -23,6 +24,8 @@ bp = Blueprint("shorten", __name__)
 async def shorten_handler():
     """Handles addition of shortened links."""
     user_id = await token_check()
+    user = await User.fetch(user_id)
+    assert user is not None
 
     try:
         j = await request.get_json()
@@ -119,7 +122,10 @@ async def shorten_handler():
     fpath = dpath / "s" / redir_rname
 
     res = {"url": f"https://{str(fpath)}"}
-    deletion_job_id = await maybe_schedule_deletion(user_id, shorten_id=redir_id)
+
+    shorten = await Shorten.fetch(redir_id)
+    assert shorten is not None
+    deletion_job_id = await shorten.schedule_deletion(user)
     if deletion_job_id:
         res["scheduled_delete_job_id"] = deletion_job_id
 

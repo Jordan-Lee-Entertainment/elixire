@@ -193,7 +193,7 @@ async def upload_handler():
 
     res = {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
 
-    deletion_job_id = await maybe_schedule_deletion(user_id, file_id=ctx.file.id)
+    deletion_job_id = await ctx.file.schedule_deletion(user)
     if deletion_job_id:
         res["scheduled_delete_job_id"] = str(deletion_job_id)
 
