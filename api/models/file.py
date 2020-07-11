@@ -306,5 +306,5 @@ class File(Resource):
         # mypy kind of fucks up here. sorry.
         return pending
 
-    async def schedule_deletion(self, user) -> Flake:
+    async def schedule_deletion(self, user) -> Optional[Flake]:
         return await self._internal_schedule_deletion(user, file_id=self.id)

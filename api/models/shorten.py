@@ -123,5 +123,5 @@ class Shorten(Resource):
             object_key("redir", self.domain_id, self.subdomain, self.shortname)
         )
 
-    async def schedule_deletion(self, user) -> Flake:
+    async def schedule_deletion(self, user) -> Optional[Flake]:
         return await self._internal_schedule_deletion(user, shorten_id=self.id)
