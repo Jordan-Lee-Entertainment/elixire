@@ -48,6 +48,13 @@ def _to_relativedelta(duration) -> relativedelta:
 
 
 def validate_request_duration(*, required: bool = False) -> None:
+    """If retention_time is given in the query arguments, check its validity.
+
+    This helper function exists because input validation should always happen
+    before any other input is used.
+
+    Raises BadInput if the value is wrongly formatted, etc.
+    """
     duration_str = request.args.get("retention_time")
     if duration_str is None and required:
         raise BadInput("retention_time is a required query argument")
