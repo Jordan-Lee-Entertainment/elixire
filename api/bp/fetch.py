@@ -48,7 +48,7 @@ async def file_handler(request, filename):
     # TODO: maybe give this a separate func and also call from thumbs?
     is_raw = request.args.get("raw")
     is_discordbot = "Discordbot" in request.headers.get("User-Agent", "")
-    is_image = os.path.splitext(request.path)[-1].lower() in ["png", "jpg", "jpeg"]
+    is_image = os.path.splitext(request.path)[-1].lower() in [".png", ".jpg", ".jpeg", ".webp"]
 
     if is_discordbot and is_image and not is_raw:
         # Generate a ?raw=true URL
