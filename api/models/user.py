@@ -250,5 +250,4 @@ class User:
         if scheduled_at is None:
             return None
 
-        # XXX: add schedule_deletion method as a protocol thing
         return await resource.schedule_deletion(scheduled_at)

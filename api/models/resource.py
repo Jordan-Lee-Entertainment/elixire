@@ -4,14 +4,14 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Protocol
 
 from hail import Flake
 
 log = logging.getLogger(__name__)
 
 
-class Resource:
+class Resource(Protocol):
     """Main resource superclass."""
 
     @staticmethod
@@ -52,3 +52,6 @@ class Resource:
         job_id = await ScheduledDeleteQueue.submit(**kwargs, scheduled_at=scheduled_at)
         log.debug("Created deletion job %r", job_id)
         return job_id
+
+    async def schedule_deletion(self, scheduled_at: datetime) -> Flake:
+        ...
