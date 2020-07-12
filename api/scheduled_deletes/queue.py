@@ -8,6 +8,7 @@ from violet.models import QueueJobContext
 from hail import Flake
 from violet import JobQueue
 from api.models import File, Shorten
+from api.models.resource import Resource
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ class ScheduledDeleteQueue(JobQueue):
 
         assert file_id or shorten_id
 
+        resource: Optional[Resource] = None
         if file_id is not None:
             resource = await File.fetch(file_id)
         elif shorten_id is not None:
