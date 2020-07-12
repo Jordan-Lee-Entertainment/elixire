@@ -196,7 +196,9 @@ async def upload_handler():
     elixire_file = await File.fetch(ctx.file.id)
     assert elixire_file is not None
 
-    deletion_job_id = await elixire_file.schedule_deletion(user)
+    deletion_job_id = await user.schedule_deletion_for(
+        elixire_file, duration=request.args.get("retention_time")
+    )
     if deletion_job_id:
         res["scheduled_delete_job_id"] = str(deletion_job_id)
 

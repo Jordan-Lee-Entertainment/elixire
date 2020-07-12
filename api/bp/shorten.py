@@ -125,7 +125,9 @@ async def shorten_handler():
 
     shorten = await Shorten.fetch(redir_id)
     assert shorten is not None
-    deletion_job_id = await shorten.schedule_deletion(user)
+    deletion_job_id = await user.schedule_deletion_for(
+        shorten, duration=request.args.get("retention_time")
+    )
     if deletion_job_id:
         res["scheduled_delete_job_id"] = deletion_job_id
 
