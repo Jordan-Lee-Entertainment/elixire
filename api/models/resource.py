@@ -4,7 +4,9 @@
 
 import logging
 from datetime import datetime
-from typing import Optional, Protocol
+from typing import Optional
+from typing_extensions import Protocol
+
 
 from hail import Flake
 
