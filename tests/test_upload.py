@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 import pytest
 from .common import png_request, hexs, aiohttp_form
 from api.bp.delete import MassDeleteQueue
+from api.models import File
 from api.scheduled_deletes import ScheduledDeleteQueue
 
 pytestmark = pytest.mark.asyncio
@@ -280,8 +281,33 @@ async def test_upload_ephmeral(test_cli_user):
 
     job_id = upload.get("scheduled_delete_job_id")
     assert job_id is not None
+
     status = await ScheduledDeleteQueue.fetch_job_status(job_id)
     assert status is not None
+
+    async with test_cli_user.app.app_context():
+        elixire_file = await File.fetch_by(shortname=upload["shortname"])
+        assert elixire_file is not None
+
+    resp = await test_cli_user.get(
+        "/api/scheduled_deletions",
+        query_string={"resource_type": "file", "after": elixire_file.id - 1},
+    )
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+
+    # if we just uploaded, there must be at least one job in here.
+    # since the job list is ordered by file id, the first job is the one we
+    # want
+    assert isinstance(rjson["jobs"], list)
+    job = rjson["jobs"][0]
+    assert isinstance(job, dict)
+    assert isinstance(job["job_id"], str)
+    assert isinstance(job["state"], int)
+    assert job["file_id"] == elixire_file.id
+
+    rjson["jobs"]
 
     await ScheduledDeleteQueue.wait_job(job_id)
 
