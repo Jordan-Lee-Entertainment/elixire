@@ -34,21 +34,25 @@ async def list_scheduled_deletions():
     wanted_resource = WantedResource(request.args["resource_type"])
     before, after, limit = lazy_paginate()
 
-    if wanted_resource == WantedResource.File:
+    if wanted_resource == WantedResource.files:
         resource_table = "files"
-        id_column = "file_id"
+        id_column = "files.file_id"
+        order_by = "scheduled_delete_queue.file_id"
     else:
         resource_table = "shortens"
-        id_column = "shorten_id"
+        id_column = "shortens.shorten_id"
+        order_by = "scheduled_delete_queue.shorten_id"
 
     rows = await app.db.fetch(
         f"""
         SELECT job_id, state, errors, inserted_at, scheduled_at,
-               file_id, shorten_id
-        FROM scheduled_deletion_queue
-        JOIN {resource_table} ON {resource_table}.uploader_id = $1
-        WHERE {id_column} < $2 AND {id_column} > $3
-        ORDER BY {id_column} DESC
+               scheduled_delete_queue.file_id,
+               scheduled_delete_queue.shorten_id
+        FROM scheduled_delete_queue
+        JOIN {resource_table} ON {resource_table}.uploader = $1
+        WHERE {id_column} < $2 AND {id_column} > $3 AND
+            {order_by} IS NOT NULL
+        ORDER BY {order_by} DESC
         LIMIT $4
         """,
         user_id,
@@ -57,7 +61,7 @@ async def list_scheduled_deletions():
         limit,
     )
 
-    return jsonify({"jobs": rows})
+    return jsonify({"jobs": [dict(r) for r in rows]})
 
 
 async def schedule_resource_deletion(fetcher_coroutine, user_id: int, **kwargs):
