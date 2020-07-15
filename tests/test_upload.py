@@ -307,8 +307,6 @@ async def test_upload_ephmeral(test_cli_user):
     assert isinstance(job["state"], int)
     assert job["file_id"] == elixire_file.id
 
-    rjson["jobs"]
-
     await ScheduledDeleteQueue.wait_job(job_id)
 
     await check_exists(test_cli_user, upload["shortname"], reverse=True)

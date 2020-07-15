@@ -100,6 +100,7 @@ class TestClient:
         async with self.app.app_context():
             user_data = await create_user(username, password, user_email, active=active)
             user = await User.fetch(int(user_data["user_id"]))
+            assert user is not None
             self.add_resource(user)
 
         return user
