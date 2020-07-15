@@ -16,6 +16,11 @@ log = logging.getLogger(__name__)
 class Resource(Protocol):
     """Main resource superclass."""
 
+    @property
+    def uploader_id(self):
+        # This shouldn't happen on subclasses.
+        raise NotImplementedError()
+
     @staticmethod
     async def _internal_schedule_deletion(
         scheduled_at: datetime,

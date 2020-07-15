@@ -235,6 +235,8 @@ class User:
         scheduled_at: Optional[datetime] = None,
         duration: Optional[str] = None,
     ) -> Optional[Flake]:
+        assert resource.uploader_id == self.id
+
         if duration and scheduled_at is None:
             # prevent circular imports by doing it at the function level
             from api.scheduled_deletes.helpers import extract_scheduled_timestamp
