@@ -11,10 +11,9 @@ from quart import Blueprint, current_app as app, jsonify, request
 from api.common.auth import token_check
 from api.scheduled_deletes import (
     validate_request_duration,
-    maybe_schedule_deletion,
     extract_scheduled_timestamp,
 )
-from api.models import File, Shorten
+from api.models import File, Shorten, User
 from api.errors import NotFound
 from api.common.pagination import lazy_paginate
 
@@ -70,7 +69,7 @@ async def schedule_resource_deletion(fetcher_coroutine, user_id: int, **kwargs):
     # make sure the resource exists and uploader matches before
     # scheduling a deletion. method raises NotFound on any mishaps
     # so it will be fine.
-    _ = await fetcher_coroutine
+    resource = await fetcher_coroutine
 
     # job_id can't be none because we require retention_time
     # on the validation call. because of that, we also always
@@ -78,13 +77,22 @@ async def schedule_resource_deletion(fetcher_coroutine, user_id: int, **kwargs):
     # make the route a little bit more expensive.
     #
     # TODO: investigate if we can put a flag on maybe_schedule_deletion
-    # so it doesn't request user settings when it isn't required.
-    job_id = await maybe_schedule_deletion(user_id, **kwargs)
+    # so it doesn't request user settings when it isn't required to do so.
+
+    if resource.uploader_id != user_id:
+        raise NotFound("Resource not found.")
+
+    user = await User.fetch(user_id)
+    assert user is not None
+
+    job_id = await user.schedule_deletion_for(
+        resource, duration=request.args["retention_time"]
+    )
     assert job_id is not None
     return jsonify({"job_id": job_id})
 
 
-@bp.route("/files/<file_id>/scheduled_deletion", methods=["PUT"])
+@bp.route("/files/<int:file_id>/scheduled_deletion", methods=["PUT"])
 async def schedule_file_deletion(file_id: int):
     user_id = await token_check()
     return await schedule_resource_deletion(
@@ -92,7 +100,7 @@ async def schedule_file_deletion(file_id: int):
     )
 
 
-@bp.route("/shortens/<shorten_id>/scheduled_deletion", methods=["PUT"])
+@bp.route("/shortens/<int:shorten_id>/scheduled_deletion", methods=["PUT"])
 async def schedule_shorten_deletion(shorten_id: int):
     user_id = await token_check()
     return await schedule_resource_deletion(
