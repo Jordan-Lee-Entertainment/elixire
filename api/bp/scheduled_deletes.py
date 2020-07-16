@@ -108,8 +108,7 @@ async def schedule_resource_deletion(fetcher_coroutine, user_id: int, **kwargs):
     # ignore the user setting for default max retention. this does
     # make the route a little bit more expensive.
     #
-    # TODO: investigate if we can put a flag on maybe_schedule_deletion
-    # so it doesn't request user settings when it isn't required to do so.
+    # We already fetch a User, though, so we always have the settings.
 
     if resource.uploader_id != user_id:
         raise NotFound("Resource not found.")

@@ -17,20 +17,6 @@ from api.models import User
 log = logging.getLogger(__name__)
 
 
-async def fetch_autodelete_jobs(
-    user_id: int, *, page: int, resource_type: str
-) -> List[dict]:
-    return await app.db.fetch(
-        f"""
-        SELECT job_id
-        FROM violet_jobs
-        WHERE queue = 'scheduled_deletes'
-          AND args->>0 = $1
-        """,
-        resource_type,
-    )
-
-
 def _to_relativedelta(duration) -> relativedelta:
     """
     Convert metomi's Duration object into a dateutil's relativedelta object.
@@ -67,29 +53,15 @@ def validate_request_duration(*, required: bool = False) -> None:
 
 
 def extract_scheduled_timestamp(duration_str: str) -> Tuple[datetime, datetime]:
+    """From a given duration string, return a tuple with datetimes representing
+    the range [now, now + duration]."""
+
+    # The juggling of metomi + dateutil is caused by the poor ISO8601 parsing
+    # and ISO8601 parsers having poor integration with datetime.
+    #
+    # Time APIs kinda suck.
+
     duration = parse.DurationParser().parse(duration_str)
     now = datetime.utcnow()
     relative_delta = _to_relativedelta(duration)
     return now, now + relative_delta
-
-
-async def maybe_schedule_deletion(user_id: int, **kwargs) -> Optional[Flake]:
-    user = await User.fetch(user_id)
-    assert user is not None
-
-    scheduled_at = None
-
-    default_max_retention: Optional[int] = user.settings.default_max_retention
-    if default_max_retention is not None:
-        scheduled_at = datetime.utcnow() + timedelta(seconds=default_max_retention)
-
-    duration_str: Optional[str] = request.args.get("retention_time")
-    if duration_str is not None:
-        _, scheduled_at = extract_scheduled_timestamp(duration_str)
-
-    if scheduled_at is None:
-        return None
-
-    job_id = await ScheduledDeleteQueue.submit(**kwargs, scheduled_at=scheduled_at)
-    log.debug("Created deletion job %r", job_id)
-    return job_id
