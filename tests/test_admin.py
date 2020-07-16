@@ -357,7 +357,7 @@ class JobTestQueue(JobQueue):
     args = ("test",)
 
     @classmethod
-    async def map_persisted_row(_cls, _row):
+    def map_persisted_row(_cls, _row):
         return
 
     @classmethod
