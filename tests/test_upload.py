@@ -291,7 +291,7 @@ async def test_upload_ephmeral(test_cli_user):
 
     resp = await test_cli_user.get(
         "/api/scheduled_deletions",
-        query_string={"resource_type": "file", "after": elixire_file.id - 1},
+        query_string={"resource_type": "file", "after": elixire_file.id},
     )
     assert resp.status_code == 200
     rjson = await resp.json

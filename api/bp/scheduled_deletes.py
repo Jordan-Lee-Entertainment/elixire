@@ -47,7 +47,7 @@ async def fetch_deletions(
                scheduled_delete_queue.shorten_id
         FROM scheduled_delete_queue
         JOIN {resource_table} ON {resource_table}.uploader = $1
-        WHERE {id_column} < $2 AND {id_column} > $3 AND
+        WHERE {id_column} <= $2 AND {id_column} >= $3 AND
             {order_by} IS NOT NULL
         ORDER BY {order_by} DESC
         LIMIT $4
@@ -73,7 +73,6 @@ async def list_scheduled_deletions():
 async def fetch_file_deletion(file_id: int):
     user_id = await token_check()
 
-    # XXX: file_id -1 and + 1?
     rows = await fetch_deletions(WantedResource.files, user_id, file_id, file_id, 1)
     if not rows:
         raise NotFound("No scheduled deletion jobs found for the given file.")
