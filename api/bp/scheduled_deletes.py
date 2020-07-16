@@ -158,7 +158,7 @@ async def modify_resource_deletion(fetcher_coroutine, user_id, **kwargs):
     return "", 204
 
 
-@bp.route("/files/<file_id>/scheduled_deletion", methods=["PATCH"])
+@bp.route("/files/<int:file_id>/scheduled_deletion", methods=["PATCH"])
 async def modify_file_deletion(file_id: int):
     user_id = await token_check()
     return await modify_resource_deletion(
@@ -166,7 +166,7 @@ async def modify_file_deletion(file_id: int):
     )
 
 
-@bp.route("/shortens/<shorten_id>/scheduled_deletion", methods=["PATCH"])
+@bp.route("/shortens/<int:shorten_id>/scheduled_deletion", methods=["PATCH"])
 async def modify_shorten_deletion(shorten_id: int):
     user_id = await token_check()
     return await modify_resource_deletion(
