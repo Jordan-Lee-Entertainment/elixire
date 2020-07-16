@@ -2,17 +2,14 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
-from datetime import datetime, timedelta
-from typing import List, Tuple, Optional
+from datetime import datetime
+from typing import Tuple
 
 import metomi.isodatetime.parsers as parse
-from quart import current_app as app, request
-from hail import Flake
+from quart import request
 from dateutil.relativedelta import relativedelta
 
-from api.scheduled_deletes.queue import ScheduledDeleteQueue
 from api.errors import BadInput
-from api.models import User
 
 log = logging.getLogger(__name__)
 
