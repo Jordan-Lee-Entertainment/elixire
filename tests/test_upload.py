@@ -307,6 +307,16 @@ async def test_upload_ephmeral(test_cli_user):
     assert isinstance(job["state"], int)
     assert job["file_id"] == elixire_file.id
 
+    resp = await test_cli_user.get(f"/api/files/{elixire_file.id}/scheduled_deletion",)
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["job"], dict)
+
+    job = rjson["job"]
+    assert job["file_id"] == elixire_file.id
+    assert job["shorten_id"] is None
+
     await ScheduledDeleteQueue.wait_job(job_id)
 
     await check_exists(test_cli_user, upload["shortname"], reverse=True)

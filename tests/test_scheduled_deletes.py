@@ -47,12 +47,20 @@ async def test_existing_shorten(test_cli_user):
     assert resp.status_code == 200
     rjson = await resp.json
     assert isinstance(rjson, dict)
+    job_id = rjson["job_id"]
+
+    resp = await test_cli_user.get(f"/api/shortens/{shorten.id}/scheduled_deletion")
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    job = rjson["job"]
+    assert isinstance(job, dict)
+    assert job["shorten_id"] == shorten.id
 
     async with test_cli_user.app.app_context():
         prewait_shorten = await Shorten.fetch(shorten.id)
         assert prewait_shorten is not None
 
-    job_id = rjson["job_id"]
     await ScheduledDeleteQueue.wait_job(job_id)
 
     async with test_cli_user.app.app_context():
