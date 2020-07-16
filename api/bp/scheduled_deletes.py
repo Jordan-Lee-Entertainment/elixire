@@ -3,9 +3,10 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 
+import asyncpg
 from quart import Blueprint, current_app as app, jsonify, request
 
 from api.common.auth import token_check
@@ -27,12 +28,9 @@ class WantedResource(Enum):
     shortens = "shorten"
 
 
-@bp.route("/scheduled_deletions")
-async def list_scheduled_deletions():
-    user_id = await token_check()
-    wanted_resource = WantedResource(request.args["resource_type"])
-    before, after, limit = lazy_paginate()
-
+async def fetch_deletions(
+    wanted_resource: WantedResource, user_id: int, before: int, after: int, limit: int
+) -> List[asyncpg.Record]:
     if wanted_resource == WantedResource.files:
         resource_table = "files"
         id_column = "files.file_id"
@@ -42,7 +40,7 @@ async def list_scheduled_deletions():
         id_column = "shortens.shorten_id"
         order_by = "scheduled_delete_queue.shorten_id"
 
-    rows = await app.db.fetch(
+    return await app.db.fetch(
         f"""
         SELECT job_id, state, errors, inserted_at, scheduled_at,
                scheduled_delete_queue.file_id,
@@ -60,7 +58,28 @@ async def list_scheduled_deletions():
         limit,
     )
 
+
+@bp.route("/scheduled_deletions")
+async def list_scheduled_deletions():
+    user_id = await token_check()
+    wanted_resource = WantedResource(request.args["resource_type"])
+    before, after, limit = lazy_paginate()
+
+    rows = await fetch_deletions(wanted_resource, user_id, before, after, limit)
     return jsonify({"jobs": [dict(r) for r in rows]})
+
+
+@bp.route("/files/<int:file_id>/scheduled_deletion")
+async def fetch_file_deletion(file_id: int):
+    user_id = await token_check()
+
+    # XXX: file_id -1 and + 1?
+    rows = await fetch_deletions(WantedResource.files, user_id, file_id, file_id, 1)
+    if not rows:
+        raise NotFound("No scheduled deletion jobs found for the given file.")
+
+    assert len(rows) == 1
+    return {"job": dict(rows[0])}
 
 
 async def schedule_resource_deletion(fetcher_coroutine, user_id: int, **kwargs):
