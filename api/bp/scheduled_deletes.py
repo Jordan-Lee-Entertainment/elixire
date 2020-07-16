@@ -81,6 +81,20 @@ async def fetch_file_deletion(file_id: int):
     return {"job": dict(rows[0])}
 
 
+@bp.route("/shortens/<int:shorten_id>/scheduled_deletion")
+async def fetch_shorten_deletion(shorten_id: int):
+    user_id = await token_check()
+
+    rows = await fetch_deletions(
+        WantedResource.shortens, user_id, shorten_id, shorten_id, 1
+    )
+    if not rows:
+        raise NotFound("No scheduled deletion jobs found for the given shorten.")
+
+    assert len(rows) == 1
+    return {"job": dict(rows[0])}
+
+
 async def schedule_resource_deletion(fetcher_coroutine, user_id: int, **kwargs):
     validate_request_duration(required=True)
 
