@@ -61,11 +61,7 @@ async def fetch_shorten_deletion(shorten_id: int):
 
 
 async def schedule_resource_deletion(resource_type, *args, user_id: int, **kwargs):
-    """Schedule a resource deletion from the current request.
-
-    A coroutine that returns the resource in question should be passed, which
-    will be awaited after input validation.
-    """
+    """Schedule a resource deletion from the current request."""
     validate_request_duration(required=True)
 
     resource = await resource_type.fetch(*args, **kwargs)
