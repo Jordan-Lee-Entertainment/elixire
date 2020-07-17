@@ -7,8 +7,9 @@ from datetime import datetime
 from typing import Optional
 from typing_extensions import Protocol
 
-
 from hail import Flake
+
+from api.errors import NotFound
 
 log = logging.getLogger(__name__)
 
@@ -17,16 +18,32 @@ class Resource(Protocol):
     """Main resource superclass."""
 
     @property
+    def _kind(self) -> str:
+        return type(self).__name__
+
+    @property
     def uploader_id(self):
         # This shouldn't happen on subclasses.
         raise NotImplementedError()
+
+    def assert_uploader(self, uploader_id: int) -> None:
+        """Assert the uploader of this resource, raising if there isn't a match.
+
+        :class:`NotFound` is raised if the uploader of this resource doesn't
+        match the one provided.
+        """
+        if self.uploader_id != uploader_id:
+            raise NotFound(f"{self._kind} not found")
+
+    async def schedule_deletion(self, scheduled_at: datetime) -> Flake:
+        raise NotImplementedError
 
     @staticmethod
     async def _internal_schedule_deletion(
         scheduled_at: datetime,
         *,
         file_id: Optional[int] = None,
-        shorten_id: Optional[int] = None
+        shorten_id: Optional[int] = None,
     ) -> Optional[Flake]:
         """Generic implementation for scheduled deletions.
 
@@ -59,6 +76,3 @@ class Resource(Protocol):
         job_id = await ScheduledDeleteQueue.submit(**kwargs, scheduled_at=scheduled_at)
         log.debug("Created deletion job %r", job_id)
         return job_id
-
-    async def schedule_deletion(self, scheduled_at: datetime) -> Flake:
-        ...

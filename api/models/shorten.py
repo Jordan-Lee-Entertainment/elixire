@@ -109,7 +109,7 @@ class Shorten(Resource):
         """Delete the shorten."""
 
         await app.db.fetchrow(
-            f"""
+            """
             UPDATE shortens
             SET deleted = true,
                 redirto = ''
