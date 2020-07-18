@@ -207,7 +207,7 @@ async def users_search(request, admin_id):
         del row['total_count']
         return row
 
-    results = map(map_user, users)
+    results = [map_user(u) for u in users]
     total_count = 0 if not users else users[0]['total_count']
 
     return response.json(pagination.response(results, total_count=total_count))
