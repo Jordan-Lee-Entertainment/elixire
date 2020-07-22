@@ -38,5 +38,5 @@ async def d1_check(request):
     ciphertext_res = fernet.encrypt(data2.encode())
 
     return response.json({
-        'data': ciphertext_res
+        'data': ciphertext_res.decode()
     })
