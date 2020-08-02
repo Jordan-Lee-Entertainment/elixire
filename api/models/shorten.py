@@ -4,10 +4,14 @@
 
 from typing import Optional, Dict, Any
 from quart import current_app as app
+from hail import Flake
+
 from api.storage import object_key
+from api.errors import NotFound
+from api.models.resource import Resource
 
 
-class Shorten:
+class Shorten(Resource):
     __slots__ = (
         "id",
         "shortname",
@@ -59,6 +63,29 @@ class Shorten:
 
         return Shorten(row)
 
+    @classmethod
+    async def fetch_by_with_uploader(
+        cls,
+        uploader_id: int,
+        *,
+        shorten_id: Optional[int] = None,
+        shortname: Optional[str] = None,
+    ) -> "Shorten":
+        """Fetch a shorten but only return it if the given uploader id
+        matches with the shorten's uploader.
+
+        Raises NotFound if the shorten isn't found or the uploader mismatches."""
+        assert shorten_id or shortname
+        if shorten_id:
+            shorten = await cls.fetch(shorten_id)
+        elif shortname:
+            shorten = await cls.fetch_by(shortname=shortname)
+
+        if shorten is None or shorten.uploader_id != uploader_id:
+            raise NotFound("Shorten not found")
+
+        return shorten
+
     def to_dict(self, *, public: bool = False) -> Dict[str, Any]:
         file_dict = {
             "id": self.id,
@@ -82,7 +109,7 @@ class Shorten:
         """Delete the shorten."""
 
         await app.db.fetchrow(
-            f"""
+            """
             UPDATE shortens
             SET deleted = true,
                 redirto = ''
@@ -95,3 +122,6 @@ class Shorten:
         await app.storage.raw_invalidate(
             object_key("redir", self.domain_id, self.subdomain, self.shortname)
         )
+
+    async def schedule_deletion(self, scheduled_at) -> Optional[Flake]:
+        return await self._internal_schedule_deletion(scheduled_at, shorten_id=self.id)

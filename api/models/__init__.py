@@ -6,5 +6,6 @@ from .user import User
 from .domain import Domain, Tag, Tags
 from .file import File
 from .shorten import Shorten
+from .resource import Resource
 
-__all__ = ["User", "Domain", "Tag", "Tags", "File", "Shorten"]
+__all__ = ["User", "Domain", "Tag", "Tags", "File", "Shorten", "Resource"]

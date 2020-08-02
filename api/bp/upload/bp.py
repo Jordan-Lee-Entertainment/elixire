@@ -16,7 +16,8 @@ from api.common import transform_wildcard
 from api.common.auth import check_admin, token_check
 from api.common.utils import resolve_domain
 from api.common.profile import gen_user_shortname
-from api.models import User
+from api.models import User, File
+from api.scheduled_deletes import validate_request_duration
 from .context import UploadContext
 from .file import UploadFile
 
@@ -92,6 +93,8 @@ async def upload_handler():
     user_id = await token_check()
     user = await User.fetch(user_id)
     assert user is not None
+
+    validate_request_duration()
 
     # if admin is set on request.args, we will # do an "admin upload", without
     # any checking for viruses, weekly limits, MIME, etc.
@@ -188,7 +191,16 @@ async def upload_handler():
 
             output.write(chunk)
 
-    await upload_metrics(ctx)
-    return jsonify(
-        {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
+    res = {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
+
+    elixire_file = await File.fetch(ctx.file.id)
+    assert elixire_file is not None
+
+    deletion_job_id = await user.schedule_deletion_for(
+        elixire_file, duration=request.args.get("retention_time")
     )
+    if deletion_job_id:
+        res["scheduled_delete_job_id"] = str(deletion_job_id)
+
+    await upload_metrics(ctx)
+    return jsonify(res)

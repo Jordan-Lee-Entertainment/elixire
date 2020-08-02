@@ -54,7 +54,9 @@ CREATE TABLE IF NOT EXISTS user_settings (
     domain bigint REFERENCES domains (domain_id) DEFAULT 0 NOT NULL,
 
     shorten_subdomain text DEFAULT '' NOT NULL,
-    shorten_domain bigint REFERENCES domains (domain_id) DEFAULT NULL
+    shorten_domain bigint REFERENCES domains (domain_id) DEFAULT NULL,
+
+    default_max_retention bigint DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS admin_user_settings (
@@ -222,4 +224,19 @@ CREATE TABLE IF NOT EXISTS mass_delete_queue (
 
     user_id bigint REFERENCES users (user_id) ON DELETE CASCADE,
     query jsonb default '{}'
+);
+
+CREATE TABLE IF NOT EXISTS scheduled_delete_queue (
+    job_id uuid primary key,
+    name text unique,
+
+    state bigint default 0,
+    errors text default '',
+    inserted_at timestamp without time zone default (now() at time zone 'utc'),
+    scheduled_at timestamp without time zone default (now() at time zone 'utc'),
+    taken_at timestamp without time zone default null,
+    internal_state jsonb default '{}',
+
+    file_id bigint references files (file_id) default null,
+    shorten_id bigint references shortens (shorten_id) default null
 );

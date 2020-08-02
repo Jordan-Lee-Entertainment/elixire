@@ -4,12 +4,14 @@
 
 import io
 import secrets
-import pytest
 import os.path
 from urllib.parse import urlparse
 
+import pytest
 from .common import png_request, hexs, aiohttp_form
 from api.bp.delete import MassDeleteQueue
+from api.models import File
+from api.scheduled_deletes import ScheduledDeleteQueue
 
 pytestmark = pytest.mark.asyncio
 
@@ -208,8 +210,8 @@ async def test_legacy_file_resolution(test_cli_user):
     assert resp.status_code == 404
 
 
-async def _upload(test_cli_user) -> dict:
-    resp = await test_cli_user.post("/api/upload", **(await png_request()))
+async def _upload(test_cli_user, **kwargs) -> dict:
+    resp = await test_cli_user.post("/api/upload", **(await png_request()), **kwargs)
 
     assert resp.status_code == 200
     respjson = await resp.json
@@ -269,3 +271,52 @@ async def test_delete_nonexist(test_cli_user):
     # ensure sharex compatibility endpoint works too
     resp_del = await test_cli_user.get(f"/api/files/{rand_file}/delete")
     assert resp_del.status_code == 404
+
+
+async def test_upload_ephmeral(test_cli_user):
+    """Test that uploading a file with a set retention time
+    actually works and will leave the file inaccessible afterwards."""
+    upload = await _upload(test_cli_user, query_string={"retention_time": "PT3S"})
+    await check_exists(test_cli_user, upload["shortname"])
+
+    job_id = upload.get("scheduled_delete_job_id")
+    assert job_id is not None
+
+    status = await ScheduledDeleteQueue.fetch_job_status(job_id)
+    assert status is not None
+
+    async with test_cli_user.app.app_context():
+        elixire_file = await File.fetch_by(shortname=upload["shortname"])
+        assert elixire_file is not None
+
+    resp = await test_cli_user.get(
+        "/api/scheduled_deletions",
+        query_string={"resource_type": "file", "after": elixire_file.id},
+    )
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+
+    # if we just uploaded, there must be at least one job in here.
+    # since the job list is ordered by file id, the first job is the one we
+    # want
+    assert isinstance(rjson["jobs"], list)
+    job = rjson["jobs"][0]
+    assert isinstance(job, dict)
+    assert isinstance(job["job_id"], str)
+    assert isinstance(job["state"], int)
+    assert job["file_id"] == elixire_file.id
+
+    resp = await test_cli_user.get(f"/api/files/{elixire_file.id}/scheduled_deletion",)
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["job"], dict)
+
+    job = rjson["job"]
+    assert job["file_id"] == elixire_file.id
+    assert job["shorten_id"] is None
+
+    await ScheduledDeleteQueue.wait_job(job_id)
+
+    await check_exists(test_cli_user, upload["shortname"], reverse=True)

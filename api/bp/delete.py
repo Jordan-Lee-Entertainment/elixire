@@ -10,7 +10,7 @@ from hail import Flake
 from violet import JobQueue
 
 from api.common.auth import token_check, password_check
-from api.errors import BadInput, NotFound  # , JobExistsError
+from api.errors import BadInput
 from api.schema import (
     validate,
     PURGE_ALL_BASE_SCHEMA,
@@ -192,10 +192,7 @@ class MassDeleteQueue(JobQueue):
 async def delete_single(shortname: str):
     """Delete a single file."""
     user_id = await token_check()
-
-    elixire_file = await File.fetch_by(shortname=shortname)
-    if elixire_file is None or elixire_file.uploader_id != user_id:
-        raise NotFound("File not found")
+    elixire_file = await File.fetch_by_with_uploader(user_id, shortname=shortname)
 
     # really want to keep this up.
     assert elixire_file.uploader_id == user_id
@@ -207,10 +204,6 @@ async def delete_single(shortname: str):
 async def shortendelete_handler(user_id, shorten_name):
     """Invalidate a shorten."""
     user_id = await token_check()
-    shorten = await Shorten.fetch_by(shortname=shorten_name)
-
-    if shorten is None or shorten.uploader_id != user_id:
-        raise NotFound("Shorten not found")
-
+    shorten = (await Shorten.fetch_by_with_uploader(user_id, shortname=shorten_name),)
     await shorten.delete()
     return "", 204

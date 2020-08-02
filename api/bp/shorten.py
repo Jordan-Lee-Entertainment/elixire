@@ -14,6 +14,8 @@ from api.enums import FileNameType
 from api.common.utils import resolve_domain
 from api.common.profile import gen_user_shortname
 from api.storage import object_key
+from api.scheduled_deletes import validate_request_duration
+from api.models import User, Shorten
 
 bp = Blueprint("shorten", __name__)
 
@@ -22,6 +24,8 @@ bp = Blueprint("shorten", __name__)
 async def shorten_handler():
     """Handles addition of shortened links."""
     user_id = await token_check()
+    user = await User.fetch(user_id)
+    assert user is not None
 
     try:
         j = await request.get_json()
@@ -41,6 +45,8 @@ async def shorten_handler():
             f"Your URL is way too long ({len(url_toredir)} "
             f"> {app.econfig.MAX_SHORTEN_URL_LEN})."
         )
+
+    validate_request_duration()
 
     # Check if admin is set in get values, if not, do checks
     # If it is set, and the admin value is truthy, do not do checks
@@ -111,12 +117,22 @@ async def shorten_handler():
         subdomain_name,
     )
 
-    await app.storage.set_with_ttl(
-        object_key("redir", domain_id, subdomain_name, redir_rname), url_toredir, 600
-    )
-
     # appended to generated filename
     dpath = pathlib.Path(domain)
     fpath = dpath / "s" / redir_rname
 
-    return jsonify({"url": f"https://{str(fpath)}"})
+    res = {"url": f"https://{str(fpath)}"}
+
+    shorten = await Shorten.fetch(redir_id)
+    assert shorten is not None
+    deletion_job_id = await user.schedule_deletion_for(
+        shorten, duration=request.args.get("retention_time")
+    )
+    if deletion_job_id:
+        res["scheduled_delete_job_id"] = deletion_job_id
+
+    await app.storage.set_with_ttl(
+        object_key("redir", domain_id, subdomain_name, redir_rname), url_toredir, 600
+    )
+
+    return jsonify(res)

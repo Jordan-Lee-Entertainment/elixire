@@ -3,8 +3,11 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from typing import Optional, Dict, Any
+from datetime import datetime, timedelta
 from asyncpg import Record
 from quart import current_app as app
+from hail import Flake
+from api.models.resource import Resource
 
 
 async def _get_uploaded_count_from(
@@ -35,6 +38,7 @@ class UserSettings:
         "domain",
         "shorten_subdomain",
         "shorten_domain",
+        "default_max_retention",
     )
 
     def __init__(self, row):
@@ -49,6 +53,8 @@ class UserSettings:
         self.subdomain: str = row["subdomain"]
         self.shorten_subdomain: str = row["shorten_subdomain"]
 
+        self.default_max_retention: int = row["default_max_retention"]
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "consented": self.consented,
@@ -57,6 +63,7 @@ class UserSettings:
             "domain": self.domain,
             "shorten_subdomain": self.shorten_subdomain,
             "shorten_domain": self.shorten_domain,
+            "default_max_retention": self.default_max_retention,
         }
 
 
@@ -86,7 +93,7 @@ class User:
             """
             SELECT
                 user_id, consented, paranoid, subdomain, domain,
-                shorten_subdomain, shorten_domain
+                shorten_subdomain, shorten_domain, default_max_retention
             FROM user_settings
             WHERE user_id = $1
             """,
@@ -220,3 +227,29 @@ class User:
             "total_bytes": total_bytes,
             "total_shortens": total_shortens,
         }
+
+    async def schedule_deletion_for(
+        self,
+        resource: Resource,
+        *,
+        scheduled_at: Optional[datetime] = None,
+        duration: Optional[str] = None,
+    ) -> Optional[Flake]:
+        assert resource.uploader_id == self.id
+
+        if duration and scheduled_at is None:
+            # prevent circular imports by doing it at the function level
+            from api.scheduled_deletes.helpers import extract_scheduled_timestamp
+
+            _, scheduled_at = extract_scheduled_timestamp(duration)
+
+        default_max_retention: Optional[int] = self.settings.default_max_retention
+
+        # only overwrite scheduled_at if we weren't given one
+        if default_max_retention is not None and scheduled_at is None:
+            scheduled_at = datetime.utcnow() + timedelta(seconds=default_max_retention)
+
+        if scheduled_at is None:
+            return None
+
+        return await resource.schedule_deletion(scheduled_at)

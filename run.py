@@ -37,6 +37,7 @@ import api.bp.cors
 import api.bp.client
 import api.bp.list
 import api.bp.delete
+import api.bp.scheduled_deletes
 from api.json import ElixireJSONEncoder
 
 from api.errors import APIError, Banned
@@ -47,6 +48,7 @@ from api.bp.metrics.counters import MetricsCounters
 from api.bp.admin.audit_log import AuditLog
 from api.common.banning import ban_request
 from api.mode import ElixireMode
+from api.scheduled_deletes import ScheduledDeleteQueue
 
 import config
 
@@ -84,6 +86,11 @@ def make_app() -> Quart:
 def set_blueprints(app_):
     """Set the blueprints on the app."""
     # load blueprints
+    #
+    # prefix of -1: no prefix at all, all routes in the blueprint are relateive
+    # 	to root path.
+    # prefix of empty string: /api
+    # prefix of non-empty string: /api<prefix>
 
     blueprints = {
         api.bp.cors.bp: -1,
@@ -111,6 +118,7 @@ def set_blueprints(app_):
         api.bp.fetch.bp: -1,
         api.bp.wpadmin.bp: -1,
         api.bp.client.bp: -1,
+        api.bp.scheduled_deletes.bp: "",
     }
 
     for blueprint, api_prefix in blueprints.items():
@@ -233,6 +241,7 @@ async def app_before_serving():
     app.sched = JobManager(loop=app.loop, db=app.db, context_function=app.app_context)
     app.sched.register_job_queue(api.bp.datadump.handler.DatadumpQueue)
     app.sched.register_job_queue(api.bp.delete.MassDeleteQueue)
+    app.sched.register_job_queue(ScheduledDeleteQueue)
 
     log.info("connecting to redis")
     app.redis = await aioredis.create_redis_pool(

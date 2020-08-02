@@ -8,8 +8,11 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Set, Awaitable
 from quart import current_app as app
+from hail import Flake
 
+from api.models.resource import Resource
 from api.storage import object_key
+from api.errors import NotFound
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +48,7 @@ def construct_url(domain: str, url_basename: str, *, scope: str = "i") -> str:
     return f"{prefix}{domain}/{scope}/{url_basename}"
 
 
-class File:
+class File(Resource):
     """File model."""
 
     __slots__ = (
@@ -104,6 +107,29 @@ class File:
             return None
 
         return cls(row)
+
+    @classmethod
+    async def fetch_by_with_uploader(
+        cls,
+        uploader_id: int,
+        *,
+        file_id: Optional[int] = None,
+        shortname: Optional[str] = None,
+    ) -> "File":
+        """Fetch a file but only return it if the given uploader id
+        matches with the file's uploader.
+
+        Raises NotFound if the file isn't found or the uploader mismatches."""
+        assert file_id or shortname
+        if file_id:
+            elixire_file = await cls.fetch(file_id)
+        elif shortname:
+            elixire_file = await cls.fetch_by(shortname=shortname)
+
+        if elixire_file is None or elixire_file.uploader_id != uploader_id:
+            raise NotFound("File not found")
+
+        return elixire_file
 
     def to_dict(self, *, public: bool = False) -> Dict[str, Any]:
         file_dict = {
@@ -277,4 +303,8 @@ class File:
         if timeout is None:
             assert not pending
 
+        # mypy kind of fucks up here. sorry.
         return pending
+
+    async def schedule_deletion(self, scheduled_at) -> Optional[Flake]:
+        return await self._internal_schedule_deletion(scheduled_at, file_id=self.id)
