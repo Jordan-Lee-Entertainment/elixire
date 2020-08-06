@@ -61,6 +61,9 @@ class TestClient:
         if not do_token:
             return headers
 
+        if self.user is None:
+            return headers
+
         headers["authorization"] = self.user["token"]
         return headers
 
