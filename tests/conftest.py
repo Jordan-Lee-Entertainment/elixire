@@ -84,6 +84,14 @@ async def test_user_fixture(app):
 
 
 @pytest.fixture
+async def test_client(test_cli):
+    """Yield a TestClient without the overhead of creating a user."""
+    client = TestClient(test_cli, None)
+    yield client
+    await client.cleanup()
+
+
+@pytest.fixture
 async def test_cli_user(test_cli, test_user):
     """Yield a TestClient instance that contains a randomly generated
     user."""
