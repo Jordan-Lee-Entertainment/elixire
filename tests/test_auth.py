@@ -57,6 +57,7 @@ async def test_login_badpwd(test_cli_user):
 async def test_login_baduser(test_cli_user):
     resp = await test_cli_user.post(
         "/api/auth/login",
+        do_token=False,
         json={"user": username(), "password": test_cli_user["password"]},
     )
 
@@ -80,12 +81,13 @@ async def test_valid_token(test_cli_user):
     assert resp.status_code == 200
 
 
-async def test_revoke(test_cli, test_cli_user):
+async def test_revoke(test_cli_user):
     resp = await test_cli_user.get("/api/profile")
     assert resp.status_code == 200
 
-    resp = await test_cli.post(
+    resp = await test_cli_user.post(
         "/api/auth/revoke",
+        do_token=False,
         json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
     )
 
