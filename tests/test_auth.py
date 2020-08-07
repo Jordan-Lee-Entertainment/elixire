@@ -174,6 +174,10 @@ async def test_password_reset(test_cli_user):
 
     assert resp.status_code == 200
 
+    # after the test, set the session's test user password
+    # to the new password, since the user is reused between tests
+    test_cli_user.user["password"] = new_password
+
 
 async def test_register(test_client):
     """Test the registration of a user"""
