@@ -1,6 +1,6 @@
 variables:
-  PIP_CACHE_DIR: '$CI_PROJECT_DIR/.cache'
-  POSTGRES_HOST_AUTH_METHOD: 'trust'
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache"
+  POSTGRES_HOST_AUTH_METHOD: "trust"
 #   GIT_SUBMODULE_STRATEGY: recursive
 
 # build_frontend:
@@ -28,19 +28,19 @@ run_backend:
     - rm -rf .tox
     - python -V
     - pip -V
-    - apk --update add build-base git python3-dev libffi-dev jpeg-dev zlib-dev
+    - time apk --update add build-base git python3-dev libffi-dev jpeg-dev zlib-dev
       freetype-dev lcms2-dev openjpeg-dev tiff-dev tk-dev tcl-dev libxml2-dev
       libxslt-dev libffi-dev gcc musl-dev libgcc openssl-dev curl libmagic
       postgresql-client
-    - pip install wheel tox
+    - time pip install wheel tox
     - mkdir -p images dumps thumbnails
     - cat config.example.py config.ci.py > config.py
     - pip install aioredis==1.3.1 asyncpg==0.20.1
-    - python ./utils/upgrade/folder_sharding.py
+    - time python ./utils/upgrade/folder_sharding.py
   script:
     - mkdir frontend/output admin-panel/dist -p
     - touch frontend/output/index.html admin-panel/dist/index.html
     - ls -la
     - pwd
-    - psql -h postgres -U postgres -f schema.sql
+    - time psql -h postgres -U postgres -f schema.sql
     - tox
