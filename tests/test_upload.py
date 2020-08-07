@@ -79,10 +79,15 @@ async def test_upload_png(test_cli_user):
 
     test_domain = await test_cli_user.create_domain()
 
+    # store the request data for uploads in a variable since new calls to
+    # png_request() will return new random bytes to prevent deduplication from
+    # breaking other tests.
+    req = await png_request()
+
     subdomain = hexs(10)
     resp = await test_cli_user.post(
         "/api/upload",
-        **(await png_request()),
+        **(req),
         query_string={"domain": test_domain.id, "subdomain": subdomain},
     )
 
@@ -123,15 +128,13 @@ async def test_upload_png(test_cli_user):
     )
     assert resp.status_code == 404
 
-    # trying to upload the same file will bring
-    # the same url (deduplication)
-    #
-    # NOTE: png_request must always return the same data.
+    # trying to upload the same file will bring the same url (deduplication)
+    # we should check for that
 
     subdomain = hexs(10)
     resp = await test_cli_user.post(
         "/api/upload",
-        **(await png_request()),
+        **(req),
         query_string={"domain": test_domain.id, "subdomain": subdomain},
     )
 
