@@ -87,23 +87,17 @@ async def test_shorten_wrong_scheme(test_cli_user):
 async def test_shorten_quota(test_cli_user):
     try:
         await test_cli_user.app.db.execute(
-            "UPDATE limits SET shlimit = 1 WHERE user_id = $1",
+            "UPDATE limits SET shlimit = 0 WHERE user_id = $1",
             test_cli_user.user["user_id"],
         )
 
         resp = await test_cli_user.post(
             "/api/shorten", json={"url": "https://elixi.re"}
         )
-        assert resp.status_code == 200
-
-        resp = await test_cli_user.post(
-            "/api/shorten", json={"url": "https://elixi.re"}
-        )
         assert resp.status_code == 469
     finally:
-
         await test_cli_user.app.db.execute(
-            "UPDATE limits SET shlimit = 100 WHERE user_id = $1",
+            "UPDATE limits SET shlimit = DEFAULT WHERE user_id = $1",
             test_cli_user.user["user_id"],
         )
 
