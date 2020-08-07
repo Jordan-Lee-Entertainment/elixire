@@ -88,7 +88,10 @@ async def test_revoke(test_cli_user):
     resp = await test_cli_user.post(
         "/api/auth/revoke",
         do_token=False,
-        json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
+        json={
+            "user": test_cli_user["username"],
+            "password": test_cli_user["password"],
+        },
     )
 
     assert resp.status_code == 204
@@ -142,8 +145,8 @@ async def test_password_reset(test_cli_user):
     email_data = test_cli_user.app._email_list[-1]
     password_url = extract_first_url(email_data["content"])
     email_token = password_url.fragment
-
     new_password = username()
+
     resp = await test_cli_user.post(
         "/api/profile/reset_password_confirm",
         do_token=False,
