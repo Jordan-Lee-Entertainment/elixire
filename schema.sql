@@ -237,6 +237,6 @@ CREATE TABLE IF NOT EXISTS scheduled_delete_queue (
     taken_at timestamp without time zone default null,
     internal_state jsonb default '{}',
 
-    file_id bigint references files (file_id) default null,
-    shorten_id bigint references shortens (shorten_id) default null
+    file_id bigint references files (file_id) default null on delete cascade,
+    shorten_id bigint references shortens (shorten_id) default null on delete cascade
 );
