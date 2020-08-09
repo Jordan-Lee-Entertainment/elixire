@@ -23,7 +23,8 @@ log = logging.getLogger(__name__)
 
 async def test_datadump(test_cli_user):
     shorten = await test_cli_user.create_shorten()
-    elixire_file = await test_cli_user.create_file("test.jpg", png_data(), "image/png")
+    image_file = png_data()
+    elixire_file = await test_cli_user.create_file("test.jpg", image_file, "image/png")
 
     resp = await test_cli_user.post("/api/dump")
     assert resp.status_code == 200
@@ -95,7 +96,7 @@ async def test_datadump(test_cli_user):
             f"files/{elixire_file.id}_{elixire_file.shortname}.png"
         ) as raw_file:
             assert raw_file
-            assert raw_file.read() == png_data().getvalue()
+            assert raw_file.read() == image_file.getvalue()
 
         zip_stat = os.stat(path)
         os.utime(path, times=(zip_stat.st_atime, zip_stat.st_mtime - 22600))

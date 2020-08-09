@@ -41,13 +41,15 @@ def choice_repeat(seq, length):
 
 
 def png_data() -> io.BytesIO:
-    return io.BytesIO(
-        base64.b64decode(
-            b"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABC"
-            b"AQAAAC1HAwCAAAAC0lEQVQYV2NgYAAAAAM"
-            b"AAWgmWQ0AAAAASUVORK5CYII="
-        )
+    # add 10 bytes of random data to prevent deduplication
+    # when tests upload images
+    base_png = base64.b64decode(
+        b"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABC"
+        b"AQAAAC1HAwCAAAAC0lEQVQYV2NgYAAAAAM"
+        b"AAWgmWQ0AAAAASUVORK5CYII="
     )
+    random_data = secrets.token_bytes(10)
+    return io.BytesIO(base_png + random_data)
 
 
 def token() -> str:

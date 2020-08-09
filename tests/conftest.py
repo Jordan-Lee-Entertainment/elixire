@@ -71,9 +71,15 @@ async def _user_fixture_teardown(user: dict):
     await asyncio.shield(task)
 
 
-@pytest.fixture(name="test_user")
+@pytest.fixture(name="test_user", scope="session")
 async def test_user_fixture(app):
-    """Yield a randomly generated test user."""
+    """Yield a randomly generated test user.
+
+    As an optimization, the test user is set to be in session scope,
+    the test client's cleanup() method then proceeds to reset the test user
+    back to a wanted initial state, which is faster than creating/destroying
+    the user on every single test.
+    """
     async with app.app_context():
         user = await _user_fixture_setup()
 
@@ -83,7 +89,15 @@ async def test_user_fixture(app):
         await _user_fixture_teardown(user)
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
+async def test_client(test_cli):
+    """Yield a TestClient without the overhead of creating a user."""
+    client = TestClient(test_cli, None)
+    yield client
+    await client.cleanup()
+
+
+@pytest.fixture(scope="function")
 async def test_cli_user(test_cli, test_user):
     """Yield a TestClient instance that contains a randomly generated
     user."""
@@ -92,13 +106,16 @@ async def test_cli_user(test_cli, test_user):
     await client.cleanup()
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 async def test_cli_admin(test_cli):
     """Yield a TestClient with an admin user."""
     # This does not use the test_user because if a given test uses both
     # test_cli_user and test_cli_admin, test_cli_admin will just point to that
     # same test_cli_user, which isn't acceptable.
     app = test_cli.app
+
+    # TODO create a test_admin_user fixture on session scope to use the
+    # resetting mechanism
 
     async with app.app_context():
         test_user = await _user_fixture_setup()

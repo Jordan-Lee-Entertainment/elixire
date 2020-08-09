@@ -57,6 +57,7 @@ async def test_login_badpwd(test_cli_user):
 async def test_login_baduser(test_cli_user):
     resp = await test_cli_user.post(
         "/api/auth/login",
+        do_token=False,
         json={"user": username(), "password": test_cli_user["password"]},
     )
 
@@ -80,13 +81,17 @@ async def test_valid_token(test_cli_user):
     assert resp.status_code == 200
 
 
-async def test_revoke(test_cli, test_cli_user):
+async def test_revoke(test_cli_user):
     resp = await test_cli_user.get("/api/profile")
     assert resp.status_code == 200
 
-    resp = await test_cli.post(
+    resp = await test_cli_user.post(
         "/api/auth/revoke",
-        json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
+        do_token=False,
+        json={
+            "user": test_cli_user["username"],
+            "password": test_cli_user["password"],
+        },
     )
 
     assert resp.status_code == 204
@@ -140,8 +145,8 @@ async def test_password_reset(test_cli_user):
     email_data = test_cli_user.app._email_list[-1]
     password_url = extract_first_url(email_data["content"])
     email_token = password_url.fragment
-
     new_password = username()
+
     resp = await test_cli_user.post(
         "/api/profile/reset_password_confirm",
         do_token=False,
@@ -169,15 +174,18 @@ async def test_password_reset(test_cli_user):
 
     assert resp.status_code == 200
 
+    # after the test, set the session's test user password
+    # to the new password, since the user is reused between tests
+    test_cli_user.user["password"] = new_password
 
-async def test_register(test_cli_user):
+
+async def test_register(test_client):
     """Test the registration of a user"""
     user_name = username()
     user_pass = username()
 
-    resp = await test_cli_user.post(
+    resp = await test_client.post(
         "/api/auth/register",
-        do_token=False,
         json={
             "name": user_name,
             "password": user_pass,
@@ -191,28 +199,25 @@ async def test_register(test_cli_user):
     assert isinstance(rjson, dict)
     assert isinstance(rjson["user_id"], str)
 
-    async with test_cli_user.app.app_context():
+    async with test_client.app.app_context():
         user = await User.fetch(int(rjson["user_id"]))
 
     assert user is not None
-    test_cli_user.add_resource(user)
+    test_client.add_resource(user)
 
     assert isinstance(rjson["require_approvals"], bool)
     assert (
-        rjson["require_approvals"]
-        == test_cli_user.app.econfig.REQUIRE_ACCOUNT_APPROVALS
+        rjson["require_approvals"] == test_client.app.econfig.REQUIRE_ACCOUNT_APPROVALS
     )
 
-    await test_cli_user.app.db.execute(
+    await test_client.app.db.execute(
         "update users set active = true where user_id = $1", user.id
     )
 
-    resp = await test_cli_user.post(
-        "/api/auth/login",
-        do_token=False,
-        json={"user": user_name, "password": user_pass},
+    resp = await test_client.post(
+        "/api/auth/login", json={"user": user_name, "password": user_pass},
     )
     assert resp.status_code == 200
 
-    assert test_cli_user.app._email_list
-    assert test_cli_user.app._webhook_list
+    assert test_client.app._email_list
+    assert test_client.app._webhook_list

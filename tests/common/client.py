@@ -12,6 +12,7 @@ from winter import get_snowflake
 from api.models import Domain, User, Shorten, File
 from api.common.user import create_user, delete_user
 from api.common.profile import gen_user_shortname
+from api.common.auth import gen_token
 from api.bp.upload.file import UploadFile
 from api.bp.upload.context import UploadContext
 
@@ -59,6 +60,9 @@ class TestClient:
             pass
 
         if not do_token:
+            return headers
+
+        if self.user is None:
             return headers
 
         headers["authorization"] = self.user["token"]
@@ -202,8 +206,54 @@ class TestClient:
         self._resources.append(shorten)
         return shorten
 
+    async def _reset_user(self):
+        assert self.user is not None
+        user_id = self.user["user_id"]
+
+        row = await self.app.db.fetchrow(
+            """
+            UPDATE users
+                SET active = true
+            WHERE
+                user_id = $1
+            RETURNING
+                username, password_hash
+            """,
+            user_id,
+        )
+        username = row["username"]
+        self.user["username"] = username
+        self.user["password_hash"] = row["password_hash"]
+
+        # regen token
+        async with self.app.app_context():
+            self.user["token"] = gen_token(self.user)
+
+        await self.app.db.execute(
+            """
+            UPDATE limits
+            SET
+                blimit = DEFAULT,
+                shlimit = DEFAULT
+            WHERE user_id  = $1
+            """,
+            user_id,
+        )
+
+        await self.app.redis.delete(f"uid:{username}")
+        await self.app.redis.delete(f"uid:{user_id}:active")
+        await self.app.redis.delete(f"uid:{user_id}:password_hash")
+        await self.app.redis.delete(f"userban:{user_id}")
+
     async def cleanup(self):
-        """Delete all allocated test resources."""
+        """Delete all allocated test resources.
+
+        Resets the test user to a good initial state.
+        """
+
+        if self.user is not None:
+            await self._reset_user()
+
         for resource in self._resources:
             async with self.app.app_context():
                 if isinstance(resource, User):

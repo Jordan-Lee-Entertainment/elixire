@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from ..mock import MockAuditLog  # noqa: E402
+from api.bp.datadump.handler import DatadumpQueue
+from api.bp.delete import MassDeleteQueue
+from api.scheduled_deletes import ScheduledDeleteQueue
 
 
 def setup_test_app(event_loop, app_) -> None:
@@ -20,3 +23,9 @@ def setup_test_app(event_loop, app_) -> None:
     # used in internal email/webhook functions for testing
     app_._email_list = []
     app_._webhook_list = []
+
+    # To speedup testing, job queues are set to poll the database faster than
+    # their production counterparts.
+    DatadumpQueue.poller_seconds = 1
+    MassDeleteQueue.poller_seconds = 1
+    ScheduledDeleteQueue.poller_seconds = 1
