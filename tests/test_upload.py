@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import io
-import secrets
 import os.path
 from urllib.parse import urlparse
 
@@ -149,17 +148,19 @@ async def test_upload_png(test_cli_user):
     await check_exists(test_cli_user, shortname)
 
 
+# Should make libmagic return application/octet-stream.
+#
+# We use a constant because even though we could generate 50 random bytes,
+# libmagic only reads 3-4 bytes to determine file type, which means tests
+# have a much higher probability of failing on this.
+MAGIC_BYTES = b"\xd2\x06\x8e\x98\x87\xd5m\xc4/B"
+
+
 async def test_bogus_data(test_cli_user):
-    """Test that uploading random data fails.
-
-    Assumes we won't get some identifying filetype from random noise.
-    lol.
-    """
+    """Test that uploading random data fails."""
     test_domain = await test_cli_user.create_domain()
-    random_data = secrets.token_bytes(50)
-
     request_kwargs = await aiohttp_form(
-        io.BytesIO(random_data), f"{hexs(10)}.bin", "application/octet-stream"
+        io.BytesIO(MAGIC_BYTES), f"{hexs(10)}.bin", "application/octet-stream"
     )
 
     subdomain = hexs(10)
