@@ -20,7 +20,13 @@ LANGUAGE PLPGSQL;
 CREATE TABLE IF NOT EXISTS domains (
     domain_id serial PRIMARY KEY,
     domain text,
-    
+
+    -- Restricts the domain to admin users.
+    admin_only boolean DEFAULT false NOT NULL,
+
+    -- Prevents non-administrators from uploading and creating shortens on the domain.
+    disabled boolean DEFAULT false NOT NULL,
+
     -- permissions' bits:
     -- I: image upload permission
     -- S: shorten permission
@@ -190,8 +196,6 @@ CREATE TABLE IF NOT EXISTS domain_tag_mappings (
     tag_id bigint REFERENCES domain_tags ON DELETE CASCADE,
     PRIMARY KEY (domain_id, tag_id)
 );
-
-INSERT INTO domain_tags (label) VALUES ('admin_only');
 
 -- a domain being official means the DNS ownership of it is by
 -- the instance owner, keep in mind this isn't the same as Registrar ownership

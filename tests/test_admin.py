@@ -189,12 +189,18 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     user_id = str(test_cli_user.user["user_id"])
     admin_id = str(test_cli_admin.user["user_id"])
 
-    # we can always assume tags 1 and 2 will exist (admin_only and official)
-    # so we can use those
+    # Select a random tag that we can use.
+    sample_tag_id = await test_cli_admin.app.db.fetchval(
+        """
+        SELECT tag_id
+        FROM domain_tags
+        LIMIT 1
+        """
+    )
 
     resp = await test_cli_admin.patch(
         "/api/admin/domains/0",
-        json={"owner_id": user_id, "permissions": 0, "tags": [1, 2]},
+        json={"owner_id": user_id, "permissions": 0, "tags": [sample_tag_id]},
     )
 
     assert resp.status_code == 200
@@ -217,7 +223,7 @@ async def test_domain_patch(test_cli_user, test_cli_admin):
     if rjson.get("owner"):
         assert rjson["owner"]["id"] == user_id
     assert rjson["permissions"] == 0
-    assert [tag["id"] for tag in rjson["tags"]] == [1, 2]
+    assert rjson["tags"][0]["id"] == sample_tag_id
 
     # reset the domain properties
     # to sane defaults
@@ -293,7 +299,7 @@ async def test_user_patch(test_cli_user, test_cli_admin):
 async def test_domain_tag_create_delete(test_cli_admin):
     """Test the personal domain stats route but as an admin."""
     resp = await test_cli_admin.put(
-        "/api/admin/domains/tag", json={"label": "admin_only"}
+        "/api/admin/domains/tag", json={"label": "testing_tag"}
     )
     assert resp.status_code == 200
 
@@ -311,13 +317,13 @@ async def test_domain_tag_create_delete(test_cli_admin):
         assert any(tag["id"] == tag_id for tag in rjson["tags"])
 
         resp = await test_cli_admin.patch(
-            f"/api/admin/domains/tag/{tag_id}", json={"label": "asdf"}
+            f"/api/admin/domains/tag/{tag_id}", json={"label": "testing_tag_2"}
         )
         assert resp.status_code == 200
         rjson = await resp.json
         assert isinstance(rjson, dict)
         assert rjson["id"] == tag_id
-        assert rjson["label"] == "asdf"
+        assert rjson["label"] == "testing_tag_2"
     finally:
         resp = await test_cli_admin.delete(f"/api/admin/domains/tag/{tag_id}")
         assert resp.status_code == 204
