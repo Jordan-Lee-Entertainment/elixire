@@ -205,6 +205,10 @@ async def get_domain_stats_all():
     args = request.args
     per_page = int(args.get("per_page", 20))
 
+    # TODO: this seems messy.
+    # maybe restrict model creation to a model classmethod?
+    domain_columns = "domain_id, domain, permissions, disabled, admin_only"
+
     try:
         page = int(args["page"])
 
@@ -213,7 +217,7 @@ async def get_domain_stats_all():
 
         rows = await app.db.fetch(
             f"""
-            SELECT domain_id, domain, permissions, COUNT(*) OVER() as total_count
+            SELECT {domain_columns}, COUNT(*) OVER() as total_count
             FROM domains
             ORDER BY domain_id ASC
             LIMIT {per_page}
@@ -224,8 +228,8 @@ async def get_domain_stats_all():
     except KeyError:
         page = -1
         rows = await app.db.fetch(
-            """
-            SELECT domain_id, domain, permissions, COUNT(*) OVER() as total_count
+            f"""
+            SELECT {domain_columns}, COUNT(*) OVER() as total_count
             FROM domains
             ORDER BY domain_id ASC
             """

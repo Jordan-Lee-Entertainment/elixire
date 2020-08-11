@@ -118,12 +118,14 @@ class Tags(list):
 class Domain:
     """Represents an elixire domain."""
 
-    __slots__ = ("id", "domain", "permissions", "tags")
+    __slots__ = ("id", "domain", "permissions", "tags", "disabled", "admin_only")
 
     def __init__(self, row, *, tags: Tags) -> None:
         self.id: int = row["domain_id"]
         self.domain: str = row["domain"]
         self.permissions: int = row["permissions"]
+        self.disabled: bool = row["disabled"]
+        self.admin_only: bool = row["admin_only"]
         self.tags: Tags = tags
 
     def __eq__(self, other) -> bool:
@@ -137,7 +139,7 @@ class Domain:
         """Fetch a domain via its ID."""
         row = await app.db.fetchrow(
             f"""
-            SELECT domain_id, domain, permissions
+            SELECT domain_id, domain, permissions, disabled, admin_only
             FROM domains
             WHERE domain_id = $1
             LIMIT 1
@@ -171,13 +173,10 @@ class Domain:
             "id": self.id,
             "domain": self.domain,
             "permissions": self.permissions,
+            "admin_only": self.admin_only,
+            "disabled": self.disabled,
             "tags": [{"id": tag.id, "label": tag.label} for tag in self.tags],
         }
-
-    @property
-    def admin_only(self) -> bool:
-        """Returns if a domain can only be used by Admins."""
-        return "admin_only" in self.tags
 
     @property
     def official(self) -> bool:
@@ -257,6 +256,8 @@ class Domain:
         tags: Optional[List[int]] = None,
         permissions: int = 3,
         owner_id: Optional[int] = None,
+        disabled: Optional[bool] = False,
+        admin_only: Optional[bool] = False,
     ) -> "Domain":
         tags = tags or []
 
@@ -266,13 +267,15 @@ class Domain:
                 domain_id = await app.db.fetchval(
                     """
                     INSERT INTO domains
-                        (domain, permissions)
+                        (domain, permissions, disabled, admin_only)
                     VALUES
-                        ($1, $2)
+                        ($1, $2, $3, $4)
                     RETURNING domain_id
                     """,
                     name,
                     permissions,
+                    disabled,
+                    admin_only,
                 )
 
                 domain = await Domain.fetch(domain_id)

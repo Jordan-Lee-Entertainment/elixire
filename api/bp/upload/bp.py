@@ -96,7 +96,7 @@ async def upload_handler():
 
     validate_request_duration()
 
-    # if admin is set on request.args, we will # do an "admin upload", without
+    # if admin is set on request.args, we will do an "admin upload", without
     # any checking for viruses, weekly limits, MIME, etc.
     do_checks = not bool(request.args.get("admin"))
 

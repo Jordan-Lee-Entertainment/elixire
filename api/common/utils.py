@@ -81,8 +81,10 @@ def find_different_keys(dict1: dict, dict2: dict) -> list:
     return keys
 
 
-def _get_domain_querystring() -> Tuple[Optional[int], Optional[str]]:
-    """Fetch domain information supplied in query string, if any"""
+def _get_specified_domain() -> Tuple[Optional[int], Optional[str]]:
+    """Return the domain ID and subdomain specified in the current request as a
+    query argument, if any.
+    """
     try:
         given_domain: Optional[int] = int(request.args["domain"])
     except (KeyError, ValueError):
@@ -99,18 +101,31 @@ def _get_domain_querystring() -> Tuple[Optional[int], Optional[str]]:
 async def resolve_domain(
     user_id: int, ftype: FileNameType
 ) -> Tuple[Optional[int], Optional[str], Optional[str]]:
-    """Fetch domain information, if any"""
+    """Resolve the domain ID, domain name, and subdomain to be used for an upload.
+
+    This function inspects the current request's query arguments and the user's
+    preferred domains and returns the correct information to be used during an
+    upload.
+    """
     ptype = Permissions.UPLOAD if ftype == FileNameType.FILE else Permissions.SHORTEN
 
-    given_domain, given_subdomain = _get_domain_querystring()
+    given_domain, given_subdomain = _get_specified_domain()
 
-    user_domain_id, user_subdomain, user_domain = await get_user_domain_info(
-        user_id, ftype
-    )
-    domain_id = given_domain or user_domain_id
-    subdomain_name = given_subdomain or user_subdomain
+    if given_domain and given_subdomain:
+        # If both the domain and subdomain were given, use those.
+        domain_id = given_domain
+        subdomain_name = given_subdomain
+    else:
+        # Otherwise, we need to fallback to the user's preferred domain and
+        # subdomain.
+        user_domain_id, user_subdomain, user_domain = await get_user_domain_info(
+            user_id, ftype
+        )
+        domain_id = given_domain or user_domain_id
+        subdomain_name = given_subdomain or user_subdomain
 
-    # check if domain is uploadable
+    # Check the domain's permissions, which specifies if uploads or shortens are
+    # allowed on it.
     await domain_permissions(app, domain_id, ptype)
 
     # resolve the given (domain_id, subdomain_name) into a string
