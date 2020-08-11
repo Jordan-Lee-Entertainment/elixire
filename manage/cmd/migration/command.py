@@ -178,28 +178,23 @@ async def apply_migration(migration: Migration):
         print("already applied", migration.mid, ": skipping")
         return
 
-    try:
-        if migration.type == ScriptType.SQL:
-            await _apply_sql(migration)
-        elif migration.type == ScriptType.Python:
-            await _apply_py(migration)
+    if migration.type == ScriptType.SQL:
+        await _apply_sql(migration)
+    elif migration.type == ScriptType.Python:
+        await _apply_py(migration)
 
-        await app.db.execute(
-            """
-            INSERT INTO migration_log
-                (change_id, description)
-            VALUES
-                ($1, $2)
-            """,
-            migration.mid,
-            f"migration: {migration.name}",
-        )
+    await app.db.execute(
+        """
+        INSERT INTO migration_log
+            (change_id, description)
+        VALUES
+            ($1, $2)
+        """,
+        migration.mid,
+        f"migration: {migration.name}",
+    )
 
-        print("applied", migration.mid, migration.name)
-    except Exception:
-        # do not let the error make this an applied migration
-        # in the logs.
-        log.exception("error while applying migration")
+    print("applied", migration.mid, migration.name)
 
 
 async def migrate_cmd(_args):
@@ -235,16 +230,19 @@ async def migrate_cmd(_args):
     # we iterate over
     # [local_latest + 1, ..., mctx.latest] (inclusive)
     # applying every migration ID in that range.
-    for mig_id in range(local_latest + 1, mctx.latest + 1):
-        migration = mctx.scripts.get(mig_id)
+    try:
+        for mig_id in range(local_latest + 1, mctx.latest + 1):
+            migration = mctx.scripts.get(mig_id)
 
-        if not migration:
-            print("skipping migration", mig_id, "not found")
-            continue
+            if not migration:
+                print(f"skipping migration {mig_id}, not found")
+                continue
 
-        await apply_migration(migration)
-
-    print("OK")
+            await apply_migration(migration)
+    except Exception:
+        log.exception("exception raised while applying migration %d", mig_id)
+    else:
+        print("OK")
 
 
 def setup(subparsers):
