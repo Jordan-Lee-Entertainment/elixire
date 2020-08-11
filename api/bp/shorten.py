@@ -20,7 +20,7 @@ from api.models import User, Shorten
 bp = Blueprint("shorten", __name__)
 
 
-@bp.route("/api/shorten", methods=["POST"])
+@bp.route("", methods=["POST"])
 async def shorten_handler():
     """Handles addition of shortened links."""
     user_id = await token_check()
