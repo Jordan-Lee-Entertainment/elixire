@@ -9,7 +9,7 @@ bp = Blueprint("frontend", __name__)
 
 async def maybe_send(path):
     if not app.econfig.ENABLE_FRONTEND:
-        return "frontend is not enabled", 405
+        return "frontend is not enabled", 404
 
     return await send_file(path)
 
