@@ -61,8 +61,13 @@ async def file_handler(request, filename):
 <html>
     <head>
         <meta property="twitter:card" content="summary_large_image">
-        <meta property="twitter:image" content="{}">
+        <meta property="twitter:image" content="{0}">
+        <meta http-equiv="Refresh" content="0; url='{0}'" />
     </head>
+    <body>
+        If you're not forwarded automatically, please click <a href="{0}">here</a> to view the image.<br>
+        Apologies for making you bother with this, but it's to deal with Discord hiding image URLs by default.
+    </body>
 </html>""".format(raw_url))
 
     app = request.app
