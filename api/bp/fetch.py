@@ -68,7 +68,7 @@ async def file_handler(request, filename):
         If you're not forwarded automatically, please click <a href="{0}">here</a> to view the image.<br>
         Apologies for making you bother with this, but it's to deal with Discord hiding image URLs by default.
     </body>
-</html>""".format(raw_url))
+</html>""".format(raw_url), headers={"Vary": "User-Agent"})
 
     app = request.app
     filepath, shortname = await filecheck(request, filename)
@@ -84,7 +84,8 @@ async def file_handler(request, filename):
     return await response.file_stream(
         filepath,
         headers={
-            'Content-Security-Policy': "sandbox; frame-src 'none'"
+            'Content-Security-Policy': "sandbox; frame-src 'none'",
+            "Vary": "User-Agent"
         },
         mime_type=mimetype)
 
