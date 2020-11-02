@@ -204,6 +204,6 @@ async def delete_single(shortname: str):
 async def shortendelete_handler(user_id, shorten_name):
     """Invalidate a shorten."""
     user_id = await token_check()
-    shorten = (await Shorten.fetch_by_with_uploader(user_id, shortname=shorten_name),)
+    shorten = await Shorten.fetch_by_with_uploader(user_id, shortname=shorten_name)
     await shorten.delete()
     return "", 204
