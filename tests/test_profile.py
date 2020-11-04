@@ -109,6 +109,43 @@ async def test_patch_profile(test_cli_user):
     assert not rjson["paranoid"]
 
 
+async def test_patch_profile(test_cli_user):
+    old_password = test_cli_user["password"]
+    new_password = username()
+
+    resp = await test_cli_user.patch(
+        "/api/profile",
+        json={
+            "new_password": new_password,
+            "password": test_cli_user["password"],
+        },
+    )
+
+    assert resp.status_code == 200
+    rjson = await resp.json
+
+    assert isinstance(rjson, dict)
+
+    # we need to create another token for this test user
+    resp = await test_cli_user.post(
+        "/api/auth/login",
+        do_token=False,
+        json={"user": test_cli_user["username"], "password": new_password},
+    )
+
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["token"], str)
+
+    test_cli_user.user["password"] = new_password
+    test_cli_user.user["token"] = rjson["token"]
+
+    # assert this new token works
+    resp = await test_cli_user.get("/api/profile")
+    assert resp.status_code == 200
+
+
 async def test_profile_wrong_token(test_cli):
     """Test the profile route with wrong tokens."""
     resp = await test_cli.get("/api/profile", headers={"Authorization": token()})
