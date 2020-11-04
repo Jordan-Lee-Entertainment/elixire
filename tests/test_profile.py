@@ -109,7 +109,7 @@ async def test_patch_profile(test_cli_user):
     assert not rjson["paranoid"]
 
 
-async def test_patch_profile(test_cli_user):
+async def test_patch_profile_new_password(test_cli_user):
     old_password = test_cli_user["password"]
     new_password = username()
 
@@ -117,7 +117,7 @@ async def test_patch_profile(test_cli_user):
         "/api/profile",
         json={
             "new_password": new_password,
-            "password": test_cli_user["password"],
+            "password": old_password,
         },
     )
 
