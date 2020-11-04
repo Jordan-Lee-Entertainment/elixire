@@ -15,6 +15,33 @@ from api.scheduled_deletes import ScheduledDeleteQueue
 pytestmark = pytest.mark.asyncio
 
 
+async def check_shorten_exists(test_cli, shortname: str, *, reverse=False):
+    """Check if a shorten exists (or not) given the shortname."""
+    resp = await test_cli.get("/api/shortens")
+    assert resp.status_code == 200
+    rjson = await resp.json
+
+    assert isinstance(rjson["shortens"], list)
+
+    try:
+        next(filter(lambda data: data["shortname"] == shortname, rjson["shortens"]))
+
+        # if we don't want the shorten to exist but we found it,
+        # that's an assertion error
+        if reverse:
+            raise AssertionError()
+    except StopIteration:
+        # if we want the shorten to exist but we DIDN't find it,
+        # that's an assertion error
+        if not reverse:
+            raise AssertionError()
+
+        # if we don't want the shorten to exist and we just found out it
+        # actually doesn't exist, we return since the rest of the code
+        # isn't for that
+        return
+
+
 async def check_exists(test_cli, shortname, *, reverse=False):
     """Check if a file exists (or not) given the shortname."""
     resp = await test_cli.get("/api/files")
@@ -226,6 +253,19 @@ async def _upload(test_cli_user, **kwargs) -> dict:
     return respjson
 
 
+async def _shorten(test_cli_user, **kwargs) -> dict:
+    url = "https://elixi.re"
+    resp = await test_cli_user.post("/api/shorten", json={"url": url}, **kwargs)
+
+    assert resp.status_code == 200
+
+    respjson = await resp.json
+    assert isinstance(respjson, dict)
+    assert isinstance(respjson["url"], str)
+
+    return respjson
+
+
 async def test_delete_file(test_cli_user):
     respjson = await _upload(test_cli_user)
 
@@ -242,9 +282,13 @@ async def test_delete_file_many(test_cli_user):
 
     rjson = await _upload(test_cli_user)
     rjson2 = await _upload(test_cli_user, query_string={"domain": test_domain.id})
+    rjson_shorten = await _shorten(test_cli_user)
     shortname1 = rjson["shortname"]
     shortname2 = rjson2["shortname"]
+    shortname_shorten = rjson_shorten["shortname"]
     assert shortname1 != shortname2
+    assert shortname1 != shortname_shorten
+    assert shortname2 != shortname_shorten
 
     resp = await test_cli_user.get(
         "/api/compute_purge_all", query_string={"delete_files_after": 0}
@@ -276,7 +320,11 @@ async def test_delete_file_many(test_cli_user):
 
     resp_del = await test_cli_user.post(
         "/api/purge_all_content",
-        json={"password": test_cli_user["password"], "delete_files_after": 0},
+        json={
+            "password": test_cli_user["password"],
+            "delete_files_after": 0,
+            "delete_shortens_after": 0,
+        },
     )
     assert resp_del.status_code == 200
     rjson = await resp_del.json
@@ -286,6 +334,7 @@ async def test_delete_file_many(test_cli_user):
     await MassDeleteQueue.wait_job(rjson["job_id"], timeout=30)
 
     await check_exists(test_cli_user, shortname1, reverse=True)
+    await check_shorten_exists(test_cli_user, shortname_shorten, reverse=True)
 
 
 async def test_delete_nonexist(test_cli_user):
