@@ -23,7 +23,11 @@ def _extract_uid(token: str) -> str:
     try:
         uid, _ = split
     except ValueError:
-        uid, _, _, = split
+        (
+            uid,
+            _,
+            _,
+        ) = split
 
     return uid
 

@@ -30,8 +30,8 @@ class ElixireValidator(Validator):
     def _validate_type_password(self, value) -> bool:
         """Validate passwords.
 
-         - More than 8 characters.
-         - Equal to or less than 72 bytes.
+        - More than 8 characters.
+        - Equal to or less than 72 bytes.
         """
         # TODO: Would it be interesting to measure entropy?
         return len(value) >= 8 and len(value.encode()) <= 72
