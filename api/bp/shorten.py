@@ -121,7 +121,7 @@ async def shorten_handler():
     dpath = pathlib.Path(domain)
     fpath = dpath / "s" / redir_rname
 
-    res = {"url": f"https://{str(fpath)}"}
+    res = {"shortname": redir_rname, "url": f"https://{str(fpath)}"}
 
     shorten = await Shorten.fetch(redir_id)
     assert shorten is not None
