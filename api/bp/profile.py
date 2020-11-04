@@ -145,11 +145,11 @@ async def validate_semantics(user_id: int, payload: dict) -> dict:
     assert user_obj is not None
     user = user_obj.to_dict()
 
-    _field_must_password = ("name", "email", "new_password")
+    _field_must_password = ("name", "email")
     _field_must_unique_user = ("name", "email")
 
     for field in _field_must_password:
-        if to_update(user, payload, field):
+        if "new_password" in payload or to_update(user, payload, field):
             await _check_password(user_id, payload)
             break
 
@@ -222,7 +222,7 @@ async def finish_update(conn, user_id: int, payload: dict):
     if to_update(user_dict, payload, "domain"):
         await _try_domain_patch(user_id, payload["domain"])
 
-    if to_update(user_dict, payload, "new_password"):
+    if "new_password" in payload:
         await _update_password(user_id, payload["new_password"])
 
 
