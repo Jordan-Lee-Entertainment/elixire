@@ -171,6 +171,8 @@ class MassDeleteQueue(JobQueue):
             return file_count, shorten_count
 
         log.info("job %s got selectors %r", ctx.job_id, j)
+        log.debug("file_stmt=%s", file_stmt)
+        log.debug("file_wheres=%r, shorten_wheres=%r", file_wheres, shorten_wheres)
 
         if file_wheres:
             file_ids = [r["file_id"] for r in await app.db.fetch(file_stmt, *file_args)]

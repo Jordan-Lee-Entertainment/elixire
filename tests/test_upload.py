@@ -238,8 +238,13 @@ async def test_delete_file(test_cli_user):
 
 
 async def test_delete_file_many(test_cli_user):
+    test_domain = await test_cli_user.create_domain()
+
     rjson = await _upload(test_cli_user)
-    shortname = rjson["shortname"]
+    rjson2 = await _upload(test_cli_user, query_string={"domain": test_domain.id})
+    shortname1 = rjson["shortname"]
+    shortname2 = rjson2["shortname"]
+    assert shortname1 != shortname2
 
     resp = await test_cli_user.get(
         "/api/compute_purge_all", query_string={"delete_files_after": 0}
@@ -250,6 +255,24 @@ async def test_delete_file_many(test_cli_user):
     assert isinstance(rjson, dict)
     assert rjson["file_count"] > 0
     assert rjson["shorten_count"] >= 0
+
+    # assert both exist before deleting
+    await check_exists(test_cli_user, shortname1)
+    await check_exists(test_cli_user, shortname2)
+
+    # delete files from the domain only, then proceed to delete all files
+    # this is to make sure that specific code path works as well
+    resp_del = await test_cli_user.post(
+        "/api/purge_all_content",
+        json={
+            "password": test_cli_user["password"],
+            "delete_from_domain": test_domain.id,
+        },
+    )
+    assert resp_del.status_code == 200
+    rjson = await resp_del.json
+    await MassDeleteQueue.wait_job(rjson["job_id"], timeout=30)
+    await check_exists(test_cli_user, shortname2, reverse=True)
 
     resp_del = await test_cli_user.post(
         "/api/purge_all_content",
@@ -262,7 +285,7 @@ async def test_delete_file_many(test_cli_user):
     assert rjson["job_id"]
     await MassDeleteQueue.wait_job(rjson["job_id"], timeout=30)
 
-    await check_exists(test_cli_user, shortname, reverse=True)
+    await check_exists(test_cli_user, shortname1, reverse=True)
 
 
 async def test_delete_nonexist(test_cli_user):
