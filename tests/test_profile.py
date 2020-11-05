@@ -6,6 +6,7 @@ import pytest
 import asyncio
 from .common import token, username, email
 from api.common.user import create_user, delete_user
+from tests.common.utils import extract_first_url
 
 pytestmark = pytest.mark.asyncio
 
@@ -236,3 +237,46 @@ async def test_patch_profile_wrong(test_cli_user):
         async with test_cli_user.app.app_context():
             task = await delete_user(random_user["user_id"], delete=True)
         await asyncio.shield(task)
+
+
+async def test_delete_own_user(test_cli_user):
+    user_password = username()
+    user = await test_cli_user.create_user(password=user_password)
+
+    resp = await test_cli_user.post(
+        "/api/auth/login",
+        do_token=False,
+        json={"user": user.name, "password": user_password},
+    )
+
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["token"], str)
+
+    token = rjson["token"]
+
+    resp = await test_cli_user.delete(
+        "/api/profile",
+        do_token=False,
+        json={"password": user_password},
+        headers={"authorization": token},
+    )
+
+    assert resp.status_code == 204
+
+    email = test_cli_user.app._email_list[-1]
+    url = extract_first_url(email["content"])
+    delete_token = url.fragment
+
+    resp = await test_cli_user.post(
+        "/api/profile/delete_confirm",
+        do_token=False,
+        query_string={"url": delete_token},
+    )
+    assert resp.status_code == 204
+
+    resp = await test_cli_user.get(
+        "/api/profile", do_token=False, headers={"authorization": token}
+    )
+    assert resp.status_code == 403
