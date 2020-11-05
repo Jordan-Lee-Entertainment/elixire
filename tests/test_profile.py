@@ -67,6 +67,7 @@ async def test_patch_profile(test_cli_user):
     new_email = email()
     new_domain = await test_cli_user.create_domain()
     new_subdomain = username()
+    new_shorten_subdomain = username()
 
     resp = await test_cli_user.patch(
         "/api/profile",
@@ -75,6 +76,8 @@ async def test_patch_profile(test_cli_user):
             "email": new_email,
             "domain": new_domain.id,
             "subdomain": new_subdomain,
+            "shorten_domain": new_domain.id,
+            "shorten_subdomain": new_shorten_subdomain,
             # users dont have paranoid by default, so
             # change that too. the more we change,
             # the better
@@ -93,6 +96,8 @@ async def test_patch_profile(test_cli_user):
     assert rjson["paranoid"]
     assert rjson["domain"] == new_domain.id
     assert rjson["subdomain"] == new_subdomain
+    assert rjson["shorten_domain"] == new_domain.id
+    assert rjson["shorten_subdomain"] == new_shorten_subdomain
 
     # request 3: changing profile info back
     resp = await test_cli_user.patch(
