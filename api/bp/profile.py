@@ -336,7 +336,7 @@ async def password_reset_confirmation():
     user_id = await uid_from_email_token(token, "email_pwd_reset_tokens")
 
     # reset password
-    await _update_password(user_id, new_pwd)
+    await _update_password(app.db, user_id, new_pwd)
     await clean_etoken(token, "email_pwd_reset_tokens")
 
     return "", 204
