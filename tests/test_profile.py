@@ -107,6 +107,10 @@ async def test_patch_profile(test_cli_user):
             "name": test_cli_user["username"],
             "email": test_cli_user["email"],
             "paranoid": False,
+            "domain": 0,
+            "subdomain": "",
+            "shorten_domain": 0,
+            "shorten_subdomain": "",
             # password required to change username and email
             "password": test_cli_user["password"],
         },
