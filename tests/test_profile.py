@@ -157,6 +157,35 @@ async def test_patch_profile_new_password(test_cli_user):
     assert resp.status_code == 200
 
 
+async def test_patch_profile_wrong_password(test_cli_user):
+    resp = await test_cli_user.patch(
+        "/api/profile",
+        json={
+            "username": username(),
+        },
+    )
+    assert resp.status_code == 400
+
+    resp = await test_cli_user.patch(
+        "/api/profile",
+        json={
+            "name": username(),
+            "password": username(),
+        },
+    )
+    assert resp.status_code == 403
+
+    resp = await test_cli_user.patch(
+        "/api/profile",
+        json={
+            "new_password": username(),
+            "password": username(),
+        },
+    )
+
+    assert resp.status_code == 403
+
+
 async def test_profile_wrong_token(test_cli):
     """Test the profile route with wrong tokens."""
     resp = await test_cli.get("/api/profile", headers={"Authorization": token()})
