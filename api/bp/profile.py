@@ -33,11 +33,11 @@ bp = Blueprint("profile", __name__)
 log = logging.getLogger(__name__)
 
 
-async def _update_password(user_id: int, new_pwd: str):
+async def _update_password(conn, user_id: int, new_pwd: str):
     """Update a user's password."""
     new_hash = await pwd_hash(new_pwd)
 
-    await app.db.execute(
+    await conn.execute(
         """
         UPDATE users
         SET password_hash = $1
@@ -74,10 +74,10 @@ async def profile_handler():
     return jsonify(user_dict)
 
 
-async def _try_domain_patch(user_id: int, domain_id: int) -> None:
-    await app.db.execute(
+async def _try_domain_patch(conn, user_id: int, domain_id: int) -> None:
+    await conn.execute(
         """
-        UPDATE users
+        UPDATE user_settings
         SET domain = $1
         WHERE user_id = $2
         """,
@@ -220,10 +220,10 @@ async def finish_update(conn, user_id: int, payload: dict):
         )
 
     if to_update(user_dict, payload, "domain"):
-        await _try_domain_patch(user_id, payload["domain"])
+        await _try_domain_patch(conn, user_id, payload["domain"])
 
     if "new_password" in payload:
-        await _update_password(user_id, payload["new_password"])
+        await _update_password(conn, user_id, payload["new_password"])
 
 
 @bp.route("", methods=["PATCH"])
