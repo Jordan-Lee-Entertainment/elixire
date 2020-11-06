@@ -524,3 +524,25 @@ async def test_activation_email(test_cli, test_cli_admin):
 async def test_doll_user_removal(test_cli_admin):
     resp = await test_cli_admin.delete("/api/admin/users/0")
     assert resp.status_code == 400
+
+
+async def test_admin_settings(test_cli_admin):
+    resp = await test_cli_admin.get("/api/admin/settings")
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+
+    # the audit_log_emails setting is disabled by default, and so this assertion
+    # must hold true for new admin users (such as the test admin user)
+    assert not rjson["audit_log_emails"]
+
+    resp = await test_cli_admin.patch(
+        "/api/admin/settings", json={"audit_log_emails": True}
+    )
+    assert resp.status_code == 204
+
+    # ensure it updated if fetched again
+    resp = await test_cli_admin.get("/api/admin/settings")
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert rjson["audit_log_emails"]
