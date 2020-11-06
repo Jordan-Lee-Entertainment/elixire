@@ -60,3 +60,21 @@ async def test_update_object_shortname(test_cli_admin):
         new_shorten = await Shorten.fetch(shorten.id)
         assert new_shorten.id == shorten.id
         assert new_shorten.shortname != shorten.shortname
+
+
+async def test_delete_object_shortname(test_cli_admin):
+    elixire_file = await test_cli_admin.create_file("test.png", png_data(), "image/png")
+    resp = await test_cli_admin.delete(f"/api/admin/file/{elixire_file.id}")
+    assert resp.status_code == 200
+
+    async with test_cli_admin.app.app_context():
+        new_elixire_file = await File.fetch(elixire_file.id)
+        assert new_elixire_file.deleted
+
+    shorten = await test_cli_admin.create_shorten()
+    resp = await test_cli_admin.delete(f"/api/admin/shorten/{shorten.id}")
+    assert resp.status_code == 200
+
+    async with test_cli_admin.app.app_context():
+        new_shorten = await Shorten.fetch(shorten.id)
+        assert new_shorten.deleted
