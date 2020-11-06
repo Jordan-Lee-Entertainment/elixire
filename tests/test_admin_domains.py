@@ -28,6 +28,8 @@ async def test_admin_create_domain(test_cli_admin):
     assert isinstance(domain, dict)
     assert domain["domain"] == domain_name
 
+    # add created domain as a resource so it's deleted by the end
+    # of this test
     async with test_cli_admin.app.app_context():
         domain = await Domain.fetch(domain["id"])
         test_cli_admin.add_resource(domain)
