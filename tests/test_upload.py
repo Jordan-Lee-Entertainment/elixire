@@ -140,7 +140,7 @@ async def test_upload_png(test_cli_user):
     resp = await test_cli_user.head(url, headers={"host": host})
     assert resp.status_code == 200
 
-    resp = await test_cli_user.get(url, headers={"host": host, "range": "bytes=0-10"})
+    resp = await test_cli_user.get(url, headers={"host": host, "range": "bytes=0-9"})
     assert resp.status_code == 206
 
     assert resp.headers["content-length"] == "10"
