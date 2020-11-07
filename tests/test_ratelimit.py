@@ -29,6 +29,10 @@ async def test_ratelimits(test_cli):
         assert resp.headers["x-ratelimit-remaining"] == "0"
         assert "x-ratelimit-reset" in resp.headers
 
+        import time
+
+        print(time.time())
+        print(resp.headers["x-ratelimit-reset"])
         # TODO validate x-ratelimit-reset?
 
         resp = await test_cli.get("/api/hello")
