@@ -19,8 +19,7 @@ TOKEN_SECRET = b":\xed\x9d\x19\x1b\xf5\xed\x02\xba12\x97$W\xb7\x9a\x97\xc2\xaf\x
 
 RATELIMITS = {
     # global ratelimit for authenticated connections
-    "/": {"requests": 10000, "second": 1},
-    ("ip", "/"): {"requests": 10000, "second": 1},
+    "*": (10000, 1)
 }
 
 REQUIRE_ACCOUNT_APPROVALS = False
