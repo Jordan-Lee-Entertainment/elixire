@@ -40,8 +40,6 @@ run_backend:
 
     # install and setup clamav
     - time apk --update add clamav
-    - mkdir data
-    - chmod 777 data
     - freshclam --config-file=ci/freshclam.conf
     - clamd --foreground=false --config-file=ci/clamd.conf
   script:
