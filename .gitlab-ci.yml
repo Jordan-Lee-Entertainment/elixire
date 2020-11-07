@@ -39,9 +39,9 @@ run_backend:
     - time python ./utils/upgrade/folder_sharding.py
 
     # install and setup clamav
-    - time apk --update add clamav
-    - freshclam --config-file=ci/freshclam.conf
-    - clamd --foreground=false --config-file=ci/clamd.conf
+    #- time apk --update add clamav
+    #- freshclam --config-file=ci/freshclam.conf
+    #- clamd --foreground=false --config-file=ci/clamd.conf
   script:
     - mkdir frontend/output admin-panel/dist -p
     - touch frontend/output/index.html admin-panel/dist/index.html
