@@ -61,12 +61,12 @@ async def check_exists(test_cli, shortname, *, reverse=False):
         # if we don't want the file to exist but we found it,
         # that's an assertion error
         if reverse:
-            raise AssertionError()
+            raise AssertionError(f"File found: {file!r}")
     except StopIteration:
         # if we want the file to exist but we DIDN't find it,
         # that's an assertion error
         if not reverse:
-            raise AssertionError()
+            raise AssertionError("File not found")
 
         # if we don't want the file to exist and we just found out it
         # actually doesn't exist, we return since the rest of the code

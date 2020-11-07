@@ -28,6 +28,7 @@ async def run_scan(ctx) -> None:
     # TODO a Timer context manager?
     scan_timestamp_start = time.monotonic()
 
+    log.debug("running clamdscan")
     process = await asyncio.create_subprocess_shell(
         "clamdscan -i -m --no-summary -",
         stderr=asyncio.subprocess.PIPE,
@@ -50,6 +51,7 @@ async def run_scan(ctx) -> None:
     body = ctx.file.stream.getvalue()
 
     # stdout and stderr here are for the webhook, not for parsing
+    log.debug("writing file body to clamdscan")
     out, err = map(lambda s: s.decode(), await process.communicate(input=body))
     total_out = f"{out}{err}"
     log.debug("output: %r", total_out)
