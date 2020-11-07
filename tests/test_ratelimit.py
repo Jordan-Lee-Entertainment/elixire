@@ -20,19 +20,15 @@ async def _set_ratelimits(app, ratelimit):
 
 async def test_ratelimits(test_cli):
     try:
-        await _set_ratelimits(test_cli.app, (2, 1))
+        await _set_ratelimits(test_cli.app, (1, 1))
 
         resp = await test_cli.get("/api/hello")
         assert resp.status_code == 200
 
-        assert resp.headers["x-ratelimit-limit"] == "2"
+        assert resp.headers["x-ratelimit-limit"] == "1"
         assert resp.headers["x-ratelimit-remaining"] == "0"
         assert "x-ratelimit-reset" in resp.headers
 
-        import time
-
-        print(time.time())
-        print(resp.headers["x-ratelimit-reset"])
         # TODO validate x-ratelimit-reset?
 
         resp = await test_cli.get("/api/hello")
@@ -55,7 +51,7 @@ async def test_ratelimits(test_cli):
 
 async def test_banning(test_cli):
     try:
-        await _set_ratelimits(test_cli.app, (2, 1))
+        await _set_ratelimits(test_cli.app, (1, 1))
         test_cli.app.econfig.RL_THRESHOLD = 2
         async with test_cli.app.app_context():
             await unban_ip("127.0.0.1")
@@ -63,7 +59,7 @@ async def test_banning(test_cli):
         resp = await test_cli.get("/api/hello")
         assert resp.status_code == 200
 
-        assert resp.headers["x-ratelimit-limit"] == "2"
+        assert resp.headers["x-ratelimit-limit"] == "1"
         assert resp.headers["x-ratelimit-remaining"] == "0"
 
         for _ in range(2):
@@ -80,14 +76,14 @@ async def test_banning(test_cli):
 
 async def test_banning_userwide(test_cli_user):
     try:
-        await _set_ratelimits(test_cli_user.app, (2, 1))
+        await _set_ratelimits(test_cli_user.app, (1, 1))
         test_cli_user.app.econfig.RL_THRESHOLD = 2
         async with test_cli_user.app.app_context():
             await unban_user(test_cli_user["user_id"])
 
         resp = await test_cli_user.get("/api/profile")
         assert resp.status_code == 200
-        assert resp.headers["x-ratelimit-limit"] == "2"
+        assert resp.headers["x-ratelimit-limit"] == "1"
         assert resp.headers["x-ratelimit-remaining"] == "0"
 
         for _ in range(2):
