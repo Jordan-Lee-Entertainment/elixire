@@ -40,8 +40,8 @@ run_backend:
 
     # install and setup clamav
     - time apk --update add clamav
-    - freshclam
-    - clamd
+    - freshclam --config-file=ci/freshclam.conf
+    - clamd --config-file=ci/clamd.conf
   script:
     - mkdir frontend/output admin-panel/dist -p
     - touch frontend/output/index.html admin-panel/dist/index.html
