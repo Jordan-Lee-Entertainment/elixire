@@ -10,16 +10,18 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_user_model(test_cli_user):
-    user = await User.fetch(test_cli_user["user_id"])
-    assert user is not None
-    assert user.id == test_cli_user["user_id"]
+    async with test_cli_user.app.app_context():
+        user = await User.fetch(test_cli_user["user_id"])
+        assert user is not None
+        assert user.id == test_cli_user["user_id"]
 
-    user = await User.fetch_by(username=username())
-    assert user is None
+        user = await User.fetch_by(username=username())
+        assert user is None
 
 
 async def test_domain_model(test_cli_user):
     domain = await test_cli_user.create_domain()
-    fetched_domain = await Domain.fetch(domain.id)
-    assert fetched_domain is not None
-    assert fetched_domain.id == domain.id
+    async with test_cli_user.app.app_context():
+        fetched_domain = await Domain.fetch(domain.id)
+        assert fetched_domain is not None
+        assert fetched_domain.id == domain.id
