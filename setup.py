@@ -20,7 +20,7 @@ setup(
         # when changing these dependencies, make sure to change them in
         # .gitlab-ci.yml, too.
         "aioredis==1.3.1",
-        "asyncpg==0.20.1",
+        "asyncpg==0.21.0",
         # ---------------------------------------------------------------------
         "aiohttp==3.7.2",
         "aioinflux==0.9.0",
