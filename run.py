@@ -271,8 +271,7 @@ async def app_before_serving():
     # don't stress InfluxDB out while running the tests.
 
     # maybe move this to current_app too?
-    if not getattr(app, "_test", False):
-        app.audit_log = AuditLog(app)
+    app.audit_log = AuditLog(app)
 
     await api.bp.cors.setup()
     await create_doll_user()

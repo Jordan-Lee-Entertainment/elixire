@@ -2,7 +2,6 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from ..mock import MockAuditLog  # noqa: E402
 from api.bp.datadump.handler import DatadumpQueue
 from api.bp.delete import MassDeleteQueue
 from api.scheduled_deletes import ScheduledDeleteQueue
@@ -16,9 +15,6 @@ def setup_test_app(event_loop, app_) -> None:
 
     # TODO should we keep this as false?
     app_.econfig.ENABLE_METRICS = False
-
-    # use mock instances of some external services.
-    app_.audit_log = MockAuditLog()
 
     # used in internal email/webhook functions for testing
     app_._email_list = []
