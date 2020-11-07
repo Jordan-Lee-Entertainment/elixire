@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import io
+import asyncio
 import os.path
 from urllib.parse import urlparse
 
@@ -398,3 +399,27 @@ async def test_upload_ephmeral(test_cli_user):
     await ScheduledDeleteQueue.wait_job(job_id)
 
     await check_exists(test_cli_user, upload["shortname"], reverse=True)
+
+
+EICAR = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+
+
+async def test_eicar_upload(test_cli_user):
+    if not test_cli_user.app.econfig.UPLOAD_SCAN:
+        return
+
+    # uh... ok???
+    # without this, asyncio subprocess kinda just hangs on communicate(), even
+    # though the process already finished
+    #
+    # fix found on https://github.com/python/asyncio/issues/478#issuecomment-268476438
+    asyncio.get_child_watcher().attach_loop(test_cli_user.app.loop)
+
+    test_cli_user.app.econfig.SCAN_WAIT_THRESHOLD = 5
+
+    request_kwargs = await aiohttp_form(
+        io.BytesIO(EICAR.encode()), f"{hexs(10)}.txt", "text/plain"
+    )
+
+    resp = await test_cli_user.post("/api/upload", **request_kwargs)
+    assert resp.status_code == 415
