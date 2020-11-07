@@ -27,3 +27,6 @@ REQUIRE_ACCOUNT_APPROVALS = False
 
 FORCE_EXTENSION = {"image/jpeg": ".jpg"}
 INCLUDE_EXTENSIONS = {"application/octet-stream": [""]}
+
+UPLOAD_SCAN = True
+SCAN_WAIT_THRESHOLD = 1
