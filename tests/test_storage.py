@@ -36,6 +36,9 @@ async def test_user_storage(test_cli_user):
         "user_id"
     ]
 
+    assert await app.storage.get_uid(secrets.token_hex(64)) is None
+    assert await app.storage.get_username(secrets.randbits(64)) is None
+
 
 async def test_domain_storage(test_cli_user):
     # TODO maybe copy test_domain.domain and replace by a
