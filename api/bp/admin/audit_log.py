@@ -151,7 +151,8 @@ class AuditLog:
     def _reset(self):
         """Reset the sender task, causing the queue to be consumed in a minute."""
         if self._sender_task:
-            self._sender_task.cancel()
+            self.app.sched.stop("global_sender_task")
+            # self._sender_task.cancel()
 
         self._sender_task = self.app.sched.spawn(
             self._sender, [], name="global_sender_task"
