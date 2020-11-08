@@ -11,7 +11,7 @@ import aiohttp
 import aioredis
 
 import quart
-from quart import Quart, jsonify, request, send_file
+from quart import Quart, jsonify, request
 from dns import resolver
 from violet import JobManager
 
