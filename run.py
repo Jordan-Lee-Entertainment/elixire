@@ -31,7 +31,6 @@ import api.bp.wpadmin
 import api.bp.misc
 import api.bp.index
 import api.bp.ratelimit
-import api.bp.frontend
 import api.bp.metrics.blueprint
 import api.bp.cors
 import api.bp.client
@@ -114,7 +113,6 @@ def set_blueprints(app_):
         api.bp.admin.misc_bp: "/admin",
         api.bp.admin.violet_jobs_bp: "/admin/violet_jobs",
         api.bp.shorten.bp: "/shorten",
-        api.bp.frontend.bp: -1,
         api.bp.fetch.bp: -1,
         api.bp.wpadmin.bp: -1,
         api.bp.client.bp: -1,
@@ -194,16 +192,6 @@ async def handle_notfound_error(err):
 
 @app.errorhandler(404)
 async def handle_notfound(_err):
-    """Give specific pages/behavior when reaching files that aren't found."""
-    has_frontend = app.econfig.ENABLE_FRONTEND
-
-    if has_frontend and request.path.startswith("/admin/"):
-        return await send_file("./admin-panel/build/index.html")
-    elif request.path.startswith("/api"):
-        return "Not Found", 404
-    elif has_frontend:
-        return (await send_file("./frontend/output/404.html")), 404
-
     return "Not Found", 404
 
 
