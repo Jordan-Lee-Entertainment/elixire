@@ -78,6 +78,5 @@ async def email_broadcast():
 async def sendmail(user_id: int):
     """Send an email to a given user."""
     j = validate(await request.get_json(), ADMIN_SEND_BROADCAST)
-    body = "\n".join(j["body"])
-    user_email = await send_email_to_user(user_id, j["subject"], body)
+    user_email = await send_email_to_user(user_id, j["subject"], j["body"])
     return jsonify({"email": user_email})

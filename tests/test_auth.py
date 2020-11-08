@@ -215,7 +215,8 @@ async def test_register(test_client):
     )
 
     resp = await test_client.post(
-        "/api/auth/login", json={"user": user_name, "password": user_pass},
+        "/api/auth/login",
+        json={"user": user_name, "password": user_pass},
     )
     assert resp.status_code == 200
 

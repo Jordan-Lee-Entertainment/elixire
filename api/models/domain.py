@@ -190,10 +190,10 @@ class Domain:
 
     async def fetch_stats(self, *, public: bool = False) -> dict:
         """Fetch statistics about a domain. Returns a dictionary containing
-         - the total count of users using the domain
-         - the total count of shortens
-         - the total count of files
-         - the total size of the files in the domain
+        - the total count of users using the domain
+        - the total count of shortens
+        - the total count of files
+        - the total size of the files in the domain
         """
         stats = {}
 

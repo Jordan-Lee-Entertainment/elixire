@@ -18,7 +18,7 @@ services:
   - redis:alpine
 
 run_backend:
-  image: python:3.7-alpine
+  image: python:3.9-alpine
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
@@ -35,8 +35,13 @@ run_backend:
     - time pip install wheel tox
     - mkdir -p images dumps thumbnails
     - cat config.example.py config.ci.py > config.py
-    - pip install aioredis==1.3.1 asyncpg==0.20.1
+    - pip install aioredis==1.3.1 asyncpg==0.21.0
     - time python ./utils/upgrade/folder_sharding.py
+
+    # install and setup clamav
+    - time apk --update add clamav
+    - freshclam --config-file=ci/freshclam.conf
+    - clamd --foreground=false --config-file=ci/clamd.conf
   script:
     - mkdir frontend/output admin-panel/dist -p
     - touch frontend/output/index.html admin-panel/dist/index.html

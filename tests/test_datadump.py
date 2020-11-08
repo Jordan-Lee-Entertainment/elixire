@@ -77,8 +77,6 @@ async def test_datadump(test_cli_user):
         )
         assert resp.status_code == 200
 
-        # TODO: better testing of the zip file, e.g files (but we need to
-        # upload stuff, etc, its hard
         zipdump = zipfile.ZipFile(path, "r")
         with zipdump.open("user_data.json") as user_data_file:
             user_data = json.load(user_data_file)

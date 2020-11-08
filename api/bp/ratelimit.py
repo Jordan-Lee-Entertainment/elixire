@@ -134,8 +134,10 @@ def setup_ratelimits():
     app.ratelimits = {}
 
     for endpoint, ratelimit in rtls.items():
+        log.debug("Ratelimit for '%s' set to %r", endpoint, ratelimit)
         app.ratelimits[endpoint] = RatelimitManager(*ratelimit)
 
     # if a global ratelimit isn't provided, inject one.
     if "*" not in app.ratelimits:
+        log.debug("Ratelimit for '*' set to default")
         app.ratelimits["*"] = RatelimitManager(15, 5)

@@ -116,5 +116,7 @@ async def revoke_file_deletion(file_id: int):
 async def revoke_shorten_deletion(shorten_id: int):
     user_id = await token_check()
     return await revoke_resource_deletion(
-        Shorten, user_id=user_id, shorten_id=shorten_id,
+        Shorten,
+        user_id=user_id,
+        shorten_id=shorten_id,
     )

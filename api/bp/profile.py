@@ -33,11 +33,11 @@ bp = Blueprint("profile", __name__)
 log = logging.getLogger(__name__)
 
 
-async def _update_password(user_id: int, new_pwd: str):
+async def _update_password(conn, user_id: int, new_pwd: str):
     """Update a user's password."""
     new_hash = await pwd_hash(new_pwd)
 
-    await app.db.execute(
+    await conn.execute(
         """
         UPDATE users
         SET password_hash = $1
@@ -74,10 +74,10 @@ async def profile_handler():
     return jsonify(user_dict)
 
 
-async def _try_domain_patch(user_id: int, domain_id: int) -> None:
-    await app.db.execute(
+async def _try_domain_patch(conn, user_id: int, domain_id: int) -> None:
+    await conn.execute(
         """
-        UPDATE users
+        UPDATE user_settings
         SET domain = $1
         WHERE user_id = $2
         """,
@@ -145,11 +145,11 @@ async def validate_semantics(user_id: int, payload: dict) -> dict:
     assert user_obj is not None
     user = user_obj.to_dict()
 
-    _field_must_password = ("name", "email", "new_password")
+    _field_must_password = ("name", "email")
     _field_must_unique_user = ("name", "email")
 
     for field in _field_must_password:
-        if to_update(user, payload, field):
+        if "new_password" in payload or to_update(user, payload, field):
             await _check_password(user_id, payload)
             break
 
@@ -220,10 +220,10 @@ async def finish_update(conn, user_id: int, payload: dict):
         )
 
     if to_update(user_dict, payload, "domain"):
-        await _try_domain_patch(user_id, payload["domain"])
+        await _try_domain_patch(conn, user_id, payload["domain"])
 
-    if to_update(user_dict, payload, "new_password"):
-        await _update_password(user_id, payload["new_password"])
+    if "new_password" in payload:
+        await _update_password(conn, user_id, payload["new_password"])
 
 
 @bp.route("", methods=["PATCH"])
@@ -336,7 +336,7 @@ async def password_reset_confirmation():
     user_id = await uid_from_email_token(token, "email_pwd_reset_tokens")
 
     # reset password
-    await _update_password(user_id, new_pwd)
+    await _update_password(app.db, user_id, new_pwd)
     await clean_etoken(token, "email_pwd_reset_tokens")
 
     return "", 204

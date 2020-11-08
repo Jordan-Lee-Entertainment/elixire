@@ -6,6 +6,7 @@ import pytest
 import asyncio
 from .common import token, username, email
 from api.common.user import create_user, delete_user
+from tests.common.utils import extract_first_url
 
 pytestmark = pytest.mark.asyncio
 
@@ -65,12 +66,19 @@ async def test_patch_profile(test_cli_user):
     # request 2: updating profile
     new_uname = f"test{username()}"
     new_email = email()
+    new_domain = await test_cli_user.create_domain()
+    new_subdomain = username()
+    new_shorten_subdomain = username()
 
     resp = await test_cli_user.patch(
         "/api/profile",
         json={
             "name": new_uname,
             "email": new_email,
+            "domain": new_domain.id,
+            "subdomain": new_subdomain,
+            "shorten_domain": new_domain.id,
+            "shorten_subdomain": new_shorten_subdomain,
             # users dont have paranoid by default, so
             # change that too. the more we change,
             # the better
@@ -87,6 +95,10 @@ async def test_patch_profile(test_cli_user):
     assert rjson["name"] == new_uname
     assert rjson["email"] == new_email
     assert rjson["paranoid"]
+    assert rjson["domain"] == new_domain.id
+    assert rjson["subdomain"] == new_subdomain
+    assert rjson["shorten_domain"] == new_domain.id
+    assert rjson["shorten_subdomain"] == new_shorten_subdomain
 
     # request 3: changing profile info back
     resp = await test_cli_user.patch(
@@ -95,6 +107,10 @@ async def test_patch_profile(test_cli_user):
             "name": test_cli_user["username"],
             "email": test_cli_user["email"],
             "paranoid": False,
+            "domain": 0,
+            "subdomain": "",
+            "shorten_domain": 0,
+            "shorten_subdomain": "",
             # password required to change username and email
             "password": test_cli_user["password"],
         },
@@ -107,6 +123,72 @@ async def test_patch_profile(test_cli_user):
     assert rjson["name"] == test_cli_user["username"]
     assert rjson["email"] == test_cli_user["email"]
     assert not rjson["paranoid"]
+
+
+async def test_patch_profile_new_password(test_cli_user):
+    old_password = test_cli_user["password"]
+    new_password = username()
+
+    resp = await test_cli_user.patch(
+        "/api/profile",
+        json={
+            "new_password": new_password,
+            "password": old_password,
+        },
+    )
+
+    assert resp.status_code == 200
+    rjson = await resp.json
+
+    assert isinstance(rjson, dict)
+
+    # we need to create another token for this test user
+    resp = await test_cli_user.post(
+        "/api/auth/login",
+        do_token=False,
+        json={"user": test_cli_user["username"], "password": new_password},
+    )
+
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["token"], str)
+
+    test_cli_user.user["password"] = new_password
+    test_cli_user.user["token"] = rjson["token"]
+
+    # assert this new token works
+    resp = await test_cli_user.get("/api/profile")
+    assert resp.status_code == 200
+
+
+async def test_patch_profile_wrong_password(test_cli_user):
+    resp = await test_cli_user.patch(
+        "/api/profile",
+        json={
+            "username": username(),
+        },
+    )
+    assert resp.status_code == 400
+
+    resp = await test_cli_user.patch(
+        "/api/profile",
+        json={
+            "name": username(),
+            "password": username(),
+        },
+    )
+    assert resp.status_code == 403
+
+    resp = await test_cli_user.patch(
+        "/api/profile",
+        json={
+            "new_password": username(),
+            "password": username(),
+        },
+    )
+
+    assert resp.status_code == 403
 
 
 async def test_profile_wrong_token(test_cli):
@@ -159,3 +241,46 @@ async def test_patch_profile_wrong(test_cli_user):
         async with test_cli_user.app.app_context():
             task = await delete_user(random_user["user_id"], delete=True)
         await asyncio.shield(task)
+
+
+async def test_delete_own_user(test_cli_user):
+    user_password = username()
+    user = await test_cli_user.create_user(password=user_password)
+
+    resp = await test_cli_user.post(
+        "/api/auth/login",
+        do_token=False,
+        json={"user": user.name, "password": user_password},
+    )
+
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert isinstance(rjson, dict)
+    assert isinstance(rjson["token"], str)
+
+    token = rjson["token"]
+
+    resp = await test_cli_user.delete(
+        "/api/profile",
+        do_token=False,
+        json={"password": user_password},
+        headers={"authorization": token},
+    )
+
+    assert resp.status_code == 204
+
+    email = test_cli_user.app._email_list[-1]
+    url = extract_first_url(email["content"])
+    delete_token = url.fragment
+
+    resp = await test_cli_user.post(
+        "/api/profile/delete_confirm",
+        do_token=False,
+        query_string={"url": delete_token},
+    )
+    assert resp.status_code == 204
+
+    resp = await test_cli_user.get(
+        "/api/profile", do_token=False, headers={"authorization": token}
+    )
+    assert resp.status_code == 403

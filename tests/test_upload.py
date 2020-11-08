@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import io
+import asyncio
 import os.path
 from urllib.parse import urlparse
 
@@ -13,6 +14,33 @@ from api.models import File
 from api.scheduled_deletes import ScheduledDeleteQueue
 
 pytestmark = pytest.mark.asyncio
+
+
+async def check_shorten_exists(test_cli, shortname: str, *, reverse=False):
+    """Check if a shorten exists (or not) given the shortname."""
+    resp = await test_cli.get("/api/shortens")
+    assert resp.status_code == 200
+    rjson = await resp.json
+
+    assert isinstance(rjson["shortens"], list)
+
+    try:
+        next(filter(lambda data: data["shortname"] == shortname, rjson["shortens"]))
+
+        # if we don't want the shorten to exist but we found it,
+        # that's an assertion error
+        if reverse:
+            raise AssertionError()
+    except StopIteration:
+        # if we want the shorten to exist but we DIDN't find it,
+        # that's an assertion error
+        if not reverse:
+            raise AssertionError()
+
+        # if we don't want the shorten to exist and we just found out it
+        # actually doesn't exist, we return since the rest of the code
+        # isn't for that
+        return
 
 
 async def check_exists(test_cli, shortname, *, reverse=False):
@@ -34,12 +62,12 @@ async def check_exists(test_cli, shortname, *, reverse=False):
         # if we don't want the file to exist but we found it,
         # that's an assertion error
         if reverse:
-            raise AssertionError()
+            raise AssertionError(f"File found: {file!r}")
     except StopIteration:
         # if we want the file to exist but we DIDN't find it,
         # that's an assertion error
         if not reverse:
-            raise AssertionError()
+            raise AssertionError("File not found")
 
         # if we don't want the file to exist and we just found out it
         # actually doesn't exist, we return since the rest of the code
@@ -112,7 +140,7 @@ async def test_upload_png(test_cli_user):
     resp = await test_cli_user.head(url, headers={"host": host})
     assert resp.status_code == 200
 
-    resp = await test_cli_user.get(url, headers={"host": host, "range": "bytes=0-10"})
+    resp = await test_cli_user.get(url, headers={"host": host, "range": "bytes=0-9"})
     assert resp.status_code == 206
 
     assert resp.headers["content-length"] == "10"
@@ -226,6 +254,19 @@ async def _upload(test_cli_user, **kwargs) -> dict:
     return respjson
 
 
+async def _shorten(test_cli_user, **kwargs) -> dict:
+    url = "https://elixi.re"
+    resp = await test_cli_user.post("/api/shorten", json={"url": url}, **kwargs)
+
+    assert resp.status_code == 200
+
+    respjson = await resp.json
+    assert isinstance(respjson, dict)
+    assert isinstance(respjson["url"], str)
+
+    return respjson
+
+
 async def test_delete_file(test_cli_user):
     respjson = await _upload(test_cli_user)
 
@@ -238,8 +279,17 @@ async def test_delete_file(test_cli_user):
 
 
 async def test_delete_file_many(test_cli_user):
+    test_domain = await test_cli_user.create_domain()
+
     rjson = await _upload(test_cli_user)
-    shortname = rjson["shortname"]
+    rjson2 = await _upload(test_cli_user, query_string={"domain": test_domain.id})
+    rjson_shorten = await _shorten(test_cli_user)
+    shortname1 = rjson["shortname"]
+    shortname2 = rjson2["shortname"]
+    shortname_shorten = rjson_shorten["shortname"]
+    assert shortname1 != shortname2
+    assert shortname1 != shortname_shorten
+    assert shortname2 != shortname_shorten
 
     resp = await test_cli_user.get(
         "/api/compute_purge_all", query_string={"delete_files_after": 0}
@@ -251,9 +301,31 @@ async def test_delete_file_many(test_cli_user):
     assert rjson["file_count"] > 0
     assert rjson["shorten_count"] >= 0
 
+    # assert both exist before deleting
+    await check_exists(test_cli_user, shortname1)
+    await check_exists(test_cli_user, shortname2)
+
+    # delete files from the domain only, then proceed to delete all files
+    # this is to make sure that specific code path works as well
     resp_del = await test_cli_user.post(
         "/api/purge_all_content",
-        json={"password": test_cli_user["password"], "delete_files_after": 0},
+        json={
+            "password": test_cli_user["password"],
+            "delete_from_domain": test_domain.id,
+        },
+    )
+    assert resp_del.status_code == 200
+    rjson = await resp_del.json
+    await MassDeleteQueue.wait_job(rjson["job_id"], timeout=30)
+    await check_exists(test_cli_user, shortname2, reverse=True)
+
+    resp_del = await test_cli_user.post(
+        "/api/purge_all_content",
+        json={
+            "password": test_cli_user["password"],
+            "delete_files_after": 0,
+            "delete_shortens_after": 0,
+        },
     )
     assert resp_del.status_code == 200
     rjson = await resp_del.json
@@ -262,7 +334,8 @@ async def test_delete_file_many(test_cli_user):
     assert rjson["job_id"]
     await MassDeleteQueue.wait_job(rjson["job_id"], timeout=30)
 
-    await check_exists(test_cli_user, shortname, reverse=True)
+    await check_exists(test_cli_user, shortname1, reverse=True)
+    await check_shorten_exists(test_cli_user, shortname_shorten, reverse=True)
 
 
 async def test_delete_nonexist(test_cli_user):
@@ -311,7 +384,9 @@ async def test_upload_ephmeral(test_cli_user):
     assert isinstance(job["state"], int)
     assert job["file_id"] == elixire_file.id
 
-    resp = await test_cli_user.get(f"/api/files/{elixire_file.id}/scheduled_deletion",)
+    resp = await test_cli_user.get(
+        f"/api/files/{elixire_file.id}/scheduled_deletion",
+    )
     assert resp.status_code == 200
     rjson = await resp.json
     assert isinstance(rjson, dict)
@@ -324,3 +399,27 @@ async def test_upload_ephmeral(test_cli_user):
     await ScheduledDeleteQueue.wait_job(job_id)
 
     await check_exists(test_cli_user, upload["shortname"], reverse=True)
+
+
+EICAR = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+
+
+async def test_eicar_upload(test_cli_user):
+    if not test_cli_user.app.econfig.UPLOAD_SCAN:
+        return
+
+    # uh... ok???
+    # without this, asyncio subprocess kinda just hangs on communicate(), even
+    # though the process already finished
+    #
+    # fix found on https://github.com/python/asyncio/issues/478#issuecomment-268476438
+    asyncio.get_child_watcher().attach_loop(test_cli_user.app.loop)
+
+    test_cli_user.app.econfig.SCAN_WAIT_THRESHOLD = 5
+
+    request_kwargs = await aiohttp_form(
+        io.BytesIO(EICAR.encode()), f"{hexs(10)}.txt", "text/plain"
+    )
+
+    resp = await test_cli_user.post("/api/upload", **request_kwargs)
+    assert resp.status_code == 415

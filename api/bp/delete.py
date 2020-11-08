@@ -117,6 +117,8 @@ class MassDeleteQueue(JobQueue):
         # type of the selector's value (since they can be snowflakes OR timestamps),
         # as well as the necessary $N indexing in the statement
 
+        # TODO: this needs a refactor
+
         for field in _fields:
             if field not in raw:
                 continue
@@ -144,18 +146,20 @@ class MassDeleteQueue(JobQueue):
         order_by_file = "order by file_id desc" if delete_content else ""
         order_by_shorten = "order by shorten_id desc" if delete_content else ""
 
+        full_file_wheres = "".join([f" AND {x}" for x in file_wheres])
+        full_shorten_wheres = "".join([f" AND {x}" for x in shorten_wheres])
+
         file_stmt = f"""
             SELECT {col_file}
             FROM files
-            WHERE uploader = $1 AND {domain_where} AND {" AND ".join(file_wheres)}
+            WHERE uploader = $1 AND {domain_where} {full_file_wheres}
             {order_by_file}
             """
 
         shorten_stmt = f"""
             SELECT {col_shorten}
             FROM shortens
-            WHERE uploader = $1 AND {domain_where} {" AND ".join(shorten_wheres)}
-            ORDER BY shorten_id ASC
+            WHERE uploader = $1 AND {domain_where} {full_shorten_wheres}
             {order_by_shorten}
             """
 
@@ -171,14 +175,16 @@ class MassDeleteQueue(JobQueue):
             return file_count, shorten_count
 
         log.info("job %s got selectors %r", ctx.job_id, j)
+        log.debug("file_stmt=%s\nshorten_stmt=%s", file_stmt, shorten_stmt)
+        log.debug("file_wheres=%r, shorten_wheres=%r", file_wheres, shorten_wheres)
 
-        if file_wheres:
+        if file_wheres or "delete_from_domain" in raw:
             file_ids = [r["file_id"] for r in await app.db.fetch(file_stmt, *file_args)]
             log.info("job %s got %d files", ctx.job_id, len(file_ids))
 
             await File.delete_many(file_ids, user_id=user_id)
 
-        if shorten_wheres:
+        if shorten_wheres or "delete_from_domain" in raw:
             shorten_ids = [
                 r["shorten_id"] for r in await app.db.fetch(shorten_stmt, *shorten_args)
             ]
