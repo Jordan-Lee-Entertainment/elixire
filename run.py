@@ -285,6 +285,7 @@ async def close_db():
     except asyncio.TimeoutError:
         log.warning("timed out waiting for tasks. ignoring and closing")
 
+    log.info("closing metrics")
     await api.bp.metrics.blueprint.close_worker()
 
     log.info("closing db")

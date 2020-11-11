@@ -8,6 +8,7 @@ import time
 from quart import Blueprint, request, current_app as app
 from api.bp.metrics.tasks import second_tasks, hourly_tasks, upload_uniq_task
 from api.bp.metrics.compactor import compact_task
+from drillbit import MetricsManager
 from api.bp.metrics.manager import MetricsManager
 
 bp = Blueprint("metrics", __name__)
@@ -16,15 +17,24 @@ log = logging.getLogger(__name__)
 
 async def create_db():
     """Create InfluxDB database"""
-    app.metrics = MetricsManager(app, app.loop)
+    cfg = app.econfig
 
-    if not app.econfig.ENABLE_METRICS:
+    app.metrics = MetricsManager(
+        database_config,
+        enabled=cfg.ENABLE_METRICS,
+        datapoints_per_call=app.econfig.METRICS_LIMIT[0],
+    )
+    if not cfg.ENABLE_METRICS:
+        log.info("metrics are disabled")
         return
 
-    dbname = app.econfig.METRICS_DATABASE
+    database_name = app.econfig.METRICS_DATABASE
+    log.info("Creating database %r", database_name)
+    await app.metrics.influx.create_database(db=database_name)
 
-    log.info(f"Creating database {dbname}")
-    await app.metrics.influx.create_database(db=dbname)
+    app.sched.spawn_periodic(
+        app.metrics.tick, [], period=app.econfig.METRICS_LIMIT[1], name="metrics_worker"
+    )
 
 
 def start_tasks():
@@ -51,7 +61,8 @@ def start_tasks():
 
 
 async def close_worker():
-    await app.metrics.stop()
+    app.sched.stop("metrics_worker")
+    await app.metrics.flush_all(every=1)
 
 
 @bp.before_app_request
