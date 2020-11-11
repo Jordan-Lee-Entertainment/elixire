@@ -35,6 +35,6 @@ setup(
         "winter @ git+https://gitlab.com/elixire/winter.git@988c6ca438663c30c6b617bdb16fd6be6c4226ba#egg=winter",
         "hail @ git+https://gitlab.com/elixire/hail.git@d72895019ef68eb96bb775f939182dd9344de36#egg=hail",
         "metomi-isodatetime @ git+https://github.com/metomi/isodatetime.git@db717514a3cc759e656bee9eecb2b1ab1bc7cc5f#egg=metomi-isodatetime",
-        "drillbit @ git+https://gitlab.com/elixire/drillbit.git@64c9ada385ba8dfaa5b1b0931862a76e4a2a1f09#egg=drillbit",
+        "drillbit @ git+https://gitlab.com/elixire/drillbit.git@d98ea30b044a30778526f48fa68a5b2c0173e9ef#egg=drillbit",
     ],
 )
