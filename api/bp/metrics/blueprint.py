@@ -8,8 +8,7 @@ import time
 from quart import Blueprint, request, current_app as app
 from api.bp.metrics.tasks import second_tasks, hourly_tasks, upload_uniq_task
 from api.bp.metrics.compactor import compact_task
-from drillbit import MetricsManager
-from api.bp.metrics.manager import MetricsManager
+from drillbit import MetricsManager, MetricsDatabaseConfig
 
 bp = Blueprint("metrics", __name__)
 log = logging.getLogger(__name__)
@@ -18,6 +17,16 @@ log = logging.getLogger(__name__)
 async def create_db():
     """Create InfluxDB database"""
     cfg = app.econfig
+
+    database_config = MetricsDatabaseConfig(
+        host=cfg.INFLUX_HOST[0],
+        port=cfg.INFLUX_HOST[1],
+        database=cfg.METRICS_DATABASE,
+        ssl=cfg.INFLUX_SSL,
+        auth=bool(cfg.INFLUX_USER),
+        username=cfg.INFLUX_USER,
+        password=cfg.INFLUX_PASSWORD,
+    )
 
     app.metrics = MetricsManager(
         database_config,
