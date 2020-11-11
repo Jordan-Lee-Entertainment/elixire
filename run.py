@@ -238,14 +238,14 @@ async def app_before_serving():
     app.db = await asyncpg.create_pool(**config.db)
 
     log.info("start job manager")
-    app.sched = JobManager(loop=app.loop, db=app.db, context_function=app.app_context)
+    app.sched = JobManager(db=app.db, context_function=app.app_context)
     app.sched.register_job_queue(api.bp.datadump.handler.DatadumpQueue)
     app.sched.register_job_queue(api.bp.delete.MassDeleteQueue)
     app.sched.register_job_queue(ScheduledDeleteQueue)
 
     log.info("connecting to redis")
     app.redis = await aioredis.create_redis_pool(
-        config.redis, minsize=3, maxsize=11, loop=app.loop, encoding="utf-8"
+        config.redis, minsize=3, maxsize=11, encoding="utf-8"
     )
 
     app.storage = Storage(app)
