@@ -119,6 +119,7 @@ def set_blueprints(app_):
         api.bp.wpadmin.bp: -1,
         api.bp.client.bp: -1,
         api.bp.scheduled_deletes.bp: "",
+        api.bp.metrics.blueprint.bp: -1,
     }
 
     for blueprint, api_prefix in blueprints.items():
