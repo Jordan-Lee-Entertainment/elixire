@@ -7,7 +7,6 @@ import time
 
 from quart import Blueprint, request, current_app as app
 from api.bp.metrics.tasks import second_tasks, hourly_tasks, upload_uniq_task
-from api.bp.metrics.compactor import compact_task
 from drillbit import MetricsManager, MetricsDatabaseConfig
 
 bp = Blueprint("metrics", __name__)
@@ -59,13 +58,6 @@ def start_tasks():
 
     app.sched.spawn_periodic(
         upload_uniq_task, [app], period=86400, name="metrics:unique_uploads"
-    )
-
-    app.sched.spawn_periodic(
-        compact_task,
-        [app],
-        period=app.econfig.METRICS_COMPACT_GENERALIZE,
-        name="metrics:compactor",
     )
 
 
