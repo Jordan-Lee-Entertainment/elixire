@@ -11,10 +11,6 @@ class MetricsCounters:
 
     def __init__(self):
         self.data = {
-            "request": 0,
-            "response": 0,
-            "error": 0,
-            "error_ise": 0,
             "file_upload_hour": 0,
             "file_upload_hour_pub": 0,
         }

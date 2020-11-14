@@ -83,9 +83,6 @@ async def on_request():
     if not app.econfig.ENABLE_METRICS:
         return
 
-    # increase the counter on every request
-    app.counters.inc("request")
-
     # so we can measure response latency
     request.start_time = time.monotonic()
 
@@ -117,7 +114,6 @@ async def maybe_submit_latency(full_measurement: str):
 @bp.after_app_request
 async def on_response(response):
     if app.econfig.ENABLE_METRICS:
-        app.counters.inc("response")
         full_measurement = influx_measurement("response", status=response.status_code)
         await app.metrics.submit(full_measurement, 1)
         await maybe_submit_latency(full_measurement)

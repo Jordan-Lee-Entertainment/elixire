@@ -218,11 +218,6 @@ def handle_exception(exception):
     except AttributeError:
         pass
 
-    app.counters.inc("error")
-
-    if status_code == 500:
-        app.counters.inc("error_ise")
-
     return jsonify({"error": True, "message": repr(exception)}), status_code
 
 
