@@ -6,7 +6,7 @@ import logging
 import time
 
 from quart import Blueprint, request, current_app as app
-from api.bp.metrics.tasks import second_tasks, hourly_tasks, upload_uniq_task
+from api.bp.metrics.tasks import second_tasks, hourly_tasks
 from drillbit import MetricsManager, MetricsDatabaseConfig
 
 bp = Blueprint("metrics", __name__)
