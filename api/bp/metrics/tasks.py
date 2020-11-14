@@ -13,20 +13,7 @@ async def second_tasks(app):
     counters = app.counters
 
     for counter in counters.data:
-        # ignore those specific counters, as they're on their own task
-        if counter in ("file_upload_hour", "file_upload_hour_pub"):
-            continue
-
         await counters.auto_submit(metrics, counter)
-
-
-async def file_upload_counts(app):
-    """Submit the counters for total amount of uploads."""
-    metrics = app.metrics
-    counters = app.counters
-
-    await counters.auto_submit(metrics, "file_upload_hour")
-    await counters.auto_submit(metrics, "file_upload_hour_pub")
 
 
 async def file_total_counts(app):
