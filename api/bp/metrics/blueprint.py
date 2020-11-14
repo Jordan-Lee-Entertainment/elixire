@@ -62,6 +62,7 @@ def start_tasks():
 
 
 async def close_worker():
+    log.info("flushing all metrics")
     app.sched.stop("metrics_worker")
     await app.metrics.flush_all(every=1)
 
