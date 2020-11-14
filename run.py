@@ -44,7 +44,6 @@ from api.errors import APIError, Banned
 from api.common.utils import get_ip_addr, LockStorage
 from api.common.user import create_doll_user
 from api.storage import Storage
-from api.bp.metrics.counters import MetricsCounters
 from api.bp.admin.audit_log import AuditLog
 from api.common.banning import ban_request
 from api.mode import ElixireMode
@@ -250,9 +249,6 @@ async def app_before_serving():
     # keep an app-level resolver instead of instantiate
     # on every check_email call
     app.resolv = resolver.Resolver()
-
-    # metrics stuff
-    app.counters = MetricsCounters()
 
     api.bp.ratelimit.setup_ratelimits()
     await api.bp.metrics.blueprint.create_db()

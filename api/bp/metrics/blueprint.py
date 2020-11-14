@@ -6,7 +6,7 @@ import logging
 import time
 
 from quart import Blueprint, request, current_app as app
-from api.bp.metrics.tasks import second_tasks, hourly_tasks
+from api.bp.metrics.tasks import hourly_tasks
 from drillbit import MetricsManager, MetricsDatabaseConfig
 
 bp = Blueprint("metrics", __name__)
@@ -50,7 +50,7 @@ def start_tasks():
     if not app.econfig.ENABLE_METRICS:
         return
 
-    app.sched.spawn_periodic(second_tasks, [app], period=1, name="metrics:second_tasks")
+    # app.sched.spawn_periodic(second_tasks, [app], period=1, name="metrics:second_tasks")
 
     app.sched.spawn_periodic(
         hourly_tasks, [app], period=3600, name="metrics:hourly_tasks"

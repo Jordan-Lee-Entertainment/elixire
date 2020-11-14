@@ -7,15 +7,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-async def second_tasks(app):
-    """Quick submission of per-second metrics."""
-    metrics = app.metrics
-    counters = app.counters
-
-    for counter in counters.data:
-        await counters.auto_submit(metrics, counter)
-
-
 async def file_total_counts(app):
     """Submit total file count."""
     total_files = await app.db.fetchval(
