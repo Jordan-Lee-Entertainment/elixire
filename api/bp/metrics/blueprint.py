@@ -67,6 +67,21 @@ async def close_worker():
     await app.metrics.flush_all(every=1)
 
 
+def influx_measurement(scope: str = "request", **extra) -> str:
+    """Convert the current request (or response) into an InfluxDB measurement."""
+    if request.url_rule is None:
+        return scope
+
+    path = request.url_rule.rule
+    method = request.method
+
+    tags = {"route": f"{method}_{path}"}
+    tags.update(extra)
+    tags_str: str = ",".join(f"{k}={v}" for k, v in tags.items())
+
+    return f"{scope}{',' + tags_str if tags_str else ''}"
+
+
 @bp.before_app_request
 async def on_request():
     if not app.econfig.ENABLE_METRICS:
@@ -78,24 +93,37 @@ async def on_request():
     # so we can measure response latency
     request.start_time = time.monotonic()
 
+    # TODO: For now, we can go with this, but once scale goes up, it is likely
+    # this code will be a bottleneck for the queue of the metrics manager.
+    #
+    # The best way to approach a fix would be to aggregate per second using
+    # MetricsCounters instead of per-request as this snippet of code does.
+    full_measurement = influx_measurement()
+    await app.metrics.submit(full_measurement, 1)
 
-@bp.after_app_request
-async def on_response(response):
-    if not app.econfig.ENABLE_METRICS:
-        return response
 
-    # increase the counter on every response from server
-    app.counters.inc("response")
-
+async def maybe_submit_latency(full_measurement: str):
     try:
         # calculate latency to get a response, and submit that to influx
         # this field won't help in the case of network failure
         latency = time.monotonic() - request.start_time
-
-        # submit the metric as milliseconds since it is more tangible in
-        # normal scenarios
-        await app.metrics.submit("response_latency", latency * 1000)
     except AttributeError:
-        pass
+        return
+
+    # submit the metric as milliseconds since it is more tangible in
+    # normal scenarios
+    await app.metrics.submit("response_latency", latency * 1000)
+
+    # also submit with the tags
+    await app.metrics.submit(full_measurement, latency * 1000)
+
+
+@bp.after_app_request
+async def on_response(response):
+    if app.econfig.ENABLE_METRICS:
+        app.counters.inc("response")
+        full_measurement = influx_measurement("response", status=response.status_code)
+        await app.metrics.submit(full_measurement, 1)
+        await maybe_submit_latency(full_measurement)
 
     return response
