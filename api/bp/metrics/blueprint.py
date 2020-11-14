@@ -56,10 +56,6 @@ def start_tasks():
         hourly_tasks, [app], period=3600, name="metrics:hourly_tasks"
     )
 
-    app.sched.spawn_periodic(
-        upload_uniq_task, [app], period=86400, name="metrics:unique_uploads"
-    )
-
 
 async def close_worker():
     log.info("flushing all metrics")
