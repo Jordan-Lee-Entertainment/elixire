@@ -116,6 +116,10 @@ async def on_response(response):
     if app.econfig.ENABLE_METRICS:
         full_measurement = influx_measurement("response", status=response.status_code)
         await app.metrics.submit(full_measurement, 1)
-        await maybe_submit_latency(full_measurement)
+
+        full_measurement_latency = influx_measurement(
+            "response_latency", status=response.status_code
+        )
+        await maybe_submit_latency(full_measurement_latency)
 
     return response
