@@ -50,8 +50,6 @@ def start_tasks():
     if not app.econfig.ENABLE_METRICS:
         return
 
-    # app.sched.spawn_periodic(second_tasks, [app], period=1, name="metrics:second_tasks")
-
     app.sched.spawn_periodic(
         hourly_tasks, [app], period=3600, name="metrics:hourly_tasks"
     )
@@ -60,7 +58,9 @@ def start_tasks():
 async def close_worker():
     log.info("flushing all metrics")
     app.sched.stop("metrics_worker")
-    await app.metrics.flush_all(every=1)
+
+    # flush at a higher rate than usual
+    await app.metrics.flush_all(every=0.5)
 
 
 def influx_measurement(scope: str = "request", **extra) -> str:
