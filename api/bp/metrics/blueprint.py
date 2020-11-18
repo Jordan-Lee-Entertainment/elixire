@@ -86,8 +86,11 @@ async def on_request():
     # so we can measure response latency
     request.start_time = time.monotonic()
 
-    # TODO: For now, we can go with this, but once scale goes up, it is likely
-    # this code will be a bottleneck for the queue of the metrics manager.
+    # TODO: For now, we can go with this, but once a lot of requests come up,
+    # it is likely this code will be a bottleneck
+    # for the queue of the metrics manager (drillbit maintains a queue of
+    # incoming datapoints from elixire to maintain a steady rate while sending
+    # them to influxdb).
     #
     # The best way to approach a fix would be to aggregate per second using
     # MetricsCounters instead of per-request as this snippet of code does.
