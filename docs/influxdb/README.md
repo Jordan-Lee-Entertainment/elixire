@@ -10,6 +10,7 @@ pushed:
 - files uploaded per hour
 - size of the entire images/ folder (calculated via the database, not fully correct)
 - user counts
+- how many "tries" were made to generate a given shortname
 
 # working with per-second metrics in the long term
 
