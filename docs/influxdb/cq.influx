@@ -1,9 +1,9 @@
 CREATE CONTINUOUS QUERY "cq_request_1h" ON "elixire"
 BEGIN
-  SELECT sum("value"::float) as "value"
+  SELECT sum("value") as "value"
   INTO "request_hour"
   FROM "request"
-  GROUP BY time(1h)
+  GROUP BY time(1h), *
 END;
 
 CREATE CONTINUOUS QUERY "cq_response_1h" ON "elixire"
@@ -11,5 +11,5 @@ BEGIN
   SELECT sum("value") as "value"
   INTO "response_hour"
   FROM "response"
-  GROUP BY time(1h)
+  GROUP BY time(1h), *
 END;
