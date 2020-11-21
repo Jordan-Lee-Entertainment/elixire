@@ -104,7 +104,7 @@ async def upload_uniq_task(app):
         """
     )
 
-    await metrics.submit("uniq_uploaders_day", count)
+    await metrics.submit("unique_uploaders_hour", count)
 
     countpub = await app.db.fetchval(
         """
@@ -116,7 +116,7 @@ async def upload_uniq_task(app):
         """
     )
 
-    await metrics.submit("uniq_uploaders_day_pub", countpub)
+    await metrics.submit("unique_uploaders_hour_pub", countpub)
 
 
 async def hourly_tasks(app):
