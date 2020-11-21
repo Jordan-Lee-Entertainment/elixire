@@ -1,0 +1,48 @@
+BEGIN;
+
+ALTER TABLE domains
+    ALTER COLUMN domain SET NOT NULL,
+    ALTER COLUMN permissions SET NOT NULL;
+
+ALTER TABLE users
+    ALTER COLUMN username SET NOT NULL,
+    ALTER COLUMN active SET NOT NULL,
+    ALTER COLUMN password_hash SET NOT NULL,
+    ALTER COLUMN admin SET NOT NULL;
+
+ALTER TABLE admin_user_settings
+    ALTER COLUMN audit_log_emails SET NOT NULL;
+
+ALTER TABLE bans
+    ALTER COLUMN user_id SET NOT NULL,
+    ALTER COLUMN reason SET NOT NULL,
+    ALTER COLUMN end_timestamp SET NOT NULL;
+
+ALTER TABLE ip_bans
+    ALTER COLUMN ip_address SET NOT NULL,
+    ALTER COLUMN reason SET NOT NULL,
+    ALTER COLUMN end_timestamp SET NOT NULL,
+    ALTER COLUMN timestamp SET NOT NULL;
+
+ALTER TABLE limits
+    ALTER COLUMN blimit SET NOT NULL,
+    ALTER COLUMN shlimit SET NOT NULL;
+
+ALTER TABLE files
+    ALTER COLUMN mimetype SET NOT NULL,
+    ALTER COLUMN file_size SET NOT NULL,
+    ALTER COLUMN uploader SET NOT NULL,
+    ALTER COLUMN fspath SET NOT NULL,
+    ALTER COLUMN deleted SET NOT NULL,
+    ALTER COLUMN domain SET NOT NULL;
+
+ALTER TABLE shortens
+    ALTER COLUMN redirto SET NOT NULL,
+    ALTER COLUMN uploader SET NOT NULL,
+    ALTER COLUMN deleted SET NOT NULL,
+    ALTER COLUMN domain SET NOT NULL;
+
+ALTER TABLE domain_tags
+    ALTER COLUMN label SET NOT NULL;
+
+COMMIT;
