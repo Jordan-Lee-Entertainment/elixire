@@ -43,7 +43,6 @@ from api.errors import APIError, Banned
 from api.common.utils import get_ip_addr, LockStorage
 from api.common.user import create_doll_user
 from api.storage import Storage
-from api.bp.metrics.counters import MetricsCounters
 from api.bp.admin.audit_log import AuditLog
 from api.common.banning import ban_request
 from api.mode import ElixireMode
@@ -117,6 +116,7 @@ def set_blueprints(app_):
         api.bp.wpadmin.bp: -1,
         api.bp.client.bp: -1,
         api.bp.scheduled_deletes.bp: "",
+        api.bp.metrics.blueprint.bp: -1,
     }
 
     for blueprint, api_prefix in blueprints.items():
@@ -179,9 +179,6 @@ def handle_api_error(err: APIError):
     """Handle any kind of application-level raised error."""
     log.warning(f"API error: {err!r}")
 
-    # api errors count as errors as well
-    app.counters.inc("error")
-
     return _wrap_err_in_json(err)
 
 
@@ -205,11 +202,6 @@ def handle_exception(exception):
     except AttributeError:
         pass
 
-    app.counters.inc("error")
-
-    if status_code == 500:
-        app.counters.inc("error_ise")
-
     return jsonify({"error": True, "message": repr(exception)}), status_code
 
 
@@ -226,14 +218,14 @@ async def app_before_serving():
     app.db = await asyncpg.create_pool(**config.db)
 
     log.info("start job manager")
-    app.sched = JobManager(loop=app.loop, db=app.db, context_function=app.app_context)
+    app.sched = JobManager(db=app.db, context_function=app.app_context)
     app.sched.register_job_queue(api.bp.datadump.handler.DatadumpQueue)
     app.sched.register_job_queue(api.bp.delete.MassDeleteQueue)
     app.sched.register_job_queue(ScheduledDeleteQueue)
 
     log.info("connecting to redis")
     app.redis = await aioredis.create_redis_pool(
-        config.redis, minsize=3, maxsize=11, loop=app.loop, encoding="utf-8"
+        config.redis, minsize=3, maxsize=11, encoding="utf-8"
     )
 
     app.storage = Storage(app)
@@ -242,9 +234,6 @@ async def app_before_serving():
     # keep an app-level resolver instead of instantiate
     # on every check_email call
     app.resolv = resolver.Resolver()
-
-    # metrics stuff
-    app.counters = MetricsCounters()
 
     api.bp.ratelimit.setup_ratelimits()
     await api.bp.metrics.blueprint.create_db()
@@ -273,6 +262,7 @@ async def close_db():
     except asyncio.TimeoutError:
         log.warning("timed out waiting for tasks. ignoring and closing")
 
+    log.info("closing metrics")
     await api.bp.metrics.blueprint.close_worker()
 
     log.info("closing db")

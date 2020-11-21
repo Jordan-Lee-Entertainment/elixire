@@ -143,13 +143,6 @@ async def upload_handler():
 
     domain_id, domain, subdomain_name = await resolve_domain(user_id, FileNameType.FILE)
 
-    # upload counter
-    app.counters.inc("file_upload_hour")
-
-    # TODO maybe push this to a background task
-    if user.settings.consented:
-        app.counters.inc("file_upload_hour_pub")
-
     # calculate the new file size, with the dupe decrease factor multiplied in
     # if necessary
     file_size = ctx.file.calculate_size(app.econfig.DUPE_DECREASE_FACTOR)
