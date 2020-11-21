@@ -37,6 +37,7 @@ import api.bp.client
 import api.bp.list
 import api.bp.delete
 import api.bp.scheduled_deletes
+import api.bp.mfa
 from api.json import ElixireJSONEncoder
 
 from api.errors import APIError, Banned
@@ -94,6 +95,7 @@ def set_blueprints(app_):
         api.bp.cors.bp: -1,
         api.bp.ratelimit.bp: "",
         api.bp.auth.bp: "/auth",
+        api.bp.mfa.bp: "/auth/mfa",
         api.bp.misc.bp: "",
         api.bp.index.bp: "",
         api.bp.profile.bp: "/profile",
