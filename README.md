@@ -30,7 +30,7 @@ Optional, but useful:
 - [InfluxDB] for metrics (see [`docs/managing.md`](docs/managing.md) for more
   details).
 - A SMTP server for outgoing email. We use [Mailgun], but any
-    SMTP server should work.
+  SMTP server should work.
 - [Discord] webhooks for admin notifications
 
 [clamav]: https://www.clamav.net
@@ -47,7 +47,7 @@ Clone the [git] repository:
 [git]: https://git-scm.com
 
 ```bash
-git clone --recursive https://gitlab.com/elixire/elixire.git && cd elixire
+git clone https://gitlab.com/elixire/elixire.git && cd elixire
 ```
 
 Create some necessary directories:
@@ -136,13 +136,25 @@ hypercorn --access-log - run:app --bind 0.0.0.0:8081
 env PYTHON_ENV=production hypercorn --access-log - run:app --bind 0.0.0.0:8081
 ```
 
-## Operator's Manual
+## Post-installation
 
-The operator's manual is still under construction, but here's some important
-notes:
+### Installing frontends
 
-- If you're running elixire behind a reverse proxy (which you should be), make
-  sure to enable host forwarding:
+When putting elixi.re in production, you should host it behind a reverse proxy.
+A reverse proxy is required if you wish to host any web-based frontends.
+
+The available frontends are:
+
+- [antichrist] which provides the main frontend for users.
+- [admin-panel] to provide administration interfaces for the instance.
+
+[antichrist]: https://gitlab.com/elixire/antichrist
+[admin-panel]: https://gitlab.com/elixire/admin-panel
+
+### Enabling host forwarding
+
+When using a reverse proxy, it should be configured so that the `Host` header
+is forwarded to elixire.
 
 ```conf
 location / {
@@ -151,11 +163,29 @@ location / {
 }
 ```
 
-- If you get an error saying something like "route already registered", then you
-  forgot to build the frontend. You can disable it in `config.py` or build it.
+#### Note on reverse proxying
+
+(todo: elaborate on this?)
+
 - Ensure that you redirect www to non-www or non-www to www or else the domain
   checking stuff won't be super happy (you'll not be able to fetch stuff
   properly).
+
+### Creating the first user
+
+Elixire instances do not come with any users (other than a specific user that
+nobody can access), you will need to create your own user:
+
+```
+env/bin/python ./manage.py adduser <email> <username> <password>
+```
+
+And then edit that user so that it is admin on the database. Open a `psql` shell,
+then type:
+
+```
+UPDATE users SET admin = true WHERE username = '<username>';
+```
 
 ### Tools
 
