@@ -4,6 +4,7 @@
 
 import pytest
 from .common import token, username, email, extract_first_url
+from tests.common.utils import password_auth_object
 from api.models import User
 
 pytestmark = pytest.mark.asyncio
@@ -13,7 +14,7 @@ async def test_login(test_cli_user):
     resp = await test_cli_user.post(
         "/api/auth/login",
         do_token=False,
-        json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
+        json=password_auth_object(test_cli_user["username"], test_cli_user["password"]),
     )
 
     assert resp.status_code == 200
@@ -26,7 +27,7 @@ async def test_apikey(test_cli_user):
     resp = await test_cli_user.post(
         "/api/auth/apikey",
         do_token=False,
-        json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
+        json=password_auth_object(test_cli_user["username"], test_cli_user["password"]),
     )
 
     assert resp.status_code == 200
@@ -38,7 +39,7 @@ async def test_apikey(test_cli_user):
 
 async def test_login_badinput(test_cli_user):
     resp = await test_cli_user.post(
-        "/api/auth/login", do_token=False, json={"user": test_cli_user["username"]}
+        "/api/auth/login", do_token=False, json={"username": test_cli_user["username"]}
     )
 
     assert resp.status_code == 400
@@ -48,7 +49,7 @@ async def test_login_badpwd(test_cli_user):
     response = await test_cli_user.post(
         "/api/auth/login",
         do_token=False,
-        json={"user": test_cli_user["username"], "password": token()},
+        json=password_auth_object(test_cli_user["username"], token()),
     )
 
     assert response.status_code == 403
@@ -58,7 +59,7 @@ async def test_login_baduser(test_cli_user):
     resp = await test_cli_user.post(
         "/api/auth/login",
         do_token=False,
-        json={"user": username(), "password": test_cli_user["password"]},
+        json=password_auth_object(username(), test_cli_user["password"]),
     )
 
     assert resp.status_code == 403
@@ -88,10 +89,7 @@ async def test_revoke(test_cli_user):
     resp = await test_cli_user.post(
         "/api/auth/revoke",
         do_token=False,
-        json={
-            "user": test_cli_user["username"],
-            "password": test_cli_user["password"],
-        },
+        json=password_auth_object(test_cli_user["username"], test_cli_user["password"]),
     )
 
     assert resp.status_code == 204
@@ -114,7 +112,7 @@ async def test_login_deactivated(test_cli_user):
     resp = await test_cli_user.post(
         "/api/auth/login",
         do_token=False,
-        json={"user": test_cli_user["username"], "password": test_cli_user["password"]},
+        json=password_auth_object(test_cli_user["username"], test_cli_user["password"]),
     )
 
     assert resp.status_code == 403
@@ -158,10 +156,9 @@ async def test_password_reset(test_cli_user):
     resp = await test_cli_user.post(
         "/api/auth/login",
         do_token=False,
-        json={
-            "user": test_cli_user.user["username"],
-            "password": test_cli_user.user["password"],
-        },
+        json=password_auth_object(
+            test_cli_user.user["username"], test_cli_user.user["password"]
+        ),
     )
 
     assert resp.status_code == 403
@@ -169,7 +166,7 @@ async def test_password_reset(test_cli_user):
     resp = await test_cli_user.post(
         "/api/auth/login",
         do_token=False,
-        json={"user": test_cli_user.user["username"], "password": new_password},
+        json=password_auth_object(test_cli_user.user["username"], new_password),
     )
 
     assert resp.status_code == 200
@@ -216,7 +213,7 @@ async def test_register(test_client):
 
     resp = await test_client.post(
         "/api/auth/login",
-        json={"user": user_name, "password": user_pass},
+        json=password_auth_object(user_name, user_pass),
     )
     assert resp.status_code == 200
 
