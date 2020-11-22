@@ -16,7 +16,7 @@ from quart import request, current_app as app
 
 from api.errors import FailedAuth
 from api.schema import validate, AUTH_SCHEMA
-from api.enums import TokenType
+from api.enums import TokenType, AuthDataType
 from api.common.banning import check_bans
 
 log = logging.getLogger(__name__)
@@ -121,8 +121,7 @@ async def login_user() -> dict:
         log.info(f"login: {username!r} does not exist")
         raise FailedAuth("User or password invalid")
 
-    # TODO (DO NOT MERGE WITHOUT THIS): enum
-    if payload["authdata_type"] == "password":
+    if payload["authdata_type"] == AuthDataType.PASSWORD:
         await authdata_password_check(username, partial_user, payload["authdata"])
 
     if not partial_user["active"]:

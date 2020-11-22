@@ -4,7 +4,7 @@
 
 from quart import Blueprint, jsonify, current_app as app, request
 
-from api.enums import TokenType
+from api.enums import TokenType, AuthDataType
 from api.common.auth import login_user, gen_token, pwd_hash
 from api.schema import validate, AUTH_SCHEMA
 
@@ -45,7 +45,8 @@ async def revoke_handler():
     payload = validate(await request.get_json(), AUTH_SCHEMA)
     user = await login_user()
 
-    assert payload["authdata_type"] == "password"
+    # Right now, we only allow password authdata types.
+    assert payload["authdata_type"] == AuthDataType.PASSWORD
 
     # by rehashing the password we change the
     # secret data that is signing the tokens,

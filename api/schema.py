@@ -12,6 +12,7 @@ import dateutil.parser
 from cerberus import Validator
 
 from api.errors import BadInput
+from api.enums import AuthDataType
 
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9]{1}[a-zA-Z0-9_]{2,19}$", re.A)
 SUBDOMAIN_REGEX = re.compile(r"^([a-z0-9_][a-z0-9_-]{0,61}[a-z0-9_]|[a-z0-9_]|)$", re.A)
@@ -115,8 +116,7 @@ AUTH_SCHEMA = {
         "required": True,
         "coerce": str.lower,
     },
-    # TODO: move this to an enum
-    "authdata_type": {"type": "string", "required": True},
+    "authdata_type": {"coerce": lambda x: AuthDataType(x), "required": True},
     "authdata": {
         "anyof": [
             {"type": "dict", "schema": AUTHDATA_PASSWORD_SCHEMA},
