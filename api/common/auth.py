@@ -15,7 +15,7 @@ import itsdangerous
 from quart import request, current_app as app
 
 from api.errors import FailedAuth
-from api.schema import validate, LOGIN_SCHEMA
+from api.schema import validate, AUTH_SCHEMA
 from api.enums import TokenType
 from api.common.banning import check_bans
 
