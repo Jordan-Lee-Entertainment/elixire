@@ -19,4 +19,4 @@ async def query():
 
     # TODO: do not create more than one valid challenge per user, to
     # 	prevent spams from creating just infinite challenges
-    return jsonify({"methods": []})
+    return jsonify({"methods": [{"type": "password"}]})
