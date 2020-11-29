@@ -6,7 +6,7 @@ import pytest
 import asyncio
 from .common import token, username, email
 from api.common.user import create_user, delete_user
-from tests.common.utils import extract_first_url
+from tests.common.utils import extract_first_url, password_auth_object
 
 pytestmark = pytest.mark.asyncio
 
@@ -146,7 +146,7 @@ async def test_patch_profile_new_password(test_cli_user):
     resp = await test_cli_user.post(
         "/api/auth/login",
         do_token=False,
-        json={"user": test_cli_user["username"], "password": new_password},
+        json=password_auth_object(test_cli_user["username"], new_password),
     )
 
     assert resp.status_code == 200
@@ -246,11 +246,10 @@ async def test_patch_profile_wrong(test_cli_user):
 async def test_delete_own_user(test_cli_user):
     user_password = username()
     user = await test_cli_user.create_user(password=user_password)
-
     resp = await test_cli_user.post(
         "/api/auth/login",
         do_token=False,
-        json={"user": user.name, "password": user_password},
+        json=password_auth_object(user.name, user_password),
     )
 
     assert resp.status_code == 200

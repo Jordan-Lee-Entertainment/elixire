@@ -15,8 +15,8 @@ import itsdangerous
 from quart import request, current_app as app
 
 from api.errors import FailedAuth
-from api.schema import validate, LOGIN_SCHEMA
-from api.enums import TokenType
+from api.schema import validate, AUTH_SCHEMA
+from api.enums import TokenType, AuthDataType
 from api.common.banning import check_bans
 
 log = logging.getLogger(__name__)
@@ -102,21 +102,27 @@ async def check_admin(user_id: int, error_on_nonadmin: bool = True) -> bool:
     return is_admin
 
 
+async def authdata_password_check(
+    username: str, partial_user: dict, authdata: dict
+) -> None:
+    await pwd_check(partial_user["password_hash"], authdata["password"])
+
+
 async def login_user() -> dict:
     """Log in a user, given their username and password.
 
     Returns a partial user dictionary.
     """
-    payload = validate(await request.get_json(), LOGIN_SCHEMA)
-    username, password = payload["user"], payload["password"]
-
+    payload = validate(await request.get_json(), AUTH_SCHEMA)
+    username = payload["username"]
     partial_user = await app.storage.auth_user_from_username(username)
 
     if partial_user is None:
         log.info(f"login: {username!r} does not exist")
         raise FailedAuth("User or password invalid")
 
-    await pwd_check(partial_user["password_hash"], password)
+    if payload["authdata_type"] == AuthDataType.PASSWORD:
+        await authdata_password_check(username, partial_user, payload["authdata"])
 
     if not partial_user["active"]:
         log.warning(f"login: {username!r} is not active")

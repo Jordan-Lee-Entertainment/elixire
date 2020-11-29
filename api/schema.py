@@ -12,6 +12,7 @@ import dateutil.parser
 from cerberus import Validator
 
 from api.errors import BadInput
+from api.enums import AuthDataType
 
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9]{1}[a-zA-Z0-9_]{2,19}$", re.A)
 SUBDOMAIN_REGEX = re.compile(r"^([a-z0-9_][a-z0-9_-]{0,61}[a-z0-9_]|[a-z0-9_]|)$", re.A)
@@ -87,25 +88,44 @@ REGISTRATION_SCHEMA = {
     "email": {"type": "email", "required": True},
 }
 
-REVOKE_SCHEMA = {
-    "user": {
-        "type": "string",
-        "nullable": False,
-        "required": True,
-        "coerce": str.lower,
-    },
-    "password": {"type": "string", "required": True},
-}
-
-LOGIN_SCHEMA = {
-    "user": {
-        "type": "string",
-        "nullable": False,
-        "required": True,
-        "coerce": str.lower,
-    },
+AUTHDATA_PASSWORD_SCHEMA = {
     "password": {"type": "string", "nullable": False, "required": True},
 }
+
+AUTHDATA_TOTP_SCHEMA = {
+    **AUTHDATA_PASSWORD_SCHEMA,
+    **{
+        "totp_code": {"type": "string", "nullable": False, "required": True},
+    },
+}
+
+AUTHDATA_WEBAUTHN_SCHEMA = {
+    # 'password' is only required if the challenge is passwordless.
+    "password": {"type": "string", "required": False},
+    "challenge_id": {"type": "string", "required": True},
+    "credential_id": {"type": "string", "required": True},
+    "client_data_json": {"type": "string", "required": True},
+    "authenticator_data": {"type": "string", "required": True},
+    "signature": {"type": "string", "required": True},
+}
+
+AUTH_SCHEMA = {
+    "username": {
+        "type": "string",
+        "nullable": False,
+        "required": True,
+        "coerce": str.lower,
+    },
+    "authdata_type": {"coerce": lambda x: AuthDataType(x), "required": True},
+    "authdata": {
+        "anyof": [
+            {"type": "dict", "schema": AUTHDATA_PASSWORD_SCHEMA},
+            {"type": "dict", "schema": AUTHDATA_WEBAUTHN_SCHEMA},
+            {"type": "dict", "schema": AUTHDATA_TOTP_SCHEMA},
+        ]
+    },
+}
+
 
 DEACTIVATE_USER_SCHEMA = {"password": {"type": "password", "required": True}}
 

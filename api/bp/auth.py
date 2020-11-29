@@ -4,9 +4,9 @@
 
 from quart import Blueprint, jsonify, current_app as app, request
 
-from api.enums import TokenType
+from api.enums import TokenType, AuthDataType
 from api.common.auth import login_user, gen_token, pwd_hash
-from api.schema import validate, REVOKE_SCHEMA
+from api.schema import validate, AUTH_SCHEMA
 
 
 bp = Blueprint("auth", __name__)
@@ -42,14 +42,17 @@ async def revoke_handler():
 
     This applies to timed and non-timed tokens.
     """
-    payload = validate(await request.get_json(), REVOKE_SCHEMA)
+    payload = validate(await request.get_json(), AUTH_SCHEMA)
     user = await login_user()
+
+    # Right now, we only allow password authdata types.
+    assert payload["authdata_type"] == AuthDataType.PASSWORD
 
     # by rehashing the password we change the
     # secret data that is signing the tokens,
     # with that, we invalidate any other token
     # used with the old hash
-    user_pwd = payload["password"]
+    user_pwd = payload["authdata"]["password"]
     hashed = await pwd_hash(user_pwd)
 
     await app.db.execute(
