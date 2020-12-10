@@ -529,38 +529,68 @@ class Storage:
         self, ip_address: Union[IPv4Network, IPv6Network]
     ) -> Optional[str]:
         """Get the reason for a specific IP ban."""
-        # TODO convert ip_address to nicer keys (if v4, use one set,
-        # if v6, use another set)
-        key = f"ipban:{ip_address}"
-        ban_reason_val = await self.get(key, str)
-        ban_reason = ban_reason_val.value
+        wanted_addresses = wanted_network_ranges(ip_address)
 
-        if ban_reason_val.flag is StorageFlag.NOT_FOUND:
-            return None
+        # create MKEY query
+        wanted_cache_keys = [f"ipban:{inet}" for inet in wanted_addresses]
+        results = await self.multi_get(wanted_cache_keys)
 
-        if ban_reason_val.flag is StorageFlag.NOT_CACHED:
-            row = await self.db.fetchrow(
-                """
-                SELECT reason, end_timestamp
-                FROM ip_bans
-                WHERE $1 << ip_address AND end_timestamp > now()
-                LIMIT 1
-                """,
-                ip_address,
-            )
+        # possible ban reasons for any of the ranges is inside results
+        #
+        # for each result:
+        # if nothing found for that result, skip
+        # if that result was not found in redis (NOT_CACHED), query the db to
+        #     find out, cache the result, return if the result was found
+        # if was found in cache, return
+        #
+        # if none of the keys returned by now, then the ip is good
 
-            if row is None:
-                await self.set(key, None)
-                return None
+        for inet, cache_key, result in zip(
+            wanted_addresses, wanted_cache_keys, results
+        ):
+            if result.flag is StorageFlag.NOT_FOUND:
+                continue
 
-            ban_reason = row["reason"]
-            end_timestamp = row["end_timestamp"]
+            if result.flag is not StorageFlag.FOUND:
+                return result.value
 
-            # set key expiration at same time the banning finishes
-            await self.set(key, ban_reason)
-            await self.redis.expire(key, calc_ttl(end_timestamp))
+            if result.flag is StorageFlag.NOT_CACHED:
+                row = await self.db.fetchrow(
+                    """
+                    SELECT ip_address, reason, end_timestamp
+                    FROM ip_bans
+                    WHERE $1 << ip_address AND end_timestamp > now()
+                    LIMIT 1
+                    ORDER BY ip_address DESC
+                    """,
+                    inet,
+                )
 
-        return ban_reason
+                if row is None:
+                    # a ttl is optional here, because we already invalidate
+                    # when we ban/unban a certain address
+                    await self.set(cache_key, None)
+                    continue
+                else:
+                    # we have found something that *might* be what we want, but
+                    # can be at a larger inet range, so we cache that instead of
+                    # the address we were querying
+                    found_inet, reason, end_timestamp = (
+                        row["ip_address"],
+                        row["reason"],
+                        row["end_timestamp"],
+                    )
+
+                    found_cache_key = f"ipban:{found_inet}"
+
+                    # set key expiration at same time the banning finishes
+                    await self.set_with_ttl(
+                        found_cache_key, reason, calc_ttl(end_timestamp)
+                    )
+
+                    return reason
+
+        return None
 
     async def get_ban(self, user_id: int) -> Optional[str]:
         """Get the ban reason for a specific user id."""
