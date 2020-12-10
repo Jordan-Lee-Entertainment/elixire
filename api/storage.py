@@ -533,7 +533,7 @@ class Storage:
 
         # create MKEY query
         wanted_cache_keys = [f"ipban:{inet}" for inet in wanted_addresses]
-        results = await self.multi_get(wanted_cache_keys)
+        results = await self.multi_get(*wanted_cache_keys)
 
         # possible ban reasons for any of the ranges is inside results
         #
