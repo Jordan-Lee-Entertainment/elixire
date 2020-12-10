@@ -158,6 +158,9 @@ class StorageValue:
     def __bool__(self) -> bool:
         return self.was_found
 
+    def __repr__(self) -> str:
+        return f"StorageValue<flag={self.flag!r} value={self.value!r}>"
+
 
 class Storage:
     """The storage subsystem.
@@ -551,7 +554,7 @@ class Storage:
             if result.flag is StorageFlag.NOT_FOUND:
                 continue
 
-            if result.flag is not StorageFlag.FOUND:
+            if result.flag is StorageFlag.FOUND:
                 return result.value
 
             if result.flag is StorageFlag.NOT_CACHED:
@@ -560,8 +563,8 @@ class Storage:
                     SELECT ip_address, reason, end_timestamp
                     FROM ip_bans
                     WHERE $1 << ip_address AND end_timestamp > now()
-                    LIMIT 1
                     ORDER BY ip_address DESC
+                    LIMIT 1
                     """,
                     inet,
                 )
