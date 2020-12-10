@@ -89,6 +89,30 @@ def solve_domain(domain_name: str, *, redis: bool = False) -> List[str]:
     return domains
 
 
+def wanted_network_ranges(ipaddress: Union[IPv4Network, IPv6Network]) -> List[str]:
+    """Get wanted network ranges for a given IPv4 or IPv6 address.
+
+    For IPv4 addresses, we wish to look on the respective /24 prefix as well.
+    For IPv6, we wish to look on /64, /48, and /32.
+    """
+
+    addresses = None
+    if isinstance(ipaddress, IPv4Network):
+        addresses = (
+            ipaddress,
+            ipaddress.supernet(new_prefix=24),
+        )
+    else:
+        addresses = (
+            ipaddress,
+            ipaddress.supernet(new_prefix=64),
+            ipaddress.supernet(new_prefix=48),
+            ipaddress.supernet(new_prefix=32),
+        )
+
+    return [str(inet) for inet in addresses]
+
+
 def _get_subdomain(domain: str) -> str:
     """Return the subdomain of a domain.
 
