@@ -10,6 +10,7 @@ from redis (as caching) and using postgres as a fallback
 import logging
 import datetime
 import enum
+from ipaddress import IPv4Network, IPv6Network
 
 from typing import Optional, Dict, Union, Any, List, Tuple, Iterable
 
@@ -474,8 +475,12 @@ class Storage:
         flag = StorageFlag.NOT_FOUND if value is None else StorageFlag.FOUND
         return StorageValue(value, flag=flag)
 
-    async def get_ipban(self, ip_address: str) -> Optional[str]:
+    async def get_ipban(
+        self, ip_address: Union[IPv4Network, IPv6Network]
+    ) -> Optional[str]:
         """Get the reason for a specific IP ban."""
+        # TODO convert ip_address to nicer keys (if v4, use one set,
+        # if v6, use another set)
         key = f"ipban:{ip_address}"
         ban_reason_val = await self.get(key, str)
         ban_reason = ban_reason_val.value
@@ -488,7 +493,7 @@ class Storage:
                 """
                 SELECT reason, end_timestamp
                 FROM ip_bans
-                WHERE ip_address = $1 AND end_timestamp > now()
+                WHERE $1 << ip_address AND end_timestamp > now()
                 LIMIT 1
                 """,
                 ip_address,
