@@ -572,7 +572,7 @@ class Storage:
                 if row is None:
                     # a ttl is optional here, because we already invalidate
                     # when we ban/unban a certain address
-                    await self.set(cache_key, None)
+                    await self.set(cache_key, self._NOTHING)
                     continue
                 else:
                     # we have found something that *might* be what we want, but
