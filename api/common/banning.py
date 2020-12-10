@@ -149,6 +149,6 @@ async def check_bans(user_id: Optional[int] = None) -> None:
     # we convert whatever quart or cf gives us into a python's ipaddress object
     # which is auto-translated by asyncpg to an inet/cidr postgresql type
     inet = ipaddress.ip_network(get_ip_addr())
-    ip_ban_reason = await app.storage.get_ipban(ip_addr)
+    ip_ban_reason = await app.storage.get_ipban(inet)
     if ip_ban_reason:
         raise FailedAuth(f"IP address is banned. {ip_ban_reason}")

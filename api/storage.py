@@ -89,28 +89,27 @@ def solve_domain(domain_name: str, *, redis: bool = False) -> List[str]:
     return domains
 
 
-def wanted_network_ranges(ipaddress: Union[IPv4Network, IPv6Network]) -> List[str]:
+def wanted_network_ranges(
+    ipaddress: Union[IPv4Network, IPv6Network]
+) -> Iterable[Union[IPv4Network, IPv6Network]]:
     """Get wanted network ranges for a given IPv4 or IPv6 address.
 
     For IPv4 addresses, we wish to look on the respective /24 prefix as well.
     For IPv6, we wish to look on /64, /48, and /32.
     """
 
-    addresses = None
     if isinstance(ipaddress, IPv4Network):
-        addresses = (
+        return (
             ipaddress,
             ipaddress.supernet(new_prefix=24),
         )
     else:
-        addresses = (
+        return (
             ipaddress,
             ipaddress.supernet(new_prefix=64),
             ipaddress.supernet(new_prefix=48),
             ipaddress.supernet(new_prefix=32),
         )
-
-    return [str(inet) for inet in addresses]
 
 
 def _get_subdomain(domain: str) -> str:
@@ -183,6 +182,23 @@ class Storage:
         self.db = app.db
         self.redis = app.redis
 
+    def _to_storage_value(self, typ, redis_value: Optional[str]) -> StorageValue:
+        if typ == bool:
+            if redis_value == "True":
+                return StorageValue(True)
+            elif redis_value == "False":
+                return StorageValue(False)
+
+        # test for the sentinel value that means a cached absence of value
+        if redis_value == self._NOTHING:
+            return StorageValue(None, flag=StorageFlag.NOT_FOUND)
+
+        # key does not exist in redis, but it might be in postgres
+        elif redis_value is None:
+            return StorageValue(None, flag=StorageFlag.NOT_CACHED)
+
+        return StorageValue(typ(redis_value), flag=StorageFlag.FOUND)
+
     async def get(self, key: str, typ: type = str) -> StorageValue:
         """Get a key from Redis.
 
@@ -200,21 +216,30 @@ class Storage:
         val = await self.redis.get(key)
 
         log.debug(f"get {key!r}, type {typ!r}, value {val!r}")
-        if typ == bool:
-            if val == "True":
-                return StorageValue(True)
-            elif val == "False":
-                return StorageValue(False)
+        return self._to_storage_value(typ, val)
 
-        # test for the sentinel value that means a cached absence of value
-        if val == self._NOTHING:
-            return StorageValue(None, flag=StorageFlag.NOT_FOUND)
+    async def multi_get(self, *keys, typ: type = str) -> List[StorageValue]:
+        """Fetch multiple keys from Redis.
 
-        # key does not exist in redis, but it might be in postgres
-        elif val is None:
-            return StorageValue(None, flag=StorageFlag.NOT_CACHED)
+        This operation involves just a single network operation on Redis, as
+        it has the MKEY command.
 
-        return StorageValue(typ(val), flag=StorageFlag.FOUND)
+        All keys should be of the same type.
+
+        Parameters
+        ----------
+        keys:
+            Keys to be fetched.
+        typ:
+            The type of the value.
+
+        Returns
+        -------
+        StorageValue
+        """
+        values = await self.redis.mget(*keys)
+        log.debug(f"get {keys!r}, type {typ!r}, value {values!r}")
+        return [self._to_storage_value(typ, redis_value) for redis_value in values]
 
     async def set(self, key: str, value: Optional[Any]) -> None:
         """Set a key in Redis.
@@ -259,6 +284,7 @@ class Storage:
         value:
             Value to set for the keys.
         """
+        # TODO mset() exists! we should use it!
         for key in keys:
             await self.set(key, value)
 
