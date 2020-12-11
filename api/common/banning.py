@@ -70,6 +70,9 @@ async def ban_request(reason: str) -> None:
         await ban_user(user_id, reason)
     except AttributeError:
         inet = ipaddress.ip_network(get_ip_addr())
+        if isinstance(inet, ipnetwork.IPv6Network):
+            inet = inet.supernet(new_prefix=64)
+
         log.warning(f"Banning ip address {inet} with reason {reason!r}")
         await ban_by_ip(inet, reason)
 
