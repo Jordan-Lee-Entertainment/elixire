@@ -69,9 +69,9 @@ async def ban_request(reason: str) -> None:
         log.warning(f"Banning {username} {user_id} with reason {reason!r}")
         await ban_user(user_id, reason)
     except AttributeError:
-        ip_addr = get_ip_addr()
-        log.warning(f"Banning ip address {ip_addr} with reason {reason!r}")
-        await ban_by_ip(ip_addr, reason)
+        inet = ipaddress.ip_network(get_ip_addr())
+        log.warning(f"Banning ip address {inet} with reason {reason!r}")
+        await ban_by_ip(inet, reason)
 
 
 async def unban_user(user_id: int) -> None:
