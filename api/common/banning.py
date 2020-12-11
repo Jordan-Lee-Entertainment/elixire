@@ -34,8 +34,8 @@ async def ban_by_ip(
     await app.storage.set_with_ttl(f"ipban:{ip_addr}", reason, calc_ttl(end_timestamp))
     try:
         await ip_ban_webhook(ip_addr, f"[ip ban] {reason}", period)
-    except WebhookError:
-        pass
+    except WebhookError as err:
+        log.error("failed to contact webhook for ip ban: %r", err)
 
 
 async def ban_user(user_id: int, reason: str) -> None:
