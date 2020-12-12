@@ -30,12 +30,14 @@ async def app_fixture(event_loop):
     setup_test_app(event_loop, app_)
 
     # event_loop.run_until_complete(app_.startup())
-    await app_.startup()
+    async with app_.app_context():
+        await app_.startup()
 
     yield app_
 
     # event_loop.run_until_complete(app_.shutdown())
-    await app_.shutdown()
+    async with app_.app_context():
+        await app_.shutdown()
 
 
 @pytest.fixture(name="test_cli")
