@@ -12,7 +12,11 @@ setup(
     author="Ave Ozkal, Luna Mendes, Mary Strodl, slice",
     python_requires=">=3.7",
     install_requires=[
-        "hypercorn==0.11.1",
+        # hypercorn does not support non-standard http codes yet
+        # for now, use forked hypercorn with relevant patch
+        # see https://gitlab.com/pgjones/hypercorn/-/merge_requests/48
+        "hypercorn @ git+https://gitlab.com/luna/hypercorn.git@a48f393605fcab4a7de46a793e9ef5260731152e#egg=hypercorn"
+        # "hypercorn==0.11.1",
         "bcrypt==3.2.0",
         "itsdangerous==1.1.0",
         "cerberus==1.3.2",
