@@ -1,6 +1,6 @@
 setuptools >= 51.0.0
 six >= 1.15
-toml > 0.10
+toml >= 0.10.2
 MarkupSafe >= 1.1.1
 Jinja2 >= 2.11
 Click >= 7.0
