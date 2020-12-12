@@ -5,7 +5,6 @@
 import logging
 import os
 import time
-import urllib.parse
 from typing import Optional, Tuple
 
 from quart import Blueprint, current_app as app, request, redirect, jsonify
