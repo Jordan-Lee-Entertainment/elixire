@@ -60,6 +60,9 @@ Install [Python] dependencies using any of:
 
 #### bare virtualenvs
 
+If you are using pip 20.3+, using the constraints file is mandatory for a
+good experience.
+
 ```bash
 python3 -m venv env
 env/bin/python3 -m pip install -U --editable . -c constraints.txt
