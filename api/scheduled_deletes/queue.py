@@ -53,7 +53,7 @@ class ScheduledDeleteQueue(JobQueue):
             log.info("deleting file %d", file_id)
             resource = await File.fetch(file_id)
         elif shorten_id is not None:
-            log.info("deleting shorten %d", file_id)
+            log.info("deleting shorten %d", shorten_id)
             resource = await Shorten.fetch(shorten_id)
 
         if resource is None:
