@@ -48,4 +48,4 @@ run_backend:
     - ls -la
     - pwd
     - time psql -h postgres -U postgres -f schema.sql
-    - tox
+    - tox -v
