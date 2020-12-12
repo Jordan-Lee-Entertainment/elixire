@@ -15,7 +15,7 @@ setup(
         # hypercorn does not support non-standard http codes yet
         # for now, use forked hypercorn with relevant patch
         # see https://gitlab.com/pgjones/hypercorn/-/merge_requests/48
-        "hypercorn @ git+https://gitlab.com/luna/hypercorn.git@a48f393605fcab4a7de46a793e9ef5260731152e#egg=hypercorn"
+        "hypercorn @ git+https://gitlab.com/luna/hypercorn.git@1a80b964c5f6997bc0267128a66e5b444d6ccd2e#egg=hypercorn"
         # "hypercorn==0.11.1",
         "bcrypt==3.2.0",
         "itsdangerous==1.1.0",
