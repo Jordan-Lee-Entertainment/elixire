@@ -5,6 +5,7 @@
 import logging
 import os
 import time
+import urllib.parse
 from typing import Optional, Tuple
 
 from quart import Blueprint, current_app as app, request, redirect, jsonify
@@ -78,6 +79,44 @@ async def resolve_file(filename) -> Tuple[str, Optional[str]]:
 @bp.route("/i/<filename>")
 async def file_handler(filename):
     """Handles file serves."""
+
+    # Recent changes to Discord made direct image URLs hidden when sent as
+    # a message.
+    #
+    # Though they did not apply that logic to URLs that can provide Twitter
+    # metadata. We use this fact to still provide image embeds to discord
+    # wihtout having the client remove the URL.
+    #
+    # TODO: should this logic also be applied to thumbnail_handler
+
+    # the "raw" query parameter is used to prevent Discord from entering a
+    # loop.
+    is_raw = request.args.get("raw")
+    is_discordbot = "Discordbot" in request.headers.get("User-Agent", "")
+    is_image = os.path.splitext(request.path)[-1].lower() in [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+    ]
+
+    if is_discordbot and is_image and not is_raw:
+        # Generate a ?raw=true URL
+        # Use & if there's already a query string
+        raw_url = request.url + ("&" if request.args else "?") + "raw=true"
+
+        return (
+            f"""
+            <html>
+                <head>
+                    <meta property="twitter:card" content="summary_large_image">
+                    <meta property="twitter:image" content="{raw_url}">
+                </head>
+            </html>""",
+            200,
+            {"Content-Type": "text/html"},
+        )
+
     filepath, shortname = await resolve_file(filename)
 
     # fetch the file's mimetype from the database
