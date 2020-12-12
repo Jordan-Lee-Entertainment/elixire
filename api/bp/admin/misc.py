@@ -52,7 +52,7 @@ async def _do_broadcast(subject, body):
             log.warning("Failed to send to %d %r: %r", user_id, user_name, exc)
             continue
 
-        log.info(f"sent broadcast to %d %r", user_id, user_name)
+        log.info("sent broadcast to %d %r", user_id, user_name)
 
     log.info("dispatched to %d users", len(uids))
 
