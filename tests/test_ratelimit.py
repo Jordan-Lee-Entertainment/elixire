@@ -5,6 +5,7 @@
 import time
 import asyncio
 import pytest
+import ipaddress
 
 from api.bp.ratelimit import setup_ratelimits
 from api.common.banning import unban_ip, unban_user
@@ -54,7 +55,7 @@ async def test_banning(test_cli):
         await _set_ratelimits(test_cli.app, (1, 1))
         test_cli.app.econfig.RL_THRESHOLD = 2
         async with test_cli.app.app_context():
-            await unban_ip("127.0.0.1")
+            await unban_ip(ipaddress.ip_network("127.0.0.1"))
 
         resp = await test_cli.get("/api/hello")
         assert resp.status_code == 200
@@ -71,7 +72,7 @@ async def test_banning(test_cli):
     finally:
         await _set_ratelimits(test_cli.app, (10000, 1))
         async with test_cli.app.app_context():
-            await unban_ip("127.0.0.1")
+            await unban_ip(ipaddress.ip_network("127.0.0.1"))
 
 
 async def test_banning_userwide(test_cli_user):

@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+from ipaddress import IPv4Network, IPv6Network
 from typing import Optional, Union, Dict, List
 
 from quart import current_app as app
@@ -92,7 +93,9 @@ async def ban_webhook(user_id: int, reason: str, period: str):
     )
 
 
-async def ip_ban_webhook(ip_address: str, reason: str, period: str):
+async def ip_ban_webhook(
+    ip_address: Union[IPv4Network, IPv6Network], reason: str, period: str
+):
     """Send a webhook containing banning information."""
     return await _post_webhook(
         getattr(app.econfig, "IP_BAN_WEBHOOK", None),
@@ -100,7 +103,7 @@ async def ip_ban_webhook(ip_address: str, reason: str, period: str):
             "title": "Elixire Auto IP Banning",
             "color": 0x696969,
             "fields": [
-                {"name": "IP address", "value": ip_address},
+                {"name": "IP address", "value": str(ip_address)},
                 {"name": "reason", "value": reason},
                 {"name": "period", "value": period},
             ],

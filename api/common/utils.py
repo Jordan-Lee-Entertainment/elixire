@@ -183,4 +183,8 @@ def get_ip_addr() -> str:
     if app.econfig.CLOUDFLARE:
         return request.headers.get(CF_IP_HEADER, request.remote_addr)
     else:
-        return request.remote_addr
+        remote_addr = request.remote_addr
+        if remote_addr == "<local>":
+            remote_addr = "127.0.0.1"
+
+        return remote_addr

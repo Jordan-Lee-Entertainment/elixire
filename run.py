@@ -260,6 +260,7 @@ async def app_before_serving():
 async def close_db():
     """Close all database connections."""
     try:
+        log.info("stopping jobs")
         await app.sched.stop_all(wait=True, timeout=10)
     except asyncio.TimeoutError:
         log.warning("timed out waiting for tasks. ignoring and closing")

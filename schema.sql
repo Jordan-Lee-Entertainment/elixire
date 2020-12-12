@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS bans (
 );
 
 CREATE TABLE IF NOT EXISTS ip_bans (
-    ip_address TEXT NOT NULL,
+    ip_address CIDR NOT NULL,
     reason TEXT NOT NULL,
     end_timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL,
 

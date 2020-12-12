@@ -23,11 +23,11 @@ from .errors import PrintException, ArgError
 log = logging.getLogger(__name__)
 
 
-async def connect_db(config, loop):
+async def connect_db(config):
     """Connect to databases."""
     pool = await asyncpg.create_pool(**config.db)
     redis = await aioredis.create_redis_pool(
-        config.redis, minsize=1, maxsize=3, loop=loop, encoding="utf-8"
+        config.redis, minsize=1, maxsize=3, encoding="utf-8"
     )
 
     return pool, redis
@@ -58,7 +58,7 @@ async def shutdown(app):
 
 async def amain(loop, config, argv: List[str], *, test: bool = False):
     app = Quart(__name__)
-    conn, redis = await connect_db(config, loop)
+    conn, redis = await connect_db(config)
     app.db = conn
     app.redis = redis
     app.loop = loop
@@ -67,7 +67,7 @@ async def amain(loop, config, argv: List[str], *, test: bool = False):
 
     app.storage = Storage(app)
     app.session = aiohttp.ClientSession()
-    app.sched = JobManager(loop=loop, db=conn, context_function=app.app_context)
+    app.sched = JobManager(db=conn, context_function=app.app_context)
 
     if test:
         setup_test_app(loop, app)

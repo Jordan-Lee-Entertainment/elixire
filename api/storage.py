@@ -10,6 +10,7 @@ from redis (as caching) and using postgres as a fallback
 import logging
 import datetime
 import enum
+from ipaddress import IPv4Network, IPv6Network
 
 from typing import Optional, Dict, Union, Any, List, Tuple, Iterable
 
@@ -88,6 +89,29 @@ def solve_domain(domain_name: str, *, redis: bool = False) -> List[str]:
     return domains
 
 
+def wanted_network_ranges(
+    ipaddress: Union[IPv4Network, IPv6Network]
+) -> Iterable[Union[IPv4Network, IPv6Network]]:
+    """Get wanted network ranges for a given IPv4 or IPv6 address.
+
+    For IPv4 addresses, we wish to look on the respective /24 prefix as well.
+    For IPv6, we wish to look on /64, /48, and /32.
+    """
+
+    if isinstance(ipaddress, IPv4Network):
+        return (
+            ipaddress,
+            ipaddress.supernet(new_prefix=24),
+        )
+    else:
+        return (
+            ipaddress,
+            ipaddress.supernet(new_prefix=64),
+            ipaddress.supernet(new_prefix=48),
+            ipaddress.supernet(new_prefix=32),
+        )
+
+
 def _get_subdomain(domain: str) -> str:
     """Return the subdomain of a domain.
 
@@ -134,6 +158,9 @@ class StorageValue:
     def __bool__(self) -> bool:
         return self.was_found
 
+    def __repr__(self) -> str:
+        return f"StorageValue<flag={self.flag!r} value={self.value!r}>"
+
 
 class Storage:
     """The storage subsystem.
@@ -158,6 +185,23 @@ class Storage:
         self.db = app.db
         self.redis = app.redis
 
+    def _to_storage_value(self, typ, redis_value: Optional[str]) -> StorageValue:
+        if typ == bool:
+            if redis_value == "True":
+                return StorageValue(True)
+            elif redis_value == "False":
+                return StorageValue(False)
+
+        # test for the sentinel value that means a cached absence of value
+        if redis_value == self._NOTHING:
+            return StorageValue(None, flag=StorageFlag.NOT_FOUND)
+
+        # key does not exist in redis, but it might be in postgres
+        elif redis_value is None:
+            return StorageValue(None, flag=StorageFlag.NOT_CACHED)
+
+        return StorageValue(typ(redis_value), flag=StorageFlag.FOUND)
+
     async def get(self, key: str, typ: type = str) -> StorageValue:
         """Get a key from Redis.
 
@@ -175,21 +219,30 @@ class Storage:
         val = await self.redis.get(key)
 
         log.debug(f"get {key!r}, type {typ!r}, value {val!r}")
-        if typ == bool:
-            if val == "True":
-                return StorageValue(True)
-            elif val == "False":
-                return StorageValue(False)
+        return self._to_storage_value(typ, val)
 
-        # test for the sentinel value that means a cached absence of value
-        if val == self._NOTHING:
-            return StorageValue(None, flag=StorageFlag.NOT_FOUND)
+    async def multi_get(self, *keys, typ: type = str) -> List[StorageValue]:
+        """Fetch multiple keys from Redis.
 
-        # key does not exist in redis, but it might be in postgres
-        elif val is None:
-            return StorageValue(None, flag=StorageFlag.NOT_CACHED)
+        This operation involves just a single network operation on Redis, as
+        it has the MKEY command.
 
-        return StorageValue(typ(val), flag=StorageFlag.FOUND)
+        All keys should be of the same type.
+
+        Parameters
+        ----------
+        keys:
+            Keys to be fetched.
+        typ:
+            The type of the value.
+
+        Returns
+        -------
+        StorageValue
+        """
+        values = await self.redis.mget(*keys)
+        log.debug(f"get {keys!r}, type {typ!r}, value {values!r}")
+        return [self._to_storage_value(typ, redis_value) for redis_value in values]
 
     async def set(self, key: str, value: Optional[Any]) -> None:
         """Set a key in Redis.
@@ -234,6 +287,7 @@ class Storage:
         value:
             Value to set for the keys.
         """
+        # TODO mset() exists! we should use it!
         for key in keys:
             await self.set(key, value)
 
@@ -474,38 +528,72 @@ class Storage:
         flag = StorageFlag.NOT_FOUND if value is None else StorageFlag.FOUND
         return StorageValue(value, flag=flag)
 
-    async def get_ipban(self, ip_address: str) -> Optional[str]:
+    async def get_ipban(
+        self, ip_address: Union[IPv4Network, IPv6Network]
+    ) -> Optional[str]:
         """Get the reason for a specific IP ban."""
-        key = f"ipban:{ip_address}"
-        ban_reason_val = await self.get(key, str)
-        ban_reason = ban_reason_val.value
+        wanted_addresses = wanted_network_ranges(ip_address)
 
-        if ban_reason_val.flag is StorageFlag.NOT_FOUND:
-            return None
+        # create MKEY query
+        wanted_cache_keys = [f"ipban:{inet}" for inet in wanted_addresses]
+        results = await self.multi_get(*wanted_cache_keys)
 
-        if ban_reason_val.flag is StorageFlag.NOT_CACHED:
-            row = await self.db.fetchrow(
-                """
-                SELECT reason, end_timestamp
-                FROM ip_bans
-                WHERE ip_address = $1 AND end_timestamp > now()
-                LIMIT 1
-                """,
-                ip_address,
-            )
+        # possible ban reasons for any of the ranges is inside results
+        #
+        # for each result:
+        # if nothing found for that result, skip
+        # if that result was not found in redis (NOT_CACHED), query the db to
+        #     find out, cache the result, return if the result was found
+        # if was found in cache, return
+        #
+        # if none of the keys returned by now, then the ip is good
 
-            if row is None:
-                await self.set(key, None)
-                return None
+        for inet, cache_key, result in zip(
+            wanted_addresses, wanted_cache_keys, results
+        ):
+            if result.flag is StorageFlag.NOT_FOUND:
+                continue
 
-            ban_reason = row["reason"]
-            end_timestamp = row["end_timestamp"]
+            if result.flag is StorageFlag.FOUND:
+                return result.value
 
-            # set key expiration at same time the banning finishes
-            await self.set(key, ban_reason)
-            await self.redis.expire(key, calc_ttl(end_timestamp))
+            if result.flag is StorageFlag.NOT_CACHED:
+                row = await self.db.fetchrow(
+                    """
+                    SELECT ip_address, reason, end_timestamp
+                    FROM ip_bans
+                    WHERE $1 << ip_address AND end_timestamp > now()
+                    ORDER BY ip_address DESC
+                    LIMIT 1
+                    """,
+                    inet,
+                )
 
-        return ban_reason
+                if row is None:
+                    # a ttl is optional here, because we already invalidate
+                    # when we ban/unban a certain address
+                    await self.set_with_ttl(cache_key, self._NOTHING, 300)
+                    continue
+                else:
+                    # we have found something that *might* be what we want, but
+                    # can be at a larger inet range, so we cache that instead of
+                    # the address we were querying
+                    found_inet, reason, end_timestamp = (
+                        row["ip_address"],
+                        row["reason"],
+                        row["end_timestamp"],
+                    )
+
+                    found_cache_key = f"ipban:{found_inet}"
+
+                    # set key expiration at same time the banning finishes
+                    await self.set_with_ttl(
+                        found_cache_key, reason, calc_ttl(end_timestamp)
+                    )
+
+                    return reason
+
+        return None
 
     async def get_ban(self, user_id: int) -> Optional[str]:
         """Get the ban reason for a specific user id."""

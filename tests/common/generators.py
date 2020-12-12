@@ -113,7 +113,7 @@ async def png_request() -> dict:
     """Generate keyword arguments to pass to an HTTP method function that would
     specify a multipart form body to upload a random PNG file.
     """
-    return await aiohttp_form(png_data(), f"hexs(10).png", "image/png")
+    return await aiohttp_form(png_data(), f"{hexs(10)}.png", "image/png")
 
 
 def rand_utf8(chars: int) -> str:

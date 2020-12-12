@@ -2,6 +2,7 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import ipaddress
 import logging
 import enum
 from typing import Union, List, Dict, Any, Optional
@@ -15,8 +16,10 @@ from api.errors import WebhookError, FailedAuth
 log = logging.getLogger(__name__)
 
 
-async def ban_by_ip(ip_addr: str, reason: str) -> None:
-    """Ban a given IP address."""
+async def ban_by_ip(
+    ip_addr: Union[ipaddress.IPv4Network, ipaddress.IPv6Network], reason: str
+) -> None:
+    """Ban a given Network."""
     period = app.econfig.IP_BAN_PERIOD
     end_timestamp = await app.db.fetchval(
         f"""
@@ -31,8 +34,8 @@ async def ban_by_ip(ip_addr: str, reason: str) -> None:
     await app.storage.set_with_ttl(f"ipban:{ip_addr}", reason, calc_ttl(end_timestamp))
     try:
         await ip_ban_webhook(ip_addr, f"[ip ban] {reason}", period)
-    except WebhookError:
-        pass
+    except WebhookError as err:
+        log.error("failed to contact webhook for ip ban: %r", err)
 
 
 async def ban_user(user_id: int, reason: str) -> None:
@@ -66,9 +69,12 @@ async def ban_request(reason: str) -> None:
         log.warning(f"Banning {username} {user_id} with reason {reason!r}")
         await ban_user(user_id, reason)
     except AttributeError:
-        ip_addr = get_ip_addr()
-        log.warning(f"Banning ip address {ip_addr} with reason {reason!r}")
-        await ban_by_ip(ip_addr, reason)
+        inet = ipaddress.ip_network(get_ip_addr())
+        if isinstance(inet, ipaddress.IPv6Network):
+            inet = inet.supernet(new_prefix=64)
+
+        log.warning(f"Banning ip address {inet} with reason {reason!r}")
+        await ban_by_ip(inet, reason)
 
 
 async def unban_user(user_id: int) -> None:
@@ -82,7 +88,7 @@ async def unban_user(user_id: int) -> None:
     )
 
 
-async def unban_ip(ipaddr: str) -> None:
+async def unban_ip(ipaddr: Union[ipaddress.IPv4Network, ipaddress.IPv6Network]) -> None:
     await app.storage.raw_invalidate(f"ipban:{ipaddr}")
     await app.db.execute(
         """
@@ -99,7 +105,8 @@ class TargetType(enum.Enum):
 
 
 async def get_bans(
-    target_value: Union[str, int],
+    # Can either be a v4, a v6, or an user id.
+    target_value: Union[ipaddress.IPv4Network, ipaddress.IPv6Network, int],
     *,
     target_type: TargetType,
     page: int = 0,
@@ -142,7 +149,10 @@ async def check_bans(user_id: Optional[int] = None) -> None:
         if reason:
             raise FailedAuth(f"User is banned. {reason}")
 
-    ip_addr = get_ip_addr()
-    ip_ban_reason = await app.storage.get_ipban(ip_addr)
+    # we convert whatever quart or cf gives us into a python's ipaddress object
+    # which is auto-translated by asyncpg to an inet/cidr postgresql type
+
+    inet = ipaddress.ip_network(get_ip_addr())
+    ip_ban_reason = await app.storage.get_ipban(inet)
     if ip_ban_reason:
         raise FailedAuth(f"IP address is banned. {ip_ban_reason}")

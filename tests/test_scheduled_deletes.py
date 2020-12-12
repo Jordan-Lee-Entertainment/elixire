@@ -29,7 +29,7 @@ async def test_existing_file(test_cli_user):
         assert prewait_file is not None
 
     job_id = rjson["job_id"]
-    await ScheduledDeleteQueue.wait_job(job_id)
+    await ScheduledDeleteQueue.wait_job(job_id, timeout=10)
 
     async with test_cli_user.app.app_context():
         postwait_file = await File.fetch(elixire_file.id)
@@ -61,7 +61,7 @@ async def test_existing_shorten(test_cli_user):
         prewait_shorten = await Shorten.fetch(shorten.id)
         assert prewait_shorten is not None
 
-    await ScheduledDeleteQueue.wait_job(job_id)
+    await ScheduledDeleteQueue.wait_job(job_id, timeout=10)
 
     async with test_cli_user.app.app_context():
         postwait_shorten = await Shorten.fetch(shorten.id)
@@ -97,7 +97,7 @@ async def test_scheduled_patch(test_cli_user):
     # sure, if the patch doesn't work, it's likely we take some
     # time in this test. that's why it'd fail.
     t1 = time.monotonic()
-    await ScheduledDeleteQueue.wait_job(job_id)
+    await ScheduledDeleteQueue.wait_job(job_id, timeout=60)
     t2 = time.monotonic()
     seconds = t2 - t1
 
@@ -127,7 +127,7 @@ async def test_scheduled_delete(test_cli_user):
     assert resp.status_code == 204
 
     try:
-        await ScheduledDeleteQueue.wait_job(job_id)
+        await ScheduledDeleteQueue.wait_job(job_id, timeout=10)
         assert False
     except ValueError:
         # If this timeouts, then the job id was likely deleted and there isn't

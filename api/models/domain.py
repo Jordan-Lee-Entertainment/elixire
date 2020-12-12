@@ -138,7 +138,7 @@ class Domain:
     async def fetch(cls, domain_id: int) -> Optional["Domain"]:
         """Fetch a domain via its ID."""
         row = await app.db.fetchrow(
-            f"""
+            """
             SELECT domain_id, domain, permissions, disabled, admin_only
             FROM domains
             WHERE domain_id = $1

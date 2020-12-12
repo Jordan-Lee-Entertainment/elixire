@@ -50,7 +50,7 @@ class Action:
         elif isinstance(details, str):
             action_text = details
 
-        lines: List[str] = [action_text, f"\naction context (for debugging purposes):"]
+        lines: List[str] = [action_text, "\naction context (for debugging purposes):"]
 
         for key, val in self.context.items():
             lines.append(f"\t{key!r}: {val!r}")
