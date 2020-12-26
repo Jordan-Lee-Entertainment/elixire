@@ -14,6 +14,20 @@ from cerberus import Validator
 from api.errors import BadInput
 from api.enums import AuthDataType
 
+# TODO: cerberus has support for a 'regex' key, which would remove the amount
+# of methods inside ElixireValidator.
+#
+# I do not know the internal implementation of cerberus for custom types,
+# but it is likely it's doing something equivalent to getattr() to turn type
+# strings into method calls. getattr() is very innefficient/discouraged in
+# python.
+#
+# getattr() sources:
+#  https://stackoverflow.com/questions/12798653/does-setattr-and-getattr-slow-down-the-speed-dramatically/12846965
+#  https://calidae.blog/to-get-or-not-getattr-with-or-without-attr-17ffa03939d2
+#
+# source for cerberus 'regex':
+#  https://gitlab.com/ratelimited.me/backend/api/-/blob/49b3b959902dbe1ada7f6f7c7c17cae02ccfb002/api/schema.py
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9]{1}[a-zA-Z0-9_]{2,19}$", re.A)
 SUBDOMAIN_REGEX = re.compile(r"^([a-z0-9_][a-z0-9_-]{0,61}[a-z0-9_]|[a-z0-9_]|)$", re.A)
 DISCORD_REGEX = re.compile(r"^[^\#]{2,70}\#\d{4}$", re.A)
