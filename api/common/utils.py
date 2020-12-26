@@ -12,6 +12,7 @@ from quart import request, send_file as quart_send_file, current_app as app
 from api.common import get_user_domain_info, transform_wildcard
 from api.enums import FileNameType
 from api.permissions import Permissions, domain_permissions
+from api.models import Domain
 
 T = TypeVar("T")
 
@@ -110,6 +111,7 @@ async def resolve_domain(
     ptype = Permissions.UPLOAD if ftype == FileNameType.FILE else Permissions.SHORTEN
 
     given_domain, given_subdomain = _get_specified_domain()
+    random_domain = bool(request.args.get("random_domain"))
 
     if given_domain and given_subdomain:
         # If both the domain and subdomain were given, use those.
@@ -124,24 +126,28 @@ async def resolve_domain(
         domain_id = given_domain or user_domain_id
         subdomain_name = given_subdomain or user_subdomain
 
+    # TODO: optimize this by using the Domain model (beyond random id fetch)
+    #
+    # Selecting a random domain overrides domain settings (either via profile OR
+    # the query argument).
+    if random_domain:
+        domain_id = await Domain.fetch_random_id()
+
     # Check the domain's permissions, which specifies if uploads or shortens are
     # allowed on it.
     await domain_permissions(app, domain_id, ptype)
 
-    # resolve the given (domain_id, subdomain_name) into a string
-    if given_domain is None:
-        domain = user_domain
-    else:
-        domain = await app.db.fetchval(
-            """
-            SELECT domain
-            FROM domains
-            WHERE domain_id = $1
-            """,
-            given_domain,
-        )
+    # resolve the given (domain_id, subdomain_name) into a usable domain string
+    domain_name = await app.db.fetchval(
+        """
+        SELECT domain
+        FROM domains
+        WHERE domain_id = $1
+        """,
+        domain_id,
+    )
 
-    domain = transform_wildcard(domain, subdomain_name)
+    domain = transform_wildcard(domain_name, subdomain_name)
     return domain_id, domain, subdomain_name
 
 

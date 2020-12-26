@@ -151,6 +151,17 @@ class Domain:
             cls(row, tags=await cls.fetch_tags(domain_id)) if row is not None else None
         )
 
+    @classmethod
+    async def fetch_random_id(_cls) -> int:
+        return await app.db.fetchval(
+            """
+            SELECT domain_id
+            FROM domains
+            ORDER BY RANDOM()
+            LIMIT 1
+            """
+        )
+
     @staticmethod
     async def fetch_tags(domain_id: int) -> Tags:
         tag_rows = await app.db.fetch(
