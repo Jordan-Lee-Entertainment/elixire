@@ -433,3 +433,15 @@ async def test_eicar_upload(test_cli_user):
 
     resp = await test_cli_user.post("/api/upload", **request_kwargs)
     assert resp.status_code == 415
+
+
+async def test_random_domain(test_cli_user):
+    # ensure at least a domain beyond the root domain exists
+    await test_cli_user.create_domain()
+
+    await _upload(test_cli_user, query_string={"random_domain": "1"})
+
+    # this is the entire test.
+    # I don't know if there's a way to actually assert if random_domain worked
+    # that isn't "uploading 10 different files and seeing if they're all the
+    # same domain in the user's domain setting"
