@@ -155,7 +155,7 @@ async def create_doll_user() -> None:
         await app.db.execute(
             """
             INSERT INTO users (user_id, username, active, password_hash, email)
-            VALUES (0, 'doll', false, 'blah', 'd o l l')
+            VALUES (0, 'doll', false, 'doll', 'doll@example.com')
             """
         )
         log.info("doll user with ID 0 successfully created")
