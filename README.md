@@ -65,7 +65,8 @@ good experience.
 
 ```bash
 python3 -m venv env
-env/bin/python3 -m pip install -U --editable . -c constraints.txt
+env/bin/pip install -U pip wheel
+env/bin/pip install -U --editable . -c constraints.txt
 ```
 
 #### virtualfish
@@ -73,7 +74,7 @@ env/bin/python3 -m pip install -U --editable . -c constraints.txt
 ```bash
 vf new -p python3 elixire
 vf activate elixire
-python3 -m pip install -U --editable . -c constraints.txt
+pip install -U --editable . -c constraints.txt
 ```
 
 Create the [PostgreSQL] database if it doesn't already exist:
@@ -93,32 +94,6 @@ $EDITOR schema.sql
 psql -U postgres -d elixire -f schema.sql
 ```
 
-Setup the directory structure in `./images`:
-
-```bash
-# Make sure you are running this from the repository root.
-./utils/upgrade/folder_sharding.py
-```
-
-Configure the admin panel and frontend:
-
-```bash
-$EDITOR frontend/config.json
-$EDITOR admin-panel/config.json
-```
-
-More information on configuring can be found in the `README.md` file of each
-project:
-
-- [frontend readme](https://gitlab.com/elixire/frontend#readme)
-- [admin-panel readme](https://gitlab.com/elixire/admin-panel#readme)
-
-Build the frontend and admin panel (this requires [Yarn]):
-
-```bash
-make
-```
-
 Configure elixire itself using [`config.example.py`](./config.example.py) as a
 base:
 
@@ -128,6 +103,15 @@ cp config.example.py config.py
 # Configure elixire to your liking.
 $EDITOR config.py
 ```
+
+Setup the directory structure in `./images`:
+
+```bash
+env/bin/python ./utils/upgrade/folder_sharding.py
+```
+
+(If you aren't using a virtualenv, replace `env/bin/python` with `python3` or
+whatever your Python binary is.)
 
 Run the app:
 
