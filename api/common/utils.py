@@ -16,8 +16,6 @@ from api.models import Domain
 
 T = TypeVar("T")
 
-CF_IP_HEADER = "cf-connecting-ip"
-
 
 def _maybe_type(typ: type, value: Any, default: Optional[T] = None) -> Optional[T]:
     """Tries to convert the given value to the given type.
@@ -184,13 +182,14 @@ async def fetch_json_rows(db, query: str, *args) -> List[Any]:
 def get_ip_addr() -> str:
     """Fetch the IP address for a request.
 
-    Returns the value given in the CF_IP_HEADER header if it exists.
+    Returns the value given in the X-Forwarded-For header if it exists AND
+    the REVERSE_PROXY setting is set.
     """
-    if app.econfig.CLOUDFLARE:
-        return request.headers.get(CF_IP_HEADER, request.remote_addr)
-    else:
-        remote_addr = request.remote_addr
-        if remote_addr == "<local>":
-            remote_addr = "127.0.0.1"
+    remote_addr = request.remote_addr
+    if remote_addr == "<local>":
+        remote_addr = "127.0.0.1"
 
+    if app.econfig.REVERSE_PROXY:
+        return request.headers.get("x-forwarded-for", remote_addr)
+    else:
         return remote_addr

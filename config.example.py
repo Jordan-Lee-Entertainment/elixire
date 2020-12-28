@@ -24,9 +24,17 @@
 HOST = "localhost"
 PORT = 8080
 
-# If the elixire instance is being served behind Cloudflare.
+# If the elixire instance is being served behind a reverse proxy like
+# nginx or caddy. This setting is recommended to be set to True if running
+# elixire in production.
+#
+# If serving an instance behind Cloudflare, your reverse proxy MUST correctly
+# mirror the CF-Connecting-IP header into the X-Forwarded-For header. Not doing
+# that is a security flaw as Cloudflare lets the client override the
+# X-Forwaded-For header.
+#
 # This setting toggles how elixire fetches the request IP.
-CLOUDFLARE = False
+REVERSE_PROXY = False
 
 ################################################################################
 
