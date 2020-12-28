@@ -94,13 +94,6 @@ $EDITOR schema.sql
 psql -U postgres -d elixire -f schema.sql
 ```
 
-Setup the directory structure in `./images`:
-
-```bash
-# Make sure you are running this from the repository root.
-./utils/upgrade/folder_sharding.py
-```
-
 Configure elixire itself using [`config.example.py`](./config.example.py) as a
 base:
 
@@ -109,6 +102,12 @@ cp config.example.py config.py
 
 # Configure elixire to your liking.
 $EDITOR config.py
+```
+
+Setup the directory structure in `./images`:
+
+```bash
+./utils/upgrade/folder_sharding.py
 ```
 
 Run the app:
