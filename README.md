@@ -107,8 +107,11 @@ $EDITOR config.py
 Setup the directory structure in `./images`:
 
 ```bash
-./utils/upgrade/folder_sharding.py
+env/bin/python ./utils/upgrade/folder_sharding.py
 ```
+
+(If you aren't using a virtualenv, replace `env/bin/python` with `python3` or
+whatever your Python binary is.)
 
 Run the app:
 
