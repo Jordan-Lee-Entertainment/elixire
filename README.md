@@ -101,25 +101,6 @@ Setup the directory structure in `./images`:
 ./utils/upgrade/folder_sharding.py
 ```
 
-Configure the admin panel and frontend:
-
-```bash
-$EDITOR frontend/config.json
-$EDITOR admin-panel/config.json
-```
-
-More information on configuring can be found in the `README.md` file of each
-project:
-
-- [frontend readme](https://gitlab.com/elixire/frontend#readme)
-- [admin-panel readme](https://gitlab.com/elixire/admin-panel#readme)
-
-Build the frontend and admin panel (this requires [Yarn]):
-
-```bash
-make
-```
-
 Configure elixire itself using [`config.example.py`](./config.example.py) as a
 base:
 
