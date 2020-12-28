@@ -29,9 +29,9 @@ PORT = 8080
 # elixire in production.
 #
 # If serving an instance behind Cloudflare, your reverse proxy MUST correctly
-# mirror the CF-Connecting-IP header into the X-Forwarded-For header. Not doing
-# that is a security flaw as Cloudflare lets the client override the
-# X-Forwaded-For header.
+# mirror the CF-Connecting-IP header into the X-Real-IP header.
+#
+# Letting users set X-Real-IP by themselves is a major security flaw.
 #
 # This setting toggles how elixire fetches the request IP.
 REVERSE_PROXY = False
