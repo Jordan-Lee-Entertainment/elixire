@@ -65,7 +65,8 @@ good experience.
 
 ```bash
 python3 -m venv env
-env/bin/python3 -m pip install -U --editable . -c constraints.txt
+env/bin/pip install -U pip wheel
+env/bin/pip install -U --editable . -c constraints.txt
 ```
 
 #### virtualfish
@@ -73,7 +74,7 @@ env/bin/python3 -m pip install -U --editable . -c constraints.txt
 ```bash
 vf new -p python3 elixire
 vf activate elixire
-python3 -m pip install -U --editable . -c constraints.txt
+pip install -U --editable . -c constraints.txt
 ```
 
 Create the [PostgreSQL] database if it doesn't already exist:
