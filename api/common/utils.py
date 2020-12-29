@@ -182,14 +182,15 @@ async def fetch_json_rows(db, query: str, *args) -> List[Any]:
 def get_ip_addr() -> str:
     """Fetch the IP address for a request.
 
-    Returns the value given in the X-Real-IP header if it exists AND
-    the REVERSE_PROXY setting is set.
+    Returns the value given in the `REAL_IP_HEADER` header defined in the
+    instance configuration file.
     """
     remote_addr = request.remote_addr
     if remote_addr == "<local>":
         remote_addr = "127.0.0.1"
 
-    if app.econfig.REVERSE_PROXY:
-        return request.headers.get("x-real-ip", remote_addr)
+    header = app.econfig.REAL_IP_HEADER:
+    if header is not None:
+        return request.headers.get(header, remote_addr)
     else:
         return remote_addr

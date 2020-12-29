@@ -25,16 +25,24 @@ HOST = "localhost"
 PORT = 8080
 
 # If the elixire instance is being served behind a reverse proxy like
-# nginx or caddy. This setting is recommended to be set to True if running
-# elixire in production.
+# nginx or caddy (recommended in production deployments), this setting must be
+# set to the header the reverse proxy will put the real client IP in.
+#
+# Set to None if there is no reverse proxy OR development.
+#
+# The value of the configuration is case-insensitive.
+#
+# A common value to set this configuration to is "X-Real-IP"
+#  (or "x-real-ip" etc). This value MUST be mirrored on your reverse proxy
+#  and/or deployed frontends.
 #
 # If serving an instance behind Cloudflare, your reverse proxy MUST correctly
-# mirror the CF-Connecting-IP header into the X-Real-IP header.
+# mirror the CF-Connecting-IP header into the header pointed by this
+# configuration. For example, X-Real-IP.
 #
-# Letting users set X-Real-IP by themselves is a major security flaw.
-#
-# This setting toggles how elixire fetches the request IP.
-REVERSE_PROXY = False
+# End users MUST NOT be able to set the value for the selected header as that
+# would be a major security flaw.
+REAL_IP_HEADER = "x-real-ip"
 
 ################################################################################
 
