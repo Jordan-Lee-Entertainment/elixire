@@ -189,7 +189,7 @@ def get_ip_addr() -> str:
     if remote_addr == "<local>":
         remote_addr = "127.0.0.1"
 
-    header = app.econfig.REAL_IP_HEADER:
+    header = app.econfig.REAL_IP_HEADER
     if header is not None:
         return request.headers.get(header, remote_addr)
     else:
