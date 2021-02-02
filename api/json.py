@@ -4,7 +4,7 @@
 
 from typing import Any
 from quart.json import JSONEncoder
-from winter import EPOCH
+from winter import DISCORD_EPOCH
 from hail import Flake
 
 
@@ -17,7 +17,7 @@ def stringify_snowflakes(obj):
             stringify_snowflakes(value)
             continue
 
-        if key == "id" and isinstance(value, int) and value > EPOCH:
+        if key == "id" and isinstance(value, int) and value > DISCORD_EPOCH:
             obj[key] = str(value)
 
 

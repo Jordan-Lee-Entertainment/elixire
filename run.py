@@ -14,6 +14,7 @@ import quart
 from quart import Quart, jsonify, request
 from dns import resolver
 from violet import JobManager
+from winter import SnowflakeFactory
 
 # TODO from api.bp import ...
 import api.bp.auth
@@ -213,6 +214,8 @@ async def app_before_serving():
         app.loop
     except AttributeError:
         app.loop = asyncio.get_event_loop()
+
+    app.winter_factory = SnowflakeFactory()
 
     app.session = aiohttp.ClientSession(loop=app.loop)
 
