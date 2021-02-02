@@ -6,15 +6,14 @@ import pytest
 import os
 import tempfile
 
-from winter import get_snowflake
 from ..api.common.profile import gen_user_shortname
 
 pytestmark = pytest.mark.asyncio
 
 
 async def _create_file(app, user_id):
-    file_id = get_snowflake()
     async with app.app_context():
+        file_id = app.winter_factory.snowflake()
         shortname, _ = await gen_user_shortname(user_id)
 
     fd, path = tempfile.mkstemp(suffix=".png", prefix="elix")
@@ -40,8 +39,8 @@ async def _create_file(app, user_id):
 
 
 async def _create_shorten(app, user_id):
-    redir_id = get_snowflake()
     async with app.app_context():
+        redir_id = app.winter_factory.snowflake()
         shortname, _ = await gen_user_shortname(user_id, table="shortens")
 
     await app.db.execute(
