@@ -5,7 +5,6 @@
 import datetime
 
 from quart import current_app as app
-from winter import snowflake_time
 from api.models import User
 
 
@@ -40,6 +39,6 @@ async def get_counts(user_id: int) -> str:
 
 def account_delta(user_id: int) -> datetime.timedelta:
     """Show an account's age."""
-    unix_timestamp = snowflake_time(user_id)
+    unix_timestamp = app.winter_factory.to_timestamp(user_id)
     timestamp = datetime.datetime.fromtimestamp(unix_timestamp)
     return datetime.datetime.utcnow() - timestamp

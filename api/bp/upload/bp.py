@@ -8,7 +8,6 @@ import time
 from typing import Any, Dict, Optional
 
 from quart import Blueprint, jsonify, current_app as app, request
-from winter import get_snowflake
 
 from api.storage import object_key
 from api.enums import FileNameType
@@ -122,7 +121,7 @@ async def upload_handler():
         start_timestamp=time.monotonic(),
     )
 
-    file_id = get_snowflake()
+    file_id = app.winter_factory.snowflake()
     ctx.file.id = file_id
 
     mime, extension = await ctx.resolve_mime()

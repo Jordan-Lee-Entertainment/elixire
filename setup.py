@@ -36,7 +36,7 @@ setup(
         "Pillow==8.0.1",
         "python-dateutil==2.8.1",
         "violet @ git+https://gitlab.com/elixire/violet.git@ea5b8373c46dc8f5314ef44f2570c00059d58d3b#egg=violet",
-        "winter @ git+https://gitlab.com/elixire/winter.git@988c6ca438663c30c6b617bdb16fd6be6c4226ba#egg=winter",
+        "winter @ git+https://gitlab.com/elixire/winter.git@c97f7aaa1486d84713924238eb91d81b22105509#egg=winter",
         "hail @ git+https://gitlab.com/elixire/hail.git@d481786d256e682f6992ca250e9f8516205d0608#egg=hail",
         "metomi-isodatetime @ git+https://github.com/metomi/isodatetime.git@db717514a3cc759e656bee9eecb2b1ab1bc7cc5f#egg=metomi-isodatetime",
         "drillbit @ git+https://gitlab.com/elixire/drillbit.git@2e63af2744ac328c9006be80b0b40b51e74d26dc#egg=drillbit",

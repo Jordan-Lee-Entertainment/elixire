@@ -6,7 +6,6 @@ import pathlib
 import urllib.parse
 
 from quart import Blueprint, jsonify, current_app as app, request
-from winter import get_snowflake
 
 from api.common.auth import token_check, check_admin
 from api.errors import QuotaExploded, BadInput, FeatureDisabled
@@ -97,7 +96,7 @@ async def shorten_handler():
     redir_rname, tries = await gen_user_shortname(user_id, table="shortens")
     await app.metrics.submit("shortname_gen_tries", tries)
 
-    redir_id = get_snowflake()
+    redir_id = app.winter_factory.snowflake()
 
     domain_id, domain, subdomain_name = await resolve_domain(
         user_id, FileNameType.SHORTEN

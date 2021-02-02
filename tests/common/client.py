@@ -7,8 +7,6 @@ import asyncio
 from typing import TypeVar, List, Optional
 from time import monotonic
 
-from winter import get_snowflake
-
 from api.models import Domain, User, Shorten, File
 from api.common.user import create_user, delete_user
 from api.common.profile import gen_user_shortname
@@ -124,7 +122,7 @@ class TestClient:
         domain_id = domain_id or 0
         subdomain = subdomain or ""
 
-        file_id = get_snowflake()
+        file_id = self.app.winter_factory.snowflake()
         async with self.app.app_context():
             shortname, _ = await gen_user_shortname(author_id, table="files")
 
@@ -181,7 +179,7 @@ class TestClient:
         domain_id = domain_id or 0
         subdomain = subdomain or ""
 
-        shorten_id = get_snowflake()
+        shorten_id = self.app.winter_factory.snowflake()
         async with self.app.app_context():
             shortname, _ = await gen_user_shortname(user_id, table="shortens")
 

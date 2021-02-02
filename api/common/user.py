@@ -6,7 +6,6 @@ from typing import Dict, Union
 
 import asyncpg
 from quart import current_app as app
-from winter import get_snowflake
 
 from api.common.auth import pwd_hash
 from api.models import File
@@ -20,7 +19,7 @@ async def create_user(
 ) -> Dict[str, Union[str, int]]:
     """Creates a single user. Outputs a dictionary containing the user's
     newly generated ID and password hash."""
-    user_id = get_snowflake()
+    user_id = app.winter_factory.snowflake()
     password_hash = await pwd_hash(password)
 
     await app.db.execute(

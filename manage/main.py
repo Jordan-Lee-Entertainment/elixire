@@ -11,6 +11,7 @@ import asyncpg
 import aioredis
 from violet import JobManager
 from quart import Quart
+from winter import SnowflakeFactory
 
 from api.storage import Storage
 from api.common.utils import LockStorage
@@ -66,6 +67,7 @@ async def amain(loop, config, argv: List[str], *, test: bool = False):
     app.econfig = config
 
     app.storage = Storage(app)
+    app.winter_factory = SnowflakeFactory()
     app.session = aiohttp.ClientSession()
     app.sched = JobManager(db=conn, context_function=app.app_context)
 
