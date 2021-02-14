@@ -118,6 +118,7 @@ async def resolve_domain(
 
     # if both domain and subdomainw ere given, we use them
     # if not, we fill in domain/subdomain with information from the user settings
+    domain_id, subdomain_name = None, None
 
     if given_domain and given_subdomain:
         domain_id = given_domain
@@ -130,8 +131,16 @@ async def resolve_domain(
             domain_id = given_domain or user.settings.domain
             subdomain_name = given_subdomain or user.settings.subdomain
         elif ftype == FileNameType.SHORTEN:
-            domain_id = given_domain or user.settings.shorten_domain
-            subdomain_name = given_subdomain or user.settings.shorten_subdomain
+            # if shorten domain settings arent set for a user, use
+            # their pre-existing domain/subdomain settings as fallback.
+            domain_id = (
+                given_domain or user.settings.shorten_domain or user.settings.domain
+            )
+            subdomain_name = (
+                given_subdomain
+                or user.settings.shorten_subdomain
+                or user.settings.subdomain
+            )
         else:
             raise AssertionError("ftype MUST be of supported FileNameType")
 
