@@ -13,7 +13,7 @@ from quart import request, send_file as quart_send_file, current_app as app
 from api.common import get_user_domain_info, transform_wildcard
 from api.enums import FileNameType
 from api.permissions import Permissions, domain_permissions
-from api.models import Domain
+from api.models import Domain, User
 
 T = TypeVar("T")
 
@@ -112,18 +112,24 @@ async def resolve_domain(
     given_domain, given_subdomain = _get_specified_domain()
     random_domain = bool(request.args.get("random_domain"))
 
+    # if both domain and subdomainw ere given, we use them
+    # if not, we fill in domain/subdomain with information from the user settings
+
     if given_domain and given_subdomain:
-        # If both the domain and subdomain were given, use those.
         domain_id = given_domain
         subdomain_name = given_subdomain
     else:
-        # Otherwise, we need to fallback to the user's preferred domain and
-        # subdomain.
-        user_domain_id, user_subdomain, user_domain = await get_user_domain_info(
-            user_id, ftype
-        )
-        domain_id = given_domain or user_domain_id
-        subdomain_name = given_subdomain or user_subdomain
+        user = await User.fetch(user_id)
+        assert user is not None
+
+        if ftype == FileNameType.FILE:
+            domain_id = given_domain or user.settings.domain
+            subdomain_name = given_subdomain or user.settings.subdomain
+        elif ftype == FileNameType.SHORTEN:
+            domain_id = given_domain or user.settings.shorten_domain
+            subdomain_name = given_subdomain or user.settings.shorten_subdomain
+        else:
+            raise AssertionError("ftype MUST be of supported FileNameType")
 
     # TODO: optimize this by using the Domain model (beyond random id fetch)
     #
