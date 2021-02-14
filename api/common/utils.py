@@ -4,18 +4,22 @@
 
 import time
 import json
+import hashlib
 import asyncio
+import logging
 from typing import Optional, Any, TypeVar, Tuple, List
 from collections import defaultdict
 
 from quart import request, send_file as quart_send_file, current_app as app
 
-from api.common import get_user_domain_info, transform_wildcard
+from api.common import transform_wildcard
 from api.enums import FileNameType
 from api.permissions import Permissions, domain_permissions
 from api.models import Domain, User
 
 T = TypeVar("T")
+
+log = logging.getLogger(__name__)
 
 
 def _maybe_type(typ: type, value: Any, default: Optional[T] = None) -> Optional[T]:
@@ -151,6 +155,7 @@ async def resolve_domain(
         """,
         domain_id,
     )
+    assert domain_name
 
     domain = transform_wildcard(domain_name, subdomain_name)
     return domain_id, domain, subdomain_name

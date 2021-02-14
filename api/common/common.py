@@ -2,17 +2,9 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import hashlib
-import logging
-import time
-from typing import Tuple, Dict, List, Union
+from typing import Dict, List, Union
 
 from quart import current_app as app
-
-from api.models import User
-from api.enums import FileNameType
-
-log = logging.getLogger(__name__)
 
 
 def transform_wildcard(domain: str, subdomain_name: str) -> str:
