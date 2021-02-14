@@ -2,10 +2,6 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Dict, List, Union
-
-from quart import current_app as app
-
 
 def transform_wildcard(domain: str, subdomain_name: str) -> str:
     """Do domain transformations in the case of a wildcard.
@@ -30,11 +26,3 @@ def transform_wildcard(domain: str, subdomain_name: str) -> str:
             domain = domain.replace("*.", "")
 
     return domain
-
-
-async def get_tags() -> List[Dict[str, Union[int, str]]]:
-    """Get a mapping from tag ID to tag label."""
-    tag_rows = await app.db.fetch(
-        "SELECT tag_id, label FROM domain_tags ORDER BY tag_id ASC"
-    )
-    return [{"id": r["tag_id"], "label": r["label"]} for r in tag_rows]

@@ -27,7 +27,6 @@ from api.bp.admin.audit_log_actions.domain import (
 
 from api.bp.admin.audit_log_actions.email import DomainOwnerNotifyAction
 
-from api.common.common import get_tags
 
 bp = Blueprint("admin_domain", __name__)
 
@@ -307,7 +306,7 @@ async def create_tag():
 async def list_tags():
     admin_id = await token_check()
     await check_admin(admin_id, True)
-    return jsonify({"tags": await get_tags()})
+    return jsonify({"tags": [tag.to_dict() for tag in await Tag.fetch_all_tags()]})
 
 
 @bp.route("/tag/<int:tag_id>", methods=["DELETE"])
