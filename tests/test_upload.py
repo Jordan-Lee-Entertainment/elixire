@@ -105,6 +105,16 @@ async def check_exists(test_cli, shortname, *, reverse=False):
     response_text = (await resp.get_data()).decode()
     assert "twitter" in response_text
 
+    # check that Discordbot receives html (on thumbnails too)
+    resp = await test_cli.get(
+        f"/t/s{shortname}{extension}",
+        headers={"host": url.netloc, "user-agent": "Discordbot"},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "text/html"
+    response_text = (await resp.get_data()).decode()
+    assert "twitter" in response_text
+
 
 async def test_upload_png(test_cli_user):
     """Test that the upload route works given test data"""
