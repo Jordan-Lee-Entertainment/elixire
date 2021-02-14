@@ -21,29 +21,6 @@ T = TypeVar("T")
 log = logging.getLogger(__name__)
 
 
-def _maybe_type(typ: type, value: Any, default: Optional[T] = None) -> Optional[T]:
-    """Tries to convert the given value to the given type.
-    Returns None or the value given in the default
-    parameter if it fails."""
-    # this check is required for mypy to catch that we're
-    # checking the value's nullability
-    if value is None:
-        return default
-
-    try:
-        return typ(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def int_(val: Optional[Any], default: Optional[int] = None) -> Optional[int]:
-    return _maybe_type(int, val, default)
-
-
-def dict_(val: Optional[Any], default: Optional[dict] = None) -> Optional[dict]:
-    return _maybe_type(dict, val, default)
-
-
 def find_different_keys(dict1: dict, dict2: dict) -> list:
     """Find the keys that point to different values in two dicts."""
     keys = []
