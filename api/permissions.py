@@ -5,7 +5,7 @@
 """
 elixi.re - domain permission helper
 """
-from .errors import BadInput, FeatureDisabled
+from .errors import FeatureDisabled
 
 
 # TODO make Permissions a bitflag, or something?
