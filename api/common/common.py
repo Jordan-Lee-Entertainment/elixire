@@ -15,48 +15,6 @@ from api.enums import FileNameType
 log = logging.getLogger(__name__)
 
 
-def _calculate_hash(fhandler) -> str:
-    """Generate a hash of the given file.
-
-    This calls the seek(0) of the file handler
-    so it can be reused.
-
-    Parameters
-    ----------
-    fhandler: file object
-        Any file-like object.
-
-    Returns
-    -------
-    str
-        The SHA256 hash of the given file.
-    """
-    hashstart = time.monotonic()
-    hash_obj = hashlib.sha256()
-
-    for chunk in iter(lambda: fhandler.read(4096), b""):
-        hash_obj.update(chunk)
-
-    # so that we can reuse the same handler
-    # later on
-    fhandler.seek(0)
-
-    hashend = time.monotonic()
-    delta = round(hashend - hashstart, 6)
-    log.info(f"Hashing file took {delta} seconds")
-
-    return hash_obj.hexdigest()
-
-
-async def calculate_hash(fhandle) -> str:
-    """Calculate a hash of the given file handle.
-
-    Uses run_in_executor to do the job asynchronously so
-    the application doesn't lock up on large files.
-    """
-    return await app.loop.run_in_executor(None, _calculate_hash, fhandle)
-
-
 async def get_user_domain_info(
     user_id: int, dtype=FileNameType.FILE
 ) -> Tuple[int, str, str]:
@@ -64,8 +22,6 @@ async def get_user_domain_info(
 
     Parameters
     ----------
-    request: sanic.Request
-        Request object for database access.
     user_id: int
         User's snowflake ID.
     dtype, optional: FileNameType

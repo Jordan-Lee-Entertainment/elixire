@@ -2,6 +2,7 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import time
 import json
 import asyncio
 from typing import Optional, Any, TypeVar, Tuple, List
@@ -149,6 +150,35 @@ async def resolve_domain(
     return domain_id, domain, subdomain_name
 
 
+class Timer:
+    """Context manager to measure how long the indented block takes to run."""
+
+    def __init__(self):
+        self.start = None
+        self.end = None
+
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    async def __aenter__(self):
+        return self.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end = time.perf_counter()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        return self.__exit__(exc_type, exc_val, exc_tb)
+
+    def __str__(self):
+        return f"{self.duration:.3f}ms"
+
+    @property
+    def duration(self):
+        """Duration in ms."""
+        return (self.end - self.start) * 1000
+
+
 async def send_file(path: str, *, mimetype: Optional[str] = None):
     """Helper function to send files while also supporting Ranged Requests."""
     response = await quart_send_file(path, mimetype=mimetype, conditional=True)
@@ -194,3 +224,46 @@ def get_ip_addr() -> str:
         return request.headers.get(header, remote_addr)
     else:
         return remote_addr
+
+
+def calculate_hash_sync(handle) -> str:
+    """Generate a hash of the given file.
+
+    This calls the seek(0) of the file handler
+    so it can be reused.
+
+    Parameters
+    ----------
+    handle: file object
+        Any file-like object.
+
+    Returns
+    -------
+    str
+        The SHA256 hash of the given file.
+    """
+    with Timer() as timer:
+        hash_obj = hashlib.sha256()
+
+        for chunk in iter(lambda: handle.read(4096), b""):
+            hash_obj.update(chunk)
+
+        # so that we can reuse the same handler
+        # later on
+        handle.seek(0)
+
+    log.info(f"Hashing file took {timer}")
+
+    return hash_obj.hexdigest()
+
+
+async def calculate_hash(fhandle) -> str:
+    """Calculate a hash of the given file handle.
+
+    Uses run_in_executor to do the job asynchronously so
+    the application doesn't lock up on large files.
+    """
+
+    # We could use aiofiles for this but we can't make it generic across
+    # any kind of file handle anymore, and it'd need to be tied to aiofiles.
+    return await app.loop.run_in_executor(None, calculate_hash_sync, fhandle)
