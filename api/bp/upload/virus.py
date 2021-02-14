@@ -14,6 +14,7 @@ from violet.fail_modes import RaiseErr
 from api.common.webhook import scan_webhook
 from api.errors import BadImage
 from api.models import File
+from api.common.utils import Timer
 
 log = logging.getLogger(__name__)
 
@@ -26,37 +27,33 @@ async def run_scan(ctx) -> None:
     # await asyncio.sleep(2)
 
     # TODO a Timer context manager?
-    scan_timestamp_start = time.monotonic()
-
-    log.debug("running clamdscan")
-    process = await asyncio.create_subprocess_shell(
-        "clamdscan -i -m --no-summary -",
-        stderr=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stdin=asyncio.subprocess.PIPE,
-    )
-
-    # if returncode is available before we actually run clamdscan, we have
-    # a problem. most likely clamdscan is unavailable
-    if process.returncode is not None:
-        log.error(
-            "return code %d before clamdscan, is it installed?", process.returncode
+    with Timer() as scan_timer:
+        log.debug("running clamdscan")
+        process = await asyncio.create_subprocess_shell(
+            "clamdscan -i -m --no-summary -",
+            stderr=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stdin=asyncio.subprocess.PIPE,
         )
 
-        out, err = map(lambda s: s.decode(), await process.communicate())
-        log.error("output: %r", f"{out}{err}")
+        # if returncode is available before we actually run clamdscan, we have
+        # a problem. most likely clamdscan is unavailable
+        if process.returncode is not None:
+            log.error(
+                "return code %d before clamdscan, is it installed?", process.returncode
+            )
 
-        return
+            out, err = map(lambda s: s.decode(), await process.communicate())
+            log.error("output: %r", f"{out}{err}")
+            return
 
-    body = ctx.file.stream.getvalue()
+        body = ctx.file.stream.getvalue()
 
-    # stdout and stderr here are for the webhook, not for parsing
-    log.debug("writing file body to clamdscan")
-    out, err = map(lambda s: s.decode(), await process.communicate(input=body))
-    total_out = f"{out}{err}"
-    log.debug("output: %r", total_out)
-
-    scan_timestamp_end = time.monotonic()
+        # stdout and stderr here are for the webhook, not for parsing
+        log.debug("writing file body to clamdscan")
+        out, err = map(lambda s: s.decode(), await process.communicate(input=body))
+        total_out = f"{out}{err}"
+        log.debug("output: %r", total_out)
 
     assert process.returncode is not None
 
@@ -66,11 +63,10 @@ async def run_scan(ctx) -> None:
     #    1 : Virus(es) found.
     #    2 : An error occurred.
 
-    delta = round(scan_timestamp_end - scan_timestamp_start, 6)
     log.info(
-        "Scanning %f MB took %f seconds (retcode %d)",
+        "Scanning %f MB took %s (return value = %d)",
         ctx.file.size / 1024 / 1024,
-        delta,
+        scan_timer,
         process.returncode,
     )
 

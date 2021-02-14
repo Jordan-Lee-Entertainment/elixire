@@ -14,6 +14,7 @@ from PIL import Image, UnidentifiedImageError
 
 from api.errors import NotFound
 from api.storage import StorageValue
+from api.common.utils import Timer
 
 bp = Blueprint("fetch", __name__)
 log = logging.getLogger(__name__)
@@ -155,29 +156,28 @@ async def thumbnail_handler(filename):
     thumbpath = os.path.join(thb_folder, f"{thumbtype}{filename}")
 
     if not os.path.isfile(thumbpath):
-        tstart = time.monotonic()
+        with Timer() as timer:
+            try:
+                image = Image.open(fspath)
+            except UnidentifiedImageError:
+                return (
+                    jsonify(
+                        {
+                            "error": True,
+                            "message": "Failed to open file with PIL. Is it an image?",
+                        }
+                    ),
+                    415,
+                )
 
-        try:
-            image = Image.open(fspath)
-        except UnidentifiedImageError:
-            return (
-                jsonify(
-                    {
-                        "error": True,
-                        "message": "Failed to open file with PIL. Is it an image?",
-                    }
-                ),
-                415,
-            )
+            image.thumbnail(appcfg.THUMBNAIL_SIZES[thumbtype])
+            image.save(thumbpath)
 
-        image.thumbnail(appcfg.THUMBNAIL_SIZES[thumbtype])
-        image.save(thumbpath)
-
-        tend = time.monotonic()
-        delta = round((tend - tstart) * 1000, 5)
         log.info(
-            f"Took {delta} msec generating thumbnail "
-            f"type {thumbtype} for {filename}"
+            "Took %s generating thumbnail type %r for %r",
+            timer,
+            thumbtype,
+            filename,
         )
 
     # yes, we are doing more I/O by using response.file
