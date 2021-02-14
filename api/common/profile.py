@@ -8,7 +8,7 @@ from quart import current_app as app
 from asyncpg import Record
 from violet import JobState
 
-from api.common.common import gen_shortname
+from api.shortname import generate_shortname
 from api.models.user import User
 
 
@@ -75,4 +75,4 @@ async def gen_user_shortname(user_id: int, *, table: str = "files") -> Tuple[str
     user = await User.fetch(user_id)
     assert user is not None
     shortname_len = 8 if user.settings.paranoid else app.econfig.SHORTNAME_LEN
-    return await gen_shortname(shortname_len, table)
+    return await generate_shortname(shortname_len, table)
