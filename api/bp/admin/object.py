@@ -12,7 +12,6 @@ from api.errors import BadInput, NotFound
 
 from api.bp.admin.audit_log_actions.object import ObjectEditAction, ObjectDeleteAction
 
-from api.common.fetch import OBJ_MAPPING
 from api.models import File, Shorten
 
 bp = Blueprint("admin_object", __name__)
