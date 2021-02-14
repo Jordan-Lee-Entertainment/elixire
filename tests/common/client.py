@@ -171,12 +171,12 @@ class TestClient:
     async def create_shorten(
         self,
         redirto: Optional[str] = None,
-        user_id: Optional[int] = None,
+        author_id: Optional[int] = None,
         domain_id: Optional[int] = None,
         subdomain: Optional[str] = None,
     ) -> Shorten:
         redirto = redirto or "https://example.test"
-        user_id = user_id or self.user["user_id"]
+        author_id = author_id or self.user["user_id"]
         domain_id = domain_id or 0
         subdomain = subdomain or ""
 
@@ -194,7 +194,7 @@ class TestClient:
             """,
             shorten_id,
             shortname,
-            user_id,
+            author_id,
             redirto,
             domain_id,
             subdomain,

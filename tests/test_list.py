@@ -6,7 +6,7 @@ import pytest
 import os
 import tempfile
 
-from ..api.common.profile import gen_user_shortname
+from ..api.models import User
 
 pytestmark = pytest.mark.asyncio
 
@@ -14,7 +14,10 @@ pytestmark = pytest.mark.asyncio
 async def _create_file(app, user_id):
     async with app.app_context():
         file_id = app.winter_factory.snowflake()
-        shortname, _ = await gen_user_shortname(user_id)
+
+        user = await User.fetch(user_id)
+        assert user is not None
+        shortname, _ = await user.generate_shortname()
 
     fd, path = tempfile.mkstemp(suffix=".png", prefix="elix")
     os.close(fd)
@@ -41,7 +44,9 @@ async def _create_file(app, user_id):
 async def _create_shorten(app, user_id):
     async with app.app_context():
         redir_id = app.winter_factory.snowflake()
-        shortname, _ = await gen_user_shortname(user_id, table="shortens")
+        user = await User.fetch(user_id)
+        assert user is not None
+        shortname, _ = await user.generate_shortname(table="shortens")
 
     await app.db.execute(
         """
