@@ -53,7 +53,7 @@ class Shorten(Resource):
             """
             SELECT shorten_id, filename, redirto, uploader, deleted, domain, subdomain
             FROM shortens
-            WHERE shortname = $1
+            WHERE filename = $1
             """,
             shortname,
         )
