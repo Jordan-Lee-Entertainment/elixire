@@ -20,13 +20,19 @@ bp = Blueprint("admin_object", __name__)
 
 async def _handler_object(obj_type: str, obj_fname: str):
     """Handler for fetching files/shortens."""
-    id_handler, obj_handler = OBJ_MAPPING[obj_type]
+    # TODO: make the action classes use file/shorten models directly
+    if obj_type == "file":
+        resource_type = File
+    elif obj_type == "shorten":
+        resource_type = Shorten
+    else:
+        raise TypeError("Object type specified in Action is invalid.")
 
-    obj_id = await id_handler(obj_fname)
-    if obj_id is None:
-        raise NotFound("Object not found")
+    resource = await resource_type.fetch_by(shortname=obj_fname)
+    if resource is None:
+        raise NotFound("{obj_type} not found")
 
-    return jsonify(await obj_handler(obj_id))
+    return jsonify(resource.to_dict())
 
 
 @bp.route("/file/<shortname>")
