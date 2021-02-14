@@ -14,6 +14,7 @@ from api.common import transform_wildcard
 from api.enums import FileNameType
 from api.permissions import Permissions, domain_permissions
 from api.models import Domain, User
+from api.errors import BadInput
 
 T = TypeVar("T")
 
@@ -120,22 +121,16 @@ async def resolve_domain(
     if random_domain:
         domain_id = await Domain.fetch_random_id()
 
+    domain = await Domain.fetch(domain_id)
+    if domain is None:
+        raise BadInput(f"Domain {domain_id} not found")
+
     # Check the domain's permissions, which specifies if uploads or shortens are
     # allowed on it.
-    await domain_permissions(app, domain_id, ptype)
+    await domain_permissions(domain, ptype)
 
-    # resolve the given (domain_id, subdomain_name) into a usable domain string
-    domain_name = await app.db.fetchval(
-        """
-        SELECT domain
-        FROM domains
-        WHERE domain_id = $1
-        """,
-        domain_id,
-    )
-    assert domain_name
-
-    domain = transform_wildcard(domain_name, subdomain_name)
+    # convert all this domain info into final domain strings we can use
+    domain = transform_wildcard(domain.domain, subdomain_name)
     return domain_id, domain, subdomain_name
 
 
