@@ -5,10 +5,8 @@
 import time
 import json
 import hashlib
-import asyncio
 import logging
 from typing import Optional, Any, TypeVar, Tuple, List
-from collections import defaultdict
 
 from quart import request, send_file as quart_send_file, current_app as app
 
@@ -43,35 +41,6 @@ def int_(val: Optional[Any], default: Optional[int] = None) -> Optional[int]:
 
 def dict_(val: Optional[Any], default: Optional[dict] = None) -> Optional[dict]:
     return _maybe_type(dict, val, default)
-
-
-def _semaphore(num):
-    """Return a function that when called, returns a new semaphore with the
-    given counter."""
-
-    def _wrap():
-        return asyncio.Semaphore(num)
-
-    return _wrap
-
-
-class LockStorage:
-    """A storage class to hold locks and semaphores.
-
-    This is a wrapper around a defaultdict so it can hold
-    multiple defaultdicts, one for each field declared in _fields.
-    """
-
-    _fields = (("delete_files", _semaphore(10)), ("bans", asyncio.Lock))
-
-    def __init__(self):
-        self._locks = {}
-
-        for field, typ in self._fields:
-            self._locks[field] = defaultdict(typ)
-
-    def __getitem__(self, key):
-        return self._locks[key]
 
 
 def find_different_keys(dict1: dict, dict2: dict) -> list:
