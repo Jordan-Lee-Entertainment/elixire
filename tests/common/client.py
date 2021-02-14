@@ -9,7 +9,6 @@ from time import monotonic
 
 from api.models import Domain, User, Shorten, File
 from api.common.user import create_user, delete_user
-from api.common.profile import gen_user_shortname
 from api.common.auth import gen_token
 from api.bp.upload.file import UploadFile
 from api.bp.upload.context import UploadContext
@@ -124,7 +123,9 @@ class TestClient:
 
         file_id = self.app.winter_factory.snowflake()
         async with self.app.app_context():
-            shortname, _ = await gen_user_shortname(author_id, table="files")
+            author = await User.fetch(author_id)
+            assert author is not None
+            shortname, _ = await author.generate_shortname(table="files")
 
             upload_ctx = UploadContext(
                 upload_file, author_id, shortname, False, int(monotonic())
@@ -181,7 +182,9 @@ class TestClient:
 
         shorten_id = self.app.winter_factory.snowflake()
         async with self.app.app_context():
-            shortname, _ = await gen_user_shortname(user_id, table="shortens")
+            author = await User.fetch(author_id)
+            assert author is not None
+            shortname, _ = await author.generate_shortname(table="shortens")
 
         await self.app.db.execute(
             """

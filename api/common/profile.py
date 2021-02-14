@@ -2,14 +2,11 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from typing import Optional, Tuple, List
+from typing import Optional, List
 
 from quart import current_app as app
 from asyncpg import Record
 from violet import JobState
-
-from api.shortname import generate_shortname
-from api.models.user import User
 
 
 async def fetch_dumps(
@@ -64,15 +61,3 @@ def wrap_dump_violet_job_state(job_record: Optional[Record]) -> Optional[dict]:
         }
 
     return {"state": "not_in_queue"}
-
-
-async def gen_user_shortname(user_id: int, *, table: str = "files") -> Tuple[str, int]:
-    """Generate a shortname for a file.
-
-    Checks if the user is in paranoid mode and acts accordingly
-    """
-
-    user = await User.fetch(user_id)
-    assert user is not None
-    shortname_len = 8 if user.settings.paranoid else app.econfig.SHORTNAME_LEN
-    return await generate_shortname(shortname_len, table)

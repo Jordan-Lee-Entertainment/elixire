@@ -11,7 +11,6 @@ from api.common.auth import token_check, check_admin
 from api.errors import QuotaExploded, BadInput, FeatureDisabled
 from api.enums import FileNameType
 from api.common.utils import resolve_domain
-from api.common.profile import gen_user_shortname
 from api.storage import object_key
 from api.scheduled_deletes import validate_request_duration
 from api.models import User, Shorten
@@ -93,7 +92,7 @@ async def shorten_handler():
                 f"This shorten blows the weekly limit of {shorten_limit} shortens"
             )
 
-    redir_rname, tries = await gen_user_shortname(user_id, table="shortens")
+    redir_rname, tries = await user.generate_shortname(table="shortens")
     await app.metrics.submit("shortname_gen_tries", tries)
 
     redir_id = app.winter_factory.snowflake()
