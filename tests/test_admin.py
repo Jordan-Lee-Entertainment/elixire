@@ -450,7 +450,7 @@ async def _disabled_test_broadcast(test_cli_admin):
 
 
 async def test_domain_create(test_cli_admin):
-    domain_name = "{username()}.com"
+    domain_name = f"{username()}.com"
     resp = await test_cli_admin.put(
         "/api/admin/domains",
         json={"domain": domain_name, "owner_id": test_cli_admin.user["user_id"]},
