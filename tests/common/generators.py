@@ -23,9 +23,6 @@ import string
 import aiohttp
 
 
-EMAIL_ALPHABET = string.ascii_lowercase
-
-
 class _AsyncBytesIO:
     """Wrapper class for fake async operations under BytesIO."""
 
