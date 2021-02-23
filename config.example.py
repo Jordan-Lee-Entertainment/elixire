@@ -119,7 +119,7 @@ ACCEPTED_MIMES = [
 # will have their extension forced to be the given one.
 #
 # By default, forces all image/jpeg files to have a jpg extension.
-FORCE_EXTENSION = {"image/jpeg": ".jpg"}
+FORCE_EXTENSION = {"image/jpeg": ".jpg", "image/webp": ".webp"}
 
 # MIME types in this dict that, when detected as the file being uploaded,
 # will also allow the given extension list as the file extension.
