@@ -10,7 +10,7 @@ __all__ = [
     "username",
     "email",
     "png_request",
-    "aiohttp_form",
+    "create_multipart",
     "rand_utf8",
 ]
 
@@ -19,10 +19,9 @@ import io
 import random
 import secrets
 import string
+
 from quart.testing import make_test_body_with_headers
 from quart.datastructures import FileStorage
-
-import aiohttp
 
 
 EMAIL_ALPHABET = string.ascii_lowercase
@@ -61,10 +60,7 @@ def email() -> str:
     return f"{name}@discordapp.io"
 
 
-async def png_request() -> dict:
-    """Generate keyword arguments to pass to an HTTP method function that would
-    specify a multipart form body to upload a random PNG file.
-    """
+async def create_multipart(data: io.BytesIO, filename: str, mimetype: str) -> dict:
     body, headers = make_test_body_with_headers(
         files={
             "file": FileStorage(
@@ -75,7 +71,15 @@ async def png_request() -> dict:
             )
         }
     )
+
     return {"data": body, "headers": headers}
+
+
+async def png_request() -> dict:
+    """Generate keyword arguments to pass to an HTTP method function that would
+    specify a multipart form body to upload a random PNG file.
+    """
+    return await create_multipart(png_data(), f"{hexs(10)}.png", "image/png")
 
 
 def rand_utf8(chars: int) -> str:

@@ -8,7 +8,7 @@ import os.path
 from urllib.parse import urlparse
 
 import pytest
-from .common import png_request, hexs, aiohttp_form
+from .common import png_request, hexs, create_multipart
 from api.bp.delete import MassDeleteQueue
 from api.models import File
 from api.scheduled_deletes import ScheduledDeleteQueue
@@ -207,7 +207,7 @@ MAGIC_BYTES = b"\xd2\x06\x8e\x98\x87\xd5m\xc4/B"
 async def test_bogus_data(test_cli_user):
     """Test that uploading random data fails."""
     test_domain = await test_cli_user.create_domain()
-    request_kwargs = await aiohttp_form(
+    request_kwargs = await create_multipart(
         io.BytesIO(MAGIC_BYTES), f"{hexs(10)}.bin", "application/octet-stream"
     )
 
@@ -276,7 +276,7 @@ async def _upload(test_cli_user, **kwargs) -> dict:
 
 async def _shorten(test_cli_user, **kwargs) -> dict:
     url = "https://elixi.re"
-    resp = await test_cli_user.post("/api/shorten", json={"url": url}, **kwargs)
+    resp = await test_cli_user.post("/api/shorten/", json={"url": url}, **kwargs)
 
     assert resp.status_code == 200
 
@@ -437,7 +437,7 @@ async def test_eicar_upload(test_cli_user):
 
     test_cli_user.app.econfig.SCAN_WAIT_THRESHOLD = 5
 
-    request_kwargs = await aiohttp_form(
+    request_kwargs = await create_multipart(
         io.BytesIO(EICAR.encode()), f"{hexs(10)}.txt", "text/plain"
     )
 
