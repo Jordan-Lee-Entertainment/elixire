@@ -28,16 +28,6 @@ import aiohttp
 EMAIL_ALPHABET = string.ascii_lowercase
 
 
-class _AsyncBytesIO:
-    """Wrapper class for fake async operations under BytesIO."""
-
-    def __init__(self):
-        self.stream = io.BytesIO()
-
-    async def write(self, data):
-        self.stream.write(data)
-
-
 def choice_repeat(seq, length):
     return "".join([secrets.choice(seq) for _ in range(length)])
 
@@ -69,46 +59,6 @@ def username() -> str:
 def email() -> str:
     name = hexs()
     return f"{name}@discordapp.io"
-
-
-class FormData:
-    """An abstraction over handling the creation of raw multipart form data.
-
-    This is needed because Quart doesn't provide a facility to use multipart
-    form data in its test client yet.
-
-    To use it, construct it and use :meth:`add_field` to attach data. Then
-    call :meth:`write` to generate the form data, then unpack the value of
-    :attr:`request` into an HTTP method call on the test client.
-    """
-
-    def __init__(self):
-        self.form = aiohttp.FormData()
-        self.body = _AsyncBytesIO()
-        self.writer = None
-
-    def add_field(self, *args, **kwargs):
-        return self.form.add_field(*args, **kwargs)
-
-    async def write(self):
-        self.writer = self.form._gen_form_data()
-        await self.writer.write(self.body)
-
-    @property
-    def request(self):
-        return {
-            "headers": {
-                "content-type": f"multipart/form-data; boundary={self.writer._boundary_value}"
-            },
-            "data": self.body.stream.getvalue(),
-        }
-
-
-async def aiohttp_form(data, filename: str, mimetype: str):
-    fd = FormData()
-    fd.add_field("file", data, filename=filename, content_type=mimetype)
-    await fd.write()
-    return fd.request
 
 
 async def png_request() -> dict:
