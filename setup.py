@@ -15,7 +15,7 @@ setup(
         # hypercorn does not support non-standard http codes yet
         # for now, use forked hypercorn with relevant patch
         # see https://gitlab.com/pgjones/hypercorn/-/merge_requests/48
-        "hypercorn @ git+https://gitlab.com/luna/hypercorn.git@1a80b964c5f6997bc0267128a66e5b444d6ccd2e#egg=hypercorn",
+        "hypercorn==0.11.2",
         # "hypercorn==0.11.1",
         "bcrypt==3.2.0",
         "itsdangerous==1.1.0",
@@ -32,7 +32,7 @@ setup(
         "python-magic==0.4.18",
         "parsedatetime==2.6",
         "dnspython==1.16.0",
-        "Quart==0.14.0",
+        "Quart @ git+https://gitlab.com/pgjones/quart@8a27eb19134c998cf96b1add88f635bd75c3bd52#egg=quart",
         "Pillow==8.0.1",
         "python-dateutil==2.8.1",
         "violet @ git+https://gitlab.com/elixire/violet.git@ea5b8373c46dc8f5314ef44f2570c00059d58d3b#egg=violet",
