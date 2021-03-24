@@ -19,6 +19,8 @@ import io
 import random
 import secrets
 import string
+from quart.testing import make_test_body_with_headers
+from quart.datastructures import FileStorage
 
 import aiohttp
 
@@ -113,7 +115,17 @@ async def png_request() -> dict:
     """Generate keyword arguments to pass to an HTTP method function that would
     specify a multipart form body to upload a random PNG file.
     """
-    return await aiohttp_form(png_data(), f"{hexs(10)}.png", "image/png")
+    body, headers = make_test_body_with_headers(
+        files={
+            "file": FileStorage(
+                stream=png_data(),
+                filename=f"{hexs(10)}.png",
+                name="file",
+                content_type="image/png",
+            )
+        }
+    )
+    return {"data": body, "headers": headers}
 
 
 def rand_utf8(chars: int) -> str:
