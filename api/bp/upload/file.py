@@ -33,7 +33,8 @@ class UploadFile:
     def __init__(self, data):
         self.name = data.filename
         # TODO don't create an intermerdiary bytes object for this
-        self.size = data.stream.getbuffer().nbytes
+
+        self.size = len(data.stream.read())
         self.stream = data.stream
         self.mime = data.mimetype
 
