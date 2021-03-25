@@ -27,7 +27,7 @@ def start():
         log.info("data dumps are disabled!")
 
 
-@bp.route("", methods=["POST"])
+@bp.route("", methods=["POST"], strict_slashes=False)
 async def request_data_dump():
     """Request a data dump."""
     if not app.econfig.DUMP_ENABLED:
@@ -43,7 +43,7 @@ async def request_data_dump():
     return {"job_id": job_id}
 
 
-@bp.route("")
+@bp.route("", strict_slashes=False)
 async def list_dumps():
     user_id = await token_check()
     pagination = Pagination()

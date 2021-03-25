@@ -50,7 +50,7 @@ async def _update_password(conn, user_id: int, new_pwd: str):
     await app.storage.invalidate(user_id, "password_hash")
 
 
-@bp.route("", methods=["GET"])
+@bp.route("", methods=["GET"], strict_slashes=False)
 async def profile_handler():
     """Get your basic information as a user."""
     user_id = await token_check()
@@ -226,7 +226,7 @@ async def finish_update(conn, user_id: int, payload: dict):
         await _update_password(conn, user_id, payload["new_password"])
 
 
-@bp.route("", methods=["PATCH"])
+@bp.route("", methods=["PATCH"], strict_slashes=False)
 async def change_profile_handler():
     if not app.econfig.PATCH_API_PROFILE_ENABLED:
         raise FeatureDisabled("Changing your profile is currently disabled")
@@ -250,7 +250,7 @@ async def change_profile_handler():
     return jsonify(user.to_dict())
 
 
-@bp.route("", methods=["DELETE"])
+@bp.route("", methods=["DELETE"], strict_slashes=False)
 async def delete_own_user():
     """Deactivate the current user.
 

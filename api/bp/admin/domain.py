@@ -32,7 +32,7 @@ from api.common.common import get_tags
 bp = Blueprint("admin_domain", __name__)
 
 
-@bp.route("", methods=["PUT"])
+@bp.route("", methods=["PUT"], strict_slashes=False)
 async def add_domain():
     """Add a domain."""
     admin_id = await token_check()
@@ -196,7 +196,7 @@ async def get_domain_stats(domain_id: int):
     return jsonify(await domain.fetch_info_dict())
 
 
-@bp.route("", methods=["GET"])
+@bp.route("", methods=["GET"], strict_slashes=False)
 async def get_domain_stats_all():
     """Request information about all domains"""
     admin_id = await token_check()
