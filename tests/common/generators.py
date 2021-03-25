@@ -64,7 +64,7 @@ async def create_multipart(data: io.BytesIO, filename: str, mimetype: str) -> di
     body, headers = make_test_body_with_headers(
         files={
             "file": FileStorage(
-                stream=png_data(),
+                stream=data,
                 filename=f"{hexs(10)}.png",
                 name="file",
                 content_type="image/png",
