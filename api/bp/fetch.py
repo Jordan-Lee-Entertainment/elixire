@@ -159,12 +159,12 @@ async def thumbnail_handler(filename):
 
         try:
             image = Image.open(fspath)
-        except UnidentifiedImageError:
+        except UnidentifiedImageError as exc:
             return (
                 jsonify(
                     {
                         "error": True,
-                        "message": "Failed to open file with PIL. Is it an image?",
+                        "message": f"Failed to open file with PIL. Is it an image? {exc!r}",
                     }
                 ),
                 415,
