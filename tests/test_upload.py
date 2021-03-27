@@ -44,7 +44,10 @@ async def check_shorten_exists(test_cli, shortname: str, *, reverse=False):
 
 
 async def check_exists(test_cli, shortname, *, reverse=False):
-    """Check if a file exists (or not) given the shortname."""
+    """Check if a file exists (or not) given the shortname.
+
+    Assumes the uploaded file is non-empty
+    """
     resp = await test_cli.get("/api/files")
 
     assert resp.status_code == 200
@@ -82,6 +85,8 @@ async def check_exists(test_cli, shortname, *, reverse=False):
         f"/i/{shortname}{extension}", headers={"host": url.netloc}
     )
     assert resp.status_code == 200
+    data = await resp.data
+    assert len(data) > 0
 
     # check the file isn't available on other domains
     resp = await test_cli.get(
