@@ -138,6 +138,8 @@ async def test_upload_png(test_cli_user):
         query_string={"domain": test_domain.id, "subdomain": subdomain},
     )
 
+    print(req)
+
     assert resp.status_code == 200
     json = await resp.json
     shortname = json["shortname"]
