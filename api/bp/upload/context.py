@@ -2,12 +2,12 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import io
 import logging
 import mimetypes
 import functools
 from dataclasses import dataclass
 from typing import Optional, Tuple
+from pathlib import Path
 
 import magic
 from quart import current_app as app
@@ -54,33 +54,25 @@ class UploadContext:
     start_timestamp: int
     _mime: Optional[str] = None
 
-    async def strip_exif(self) -> io.BytesIO:
+    async def strip_exif(self, filepath):
         """Strip EXIF information from a given file."""
-        stream = self.file.stream
         if not app.econfig.CLEAR_EXIF or self.file.mime != "image/jpeg":
             log.debug("not stripping exif, disabled or not jpeg")
-            return stream
+            return
 
         log.debug("going to clear exif now")
         ratio_limit = app.econfig.EXIF_INCREASELIMIT
 
-        noexif_stream = await clear_exif(stream, loop=app.loop)
-        noexif_len = len(noexif_stream.getvalue())
+        blocking_exif_call = functools.partial(clear_exif, filepath)
+        await app.loop.run_in_executor(None, blocking_exif_call)
+
+        noexif_len = Path(filepath).stat().st_size
         ratio = noexif_len / self.file.size
 
-        # if this is an admin upload or the file hasn't grown big, return the
-        # stripped exif buffer
-        #
-        # (admins get to always have their jpegs stripped of exif data)
-        if not self.do_checks or ratio < ratio_limit:
-            return noexif_stream
-
         # or else... send a webhook about what happened
-        if ratio > ratio_limit:
+        if self.do_checks and ratio > ratio_limit:
             await jpeg_toobig_webhook(self, noexif_len)
             raise BadImage("jpeg-bomb attempt detected")
-
-        return self.file.stream
 
     @property
     async def mime(self) -> str:

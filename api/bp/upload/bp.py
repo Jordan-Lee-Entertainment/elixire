@@ -17,6 +17,7 @@ from api.common.utils import resolve_domain
 from api.common.profile import gen_user_shortname
 from api.models import User, File
 from api.scheduled_deletes import validate_request_duration
+from api.errors import BadImage
 from .context import UploadContext
 from .file import UploadFile
 
@@ -170,23 +171,19 @@ async def upload_handler():
         object_key("fspath", domain_id, subdomain_name, shortname), file.raw_path, 600
     )
 
-    # write the file to filesystem
-    stream = await ctx.strip_exif()
-    with open(file.raw_path, "wb") as output:
-
-        # instead of copying the entire stream and writing
-        # we copy ~128kb chunks to decrease total memory usage
-        while True:
-            chunk = stream.read(128 * 1024)
-            if not chunk:
-                break
-
-            output.write(chunk)
-
-    res = {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
-
     elixire_file = await File.fetch(ctx.file.id)
     assert elixire_file is not None
+
+    # write the file to filesystem, then clean exif, if it raises BadImage,
+    # we must delete the file.
+    await ctx.file.storage.save(file.raw_path)
+    try:
+        await ctx.strip_exif(file.raw_path)
+    except BadImage as exc:
+        await elixire_file.delete()
+        raise exc
+
+    res = {"url": _construct_url(domain, shortname, extension), "shortname": shortname}
 
     deletion_job_id = await user.schedule_deletion_for(
         elixire_file, duration=request.args.get("retention_time")

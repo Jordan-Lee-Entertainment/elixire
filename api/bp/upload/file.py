@@ -14,7 +14,7 @@ from quart import request, current_app as app
 from api.common import calculate_hash
 from api.errors import BadUpload
 
-BaseFile = namedtuple("BaseFile", "filename stream mimetype")
+BaseTestFile = namedtuple("BaseTestFile", "filename stream mimetype content_length")
 
 
 @dataclass
@@ -31,6 +31,7 @@ class UploadFile:
     id: Optional[int] = None
 
     def __init__(self, data):
+        self.storage = data
         self.name = data.filename
         self.size = data.content_length
         assert self.size is not None
@@ -87,7 +88,12 @@ class UploadFile:
     def from_stream(
         cls, filename: str, stream: io.BytesIO, mimetype: str
     ) -> "UploadFile":
-        wrapped_file = BaseFile(filename=filename, stream=stream, mimetype=mimetype)
+        wrapped_file = BaseTestFile(
+            filename=filename,
+            stream=stream,
+            mimetype=mimetype,
+            content_length=len(stream.getvalue()),
+        )
         return cls(wrapped_file)
 
     async def _gen_hash(self):
