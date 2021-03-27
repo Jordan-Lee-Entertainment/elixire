@@ -48,11 +48,15 @@ async def run_scan(ctx) -> None:
 
         return
 
-    body = ctx.file.stream.getvalue()
+    # TODO don't read the entire file into memory, maybe we can write to
+    # the process at a later time?
+    all_file_bytes = ctx.file.stream.read()
 
     # stdout and stderr here are for the webhook, not for parsing
     log.debug("writing file body to clamdscan")
-    out, err = map(lambda s: s.decode(), await process.communicate(input=body))
+    out, err = map(
+        lambda s: s.decode(), await process.communicate(input=all_file_bytes)
+    )
     total_out = f"{out}{err}"
     log.debug("output: %r", total_out)
 
