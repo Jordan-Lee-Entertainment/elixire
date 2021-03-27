@@ -32,9 +32,8 @@ class UploadFile:
 
     def __init__(self, data):
         self.name = data.filename
-        # TODO don't create an intermerdiary bytes object for this
-
-        self.size = len(data.stream.read())
+        self.size = data.content_length
+        assert self.size is not None
         self.stream = data.stream
         self.mime = data.mimetype
 
