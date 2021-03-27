@@ -14,7 +14,7 @@ from quart import Quart
 from winter import SnowflakeFactory
 
 from api.storage import Storage
-from api.common.utils import LockStorage
+from api.locks import LockStorage
 from tests.common.helpers import setup_test_app
 
 from manage.cmd import ban, files, find, user, migration, domains

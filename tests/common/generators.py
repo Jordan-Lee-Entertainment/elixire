@@ -18,12 +18,8 @@ import base64
 import io
 import random
 import secrets
-import string
 
 import aiohttp
-
-
-EMAIL_ALPHABET = string.ascii_lowercase
 
 
 class _AsyncBytesIO:

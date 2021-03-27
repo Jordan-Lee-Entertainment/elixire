@@ -18,20 +18,6 @@ from tests.common.utils import extract_first_url
 pytestmark = pytest.mark.asyncio
 
 
-def _extract_uid(token: str) -> str:
-    split = token.split(".")
-    try:
-        uid, _ = split
-    except ValueError:
-        (
-            uid,
-            _,
-            _,
-        ) = split
-
-    return uid
-
-
 async def test_non_admin(test_cli_user):
     resp = await test_cli_user.get("/api/admin/test")
     assert resp.status_code != 200
@@ -356,10 +342,6 @@ async def test_sensible_uuid():
     assert UUID(int=val.int + 1).int == val_int + 1
 
 
-async def _null_handler(_ctx, _i):
-    pass
-
-
 class JobTestQueue(JobQueue):
     name = "__test"
     workers = 5
@@ -468,7 +450,7 @@ async def _disabled_test_broadcast(test_cli_admin):
 
 
 async def test_domain_create(test_cli_admin):
-    domain_name = "{username()}.com"
+    domain_name = f"{username()}.com"
     resp = await test_cli_admin.put(
         "/api/admin/domains",
         json={"domain": domain_name, "owner_id": test_cli_admin.user["user_id"]},

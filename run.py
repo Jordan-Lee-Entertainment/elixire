@@ -42,7 +42,8 @@ import api.bp.mfa
 from api.json import ElixireJSONEncoder
 
 from api.errors import APIError, Banned
-from api.common.utils import get_ip_addr, LockStorage
+from api.common.utils import get_ip_addr
+from api.locks import LockStorage
 from api.common.user import create_doll_user
 from api.storage import Storage
 from api.bp.admin.audit_log import AuditLog

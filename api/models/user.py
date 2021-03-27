@@ -8,6 +8,7 @@ from asyncpg import Record
 from quart import current_app as app
 from hail import Flake
 from api.models.resource import Resource
+from api.shortname import generate_shortname
 
 
 async def _get_uploaded_count_from(
@@ -253,3 +254,12 @@ class User:
             return None
 
         return await resource.schedule_deletion(scheduled_at)
+
+    async def generate_shortname(self, *, table: str = "files"):
+        """Generate a shortname for some resource (file/shorten).
+
+        Checks if the user is in paranoid mode and bumps the shortname length
+        accordingly.
+        """
+        shortname_len = 8 if self.settings.paranoid else app.econfig.SHORTNAME_LEN
+        return await generate_shortname(shortname_len, table)

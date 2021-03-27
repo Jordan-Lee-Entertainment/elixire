@@ -15,16 +15,16 @@ async def test_fetch_file_and_shorten(test_cli_admin):
     assert resp.status_code == 200
     rjson = await resp.json
     assert isinstance(rjson, dict)
-    assert elixire_file.id == int(rjson["file_id"])
-    assert elixire_file.shortname == rjson["filename"]
+    assert elixire_file.id == int(rjson["id"])
+    assert elixire_file.shortname == rjson["shortname"]
 
     shorten = await test_cli_admin.create_shorten()
     resp = await test_cli_admin.get(f"/api/admin/shorten/{shorten.shortname}")
     assert resp.status_code == 200
     rjson = await resp.json
     assert isinstance(rjson, dict)
-    assert shorten.id == int(rjson["shorten_id"])
-    assert shorten.shortname == rjson["filename"]
+    assert shorten.id == int(rjson["id"])
+    assert shorten.shortname == rjson["shortname"]
 
 
 async def test_update_object_shortname(test_cli_admin):

@@ -25,7 +25,7 @@ from api.schema import (
     PASSWORD_RESET_CONFIRM_SCHEMA,
 )
 from api.common.user import delete_user
-from api.common.profile import fetch_dumps, wrap_dump_violet_job_state
+from api.common.violet_jobs import fetch_datadump_jobs, wrap_datadump_job_state
 from api.common.auth import pwd_check
 from api.models import User, Domain
 
@@ -66,8 +66,8 @@ async def profile_handler():
     user_dict["limits"] = await user.fetch_limits()
     user_dict["stats"] = await user.fetch_stats()
 
-    violet_jobs = await fetch_dumps(user_id, current=True)
-    user_dict["dump_status"] = wrap_dump_violet_job_state(
+    violet_jobs = await fetch_datadump_jobs(user_id, current=True)
+    user_dict["dump_status"] = wrap_datadump_job_state(
         violet_jobs[0] if violet_jobs else None
     )
 
