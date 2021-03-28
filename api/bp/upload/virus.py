@@ -58,12 +58,7 @@ async def run_scan(ctx) -> None:
 
         process.stdin.write_eof()
         log.debug("waiting for clamdscan")
-        await process.wait()
-        log.debug("wait ok, read out err")
-
-        # stdout and stderr here are for the webhook, not for parsing
-        out = await process.stdout.read()
-        err = await process.stderr.read()
+        out, err = map(lambda s: s.decode(), await process.communicate(input=None))
         total_out = f"{out}{err}"
         log.debug("output: %r", total_out)
 
