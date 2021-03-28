@@ -32,7 +32,7 @@ setup(
         "python-magic==0.4.18",
         "parsedatetime==2.6",
         "dnspython==1.16.0",
-        "Quart @ git+https://gitlab.com/pgjones/quart@44f3ee78298b1d7bd5e97d499ca21cf123c49a4c#egg=quart",
+        "Quart @ git+https://gitlab.com/luna/quart@7ae9f32387bd2edc3565b322c510ada76384c332#egg=quart",
         "Pillow==8.0.1",
         "python-dateutil==2.8.1",
         "violet @ git+https://gitlab.com/elixire/violet.git@ea5b8373c46dc8f5314ef44f2570c00059d58d3b#egg=violet",
