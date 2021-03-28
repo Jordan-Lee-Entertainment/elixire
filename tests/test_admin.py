@@ -18,20 +18,6 @@ from tests.common.utils import extract_first_url
 pytestmark = pytest.mark.asyncio
 
 
-def _extract_uid(token: str) -> str:
-    split = token.split(".")
-    try:
-        uid, _ = split
-    except ValueError:
-        (
-            uid,
-            _,
-            _,
-        ) = split
-
-    return uid
-
-
 async def test_non_admin(test_cli_user):
     resp = await test_cli_user.get("/api/admin/test")
     assert resp.status_code != 200
@@ -354,10 +340,6 @@ async def test_sensible_uuid():
     val_int = random.randint(0, 1000)
     val = UUID(int=val_int)
     assert UUID(int=val.int + 1).int == val_int + 1
-
-
-async def _null_handler(_ctx, _i):
-    pass
 
 
 class JobTestQueue(JobQueue):

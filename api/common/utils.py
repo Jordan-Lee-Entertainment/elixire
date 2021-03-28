@@ -2,71 +2,23 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import time
 import json
-import asyncio
+import hashlib
+import logging
 from typing import Optional, Any, TypeVar, Tuple, List
-from collections import defaultdict
 
 from quart import request, send_file as quart_send_file, current_app as app
 
-from api.common import get_user_domain_info, transform_wildcard
+from api.common import transform_wildcard
 from api.enums import FileNameType
 from api.permissions import Permissions, domain_permissions
-from api.models import Domain
+from api.models import Domain, User
+from api.errors import BadInput
 
 T = TypeVar("T")
 
-
-def _maybe_type(typ: type, value: Any, default: Optional[T] = None) -> Optional[T]:
-    """Tries to convert the given value to the given type.
-    Returns None or the value given in the default
-    parameter if it fails."""
-    # this check is required for mypy to catch that we're
-    # checking the value's nullability
-    if value is None:
-        return default
-
-    try:
-        return typ(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def int_(val: Optional[Any], default: Optional[int] = None) -> Optional[int]:
-    return _maybe_type(int, val, default)
-
-
-def dict_(val: Optional[Any], default: Optional[dict] = None) -> Optional[dict]:
-    return _maybe_type(dict, val, default)
-
-
-def _semaphore(num):
-    """Return a function that when called, returns a new semaphore with the
-    given counter."""
-
-    def _wrap():
-        return asyncio.Semaphore(num)
-
-    return _wrap
-
-
-class LockStorage:
-    """A storage class to hold locks and semaphores.
-
-    This is a wrapper around a defaultdict so it can hold
-    multiple defaultdicts, one for each field declared in _fields.
-    """
-
-    _fields = (("delete_files", _semaphore(10)), ("bans", asyncio.Lock))
-
-    def __init__(self):
-        self._locks = {}
-
-        for field, typ in self._fields:
-            self._locks[field] = defaultdict(typ)
-
-    def __getitem__(self, key):
-        return self._locks[key]
+log = logging.getLogger(__name__)
 
 
 def find_different_keys(dict1: dict, dict2: dict) -> list:
@@ -111,18 +63,33 @@ async def resolve_domain(
     given_domain, given_subdomain = _get_specified_domain()
     random_domain = bool(request.args.get("random_domain"))
 
+    # if both domain and subdomainw ere given, we use them
+    # if not, we fill in domain/subdomain with information from the user settings
+    domain_id, subdomain_name = None, None
+
     if given_domain and given_subdomain:
-        # If both the domain and subdomain were given, use those.
         domain_id = given_domain
         subdomain_name = given_subdomain
     else:
-        # Otherwise, we need to fallback to the user's preferred domain and
-        # subdomain.
-        user_domain_id, user_subdomain, user_domain = await get_user_domain_info(
-            user_id, ftype
-        )
-        domain_id = given_domain or user_domain_id
-        subdomain_name = given_subdomain or user_subdomain
+        user = await User.fetch(user_id)
+        assert user is not None
+
+        if ftype == FileNameType.FILE:
+            domain_id = given_domain or user.settings.domain
+            subdomain_name = given_subdomain or user.settings.subdomain
+        elif ftype == FileNameType.SHORTEN:
+            # if shorten domain settings arent set for a user, use
+            # their pre-existing domain/subdomain settings as fallback.
+            domain_id = (
+                given_domain or user.settings.shorten_domain or user.settings.domain
+            )
+            subdomain_name = (
+                given_subdomain
+                or user.settings.shorten_subdomain
+                or user.settings.subdomain
+            )
+        else:
+            raise AssertionError("ftype MUST be of supported FileNameType")
 
     # TODO: optimize this by using the Domain model (beyond random id fetch)
     #
@@ -131,22 +98,46 @@ async def resolve_domain(
     if random_domain:
         domain_id = await Domain.fetch_random_id()
 
+    domain = await Domain.fetch(domain_id)
+    if domain is None:
+        raise BadInput(f"Domain {domain_id} not found")
+
     # Check the domain's permissions, which specifies if uploads or shortens are
     # allowed on it.
-    await domain_permissions(app, domain_id, ptype)
+    await domain_permissions(domain, ptype)
 
-    # resolve the given (domain_id, subdomain_name) into a usable domain string
-    domain_name = await app.db.fetchval(
-        """
-        SELECT domain
-        FROM domains
-        WHERE domain_id = $1
-        """,
-        domain_id,
-    )
-
-    domain = transform_wildcard(domain_name, subdomain_name)
+    # convert all this domain info into final domain strings we can use
+    domain = transform_wildcard(domain.domain, subdomain_name)
     return domain_id, domain, subdomain_name
+
+
+class Timer:
+    """Context manager to measure how long the indented block takes to run."""
+
+    def __init__(self):
+        self.start = None
+        self.end = None
+
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    async def __aenter__(self):
+        return self.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end = time.perf_counter()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        return self.__exit__(exc_type, exc_val, exc_tb)
+
+    def __str__(self):
+        return f"{self.duration:.3f}ms"
+
+    @property
+    def duration(self):
+        """Duration in ms."""
+        return (self.end - self.start) * 1000
 
 
 async def send_file(path: str, *, mimetype: Optional[str] = None):
@@ -194,3 +185,46 @@ def get_ip_addr() -> str:
         return request.headers.get(header, remote_addr)
     else:
         return remote_addr
+
+
+def calculate_hash_sync(handle) -> str:
+    """Generate a hash of the given file.
+
+    This calls the seek(0) of the file handler
+    so it can be reused.
+
+    Parameters
+    ----------
+    handle: file object
+        Any file-like object.
+
+    Returns
+    -------
+    str
+        The SHA256 hash of the given file.
+    """
+    with Timer() as timer:
+        hash_obj = hashlib.sha256()
+
+        for chunk in iter(lambda: handle.read(4096), b""):
+            hash_obj.update(chunk)
+
+        # so that we can reuse the same handler
+        # later on
+        handle.seek(0)
+
+    log.info(f"Hashing file took {timer}")
+
+    return hash_obj.hexdigest()
+
+
+async def calculate_hash(fhandle) -> str:
+    """Calculate a hash of the given file handle.
+
+    Uses run_in_executor to do the job asynchronously so
+    the application doesn't lock up on large files.
+    """
+
+    # We could use aiofiles for this but we can't make it generic across
+    # any kind of file handle anymore, and it'd need to be tied to aiofiles.
+    return await app.loop.run_in_executor(None, calculate_hash_sync, fhandle)

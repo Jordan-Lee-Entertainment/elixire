@@ -59,6 +59,13 @@ class Tag:
 
         return [Tag(row["tag_id"], row["label"]) for row in rows]
 
+    @classmethod
+    async def fetch_all_tags(self) -> List["Tag"]:
+        rows = await app.db.fetch(
+            "SELECT tag_id, label FROM domain_tags ORDER BY tag_id ASC"
+        )
+        return [Tag(r["tag_id"], r["label"]) for r in rows]
+
     @staticmethod
     async def create(label: str) -> "Tag":
         """Create a new tag."""

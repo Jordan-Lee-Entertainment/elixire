@@ -2,21 +2,28 @@
 # Copyright 2018-2020, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
-from typing import Optional
 
 from api.bp.admin.audit_log import EditAction, DeleteAction
-from api.common.fetch import OBJ_MAPPING
+from api.models import File, Shorten
 
 log = logging.getLogger(__name__)
 
 
-async def _generic_get(action, object_id: int) -> Optional[dict]:
-    """Fetches an object (shorten or file) from the database from an action."""
-    try:
-        _, getter = OBJ_MAPPING[action.type]
-        return await getter(object_id)
-    except KeyError:
+async def _generic_get(action, object_id: int) -> dict:
+    """Fetches a resource from the database and returns its json representation
+    for audit log usage."""
+    # TODO: make the action classes use file/shorten models directly
+    if action.type == "file":
+        resource_type = File
+    elif action.type == "shorten":
+        resource_type = Shorten
+    else:
         raise TypeError("Object type specified in Action is invalid.")
+
+    resource = await resource_type.fetch(object_id)
+
+    # add 'type' so that the emails contain better info
+    return {**{"type": action.type}, **resource.to_dict()}
 
 
 class ObjectEditAction(EditAction):

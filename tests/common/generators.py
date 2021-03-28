@@ -18,13 +18,9 @@ import base64
 import io
 import random
 import secrets
-import string
 
 from quart.testing import make_test_body_with_headers
 from quart.datastructures import FileStorage
-
-
-EMAIL_ALPHABET = string.ascii_lowercase
 
 
 def choice_repeat(seq, length):

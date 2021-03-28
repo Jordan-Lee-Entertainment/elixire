@@ -14,7 +14,6 @@ from api.enums import FileNameType
 from api.common import transform_wildcard
 from api.common.auth import check_admin, token_check
 from api.common.utils import resolve_domain
-from api.common.profile import gen_user_shortname
 from api.models import User, File
 from api.scheduled_deletes import validate_request_duration
 from api.errors import BadImage
@@ -109,7 +108,7 @@ async def upload_handler():
 
     # generate a filename so we can identify later when removing it
     # because of virus scanning.
-    shortname, tries = await gen_user_shortname(user_id)
+    shortname, tries = await user.generate_shortname()
     await app.metrics.submit("shortname_gen_tries", tries)
 
     # construct an upload context, which holds the file and other data about

@@ -11,7 +11,7 @@ from collections import namedtuple
 
 from quart import request, current_app as app
 
-from api.common import calculate_hash
+from api.common.utils import calculate_hash
 from api.errors import BadUpload
 
 BaseTestFile = namedtuple("BaseTestFile", "filename stream mimetype content_length")

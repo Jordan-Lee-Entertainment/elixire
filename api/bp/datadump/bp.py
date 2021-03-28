@@ -10,8 +10,7 @@ from quart import Blueprint, jsonify, request, current_app as app, send_file
 from api.errors import BadInput, FeatureDisabled
 from api.bp.datadump.janitor import start_janitor
 from api.common.auth import token_check, check_admin
-from api.common.profile import fetch_dumps
-from api.common.violet_jobs import violet_jobs_to_json
+from api.common.violet_jobs import violet_jobs_to_json, fetch_datadump_jobs
 from api.common.pagination import Pagination
 from api.models import User
 from api.bp.datadump.handler import DatadumpQueue
@@ -35,7 +34,7 @@ async def request_data_dump():
 
     user_id = await token_check()
 
-    violet_jobs = await fetch_dumps(user_id, future=True)
+    violet_jobs = await fetch_datadump_jobs(user_id, future=True)
     if violet_jobs:
         raise BadInput("Your data dump is currently being processed or in the queue.")
 
