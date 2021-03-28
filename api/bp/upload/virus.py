@@ -23,9 +23,7 @@ async def run_scan(ctx) -> None:
 
     Raises BadImage on any non-successful scan.
     """
-    # await asyncio.sleep(2)
 
-    # TODO a Timer context manager?
     with Timer() as scan_timer:
         log.debug("running clamdscan")
         process = await asyncio.create_subprocess_shell(
@@ -46,19 +44,19 @@ async def run_scan(ctx) -> None:
             log.error("output: %r", f"{out}{err}")
             return
 
-    # TODO don't read the entire file into memory, maybe we can write to
-    # the process at a later time?
-    all_file_bytes = ctx.file.stream.read()
+        # TODO don't read the entire file into memory, maybe we can write to
+        # the process at a later time?
+        all_file_bytes = ctx.file.stream.read()
 
-    # stdout and stderr here are for the webhook, not for parsing
-    log.debug("writing file body to clamdscan")
-    out, err = map(
-        lambda s: s.decode(), await process.communicate(input=all_file_bytes)
-    )
-    total_out = f"{out}{err}"
-    log.debug("output: %r", total_out)
+        # stdout and stderr here are for the webhook, not for parsing
+        log.debug("writing file body to clamdscan")
+        out, err = map(
+            lambda s: s.decode(), await process.communicate(input=all_file_bytes)
+        )
+        total_out = f"{out}{err}"
+        log.debug("output: %r", total_out)
 
-    assert process.returncode is not None
+        assert process.returncode is not None
 
     # from clamdscan:
     # RETURN CODES
