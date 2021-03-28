@@ -17,6 +17,8 @@ from api.common.utils import Timer
 
 log = logging.getLogger(__name__)
 
+STDIN_CHUNK_SIZE = 16384
+
 
 async def run_scan(ctx) -> None:
     """Scan a file for viruses using clamdscan.
@@ -44,15 +46,24 @@ async def run_scan(ctx) -> None:
             log.error("output: %r", f"{out}{err}")
             return
 
-        # TODO don't read the entire file into memory, maybe we can write to
-        # the process at a later time?
-        all_file_bytes = ctx.file.stream.read()
+        assert process.stdin.can_write_eof()
+
+        stream = ctx.file.stream
+        # copy from stream to process
+        chunk = stream.read(STDIN_CHUNK_SIZE)
+        while chunk != b"":
+            process.stdin.write(chunk)
+            await process.stdin.drain()
+            chunk = stream.read(STDIN_CHUNK_SIZE)
+
+        process.stdin.write_eof()
+        log.debug("waiting for clamdscan")
+        await process.wait()
+        log.debug("wait ok, read out err")
 
         # stdout and stderr here are for the webhook, not for parsing
-        log.debug("writing file body to clamdscan")
-        out, err = map(
-            lambda s: s.decode(), await process.communicate(input=all_file_bytes)
-        )
+        out = await process.stdout.read()
+        err = await process.stderr.read()
         total_out = f"{out}{err}"
         log.debug("output: %r", total_out)
 
