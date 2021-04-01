@@ -24,16 +24,16 @@ setup(
         # when changing these dependencies, make sure to change them in
         # .gitlab-ci.yml, too.
         "aioredis==1.3.1",
-        "asyncpg==0.21.0",
+        "asyncpg==0.22.0",
         # ---------------------------------------------------------------------
         "aiohttp==3.7.3",
         "aioinflux==0.9.0",
         "cryptography==3.3.1",
-        "python-magic==0.4.18",
+        "python-magic==0.4.22",
         "parsedatetime==2.6",
         "dnspython==1.16.0",
-        "Quart==0.14.0",
-        "Pillow==8.0.1",
+        "Quart==0.14.1",
+        "Pillow==8.1.2",
         "python-dateutil==2.8.1",
         "violet @ git+https://gitlab.com/elixire/violet.git@ea5b8373c46dc8f5314ef44f2570c00059d58d3b#egg=violet",
         "winter @ git+https://gitlab.com/elixire/winter.git@c97f7aaa1486d84713924238eb91d81b22105509#egg=winter",
