@@ -24,12 +24,12 @@ setup(
         # when changing these dependencies, make sure to change them in
         # .gitlab-ci.yml, too.
         "aioredis==1.3.1",
-        "asyncpg==0.21.0",
+        "asyncpg==0.22.0",
         # ---------------------------------------------------------------------
         "aiohttp==3.7.3",
         "aioinflux==0.9.0",
         "cryptography==3.3.1",
-        "python-magic==0.4.18",
+        "python-magic==0.4.22",
         "parsedatetime==2.6",
         "dnspython==1.16.0",
         "Quart @ git+https://gitlab.com/luna/quart@7ae9f32387bd2edc3565b322c510ada76384c332#egg=quart",
