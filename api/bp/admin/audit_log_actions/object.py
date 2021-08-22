@@ -15,7 +15,7 @@ async def _generic_get(action, object_id: int) -> dict:
         _, getter = OBJ_MAPPING[action.type]
         return await getter(action.app.db, object_id)
     except KeyError:
-        raise TypeError('Object type specified in Action is invalid.')
+        raise TypeError("Object type specified in Action is invalid.")
 
 
 class ObjectEditAction(EditAction):
@@ -27,10 +27,10 @@ class ObjectEditAction(EditAction):
         return await _generic_get(self, object_id)
 
     async def details(self):
-        lines = [f'{self.type.capitalize()} ID {self.id} was edited.']
+        lines = [f"{self.type.capitalize()} ID {self.id} was edited."]
 
         for key, old, new in self.different_keys_items():
-            lines.append(f'\t{key}: {old!r} => {new!r}')
+            lines.append(f"\t{key}: {old!r} => {new!r}")
 
         return lines
 
@@ -47,11 +47,11 @@ class ObjectDeleteAction(DeleteAction):
         object_type = self.type.capitalize()
 
         lines = [
-            f'{object_type} with ID {self.id} was deleted.',
-            f'{object_type} information:',
+            f"{object_type} with ID {self.id} was deleted.",
+            f"{object_type} information:",
         ]
 
         for key, val in self.object.items():
-            lines.append(f'\t{key}: {val!r}')
+            lines.append(f"\t{key}: {val!r}")
 
         return lines

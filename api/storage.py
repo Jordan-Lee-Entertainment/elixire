@@ -45,27 +45,27 @@ def check(map_data) -> dict:
 
 def prefix(user_id: int) -> str:
     """Return the prefix for a key, given user ID."""
-    return f'uid:{user_id}'
+    return f"uid:{user_id}"
 
 
 def solve_domain(domain_name: str, redis=True) -> list:
     """Solve a domain into its Redis keys."""
-    k = domain_name.find('.')
-    raw_wildcard = f'*.{domain_name}'
-    wildcard_name = f'*.{domain_name[k + 1:]}'
+    k = domain_name.find(".")
+    raw_wildcard = f"*.{domain_name}"
+    wildcard_name = f"*.{domain_name[k + 1:]}"
 
     domains = [
         # example: domain_name = elixi.re
         # wildcard_name = *.elixi.re
-
         # example 2: domain_name = pretty.please-yiff.me
         # wildcard_name = *.please-yiff.me
-
-        raw_wildcard, domain_name, wildcard_name
+        raw_wildcard,
+        domain_name,
+        wildcard_name,
     ]
 
     if redis:
-        return list(map(lambda d: f'domain_id:{d}', domains))
+        return list(map(lambda d: f"domain_id:{d}", domains))
 
     return domains
 
@@ -75,6 +75,7 @@ class Storage:
 
     This is used by the codebase to provide caching with Redis.
     """
+
     def __init__(self, app):
         self.app = app
         self.db = app.db
@@ -103,16 +104,16 @@ class Storage:
         with await self.redis as conn:
             val = await conn.get(key)
 
-        log.debug(f'get {key!r}, type {typ!r}, value {val!r}')
+        log.debug(f"get {key!r}, type {typ!r}, value {val!r}")
         if typ == bool:
-            if val == 'True':
+            if val == "True":
                 return True
-            elif val == 'False':
+            elif val == "False":
                 return False
 
         # always use "false" to show when the db
         # didnt give us anything
-        if val == 'false':
+        if val == "false":
             return False
 
         # key does not exist
@@ -139,11 +140,11 @@ class Storage:
             if isinstance(value, bool):
                 value = str(value)
 
-            log.debug(f'set key {key!r} to {value!r}')
+            log.debug(f"set key {key!r} to {value!r}")
 
             # the string false tells that whatever
             # query the db did returned None.
-            value = 'false' if value is None else value
+            value = "false" if value is None else value
             await conn.set(key, value, **kwargs)
 
     async def set_with_ttl(self, key, value, ttl):
@@ -177,18 +178,19 @@ class Storage:
             Any amount of parameters can be given.
             Those represent the keys to be invalidated.
         """
-        log.info(f'Invalidating {len(keys)} keys: {keys}')
+        log.info(f"Invalidating {len(keys)} keys: {keys}")
         with await self.redis as conn:
             await conn.delete(*keys)
 
     async def invalidate(self, user_id: int, *fields: tuple):
         """Invalidate fields given a user id."""
         ukey = prefix(user_id)
-        keys = (f'{ukey}:{field}' for field in fields)
+        keys = (f"{ukey}:{field}" for field in fields)
         await self.raw_invalidate(*keys)
 
-    async def _generic_1(self, key: str, key_type, ttl: int,
-                         query: str, *query_args: tuple):
+    async def _generic_1(
+        self, key: str, key_type, ttl: int, query: str, *query_args: tuple
+    ):
         """Generic storage function for Storage.get_uid
         and Storage.get_username.
 
@@ -221,27 +223,39 @@ class Storage:
 
         if val is None:
             val = await self.db.fetchval(query, *query_args)
-            await self.set_with_ttl(key, val or 'false', ttl)
+            await self.set_with_ttl(key, val or "false", ttl)
 
         return val
 
     async def get_uid(self, username: str) -> int:
         """Get an user ID given a username."""
-        return await self._generic_1(f'uid:{username}', int, 600, """
+        return await self._generic_1(
+            f"uid:{username}",
+            int,
+            600,
+            """
             SELECT user_id
             FROM users
             WHERE username = $1
             LIMIT 1
-        """, username)
+        """,
+            username,
+        )
 
     async def get_username(self, user_id: int) -> str:
         """Get a username given user ID."""
-        return await self._generic_1(f'uname:{user_id}', str, 600, """
+        return await self._generic_1(
+            f"uname:{user_id}",
+            str,
+            600,
+            """
             SELECT username
             FROM users
             WHERE user_id = $1
             LIMIT 1
-        """, user_id)
+        """,
+            user_id,
+        )
 
     async def actx_username(self, username: str) -> dict:
         """Fetch authentication context important stuff
@@ -265,15 +279,15 @@ class Storage:
         """
         user_id = await self.get_uid(username)
         if not user_id:
-            log.warning('user not found')
+            log.warning("user not found")
             return
 
         actx = await self.actx_userid(user_id)
         if not actx:
-            log.warning('actx failed')
+            log.warning("actx failed")
             return
 
-        actx.update({'user_id': user_id})
+        actx.update({"user_id": user_id})
         return check(actx)
 
     async def actx_userid(self, user_id: str) -> dict:
@@ -289,81 +303,104 @@ class Storage:
         """
         ukey = prefix(user_id)
 
-        password_hash = await self.get(f'{ukey}:password_hash')
-        active = await self.get(f'{ukey}:active', bool)
+        password_hash = await self.get(f"{ukey}:password_hash")
+        active = await self.get(f"{ukey}:active", bool)
 
         if password_hash is None:
-            password_hash = await self.db.fetchval("""
+            password_hash = await self.db.fetchval(
+                """
             SELECT password_hash
             FROM users
             WHERE user_id = $1
-            """, user_id)
+            """,
+                user_id,
+            )
 
             # keep this cached for 10 minutes
-            await self.set_with_ttl(f'{ukey}:password_hash',
-                                    password_hash,
-                                    600)
+            await self.set_with_ttl(f"{ukey}:password_hash", password_hash, 600)
 
         if active is None:
-            active = await self.db.fetchval("""
+            active = await self.db.fetchval(
+                """
             SELECT active
             FROM users
             WHERE user_id = $1
-            """, user_id)
+            """,
+                user_id,
+            )
 
             # keep this cached as well
-            await self.set_with_ttl(f'{ukey}:active', active, 600)
+            await self.set_with_ttl(f"{ukey}:active", active, 600)
 
-        return check({
-            'password_hash': password_hash,
-            'active': active,
-        })
+        return check(
+            {
+                "password_hash": password_hash,
+                "active": active,
+            }
+        )
 
     async def get_fspath(self, shortname: str, domain_id: int) -> str:
         """Get the filesystem path of an image."""
-        key = f'fspath:{domain_id}:{shortname}'
-        return await self._generic_1(key, str, 600, """
+        key = f"fspath:{domain_id}:{shortname}"
+        return await self._generic_1(
+            key,
+            str,
+            600,
+            """
             SELECT fspath
             FROM files
             WHERE filename = $1
               AND deleted = false
               AND domain = $2
             LIMIT 1
-        """, shortname, domain_id)
+        """,
+            shortname,
+            domain_id,
+        )
 
     async def get_urlredir(self, filename: str, domain_id: int) -> str:
         """Get a redirection of an URL."""
-        key = f'redir:{domain_id}:{filename}'
-        return await self._generic_1(key, str, 600, """
+        key = f"redir:{domain_id}:{filename}"
+        return await self._generic_1(
+            key,
+            str,
+            600,
+            """
             SELECT redirto
             FROM shortens
             WHERE filename = $1
             AND deleted = false
             AND domain = $2
-        """, filename, domain_id)
+        """,
+            filename,
+            domain_id,
+        )
 
     async def get_ipban(self, ip_address: str) -> str:
         """Get the reason for a specific IP ban."""
-        key = f'ipban:{ip_address}'
+        key = f"ipban:{ip_address}"
         ban_reason = await self.get(key, str)
 
         if ban_reason is False:
             return
 
         if ban_reason is None:
-            row = await self.db.fetchrow("""
+            row = await self.db.fetchrow(
+                """
             SELECT reason, end_timestamp
             FROM ip_bans
             WHERE ip_address = $1 AND end_timestamp > now()
             LIMIT 1
-            """, ip_address)
+            """,
+                ip_address,
+            )
 
             if row is None:
                 await self.set(key, None)
                 return None
 
-            ban_reason = row['reason']
-            end_timestamp = row['end_timestamp']
+            ban_reason = row["reason"]
+            end_timestamp = row["end_timestamp"]
 
             # set key expiration at same time the banning finishes
             await self.set(key, ban_reason)
@@ -373,26 +410,29 @@ class Storage:
 
     async def get_ban(self, user_id: int) -> str:
         """Get the ban reason for a specific user id."""
-        key = f'userban:{user_id}'
+        key = f"userban:{user_id}"
         ban_reason = await self.get(key, str)
 
         if ban_reason is False:
             return
 
         if ban_reason is None:
-            row = await self.db.fetchrow("""
+            row = await self.db.fetchrow(
+                """
             SELECT reason, end_timestamp
             FROM bans
             WHERE user_id = $1 AND end_timestamp > now()
             LIMIT 1
-            """, user_id)
+            """,
+                user_id,
+            )
 
             if row is None:
                 await self.set(key, None)
                 return None
 
-            ban_reason = row['reason']
-            end_timestamp = row['end_timestamp']
+            ban_reason = row["reason"]
+            end_timestamp = row["end_timestamp"]
 
             # set key expiration at same time the banning finishes
             await self.set(key, ban_reason)
@@ -414,8 +454,7 @@ class Storage:
 
             # as soon as we get a key that is valid,
             # return it
-            if not isinstance(possible_id, bool) and \
-                    possible_id is not None:
+            if not isinstance(possible_id, bool) and possible_id is not None:
                 return possible_id
 
         # if no keys solve to any domain,
@@ -429,55 +468,71 @@ class Storage:
 
         keys_db = solve_domain(domain_name, False)
 
-        row = await self.db.fetchrow("""
+        row = await self.db.fetchrow(
+            """
         SELECT domain, domain_id
         FROM domains
         WHERE domain = $1
             OR domain = $2
             OR domain = $3
-        """, *keys_db)
+        """,
+            *keys_db,
+        )
 
         if row is None:
             # maybe we set only f'domain_id:{domain_name}' to false
             # instead of all 3 keys? dunno
-            await self.set_multi_one(keys, 'false')
+            await self.set_multi_one(keys, "false")
 
             if err_flag:
-                raise NotFound('This domain does not exist in '
-                               'this elixire instance.')
+                raise NotFound(
+                    "This domain does not exist in " "this elixire instance."
+                )
 
             return None
 
         domain_name, domain_id = row
-        await self.set(f'domain_id:{domain_name}', domain_id)
+        await self.set(f"domain_id:{domain_name}", domain_id)
         return domain_id
 
     async def get_domain_shorten(self, shortname: str) -> int:
         """Get a domain ID for a shorten."""
 
-        return await self.db.fetchval("""
+        return await self.db.fetchval(
+            """
         SELECT domain
         FROM shortens
         WHERE filename = $1
-        """, shortname)
+        """,
+            shortname,
+        )
 
     async def get_domain_file(self, shortname: str) -> int:
         """Get a domain ID for a file."""
 
-        return await self.db.fetchval("""
+        return await self.db.fetchval(
+            """
         SELECT domain
         FROM files
         WHERE filename = $1
-        """, shortname)
+        """,
+            shortname,
+        )
 
     async def get_file_mime(self, shortname: str) -> str:
         """Get the File's mimetype stored on the database."""
 
-        key = f'mime:{shortname}'
-        return await self._generic_1(key, str, 600, """
+        key = f"mime:{shortname}"
+        return await self._generic_1(
+            key,
+            str,
+            600,
+            """
             SELECT mimetype
             FROM files
             WHERE filename = $1
               AND deleted = false
             LIMIT 1
-        """, shortname)
+        """,
+            shortname,
+        )

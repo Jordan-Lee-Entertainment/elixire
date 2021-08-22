@@ -30,8 +30,13 @@ Snowflake = int
 def get_invite_code() -> str:
     """Get a random invite code."""
     random_stuff = hashlib.sha512(os.urandom(1024)).digest()
-    code = base64.urlsafe_b64encode(random_stuff).decode().replace('=', '5') \
-        .replace('_', 'W').replace('-', 'm')
+    code = (
+        base64.urlsafe_b64encode(random_stuff)
+        .decode()
+        .replace("=", "5")
+        .replace("_", "W")
+        .replace("-", "m")
+    )
     return code[:6]
 
 
@@ -59,7 +64,7 @@ def _snowflake(timestamp: int) -> Snowflake:
 
     sflake |= (WORKER_ID % 32) << 17
     sflake |= (PROCESS_ID % 32) << 12
-    sflake |= (_generated_ids % 4096)
+    sflake |= _generated_ids % 4096
 
     _generated_ids += 1
 

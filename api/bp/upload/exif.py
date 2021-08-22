@@ -21,14 +21,14 @@ async def clear_exif(image_bytes: io.BytesIO, loop) -> io.BytesIO:
 
     exif = image._getexif()
     if not exif:
-        log.debug('not resaving, no exif data was present')
+        log.debug("not resaving, no exif data was present")
         return image_bytes
 
     # Only clear exif if orientation exif is present
     # We're not just returning as re-saving image removes the
     # remaining exif tags (like location or device info)
     if EXIF_ORIENTATION in exif:
-        log.debug(f'exif orientation: {exif[EXIF_ORIENTATION]}')
+        log.debug(f"exif orientation: {exif[EXIF_ORIENTATION]}")
         if exif[EXIF_ORIENTATION] == 3:
             image = image.rotate(180, expand=True)
         elif exif[EXIF_ORIENTATION] == 6:
@@ -36,12 +36,12 @@ async def clear_exif(image_bytes: io.BytesIO, loop) -> io.BytesIO:
         elif exif[EXIF_ORIENTATION] == 8:
             image = image.rotate(90, expand=True)
     else:
-        log.debug('no exif orientation value')
+        log.debug("no exif orientation value")
 
-    log.debug('resaving jpeg')
+    log.debug("resaving jpeg")
     result_bytes = io.BytesIO()
 
-    save = functools.partial(image.save, result_bytes, format='JPEG')
+    save = functools.partial(image.save, result_bytes, format="JPEG")
     await loop.run_in_executor(None, save)
 
     image.close()

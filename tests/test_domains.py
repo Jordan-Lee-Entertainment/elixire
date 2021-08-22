@@ -10,26 +10,32 @@ async def assert_domains(resp):
 
     rjson = await resp.json()
     assert isinstance(rjson, dict)
-    assert isinstance(rjson['domains'], dict)
+    assert isinstance(rjson["domains"], dict)
 
 
 async def test_domains_nouser(test_cli):
-    resp = await test_cli.get('/api/domains')
+    resp = await test_cli.get("/api/domains")
     await assert_domains(resp)
 
 
 async def test_domains_user(test_cli):
     utoken = await login_normal(test_cli)
-    resp = await test_cli.get('/api/domains', headers={
-        'Authorization': utoken,
-    })
+    resp = await test_cli.get(
+        "/api/domains",
+        headers={
+            "Authorization": utoken,
+        },
+    )
 
     await assert_domains(resp)
 
 
 async def test_domains_admin(test_cli):
     atoken = await login_admin(test_cli)
-    resp = await test_cli.get('/api/domains', headers={
-        'Authorization': atoken,
-    })
+    resp = await test_cli.get(
+        "/api/domains",
+        headers={
+            "Authorization": atoken,
+        },
+    )
     await assert_domains(resp)

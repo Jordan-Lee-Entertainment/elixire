@@ -52,7 +52,7 @@ class UploadFile:
         try:
             key = next(iter(request.files.keys()))
         except StopIteration:
-            raise BadUpload('No images given')
+            raise BadUpload("No images given")
 
         data = next(iter(request.files[key]))
 
@@ -64,5 +64,5 @@ class UploadFile:
     async def resolve(self, app, extension):
         folder = app.econfig.IMAGE_FOLDER
 
-        raw_path = f'{folder}/{self.hash[0]}/{self.hash}{extension}'
+        raw_path = f"{folder}/{self.hash[0]}/{self.hash}{extension}"
         self.path = Path(raw_path)

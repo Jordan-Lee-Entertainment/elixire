@@ -19,7 +19,7 @@ from pathlib import Path
 import asyncpg
 import aioredis
 
-p = Path('.')
+p = Path(".")
 sys.path.append(str(p.cwd()))
 
 import config
@@ -29,31 +29,32 @@ import config
 # change here too
 ALPHABET = string.ascii_lowercase + string.digits
 
+
 async def main():
     pool = await asyncpg.create_pool(**config.db)
     redis = await aioredis.create_redis(config.redis)
 
-    impath = Path('./images')
+    impath = Path("./images")
 
     for letter in ALPHABET:
         letterpath = impath / letter
         try:
             letterpath.mkdir()
-            print('making folder', letterpath)
+            print("making folder", letterpath)
         except FileExistsError:
-            print('already made folder', letterpath)
+            print("already made folder", letterpath)
 
     images = [path for path in impath.iterdir() if path.is_file()]
 
-    print(f'{len(images)} images')
+    print(f"{len(images)} images")
 
     renamed, total = 0, 0
     for image in images:
         simg = str(image)
-        imfname = simg.split('/')[-1]
+        imfname = simg.split("/")[-1]
 
         # ne for non extension etc
-        imfname_ne = imfname.split('.')[0]
+        imfname_ne = imfname.split(".")[0]
 
         imletter = imfname[0]
         if imletter not in ALPHABET:
@@ -62,7 +63,7 @@ async def main():
         total += 1
 
         target = impath / imletter / imfname
-        print(f'renaming {image} to {target}')
+        print(f"renaming {image} to {target}")
 
         if target.exists():
             print(f"can't rename {image} to {target}, target exists, stopping")
@@ -70,30 +71,37 @@ async def main():
 
         image.rename(target)
 
-        domain = await pool.fetchval("""
+        domain = await pool.fetchval(
+            """
         SELECT domain
         FROM files
         WHERE filename = $1
-        """, imfname_ne)
+        """,
+            imfname_ne,
+        )
 
-        exec_out = await pool.execute("""
+        exec_out = await pool.execute(
+            """
         UPDATE files
         SET fspath = $2
         WHERE filename = $1
-        """, imfname_ne, f'./{target}')
+        """,
+            imfname_ne,
+            f"./{target}",
+        )
 
-        print(f'db out: {exec_out}')
-        await redis.delete(f'fspath:{domain}:{imfname_ne}')
+        print(f"db out: {exec_out}")
+        await redis.delete(f"fspath:{domain}:{imfname_ne}")
         renamed += 1
 
-    print(f'renamed {renamed} out of {total} to rename')
+    print(f"renamed {renamed} out of {total} to rename")
 
     await pool.close()
     redis.close()
     await redis.wait_closed()
-    print('OK')
+    print("OK")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())

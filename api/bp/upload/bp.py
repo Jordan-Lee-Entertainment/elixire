@@ -18,47 +18,55 @@ from .context import UploadContext
 from .file import UploadFile
 from ..metrics import is_consenting
 
-bp = Blueprint('upload')
+bp = Blueprint("upload")
 log = logging.getLogger(__name__)
 
 
 def _construct_url(domain, shortname, extension):
     dpath = pathlib.Path(domain)
-    final_path = dpath / 'i' / f'{shortname}{extension}'
+    final_path = dpath / "i" / f"{shortname}{extension}"
 
-    return f'https://{final_path!s}'
+    return f"https://{final_path!s}"
 
 
-async def check_repeat(app, fspath: str, extension: str, ctx: UploadContext) -> Optional[Dict[str, Any]]:
+async def check_repeat(
+    app, fspath: str, extension: str, ctx: UploadContext
+) -> Optional[Dict[str, Any]]:
     # check which files have the same fspath (the same hash)
-    files = await app.db.fetch("""
+    files = await app.db.fetch(
+        """
     SELECT filename, uploader, domain
     FROM files
     WHERE fspath = $1 AND files.deleted = false
-    """, fspath)
+    """,
+        fspath,
+    )
 
     # get the first file, if any, from the uploader
     try:
-        ufile = next(frow for frow in files if frow['uploader'] == ctx.user_id)
+        ufile = next(frow for frow in files if frow["uploader"] == ctx.user_id)
     except StopIteration:
         # no files for the user were found.
         return
 
     # fetch domain info about that file
-    domain = await app.db.fetchval("""
+    domain = await app.db.fetchval(
+        """
     SELECT domain
     FROM domains
     WHERE domain_id = $1
-    """, ufile['domain'])
+    """,
+        ufile["domain"],
+    )
 
     # use 'i' as subdomain by default
     # since files.subdomain isn't a thing.
-    domain = transform_wildcard(domain, 'i')
+    domain = transform_wildcard(domain, "i")
 
     return {
-        'url': _construct_url(domain, ufile['filename'], extension),
-        'repeated': True,
-        'shortname': ufile['filename'],
+        "url": _construct_url(domain, ufile["filename"], extension),
+        "repeated": True,
+        "shortname": ufile["filename"],
     }
 
 
@@ -68,25 +76,25 @@ async def upload_metrics(app, ctx):
     metrics = app.metrics
     delta = round((end - ctx.start_timestamp) * 1000, 5)
 
-    await metrics.submit('upload_latency', delta)
+    await metrics.submit("upload_latency", delta)
 
 
 def _fetch_domain(request):
     """Fetch domain information, if any"""
     try:
-        given_domain = int(request.raw_args['domain'])
+        given_domain = int(request.raw_args["domain"])
     except KeyError:
         given_domain = None
 
     try:
-        given_subdomain = str(request.raw_args['subdomain'])
+        given_subdomain = str(request.raw_args["subdomain"])
     except KeyError:
         given_subdomain = None
 
     return given_domain, given_subdomain
 
 
-@bp.post('/api/upload')
+@bp.post("/api/upload")
 @auth_route
 async def upload_handler(request, user_id):
     """Main upload handler."""
@@ -94,8 +102,8 @@ async def upload_handler(request, user_id):
 
     # if admin is set on request.args, we will # do an "admin upload", without
     # any checking for viruses, weekly limits, MIME, etc.
-    do_checks = not ('admin' in request.args and request.args['admin'])
-    random_domain = ('random' in request.args and request.args['random'])
+    do_checks = not ("admin" in request.args and request.args["admin"])
+    random_domain = "random" in request.args and request.args["random"]
     given_domain, given_subdomain = _fetch_domain(request)
 
     # if the user is admin and they wanted an admin
@@ -115,7 +123,7 @@ async def upload_handler(request, user_id):
     # generate a filename so we can identify later when removing it
     # because of virus scanning.
     shortname, tries = await gen_shortname(request, user_id)
-    await app.metrics.submit('shortname_gen_tries', tries)
+    await app.metrics.submit("shortname_gen_tries", tries)
 
     # construct an upload context, which holds the file and other data about
     # the current upload
@@ -124,7 +132,7 @@ async def upload_handler(request, user_id):
         user_id=user_id,
         shortname=shortname,
         do_checks=do_checks,
-        start_timestamp=time.monotonic()
+        start_timestamp=time.monotonic(),
     )
 
     # perform any checks like virus scanning and quota limits. this method will
@@ -164,7 +172,9 @@ async def upload_handler(request, user_id):
     # account settings.
 
     # get the user's domain settings
-    user_domain_id, user_subdomain, user_domain = await get_domain_info(request, user_id)
+    user_domain_id, user_subdomain, user_domain = await get_domain_info(
+        request, user_id
+    )
 
     if random_domain:
         # let's get a random domain and pretend that it was specified in the
@@ -187,27 +197,30 @@ async def upload_handler(request, user_id):
         domain = user_domain
     else:
         # a specific domain was specified, fetch that one from database
-        domain = await app.db.fetchval("""
+        domain = await app.db.fetchval(
+            """
         SELECT domain
         FROM domains
         WHERE domain_id = $1
-        """, given_domain)
+        """,
+            given_domain,
+        )
 
     # the domain might have *. at the beginning, let's replace that with the
     # provided subdomain's name
     domain = transform_wildcard(domain, subdomain_name)
 
     # upload counter
-    app.counters.inc('file_upload_hour')
+    app.counters.inc("file_upload_hour")
     if await is_consenting(app, user_id):
-        app.counters.inc('file_upload_hour_pub')
+        app.counters.inc("file_upload_hour_pub")
 
     # calculate the new file size, with the dupe decrease factor multiplied in
     # if necessary
     file_size = ctx.file.calculate_size(app.econfig.DUPE_DECREASE_FACTOR)
 
     # invalidating any existing file before
-    await app.storage.raw_invalidate(f'fspath:{domain_id}:{shortname}')
+    await app.storage.raw_invalidate(f"fspath:{domain_id}:{shortname}")
 
     # insert into database
     await app.db.execute(
@@ -217,12 +230,19 @@ async def upload_handler(request, user_id):
             file_size, uploader, fspath, domain
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7)
-        """, file_id, mime, shortname, file_size, user_id,
-        file.raw_path, domain_id)
+        """,
+        file_id,
+        mime,
+        shortname,
+        file_size,
+        user_id,
+        file.raw_path,
+        domain_id,
+    )
 
     # write to fs
     buffer = await ctx.strip_exif(app)
-    with open(file.raw_path, 'wb') as raw_file:
+    with open(file.raw_path, "wb") as raw_file:
         raw_file.write(buffer.getvalue())
 
     # upload file latency metrics
@@ -230,8 +250,10 @@ async def upload_handler(request, user_id):
 
     instance_url = app.econfig.MAIN_URL
 
-    return response.json({
-        'url': _construct_url(domain, shortname, extension),
-        'shortname': shortname,
-        'delete_url': f'{instance_url}/api/delete/{shortname}'
-    })
+    return response.json(
+        {
+            "url": _construct_url(domain, shortname, extension),
+            "shortname": shortname,
+            "delete_url": f"{instance_url}/api/delete/{shortname}",
+        }
+    )

@@ -52,19 +52,19 @@ CORS(
     resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"],
     automatic_options=True,
     expose_headers=[
-        'X-Ratelimit-Scope',
-        'X-Ratelimit-Limit',
-        'X-Ratelimit-Remaining',
-        'X-Ratelimit-Reset'
-    ]
+        "X-Ratelimit-Scope",
+        "X-Ratelimit-Limit",
+        "X-Ratelimit-Remaining",
+        "X-Ratelimit-Reset",
+    ],
 )
 
-level = getattr(config, 'LOGGING_LEVEL', 'INFO')
+level = getattr(config, "LOGGING_LEVEL", "INFO")
 logging.basicConfig(level=level)
-logging.getLogger('aioinflux').setLevel(logging.INFO)
+logging.getLogger("aioinflux").setLevel(logging.INFO)
 
-if level == 'DEBUG':
-    fh = logging.FileHandler('elixire.log')
+if level == "DEBUG":
+    fh = logging.FileHandler("elixire.log")
     fh.setLevel(logging.DEBUG)
     logging.getLogger().addHandler(fh)
 
@@ -103,38 +103,46 @@ def set_blueprints(app_):
 
 async def options_handler(request, *args, **kwargs):
     """Dummy OPTIONS handler for CORS stuff."""
-    return response.text('ok')
+    return response.text("ok")
 
 
 async def _handle_ban(request, reason: str):
     rapp = request.app
 
-    if 'ctx' not in request:
+    if "ctx" not in request:
         # use the IP as banning point
         ip_addr = get_ip_addr(request)
 
-        log.warning(f'Banning ip address {ip_addr} with reason {reason!r}')
+        log.warning(f"Banning ip address {ip_addr} with reason {reason!r}")
 
         period = rapp.econfig.IP_BAN_PERIOD
-        await rapp.db.execute(f"""
+        await rapp.db.execute(
+            f"""
         INSERT INTO ip_bans (ip_address, reason, end_timestamp)
         VALUES ($1, $2, now()::timestamp + interval '{period}')
-        """, ip_addr, reason)
+        """,
+            ip_addr,
+            reason,
+        )
 
-        await rapp.storage.raw_invalidate(f'ipban:{ip_addr}')
-        await ip_ban_webhook(rapp, ip_addr, f'[ip ban] {reason}', period)
+        await rapp.storage.raw_invalidate(f"ipban:{ip_addr}")
+        await ip_ban_webhook(rapp, ip_addr, f"[ip ban] {reason}", period)
     else:
-        user_name, user_id = request['ctx']
+        user_name, user_id = request["ctx"]
 
-        log.warning(f'Banning {user_name} {user_id} with reason {reason!r}')
+        log.warning(f"Banning {user_name} {user_id} with reason {reason!r}")
 
         period = app.econfig.BAN_PERIOD
-        await rapp.db.execute(f"""
+        await rapp.db.execute(
+            f"""
         INSERT INTO bans (user_id, reason, end_timestamp)
         VALUES ($1, $2, now()::timestamp + interval '{period}')
-        """, user_id, reason)
+        """,
+            user_id,
+            reason,
+        )
 
-        await rapp.storage.raw_invalidate(f'userban:{user_id}')
+        await rapp.storage.raw_invalidate(f"userban:{user_id}")
         await ban_webhook(rapp, user_id, reason, period)
 
 
@@ -147,21 +155,21 @@ async def handle_ban(request, exception):
     scode = exception.status_code
     reason = exception.args[0]
 
-    lock_key = request['ctx'][0] if 'ctx' in request else get_ip_addr(request)
-    ban_lock = app.locks['bans'][lock_key]
+    lock_key = request["ctx"][0] if "ctx" in request else get_ip_addr(request)
+    ban_lock = app.locks["bans"][lock_key]
 
     # generate error message before anything
     res = {
-        'error': True,
-        'code': scode,
-        'message': reason,
+        "error": True,
+        "code": scode,
+        "message": reason,
     }
 
     res.update(exception.get_payload())
     resp = response.json(res, status=scode)
 
     if ban_lock.locked():
-        log.warning('Ban lock already acquired.')
+        log.warning("Ban lock already acquired.")
         return resp
 
     await ban_lock.acquire()
@@ -178,17 +186,13 @@ async def handle_ban(request, exception):
 @app.exception(APIError)
 def handle_api_error(request, exception):
     """Handle any kind of application-level raised error."""
-    log.warning(f'API error: {exception!r}')
+    log.warning(f"API error: {exception!r}")
 
     # api errors count as errors as well
-    request.app.counters.inc('error')
+    request.app.counters.inc("error")
 
     scode = exception.status_code
-    res = {
-        'error': True,
-        'code': scode,
-        'message': exception.args[0]
-    }
+    res = {"error": True, "code": scode, "message": exception.args[0]}
 
     res.update(exception.get_payload())
     return response.json(res, status=scode)
@@ -207,46 +211,40 @@ def handle_exception(request, exception):
 
     if isinstance(exception, (NotFound, FileNotFound, FileNotFoundError)):
         status_code = 404
-        log.warning(f'File not found: {exception!r}')
+        log.warning(f"File not found: {exception!r}")
 
         if request.app.econfig.ENABLE_FRONTEND:
             # admin panel routes all 404's back to index.
-            if url.startswith('/admin'):
-                return response.file(
-                    './admin-panel/build/index.html')
+            if url.startswith("/admin"):
+                return response.file("./admin-panel/build/index.html")
 
-            return response.file(
-                './frontend/output/404.html',
-                status=404)
+            return response.file("./frontend/output/404.html", status=404)
     else:
-        log.exception(f'Error in request: {exception!r}')
+        log.exception(f"Error in request: {exception!r}")
 
-    request.app.counters.inc('error')
+    request.app.counters.inc("error")
 
     if status_code == 500:
-        request.app.counters.inc('error_ise')
+        request.app.counters.inc("error_ise")
 
-    return response.json({
-        'error': True,
-        'message': repr(exception)
-    }, status=status_code)
+    return response.json(
+        {"error": True, "message": repr(exception)}, status=status_code
+    )
 
 
-@app.listener('before_server_start')
+@app.listener("before_server_start")
 async def setup_db(rapp, loop):
     """Initialize db connection before app start"""
     rapp.sched = JobManager()
 
     rapp.session = aiohttp.ClientSession(loop=loop)
 
-    log.info('connecting to db')
+    log.info("connecting to db")
     rapp.db = await asyncpg.create_pool(**config.db)
 
-    log.info('connecting to redis')
+    log.info("connecting to redis")
     rapp.redis = await aioredis.create_redis_pool(
-        config.redis,
-        minsize=3, maxsize=11,
-        loop=loop, encoding='utf-8'
+        config.redis, minsize=3, maxsize=11, loop=loop, encoding="utf-8"
     )
 
     rapp.storage = Storage(app)
@@ -266,17 +264,17 @@ async def setup_db(rapp, loop):
     # TODO: maybe we can make a MockMetricsManager so that we
     # don't stress InfluxDB out while running the tests.
 
-    if not getattr(rapp, 'test', False):
+    if not getattr(rapp, "test", False):
         rapp.audit_log = AuditLog(rapp)
 
 
-@app.listener('after_server_stop')
+@app.listener("after_server_stop")
 async def close_db(rapp, _loop):
     """Close all database connections."""
-    log.info('closing db')
+    log.info("closing db")
     await rapp.db.close()
 
-    log.info('closing redis')
+    log.info("closing redis")
     rapp.redis.close()
     await rapp.redis.wait_closed()
 
@@ -295,17 +293,17 @@ def main():
     routelist = list(app.router.routes_all.keys())
     for uri in list(routelist):
         try:
-            app.add_route(options_handler, uri, methods=['OPTIONS'])
+            app.add_route(options_handler, uri, methods=["OPTIONS"])
         except Exception:
             pass
 
     del routelist
 
-    app.static('/humans.txt', './static/humans.txt')
-    app.static('/robots.txt', './static/robots.txt')
+    app.static("/humans.txt", "./static/humans.txt")
+    app.static("/robots.txt", "./static/robots.txt")
 
     app.run(host=config.HOST, port=config.PORT)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

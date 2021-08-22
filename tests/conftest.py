@@ -19,24 +19,14 @@ def app():
     app_.test = True
     app_.econfig.CLOUDFLARE = False
     app_.econfig.RATELIMITS = {
-        '/': {
-            'requests': 10000,
-            'second': 1
+        "/": {"requests": 10000, "second": 1},
+        ("ip", "/"): {"requests": 10000, "second": 1},
+        ("ip", "/i/"): {"requests": 1000, "second": 1},
+        ("ip", "/t/"): {
+            "requests": 1000,
+            "second": 1,
         },
-        ('ip', '/'): {
-            'requests': 10000,
-            'second': 1
-        },
-        ('ip', '/i/'): {
-            'requests': 1000,
-            'second': 1
-        },
-        ('ip', '/t/'): {
-            'requests': 1000,
-            'second': 1,
-        }
     }
-
 
     # use mock instances of some external services.
     app_.audit_log = MockAuditLog()
@@ -47,4 +37,3 @@ def app():
 @pytest.fixture
 def test_cli(loop, app, test_client):
     return loop.run_until_complete(test_client(app))
-

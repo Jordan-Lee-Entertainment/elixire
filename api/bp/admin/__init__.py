@@ -8,4 +8,4 @@ from .domain import bp as domain_bp
 from .misc import bp as misc_bp
 from .settings import bp as settings_bp
 
-__all__ = ['user_bp', 'object_bp', 'domain_bp', 'misc_bp', 'settings_bp']
+__all__ = ["user_bp", "object_bp", "domain_bp", "misc_bp", "settings_bp"]

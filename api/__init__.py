@@ -3,4 +3,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from .version import VERSION
+
 __version__ = VERSION

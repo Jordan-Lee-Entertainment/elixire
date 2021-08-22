@@ -4,88 +4,99 @@
 
 from .common import token, username, login_normal
 
+
 async def test_invalid_shorten(test_cli):
-    invalid_shit = [f'{username()}' for _ in range(100)]
+    invalid_shit = [f"{username()}" for _ in range(100)]
 
     for invalid in invalid_shit:
-        resp = await test_cli.get(f'/s/{invalid}')
+        resp = await test_cli.get(f"/s/{invalid}")
         assert resp.status == 404
 
 
 async def test_shorten(test_cli):
     utoken = await login_normal(test_cli)
 
-    resp = await test_cli.post('/api/shorten', headers={
-        'Authorization': utoken
-    }, json={
-        'url': 'https://elixi.re'
-    })
+    resp = await test_cli.post(
+        "/api/shorten",
+        headers={"Authorization": utoken},
+        json={"url": "https://elixi.re"},
+    )
 
     assert resp.status == 200
     data = await resp.json()
     assert isinstance(data, dict)
-    assert isinstance(data['url'], str)
+    assert isinstance(data["url"], str)
 
 
 async def test_shorten_complete(test_cli):
     utoken = await login_normal(test_cli)
-    url = 'https://elixi.re'
+    url = "https://elixi.re"
 
-    resp = await test_cli.post('/api/shorten', headers={
-        'Authorization': utoken,
-    }, json={
-        'url': url,
-    })
+    resp = await test_cli.post(
+        "/api/shorten",
+        headers={
+            "Authorization": utoken,
+        },
+        json={
+            "url": url,
+        },
+    )
 
     assert resp.status == 200
     data = await resp.json()
     assert isinstance(data, dict)
-    assert isinstance(data['url'], str)
+    assert isinstance(data["url"], str)
 
-    given_shorten = data['url'].split('/')[-1]
+    given_shorten = data["url"].split("/")[-1]
 
     # No, we can't call GET /s/whatever to test this route.
     # and probably that won't happen to GET /i/whatever too.
     # because since this is a test server, it runs in an entirely
     # different domain (127.0.0.1:random_port), instead of
     # localhost:8081.
-    listdata = await test_cli.get('/api/list?page=0', headers={
-        'Authorization': utoken,
-    })
+    listdata = await test_cli.get(
+        "/api/list?page=0",
+        headers={
+            "Authorization": utoken,
+        },
+    )
 
     assert listdata.status == 200
 
     listdata = await listdata.json()
 
-    shortens = listdata['shortens']
+    shortens = listdata["shortens"]
     try:
         key = next(k for k in shortens if k == given_shorten)
         shorten = shortens[key]
     except StopIteration:
-        raise RuntimeError('shorten not found')
+        raise RuntimeError("shorten not found")
 
-    assert shorten['redirto'] == url
+    assert shorten["redirto"] == url
+
 
 async def test_shorten_wrong_scheme(test_cli):
     utoken = await login_normal(test_cli)
 
     some_schemes = [
-        'ftp://',
-        'mailto:',
-        'laksjdkj::',
+        "ftp://",
+        "mailto:",
+        "laksjdkj::",
         token(),
     ]
 
     # bad idea but whatever
     wrong = []
     for scheme in some_schemes:
-        wrong += [f'{scheme}{token()}.{token()}' for _ in range(100)]
+        wrong += [f"{scheme}{token()}.{token()}" for _ in range(100)]
 
     for wrong_url in wrong:
-        resp = await test_cli.post('/api/shorten', headers={
-            'Authorization': utoken
-        }, json={
-            'url': wrong_url,
-        })
+        resp = await test_cli.post(
+            "/api/shorten",
+            headers={"Authorization": utoken},
+            json={
+                "url": wrong_url,
+            },
+        )
 
         assert resp.status == 400

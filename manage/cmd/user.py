@@ -24,23 +24,34 @@ async def adduser(ctx, args):
 
     user_id = get_snowflake()
 
-    await ctx.db.execute("""
+    await ctx.db.execute(
+        """
     INSERT INTO users (user_id, username, password_hash, email)
     VALUES ($1, $2, $3, $4)
-    """, user_id, username, hashed.decode(), email)
+    """,
+        user_id,
+        username,
+        hashed.decode(),
+        email,
+    )
 
-    await ctx.db.execute("""
+    await ctx.db.execute(
+        """
     INSERT INTO limits (user_id)
     VALUES ($1)
-    """, user_id)
+    """,
+        user_id,
+    )
 
-    await ctx.redis.delete(f'uid:{username}')
+    await ctx.redis.delete(f"uid:{username}")
 
-    print(f"""
+    print(
+        f"""
     user id: {user_id}
     username: {username!r}
     password: {password!r}
-    """)
+    """
+    )
 
 
 async def del_user(ctx, args):
@@ -52,7 +63,7 @@ async def del_user(ctx, args):
     task = await delete_user(ctx, userid, True)
     await asyncio.shield(task)
 
-    print('OK')
+    print("OK")
 
 
 async def resetpass(ctx, args):
@@ -60,62 +71,65 @@ async def resetpass(ctx, args):
     user_id = await get_user(ctx, username)
     password = secrets.token_urlsafe(25)
 
-    _pwd = bytes(password, 'utf-8')
+    _pwd = bytes(password, "utf-8")
     hashed = bcrypt.hashpw(_pwd, bcrypt.gensalt(14))
 
     # insert on db
-    dbout = await ctx.db.execute("""
+    dbout = await ctx.db.execute(
+        """
     UPDATE users
     SET password_hash = $1
     WHERE user_id = $2
-    """, hashed.decode('utf-8'), user_id)
+    """,
+        hashed.decode("utf-8"),
+        user_id,
+    )
 
     # invalidate
-    await ctx.redis.delete(f'uid:{user_id}:password_hash')
-    await ctx.redis.delete(f'uid:{user_id}:active')
+    await ctx.redis.delete(f"uid:{user_id}:password_hash")
+    await ctx.redis.delete(f"uid:{user_id}:active")
 
     # print the user & password
-    print(f"""
+    print(
+        f"""
 db out: {dbout}
 username: {username!r}, {user_id!r}
 new password: {password!r}
-    """)
+    """
+    )
 
 
 def setup(subparsers):
     parser_adduser = subparsers.add_parser(
-        'adduser',
-        help='Add a single user',
+        "adduser",
+        help="Add a single user",
         description="""
 The newly created user will be deactivated by default.
 When password is not provided, a secure one is generated.
-        """
+        """,
     )
-    parser_adduser.add_argument('email', help="User's email")
-    parser_adduser.add_argument('username', help="User's new username")
-    parser_adduser.add_argument('password', help='Password', nargs='?')
+    parser_adduser.add_argument("email", help="User's email")
+    parser_adduser.add_argument("username", help="User's new username")
+    parser_adduser.add_argument("password", help="Password", nargs="?")
     parser_adduser.set_defaults(func=adduser)
 
     parser_del_user = subparsers.add_parser(
-        'deluser',
-        help='Delete a single user',
+        "deluser",
+        help="Delete a single user",
         description="""
 This operation completly deletes all information on the user.
 
 Please proceed with caution as there is no going back
 from this operation.
-        """
+        """,
     )
-    parser_del_user.add_argument('username',
-                                 help='Username of the user to delete')
+    parser_del_user.add_argument("username", help="Username of the user to delete")
     parser_del_user.set_defaults(func=del_user)
 
     parser_resetpwd = subparsers.add_parser(
-        'resetpass',
-        help="Reset a user's password manually"
+        "resetpass", help="Reset a user's password manually"
     )
 
-    parser_resetpwd.add_argument('username',
-                                 help='Username')
+    parser_resetpwd.add_argument("username", help="Username")
 
     parser_resetpwd.set_defaults(func=resetpass)
