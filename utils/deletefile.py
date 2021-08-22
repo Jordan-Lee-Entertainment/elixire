@@ -8,8 +8,6 @@ import aiohttp
 import os
 import asyncio
 
-import asyncpg
-
 sys.path.append("..")
 import config
 from common import open_db, close_db

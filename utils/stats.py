@@ -5,9 +5,8 @@
 
 import os
 import asyncio
-import asyncpg
 
-from decimal import *
+from decimal import Decimal
 
 from common import open_db, close_db
 

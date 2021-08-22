@@ -2,7 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from .common import token, username, login_normal, login_admin
+from .common import login_normal, login_admin
 
 
 async def assert_domains(resp):

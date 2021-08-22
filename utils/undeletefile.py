@@ -5,11 +5,7 @@
 
 import sys
 import aiohttp
-import os
 import asyncio
-
-import asyncpg
-import aioredis
 
 from common import open_db, close_db
 

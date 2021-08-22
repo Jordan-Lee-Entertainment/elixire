@@ -2,10 +2,9 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import secrets
 import random
 
-from .common import token, username, login_normal
+from .common import username
 
 
 async def test_invalid_path(test_cli):

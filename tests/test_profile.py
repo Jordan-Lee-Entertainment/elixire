@@ -2,7 +2,6 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import aiohttp
 from .creds import USERNAME, PASSWORD
 from .common import token, username, email, login_normal
 

@@ -10,24 +10,25 @@ async def _invalidate(ctx, user_id: int):
     await ctx.storage.raw_invalidate(f"userban:{user_id}")
 
 
+# TODO fix ban_user
 async def ban_user(ctx, args):
     """Ban a single user."""
     username = args.username
-    interval = args.interval
+    # interval = args.interval
     reason = args.reason
     user_id = await get_user(ctx, username)
     await _invalidate(ctx, user_id)
 
-    exec_out = await ctx.db.execute(
-        """
-    INSERT INTO bans (user_id, reason, end_timestamp)
-    VALUES ($1, $2, $3)
-    """,
-        user_id,
-        reason,
+    print(
+        await ctx.db.execute(
+            """
+            INSERT INTO bans (user_id, reason, end_timestamp)
+            VALUES ($1, $2, $3)
+            """,
+            user_id,
+            reason,
+        )
     )
-
-    print("AAA")
 
 
 async def unban_user(ctx, args):
