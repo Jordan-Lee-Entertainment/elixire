@@ -20,5 +20,5 @@ Notes to keep:
  - YEAR changes do not apply to semver's MAJOR.
 """
 
-VERSION = '2019.2.12.1'
-API_VERSION = '2019.2.4.9'
+VERSION = "2019.2.12.1"
+API_VERSION = "2019.2.4.9"

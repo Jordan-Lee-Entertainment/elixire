@@ -9,10 +9,10 @@ from ..common import TokenType
 from ..common.auth import login_user, gen_token, pwd_hash
 from ..schema import validate, REVOKE_SCHEMA
 
-bp = Blueprint('auth')
+bp = Blueprint("auth")
 
 
-@bp.post('/api/login')
+@bp.post("/api/login")
 async def login_handler(request):
     """
     Login one user to the service
@@ -22,12 +22,14 @@ async def login_handler(request):
     """
     user = await login_user(request)
 
-    return response.json({
-        'token': gen_token(request.app, user, TokenType.TIMED),
-    })
+    return response.json(
+        {
+            "token": gen_token(request.app, user, TokenType.TIMED),
+        }
+    )
 
 
-@bp.post('/api/apikey')
+@bp.post("/api/apikey")
 async def apikey_handler(request):
     """
     Generate an API key.
@@ -36,12 +38,14 @@ async def apikey_handler(request):
     """
     user = await login_user(request)
 
-    return response.json({
-        'api_key': gen_token(request.app, user, TokenType.NONTIMED),
-    })
+    return response.json(
+        {
+            "api_key": gen_token(request.app, user, TokenType.NONTIMED),
+        }
+    )
 
 
-@bp.post('/api/revoke')
+@bp.post("/api/revoke")
 async def revoke_handler(request):
     """
     Revoke all generated tokens.
@@ -55,17 +59,19 @@ async def revoke_handler(request):
     # secret data that is signing the tokens,
     # with that, we invalidate any other token
     # used with the old hash
-    user_pwd = payload['password']
+    user_pwd = payload["password"]
     hashed = await pwd_hash(request, user_pwd)
 
-    await request.app.db.execute("""
+    await request.app.db.execute(
+        """
     UPDATE users
     SET password_hash = $1
     WHERE user_id = $2
-    """, hashed, user['user_id'])
+    """,
+        hashed,
+        user["user_id"],
+    )
 
-    await request.app.storage.invalidate(user['user_id'], 'password_hash')
+    await request.app.storage.invalidate(user["user_id"], "password_hash")
 
-    return response.json({
-        'success': True
-    })
+    return response.json({"success": True})

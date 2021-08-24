@@ -21,6 +21,7 @@ class Context:
     instead of a db connection instance, we pass Context
     instead of having to instantiate the sanic App object.
     """
+
     def __init__(self, db, redis, loop, locks):
         self.db = db
         self.redis = redis
@@ -36,41 +37,53 @@ class Context:
 
 async def get_user(ctx, username: str) -> int:
     """Fetch a user's ID, given username"""
-    user_id = await ctx.db.fetchval("""
+    user_id = await ctx.db.fetchval(
+        """
     SELECT user_id
     FROM users
     WHERE username = $1
-    """, username)
+    """,
+        username,
+    )
 
     if not user_id:
-        raise ArgError('no user found')
+        raise ArgError("no user found")
 
     return user_id
 
 
 async def get_counts(ctx, user_id) -> str:
     """Show consent and count information in a string."""
-    consented = await ctx.db.fetchval("""
+    consented = await ctx.db.fetchval(
+        """
     SELECT consented
     FROM users
     WHERE user_id = $1
-    """, user_id)
+    """,
+        user_id,
+    )
 
-    files = await ctx.db.fetchval("""
+    files = await ctx.db.fetchval(
+        """
     SELECT COUNT(*)
     FROM files
     WHERE files.uploader = $1
-    """, user_id)
+    """,
+        user_id,
+    )
 
-    shortens = await ctx.db.fetchval("""
+    shortens = await ctx.db.fetchval(
+        """
     SELECT COUNT(*)
     FROM files
     WHERE files.uploader = $1
-    """, user_id)
+    """,
+        user_id,
+    )
 
-    cons = 'consented' if consented else 'not consented'
+    cons = "consented" if consented else "not consented"
 
-    return f'{cons}, {files} files, {shortens} shortens'
+    return f"{cons}, {files} files, {shortens} shortens"
 
 
 def account_delta(user_id) -> datetime.timedelta:

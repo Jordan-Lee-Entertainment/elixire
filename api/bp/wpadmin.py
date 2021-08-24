@@ -9,7 +9,7 @@ from sanic import Blueprint
 from sanic import response
 
 
-bp = Blueprint('wpadmin')
+bp = Blueprint("wpadmin")
 log = logging.getLogger(__name__)
 
 # Inspired by:
@@ -21,19 +21,19 @@ memes = [
     "https://www.youtube.com/watch?v=b2F-DItXtZs",
     "https://www.youtube.com/watch?v=5GpOfwbFRcs",
     "https://www.youtube.com/watch?v=pCOCKS5AJI8",
-    "https://www.youtube.com/watch?v=bzkRVzciAZg"
+    "https://www.youtube.com/watch?v=bzkRVzciAZg",
 ]
 
 
-@bp.get('ajaxproxy/proxy.php')
-@bp.get('bitrix/admin/index.php')
-@bp.get('magmi/web/magmi.php')
-@bp.get('wp-admin/admin-ajax.php')
-@bp.get('wp-admin/includes/themes.php')
-@bp.get('wp-admin/options-link.php')
-@bp.get('wp-admin/post-new.php')
-@bp.get('wp-login.php')
-@bp.get('xmlrpc.php')
+@bp.get("ajaxproxy/proxy.php")
+@bp.get("bitrix/admin/index.php")
+@bp.get("magmi/web/magmi.php")
+@bp.get("wp-admin/admin-ajax.php")
+@bp.get("wp-admin/includes/themes.php")
+@bp.get("wp-admin/options-link.php")
+@bp.get("wp-admin/post-new.php")
+@bp.get("wp-login.php")
+@bp.get("xmlrpc.php")
 async def wpadmin(request):
     """Redirect bots to memes."""
 

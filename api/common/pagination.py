@@ -12,22 +12,22 @@ class Pagination:
 
     def __init__(self, request):
         self._raw_args = request.raw_args
-        self.page = self._int_arg('page')
-        self.per_page = self._int_arg('per_page', 20)
+        self.page = self._int_arg("page")
+        self.per_page = self._int_arg("per_page", 20)
 
         if self.page < 0:
-            raise BadInput('Invalid page number')
+            raise BadInput("Invalid page number")
         if self.per_page < 0:
-            raise BadInput('Invalid per_page number')
+            raise BadInput("Invalid per_page number")
 
     def response(self, results, *, total_count):
         """Return the resulting JSON object that the request should return."""
         return {
-            'results': results,
-            'pagination': {
-                'total': math.ceil(total_count / self.per_page),
-                'current': self.page,
-            }
+            "results": results,
+            "pagination": {
+                "total": math.ceil(total_count / self.per_page),
+                "current": self.page,
+            },
         }
 
     def _int_arg(self, name, default=0):

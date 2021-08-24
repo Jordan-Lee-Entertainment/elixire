@@ -32,9 +32,7 @@ async def connect_db(config, loop):
     """Connect to databases."""
     pool = await asyncpg.create_pool(**config.db)
     redis = await aioredis.create_redis_pool(
-        config.redis,
-        minsize=1, maxsize=3,
-        loop=loop, encoding='utf-8'
+        config.redis, minsize=1, maxsize=3, loop=loop, encoding="utf-8"
     )
 
     return pool, redis
@@ -51,7 +49,7 @@ async def close_ctx(ctx):
 def set_parser():
     """Initialize parser."""
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(help='operations')
+    subparsers = parser.add_subparsers(help="operations")
 
     # start our "blueprints"
     user(subparsers)
@@ -100,7 +98,7 @@ def main(config):
         print(f'argument error: {",".join(exc.args)}')
         return 1
     except Exception:
-        log.exception('oops.')
+        log.exception("oops.")
         return 1
     finally:
         loop.run_until_complete(close_ctx(ctx))

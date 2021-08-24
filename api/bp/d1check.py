@@ -12,7 +12,7 @@ from ..errors import BadInput
 bp = Blueprint(__name__)
 
 
-@bp.post('/api/check')
+@bp.post("/api/check")
 async def d1_check(request):
     """Check endpoint for d1.
 
@@ -21,22 +21,20 @@ async def d1_check(request):
     is a part of it.
     """
     try:
-        ciphertext = request.json['data']
+        ciphertext = request.json["data"]
     except (TypeError, KeyError):
-        raise BadInput('Invalid json')
+        raise BadInput("Invalid json")
 
     fernet = Fernet(request.app.econfig.SECRET_KEY)
 
     try:
         data = fernet.decrypt(ciphertext.encode()).decode()
     except InvalidToken:
-        raise BadInput('Invalid ciphertext')
+        raise BadInput("Invalid ciphertext")
 
     ipaddr = get_ip_addr(request)
-    data2 = f'{data},{ipaddr}'
+    data2 = f"{data},{ipaddr}"
 
     ciphertext_res = fernet.encrypt(data2.encode())
 
-    return response.json({
-        'data': ciphertext_res.decode()
-    })
+    return response.json({"data": ciphertext_res.decode()})

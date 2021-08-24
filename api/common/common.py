@@ -14,18 +14,20 @@ import asyncpg
 from ..errors import FailedAuth, NotFound
 
 ALPHABET = string.ascii_lowercase + string.digits
-CF_HEADER = 'CF-Connecting-IP'
+CF_HEADER = "CF-Connecting-IP"
 log = logging.getLogger(__name__)
 
 
 class TokenType:
     """Token type "enum"."""
+
     NONTIMED = 1
     TIMED = 2
 
 
 class FileNameType:
     """Represents a type of a filename."""
+
     FILE = 0
     SHORTEN = 1
 
@@ -44,11 +46,10 @@ def get_ip_addr(request) -> str:
 
 def _gen_fname(length) -> str:
     """Generate a random filename."""
-    return ''.join(secrets.choice(ALPHABET)
-                   for _ in range(length))
+    return "".join(secrets.choice(ALPHABET) for _ in range(length))
 
 
-async def gen_filename(request, length=3, table='files', _curc=0) -> str:
+async def gen_filename(request, length=3, table="files", _curc=0) -> str:
     """Generate a unique random filename.
 
     To guarantee that the generated shortnames will
@@ -80,30 +81,31 @@ async def gen_filename(request, length=3, table='files', _curc=0) -> str:
         If it tried to generate a shortname with more than 10 letters.
     """
     if length > 10:
-        raise RuntimeError('Failed to generate a filename')
+        raise RuntimeError("Failed to generate a filename")
 
     try_count = 0
 
-    field = 'file_id' if table == 'files' else 'shorten_id'
+    field = "file_id" if table == "files" else "shorten_id"
 
     for try_count in range(10):
         random_fname = _gen_fname(length)
 
-        filerow = await request.app.db.fetchrow(f"""
+        filerow = await request.app.db.fetchrow(
+            f"""
         SELECT {field}
         FROM {table}
         WHERE filename = $1
-        """, random_fname)
+        """,
+            random_fname,
+        )
 
         if not filerow:
             total = _curc + try_count
-            log.info(f'Took {total} retries to '
-                     f'generate {random_fname!r}')
+            log.info(f"Took {total} retries to " f"generate {random_fname!r}")
             return random_fname, total
 
     # if 10 tries didnt work, try generating with length+1
-    return await gen_filename(request, length + 1, table,
-                              _curc + try_count + 1)
+    return await gen_filename(request, length + 1, table, _curc + try_count + 1)
 
 
 def _calculate_hash(fhandler) -> str:
@@ -134,7 +136,7 @@ def _calculate_hash(fhandler) -> str:
 
     hashend = time.monotonic()
     delta = round(hashend - hashstart, 6)
-    log.info(f'Hashing file took {delta} seconds')
+    log.info(f"Hashing file took {delta} seconds")
 
     return hash_obj.hexdigest()
 
@@ -153,33 +155,41 @@ async def remove_fspath(app, shortname: str):
     if shortname is None:
         return
 
-    fspath = await app.db.fetchval("""
+    fspath = await app.db.fetchval(
+        """
     SELECT fspath
     FROM files
     WHERE filename = $1
-    """, shortname)
+    """,
+        shortname,
+    )
 
     if fspath is None:
         return
 
     # fetch all files with the same fspath
     # and on the hash system, means the same hash
-    same_fspath = await app.db.fetchval("""
+    same_fspath = await app.db.fetchval(
+        """
     SELECT COUNT(*)
     FROM files
     WHERE fspath = $1 AND deleted = false
-    """, fspath)
+    """,
+        fspath,
+    )
 
     if same_fspath == 0:
         path = Path(fspath)
         try:
             path.unlink()
-            log.info(f'Deleted {fspath!s} since no files refer to it')
+            log.info(f"Deleted {fspath!s} since no files refer to it")
         except FileNotFoundError:
-            log.warning(f'fspath {fspath!s} does not exist')
+            log.warning(f"fspath {fspath!s} does not exist")
     else:
-        log.info(f'there are still {same_fspath} files with the '
-                 f'same fspath {fspath!s}, not deleting')
+        log.info(
+            f"there are still {same_fspath} files with the "
+            f"same fspath {fspath!s}, not deleting"
+        )
 
 
 async def delete_file(app, file_name: str, user_id, set_delete=True):
@@ -206,31 +216,38 @@ async def delete_file(app, file_name: str, user_id, set_delete=True):
     domain_id = await app.storage.get_domain_file(file_name)
 
     try:
-        await app.db.execute("""
+        await app.db.execute(
+            """
         INSERT INTO users (user_id, username, active, password_hash, email)
         VALUES (0, 'dummy', false, 'blah', 'd u m m y')
-        """)
+        """
+        )
     except asyncpg.UniqueViolationError:
         pass
 
     if set_delete:
-        exec_out = await app.db.execute("""
+        exec_out = await app.db.execute(
+            """
         UPDATE files
         SET deleted = true
         WHERE uploader = $1
           AND filename = $2
           AND deleted = false
-        """, user_id, file_name)
+        """,
+            user_id,
+            file_name,
+        )
 
         if exec_out == "UPDATE 0":
-            raise NotFound('You have no files with this name.')
+            raise NotFound("You have no files with this name.")
 
         await remove_fspath(app, file_name)
     else:
         await remove_fspath(app, file_name)
 
         if user_id:
-            await app.db.execute("""
+            await app.db.execute(
+                """
             UPDATE files
             SET uploader = 0,
                 file_size = 0,
@@ -240,9 +257,13 @@ async def delete_file(app, file_name: str, user_id, set_delete=True):
             WHERE
                 filename = $1
             AND uploader = $2
-            """, file_name, user_id)
+            """,
+                file_name,
+                user_id,
+            )
         else:
-            await app.db.execute("""
+            await app.db.execute(
+                """
             UPDATE files
             SET uploader = 0,
                 file_size = 0,
@@ -250,28 +271,34 @@ async def delete_file(app, file_name: str, user_id, set_delete=True):
                 deleted = true,
                 domain = 0
             WHERE filename = $1
-            """, file_name)
+            """,
+                file_name,
+            )
 
-    await app.storage.raw_invalidate(f'fspath:{domain_id}:{file_name}')
+    await app.storage.raw_invalidate(f"fspath:{domain_id}:{file_name}")
 
 
 async def delete_shorten(app, shortname: str, user_id: int):
     """Remove a shorten from the system"""
-    exec_out = await app.db.execute("""
+    exec_out = await app.db.execute(
+        """
     UPDATE shortens
     SET deleted = true
     WHERE uploader = $1
     AND filename = $2
     AND deleted = false
-    """, user_id, shortname)
+    """,
+        user_id,
+        shortname,
+    )
 
     # By doing this, we're cutting down DB calls by half
     # and it still checks for user
     if exec_out == "UPDATE 0":
-        raise NotFound('You have no shortens with this name.')
+        raise NotFound("You have no shortens with this name.")
 
     domain_id = await app.storage.get_domain_shorten(shortname)
-    await app.storage.raw_invalidate(f'redir:{domain_id}:{shortname}')
+    await app.storage.raw_invalidate(f"redir:{domain_id}:{shortname}")
 
 
 async def check_bans(request, user_id: int):
@@ -287,16 +314,15 @@ async def check_bans(request, user_id: int):
         reason = await request.app.storage.get_ban(user_id)
 
         if reason:
-            raise FailedAuth(f'User is banned. {reason}')
+            raise FailedAuth(f"User is banned. {reason}")
 
     ip_addr = get_ip_addr(request)
     ip_ban_reason = await request.app.storage.get_ipban(ip_addr)
     if ip_ban_reason:
-        raise FailedAuth(f'IP address is banned. {ip_ban_reason}')
+        raise FailedAuth(f"IP address is banned. {ip_ban_reason}")
 
 
-async def get_domain_info(request, user_id: int,
-                          dtype=FileNameType.FILE) -> tuple:
+async def get_domain_info(request, user_id: int, dtype=FileNameType.FILE) -> tuple:
     """Get information about a user's selected domain.
 
     Parameters
@@ -314,31 +340,43 @@ async def get_domain_info(request, user_id: int,
     tuple
         with 3 values: domain id, subdomain and the domain string
     """
-    domain_id, subdomain_name = await request.app.db.fetchrow("""
+    domain_id, subdomain_name = await request.app.db.fetchrow(
+        """
     SELECT domain, subdomain
     FROM users
     WHERE user_id = $1
-    """, user_id)
+    """,
+        user_id,
+    )
 
-    domain = await request.app.db.fetchval("""
+    domain = await request.app.db.fetchval(
+        """
     SELECT domain
     FROM domains
     WHERE domain_id = $1
-    """, domain_id)
+    """,
+        domain_id,
+    )
 
     if dtype == FileNameType.SHORTEN:
-        shorten_domain_id, shorten_subdomain = await request.app.db.fetchrow("""
+        shorten_domain_id, shorten_subdomain = await request.app.db.fetchrow(
+            """
         SELECT shorten_domain, shorten_subdomain
         FROM users
         WHERE user_id = $1
-        """, user_id)
+        """,
+            user_id,
+        )
 
         if shorten_domain_id is not None:
-            shorten_domain = await request.app.db.fetchval("""
+            shorten_domain = await request.app.db.fetchval(
+                """
             SELECT domain
             FROM domains
             WHERE domain_id = $1
-            """, shorten_domain_id)
+            """,
+                shorten_domain_id,
+            )
 
             # if we have all the data on shorten subdomain, return it
             return shorten_domain_id, shorten_subdomain, shorten_domain
@@ -348,11 +386,13 @@ async def get_domain_info(request, user_id: int,
 
 async def get_random_domain(app) -> int:
     """Get a random domain from the table."""
-    return await app.db.fetchval("""
+    return await app.db.fetchval(
+        """
     SELECT domain_id FROM domains
     ORDER BY RANDOM()
     LIMIT 1
-    """)
+    """
+    )
 
 
 def transform_wildcard(domain: str, subdomain_name: str) -> str:
@@ -371,7 +411,7 @@ def transform_wildcard(domain: str, subdomain_name: str) -> str:
         The actual domain you should use.
     """
     # Check if it's wildcard and if we have a subdomain set
-    if domain[0:2] == '*.':
+    if domain[0:2] == "*.":
         if subdomain_name:
             domain = domain.replace("*.", f"{subdomain_name}.")
         else:

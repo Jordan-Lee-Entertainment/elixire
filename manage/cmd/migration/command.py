@@ -14,7 +14,7 @@ import asyncpg
 
 log = logging.getLogger(__name__)
 
-Migration = namedtuple('Migration', 'mid name path')
+Migration = namedtuple("Migration", "mid name path")
 
 
 def _get_mig_folder() -> Path:
@@ -25,12 +25,10 @@ def _get_mig_folder() -> Path:
     cmd_path = stack()[0][1]
 
     # extract one level up (the folder)
-    cmd_folder = Path(
-        '/'.join(cmd_path.split('/')[:-1])
-    )
+    cmd_folder = Path("/".join(cmd_path.split("/")[:-1]))
 
     # then we'll have the migration folder
-    return cmd_folder / 'scripts'
+    return cmd_folder / "scripts"
 
 
 class MigrationContext:
@@ -39,6 +37,7 @@ class MigrationContext:
     Contains the list of current SQL scripts on the
     manage/cmd/migration/scripts folder.
     """
+
     def __init__(self):
         self.migration_folder = _get_mig_folder()
         self.scripts = self._get_scripts()
@@ -47,7 +46,7 @@ class MigrationContext:
         mig_folder = self.migration_folder
         migrations = {}
 
-        for migration_path in mig_folder.glob('*.sql'):
+        for migration_path in mig_folder.glob("*.sql"):
 
             # we need to extract the migration's
             # ID and name to insert in the dictionary
@@ -57,13 +56,12 @@ class MigrationContext:
             # <ID>_<migration's name>.sql
             # example:
             # 6_add_users_index.sql
-            fragments = filename.split('_')
+            fragments = filename.split("_")
 
             mig_id = int(fragments[0])
-            mig_name = '_'.join(fragments[1:])
+            mig_name = "_".join(fragments[1:])
 
-            migrations[mig_id] = Migration(
-                mig_id, mig_name, migration_path)
+            migrations[mig_id] = Migration(mig_id, mig_name, migration_path)
 
         return migrations
 
@@ -83,7 +81,8 @@ async def _ensure_changelog(ctx, mctx) -> int:
     """Ensure a migration log exists
     in the database."""
     try:
-        await ctx.db.execute("""
+        await ctx.db.execute(
+            """
         CREATE TABLE migration_log (
             change_id bigint PRIMARY KEY,
 
@@ -92,66 +91,79 @@ async def _ensure_changelog(ctx, mctx) -> int:
 
             description text
         )
-        """)
+        """
+        )
 
         # if we are just creating the table,
         # then we'll assume the current database is
         # in latest schema.sql.
-        await ctx.db.execute("""
+        await ctx.db.execute(
+            """
         INSERT INTO migration_log
             (change_id, description)
         VALUES
             ($1, $2)
-        """, mctx.latest, 'migration table setup')
+        """,
+            mctx.latest,
+            "migration table setup",
+        )
 
-        log.debug('migration table created')
+        log.debug("migration table created")
     except asyncpg.DuplicateTableError:
-        log.debug('existing migration log')
+        log.debug("existing migration log")
 
-    return await ctx.db.fetchval("""
+    return (
+        await ctx.db.fetchval(
+            """
     SELECT MAX(change_id)
     FROM migration_log
-    """) or 0
+    """
+        )
+        or 0
+    )
 
 
 async def apply_migration(ctx, migration: Migration):
     """Apply a single migration to the database."""
 
     # check if we already applied
-    apply_ts = await ctx.db.fetchval("""
+    apply_ts = await ctx.db.fetchval(
+        """
     SELECT apply_ts
     FROM migration_log
     WHERE change_id = $1
-    """, migration.mid)
+    """,
+        migration.mid,
+    )
 
     if apply_ts is not None:
-        print('already applied', migration.mid,
-              ': skipping')
+        print("already applied", migration.mid, ": skipping")
 
         return
 
     # get this migration's raw sql to apply
-    raw_sql = migration.path.read_text(
-        encoding='utf-8'
-    )
+    raw_sql = migration.path.read_text(encoding="utf-8")
 
     # try to apply
     try:
         await ctx.db.execute(raw_sql)
 
-        await ctx.db.execute("""
+        await ctx.db.execute(
+            """
         INSERT INTO migration_log
             (change_id, description)
         VALUES
             ($1, $2)
-        """, migration.mid, f'migration: {migration.name}')
+        """,
+            migration.mid,
+            f"migration: {migration.name}",
+        )
 
-        print('applied', migration.mid, migration.name)
+        print("applied", migration.mid, migration.name)
     except Exception:
         # do not let the error make this an applied migration
         # in the logs.
-        log.exception('error while applying migration')
-
+        log.exception("error while applying migration")
 
 
 async def migrate_cmd(ctx, _args):
@@ -169,18 +181,17 @@ async def migrate_cmd(ctx, _args):
     # this value against MigrationContext.latest.
     local_latest = await _ensure_changelog(ctx, mctx)
 
-    log.debug('%d migrations loaded', len(mctx.scripts))
+    log.debug("%d migrations loaded", len(mctx.scripts))
 
-    print('local', local_latest, 'latest', mctx.latest)
+    print("local", local_latest, "latest", mctx.latest)
 
     if local_latest == mctx.latest:
-        print('local == latest, no changes to do')
+        print("local == latest, no changes to do")
         return
 
     # sanity check
     if local_latest > mctx.latest:
-        print('local > latest, this is impossible. '
-              'please fix database manually')
+        print("local > latest, this is impossible. " "please fix database manually")
         return
 
     # if we are outdated from latest
@@ -192,19 +203,16 @@ async def migrate_cmd(ctx, _args):
         migration = mctx.scripts.get(mig_id)
 
         if not migration:
-            print('skipping migration', mig_id, 'not found')
+            print("skipping migration", mig_id, "not found")
             continue
 
         await apply_migration(ctx, migration)
 
-    print('OK')
+    print("OK")
 
 
 def setup(subparsers):
     """Setup migration command."""
-    parser_migrate = subparsers.add_parser(
-        'migrate',
-        help='Migrate the database'
-    )
+    parser_migrate = subparsers.add_parser("migrate", help="Migrate the database")
 
     parser_migrate.set_defaults(func=migrate_cmd)

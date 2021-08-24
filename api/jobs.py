@@ -5,41 +5,42 @@
 import asyncio
 
 import logging
+
 log = logging.getLogger(__name__)
 
 
 class JobManager:
     """Manage background jobs."""
+
     def __init__(self, loop=None):
-        log.debug('job manager start')
+        log.debug("job manager start")
         self.loop = loop or asyncio.get_event_loop()
         self.jobs = {}
 
     async def _wrapper(self, job_name, coro):
         try:
-            log.debug('running job: %r', job_name)
+            log.debug("running job: %r", job_name)
             await coro
-            log.debug('job finish: %r', job_name)
+            log.debug("job finish: %r", job_name)
         except asyncio.CancelledError:
-            log.warning('cancelled job: %r', job_name)
+            log.warning("cancelled job: %r", job_name)
         except Exception:
-            log.exception('Error while running job %r', job_name)
+            log.exception("Error while running job %r", job_name)
         finally:
             self.jobs.pop(job_name)
 
     async def _wrapper_bg(self, job_name, func, args, period: int):
-        log.debug('wrapped %r in periodic %dsec',
-                  job_name, period)
+        log.debug("wrapped %r in periodic %dsec", job_name, period)
 
         try:
             while True:
-                log.debug('background tick for %r', job_name)
+                log.debug("background tick for %r", job_name)
                 await func(*args)
                 await asyncio.sleep(period)
         except asyncio.CancelledError:
-            log.warning('cancelled job: %r', job_name)
+            log.warning("cancelled job: %r", job_name)
         except Exception:
-            log.exception('Error while running job %r', job_name)
+            log.exception("Error while running job %r", job_name)
         finally:
             try:
                 self.jobs.pop(job_name)
@@ -53,9 +54,7 @@ class JobManager:
         """
         name = name or coro.__name__
 
-        task = self.loop.create_task(
-            self._wrapper(name, coro)
-        )
+        task = self.loop.create_task(self._wrapper(name, coro))
 
         self.jobs[name] = task
         return task
@@ -65,9 +64,7 @@ class JobManager:
         every ``period`` seconds."""
         name = name or func.__name__
 
-        task = self.loop.create_task(
-            self._wrapper_bg(name, func, args, period)
-        )
+        task = self.loop.create_task(self._wrapper_bg(name, func, args, period))
 
         self.jobs[name] = task
         return task
@@ -79,12 +76,12 @@ class JobManager:
 
     def stop_job(self, job_name: str):
         """Stop a single job."""
-        log.debug('stopping job %r', job_name)
+        log.debug("stopping job %r", job_name)
         try:
             job = self.jobs[job_name]
             job.cancel()
         except KeyError:
-            log.warning('unknown job to cancel: %r', job_name)
+            log.warning("unknown job to cancel: %r", job_name)
         finally:
             # as a last measure, try to pop() the job
             # post-cancel. if that fails, the job probably
@@ -97,7 +94,7 @@ class JobManager:
     def stop(self):
         """Stop the job manager by
         cancelling all jobs."""
-        log.debug('cancelling %d jobs', len(self.jobs))
+        log.debug("cancelling %d jobs", len(self.jobs))
 
         for job_name in list(self.jobs.keys()):
             self.stop_job(job_name)
