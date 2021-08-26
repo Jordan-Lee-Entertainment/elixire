@@ -48,22 +48,29 @@ async def file_handler(request, filename):
     # TODO: maybe give this a separate func and also call from thumbs?
     is_raw = request.args.get("raw")
     is_discordbot = "Discordbot" in request.headers.get("User-Agent", "")
-    is_image = os.path.splitext(request.path)[-1].lower() in [".png", ".jpg", ".jpeg", ".webp"]
+    is_image = os.path.splitext(request.path)[-1].lower() in [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+    ]
 
     if is_discordbot and is_image and not is_raw:
         # Generate a ?raw=true URL
         # Use & if there's already a query string
-        raw_url = (request.url
-                   + ("&" if request.query_string else "?")
-                   + "raw=true")
+        raw_url = request.url + ("&" if request.query_string else "?") + "raw=true"
 
-        return response.html("""
+        return response.html(
+            """
 <html>
     <head>
         <meta property="twitter:card" content="summary_large_image">
         <meta property="twitter:image" content="{}">
     </head>
-</html>""".format(raw_url))
+</html>""".format(
+                raw_url
+            )
+        )
 
     app = request.app
     filepath, shortname = await filecheck(request, filename)
