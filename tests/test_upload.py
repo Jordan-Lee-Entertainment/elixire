@@ -35,6 +35,7 @@ async def check_exists(test_cli, shortname, utoken, not_exists=False):
     else:
         assert shortname in rjson["files"]
         elixire_file = rjson["files"][shortname]
+        assert elixire_file["size"] > 0
 
     url = urlparse(elixire_file["url"])
     _, extension = os.path.splitext(url.path.split("/")[-1])

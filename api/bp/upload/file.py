@@ -15,13 +15,16 @@ class UploadFile:
     def __init__(self, data):
         self.storage = data
         self.name: str = data.filename
-        self.size: int = data.content_length
-        assert self.size is not None
         self.stream = data.stream
         self.mime: str = data.mimetype
 
         self.hash: Optional[str] = None
         self.path: Optional[Path] = None
+
+        # initialize size with real stream position
+        current_position = self.stream.tell()
+        self.size = self.stream.seek(0, 2)
+        self.stream.seek(current_position, 0)
 
     @property
     def given_extension(self):
