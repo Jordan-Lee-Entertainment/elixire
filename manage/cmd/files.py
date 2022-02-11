@@ -6,6 +6,7 @@ from os.path import splitext
 from pathlib import Path
 from decimal import Decimal
 
+from quart import current_app as app
 from api.common import delete_file
 from manage.errors import PrintException
 
@@ -23,9 +24,9 @@ def byte_to_mibstring(bytecount: int) -> str:
     return f"{round(mib, 2)}MiB"
 
 
-async def deletefiles(ctx, _args):
+async def deletefiles(_args):
     """Clean files marked as deleted on the db."""
-    to_delete = await ctx.db.fetch(
+    to_delete = await app.db.fetch(
         """
     SELECT fspath
     FROM files
@@ -53,12 +54,12 @@ async def deletefiles(ctx, _args):
     )
 
 
-async def rename_file(ctx, args):
+async def rename_file(args):
     """Rename a file."""
     shortname = args.shortname
     renamed = args.renamed
 
-    domain = await ctx.db.fetchval(
+    domain = await app.db.fetchval(
         """
     SELECT domain
     FROM files
@@ -70,7 +71,7 @@ async def rename_file(ctx, args):
     if domain is None:
         return print(f"no files found with shortname {shortname!r}")
 
-    existing_id = await ctx.db.fetchval(
+    existing_id = await app.db.fetchval(
         """
     SELECT file_id
     FROM files
@@ -82,7 +83,7 @@ async def rename_file(ctx, args):
     if existing_id:
         return print(f"file {renamed} already exists, stopping!")
 
-    exec_out = await ctx.db.execute(
+    exec_out = await app.db.execute(
         """
     UPDATE files
     SET filename = $1
@@ -94,14 +95,14 @@ async def rename_file(ctx, args):
     )
 
     # invalidate etc
-    await ctx.redis.delete(f"fspath:{domain}:{shortname}")
-    await ctx.redis.delete(f"fspath:{domain}:{renamed}")
+    await app.redis.delete(f"fspath:{domain}:{shortname}")
+    await app.redis.delete(f"fspath:{domain}:{renamed}")
 
     print(f"SQL out: {exec_out}")
 
 
-async def show_stats(ctx, _args):
-    db = ctx.db
+async def show_stats(_args):
+    db = app.db
 
     # Total non-deleted file count
     nd_file_count = await db.fetchval(
@@ -271,12 +272,12 @@ Weekly Counts, ND: {nd_shorten_count_week}, D: {d_shorten_count_week}
     )
 
 
-async def _extract_file_info(ctx, shortname) -> int:
+async def _extract_file_info(shortname) -> int:
     """Extract the domain ID for a file.
 
     Does checking against dummy user.
     """
-    row = await ctx.db.fetchrow(
+    row = await app.db.fetchrow(
         """
     SELECT uploader, domain
     FROM files
@@ -296,11 +297,11 @@ async def _extract_file_info(ctx, shortname) -> int:
     return domain_id
 
 
-async def delete_file_cmd(ctx, args):
+async def delete_file_cmd(args):
     shortname = args.shortname
-    domain_id = await _extract_file_info(ctx, shortname)
+    domain_id = await _extract_file_info(shortname)
 
-    await ctx.db.execute(
+    await app.db.execute(
         """
     UPDATE files
     SET deleted = true
@@ -309,16 +310,16 @@ async def delete_file_cmd(ctx, args):
         shortname,
     )
 
-    await ctx.storage.raw_invalidate(f"fspath:{domain_id}:{shortname}")
+    await app.storage.raw_invalidate(f"fspath:{domain_id}:{shortname}")
 
     print("OK", shortname)
 
 
-async def undelete_file_cmd(ctx, args):
+async def undelete_file_cmd(args):
     shortname = args.shortname
-    domain_id = await _extract_file_info(ctx, shortname)
+    domain_id = await _extract_file_info(shortname)
 
-    await ctx.db.execute(
+    await app.db.execute(
         """
     UPDATE files
     SET deleted = false
@@ -327,15 +328,15 @@ async def undelete_file_cmd(ctx, args):
         shortname,
     )
 
-    await ctx.storage.raw_invalidate(f"fspath:{domain_id}:{shortname}")
+    await app.storage.raw_invalidate(f"fspath:{domain_id}:{shortname}")
 
     print("OK", shortname)
 
 
-async def nuke_file_cmd(ctx, args):
+async def nuke_file_cmd(args):
     shortname = args.shortname
-    domain_id = await _extract_file_info(ctx, shortname)
-    await delete_file(ctx, shortname, None, False)
+    domain_id = await _extract_file_info(shortname)
+    await delete_file(shortname, None, False)
     print("OK", shortname, "DOMAIN", domain_id)
 
 

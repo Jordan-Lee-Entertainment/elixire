@@ -2,39 +2,39 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from sanic import Blueprint, response
+from quart import Blueprint, jsonify, current_app as app, request
 
 from cryptography.fernet import Fernet, InvalidToken
 
 from ..common import get_ip_addr
 from ..errors import BadInput
 
-bp = Blueprint(__name__)
+bp = Blueprint("d1check", __name__)
 
 
-@bp.post("/api/check")
-async def d1_check(request):
+@bp.post("/check")
+async def d1_check():
     """Check endpoint for d1.
 
     Please look into d1's documentation
     on how d1's protocol works and how this code
     is a part of it.
     """
+    j = await request.get_json()
     try:
-        ciphertext = request.json["data"]
+        ciphertext = j["data"]
     except (TypeError, KeyError):
         raise BadInput("Invalid json")
 
-    fernet = Fernet(request.app.econfig.SECRET_KEY)
+    fernet = Fernet(app.econfig.SECRET_KEY)
 
     try:
         data = fernet.decrypt(ciphertext.encode()).decode()
     except InvalidToken:
         raise BadInput("Invalid ciphertext")
 
-    ipaddr = get_ip_addr(request)
+    ipaddr = get_ip_addr()
     data2 = f"{data},{ipaddr}"
 
     ciphertext_res = fernet.encrypt(data2.encode())
-
-    return response.json({"data": ciphertext_res.decode()})
+    return jsonify({"data": ciphertext_res.decode()})

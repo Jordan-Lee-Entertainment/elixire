@@ -5,21 +5,26 @@
 import logging
 import os
 import time
+from typing import Optional
 
-from sanic import Blueprint
-from sanic import response
+from quart import (
+    Blueprint,
+    current_app as app,
+    request,
+    send_file as quart_send_file,
+)
 
 from PIL import Image
 
 from ..errors import NotFound
 
-bp = Blueprint("fetch")
+bp = Blueprint("fetch", __name__)
 log = logging.getLogger(__name__)
 
 
-async def filecheck(request, filename):
+async def filecheck(filename):
     """Check if the given file exists on the domain."""
-    storage = request.app.storage
+    storage = app.storage
     domain_id = await storage.get_domain_id(request.host)
 
     shortname, ext = os.path.splitext(filename)
@@ -41,8 +46,20 @@ async def filecheck(request, filename):
     return filepath, shortname
 
 
+async def send_file(path: str, *, mimetype: Optional[str] = None):
+    """Helper function to send files while also supporting Ranged Requests."""
+    response = await quart_send_file(path, mimetype=mimetype, conditional=True)
+
+    filebody = response.response
+    response.headers["content-length"] = filebody.end - filebody.begin
+    response.headers["content-disposition"] = "inline"
+    response.headers["content-security-policy"] = "sandbox; frame-src 'None'"
+
+    return response
+
+
 @bp.get("/i/<filename>")
-async def file_handler(request, filename):
+async def file_handler(filename):
     """Handles file serves."""
     # Account for requests from Discord to preserve URL
     # TODO: maybe give this a separate func and also call from thumbs?
@@ -58,9 +75,9 @@ async def file_handler(request, filename):
     if is_discordbot and is_image and not is_raw:
         # Generate a ?raw=true URL
         # Use & if there's already a query string
-        raw_url = request.url + ("&" if request.query_string else "?") + "raw=true"
+        raw_url = request.url + ("&" if request.args else "?") + "raw=true"
 
-        return response.html(
+        return (
             """
 <html>
     <head>
@@ -69,11 +86,12 @@ async def file_handler(request, filename):
     </head>
 </html>""".format(
                 raw_url
-            )
+            ),
+            200,
+            {"Content-Type": "text/html"},
         )
 
-    app = request.app
-    filepath, shortname = await filecheck(request, filename)
+    filepath, shortname = await filecheck(filename)
 
     # fetch the file's mimetype from the database
     # which should be way more reliable than sanic
@@ -83,24 +101,20 @@ async def file_handler(request, filename):
     if mimetype == "text/plain":
         mimetype = "text/plain; charset=utf-8"
 
-    return await response.file_stream(
-        filepath,
-        headers={"Content-Security-Policy": "sandbox; frame-src 'none'"},
-        mime_type=mimetype,
-    )
+    return await send_file(filepath, mimetype=mimetype)
 
 
 @bp.get("/t/<filename>")
-async def thumbnail_handler(request, filename):
+async def thumbnail_handler(filename):
     """Handles thumbnail serves."""
-    appcfg = request.app.econfig
+    appcfg = app.econfig
     thumbtype, filename = filename[0], filename[1:]
-    fspath, _shortname = await filecheck(request, filename)
+    fspath, _shortname = await filecheck(filename)
 
     # if thumbnails are disabled, just return
     # the same file
     if not appcfg.THUMBNAILS:
-        return await response.file_stream(fspath)
+        return await send_file(fspath)
 
     thb_folder = appcfg.THUMBNAIL_FOLDER
     thumbpath = os.path.join(thb_folder, f"{thumbtype}{filename}")
@@ -121,6 +135,4 @@ async def thumbnail_handler(request, filename):
 
     # yes, we are doing more I/O by using response.file
     # and not sending the bytes ourselves.
-    return await response.file_stream(
-        thumbpath, headers={"Content-Security-Policy": "sandbox; frame-src 'none'"}
-    )
+    return await send_file(thumbpath)

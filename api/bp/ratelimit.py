@@ -2,169 +2,138 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-"""
-elixi.re - ratelimit blueprint
-"""
-from sanic import Blueprint
-from ..ratelimit import RatelimitManager
-from ..errors import Ratelimited, Banned
+import logging
+from dataclasses import dataclass
+from typing import Optional
+
+from quart import Blueprint, request, current_app as app
+from ..ratelimit import RatelimitManager, RatelimitBucket
+from ..errors import Ratelimited, Banned, FailedAuth
 from ..common import check_bans, get_ip_addr
-from ..common.auth import token_check, get_token
+from ..common.auth import token_check
 
-bp = Blueprint("ratelimit")
+log = logging.getLogger(__name__)
+bp = Blueprint("ratelimit", __name__)
 
 
+# force ip based ratelimiting on those rules.
 FORCE_IP = (
-    "/api/login",
-    "/api/apikey",
-    "/api/revoke",
-    "/api/hello",
+    "auth.login_handler",
+    "auth.apikey_handler",
+    "auth.revoke_handler",
+    "misc.hello",
 )
 
 
-def check_rtl(request, bucket):
+@dataclass
+class RatelimitContext:
+    bucket: Optional[RatelimitBucket] = None
+    retry_after: Optional[float] = None
+    bucket_global: bool = False
+
+
+def _check_bucket(bucket: RatelimitBucket):
     """Check the ratelimit bucket."""
     retry_after = bucket.update_rate_limit()
-    if bucket.retries > request.app.econfig.RL_THRESHOLD:
+    ctx = request.ratelimit_context
+    ctx.bucket = bucket
+    if bucket.retries > app.econfig.RL_THRESHOLD:
         raise Banned("Reached retry limit on ratelimiting.")
 
     if retry_after:
-        raise Ratelimited("You are being ratelimited.", retry_after)
+        ctx.retry_after = retry_after
+        raise Ratelimited("You are being rate limited.", retry_after)
 
 
-async def finish_ratelimit(
-    request, best_rtl, bucket_key, do_ban_checking: bool = False
+async def _handle_ratelimit(
+    ratelimit: Optional[RatelimitManager], is_global: bool = False
 ):
-    """Finish the ratelimiting operation.
-    - getting the bucket, setting it as _ratelimit_bucket
-    - checking ban info (only when required)
-    - checking if the bucket is exploded
-        (and giving a 429 when that happens)
-    """
-    bucket = best_rtl.get_bucket(bucket_key)
-    request["_ratelimit_bucket"] = bucket
+    try:
+        _username, user_id = request._user
+    except AttributeError:
+        user_id = get_ip_addr()
+        # check_bans for user ids is already called when we're checking
+        # the token.
+        await check_bans(None)
 
-    if do_ban_checking:
-        # the only case where ratelimiting code needs
-        # to call check_bans is when we are on an ip-only context.
+    if is_global:
+        ctx = request.ratelimit_context
+        ctx.bucket_global = True
+        ratelimit = app.ratelimits["*"]
 
-        # if we are on a user context, we already called token_check,
-        # and token_check, by default, calls check_bans
+    if ratelimit is None:
+        return
 
-        # calling check_bans from here without any flags up
-        # would be a waste of redis calls.
-        await check_bans(request, None)
-
-    return check_rtl(request, bucket)
+    bucket = ratelimit.get_bucket(user_id)
+    _check_bucket(bucket)
 
 
-@bp.middleware("request")
-async def ratelimit_handler(request):
-    """Ratelimit handler."""
-    # ignore any OPTIONS
+@bp.before_app_request
+async def ratelimit_handler():
     if request.method == "OPTIONS":
         return
 
-    app = request.app
+    rule = request.url_rule
 
-    # list of preferred ratelimit buckets
-    preferred = []
+    # for the given request, we create a context so we can generate
+    # the x- ratelimit headers by the time we're making our response
 
-    try:
-        token = get_token(request)
-    except KeyError:
-        token = False
+    # _handle_global and _handle_specific fill the context.
+    request.ratelimit_context = RatelimitContext()
 
-    token = False if any(r in request.path for r in FORCE_IP) else token
-
-    preferred_scope = "token" if token else "ip"
-    request["_ratelimit_scope"] = preferred_scope
-
-    # search through all defined ratelimits in configuration file,
-    #  find the *preferred ones*.
-
-    # e.g if a request has Authorization header, we only search for
-    #  ratelimit configurations that work on the 'token' scope.
-    # if a request doesn't have Authorization, we use the 'ip' scope.
-    for scope, ratelimit in app.ratelimits.items():
-        try:
-            req_scope, path_scope = scope
-        except ValueError:
-            req_scope, path_scope = "token", scope
-
-        if req_scope == preferred_scope and request.path.startswith(path_scope):
-            preferred.append(ratelimit)
-
-    # find the best ratelimiter
-
-    # we use the longest scope of the rateimiter to find the best one:
-    #  if the scopes were /, /api/hello and /api, the /api/hello scope
-    #  would win.
-    def _scope_length(rtl):
-        try:
-            _, path_scope = rtl.scope
-            return len(path_scope)
-        except ValueError:
-            return len(rtl.scope)
-
-    sorted_rtl = sorted(preferred, key=_scope_length, reverse=True)
-    if sorted_rtl:
-        best_rtl = sorted_rtl[0]
-    else:
+    # NOTE IIRC rule is None when the client is trying to access
+    # static resources on the app, so right now i fall it back to
+    # being the global ratelimit.
+    if rule is None:
+        await _handle_ratelimit(None, is_global=True)
         return
 
-    rtl_path_scope = best_rtl.scope
-    if isinstance(rtl_path_scope, tuple):
-        request["_ratelimit_path"] = rtl_path_scope[1]
+    # rule.endpoint is composed of '<blueprint>.<function>'
+    # and so we can use that to make routes with different
+    # methods have different ratelimits
+    rule_path = rule.endpoint
+
+    try:
+        user_id = await token_check()
+        username = await app.storage.get_username(user_id)
+        request._user = (username, user_id)
+    except FailedAuth:
+        pass
+
+    if rule_path in app.ratelimits:
+        await _handle_ratelimit(app.ratelimits[rule_path])
     else:
-        request["_ratelimit_path"] = rtl_path_scope
-
-    # from the best ratelimiter, acquire the bucket
-    # (which is based on IP or user ID)
-    if preferred_scope == "ip":
-        ip_address = get_ip_addr(request)
-        return await finish_ratelimit(request, best_rtl, ip_address, True)
-
-    # user-based ratelimiting from now on
-    user_id = await token_check(request)
-    username = await app.storage.get_username(user_id)
-
-    request["ctx"] = (username, user_id)
-    return await finish_ratelimit(request, best_rtl, username)
+        await _handle_ratelimit(None, is_global=True)
 
 
-@bp.middleware("response")
-async def rl_header_set(request, resp):
+@bp.after_app_request
+async def rl_header_set(response):
     """Set ratelimit headers when possible!"""
-    if request.method == "OPTIONS":
-        return
-
     try:
-        bucket = request["_ratelimit_bucket"]
-    except KeyError:
-        # no ratelimit bucket was made for this request
-        return
+        ctx = request.ratelimit_context
+    except AttributeError:
+        return response
 
-    try:
-        resp.headers["X-Ratelimit-Scope"] = request["_ratelimit_scope"]
-    except KeyError:
-        pass
+    bucket = ctx.bucket
+    if bucket is None:
+        return response
 
-    try:
-        resp.headers["X-Ratelimit-Path"] = request["_ratelimit_path"]
-    except KeyError:
-        pass
+    response.headers["X-RateLimit-Limit"] = str(bucket.requests)
+    response.headers["X-RateLimit-Remaining"] = str(bucket._tokens)
+    response.headers["X-RateLimit-Reset"] = str(bucket._window + bucket.second)
 
-    if bucket:
-        resp.headers["X-RateLimit-Limit"] = bucket.requests
-        resp.headers["X-RateLimit-Remaining"] = bucket._tokens
-        resp.headers["X-RateLimit-Reset"] = bucket._window + bucket.second
+    return response
 
 
-@bp.listener("before_server_start")
-async def start_ratelimiters(app, _loop):
+def setup_ratelimits():
     rtls = app.econfig.RATELIMITS
     app.ratelimits = {}
 
-    for scope, ratelimit in rtls.items():
-        app.ratelimits[scope] = RatelimitManager(scope, ratelimit)
+    for endpoint, ratelimit in rtls.items():
+        log.debug("Ratelimit for '%s' set to %r", endpoint, ratelimit)
+        app.ratelimits[endpoint] = RatelimitManager(*ratelimit)
+
+    # if a global ratelimit isn't provided, inject a default one.
+    if "*" not in app.ratelimits:
+        log.debug("Ratelimit for '*' set to default")
+        app.ratelimits["*"] = RatelimitManager(15, 5)

@@ -2,13 +2,16 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import pytest
 from .common import login_normal, login_admin
+
+pytestmark = pytest.mark.asyncio
 
 
 async def assert_domains(resp):
-    assert resp.status == 200
+    assert resp.status_code == 200
 
-    rjson = await resp.json()
+    rjson = await resp.json
     assert isinstance(rjson, dict)
     assert isinstance(rjson["domains"], dict)
 

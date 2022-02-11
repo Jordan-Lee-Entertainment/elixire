@@ -159,7 +159,7 @@ async def _fetch_init_ctx(ctx: CompactorContext):
     """
     )
 
-    count = extract_row(count_res, 1)
+    count = extract_row(count_res, 1) or 0
 
     log.info("working %d datapoints for %r", count, ctx.source)
 
@@ -328,7 +328,10 @@ async def compact_single(ctx: CompactorContext):
     # in the datapoints that still exist
     # (Fs and Ts)
     first, last = await _fetch_init_ctx(ctx)
-    log.debug("source: %r, first: %d, last: %d", ctx.source, first, last)
+    log.debug("source: %r, first: %r, last: %r", ctx.source, first, last)
+    if first is None or last is None:
+        log.info("no datapoints found, not compacting")
+        return
 
     # fetch Lt
     last_in_target_res = await ctx.influx.query(
@@ -342,6 +345,7 @@ async def compact_single(ctx: CompactorContext):
 
     # check values for pre-process
     start_ts = first if last_target is None else last_target + ctx.generalize_sec
+    assert start_ts is not None
 
     log.debug(
         "starting [%s]: f=%d l=%d last_target=%r start_ts=%d",

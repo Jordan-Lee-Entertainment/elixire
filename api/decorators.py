@@ -9,9 +9,9 @@ def auth_route(handler):
     """Declare an authenticated route."""
 
     @functools.wraps(handler)
-    async def auth_route_wrapped(request, *args, **kwargs):
-        user_id = await token_check(request)
-        return await handler(request, user_id, *args, **kwargs)
+    async def auth_route_wrapped(*args, **kwargs):
+        user_id = await token_check()
+        return await handler(user_id, *args, **kwargs)
 
     return auth_route_wrapped
 
@@ -20,13 +20,13 @@ def admin_route(handler):
     """Declare an admin route."""
 
     @functools.wraps(handler)
-    async def admin_route_wrapped(request, *args, **kwargs):
-        admin_id = await token_check(request)
+    async def admin_route_wrapped(*args, **kwargs):
+        admin_id = await token_check()
 
         # raise exception on non-admins
-        await check_admin(request, admin_id, True)
+        await check_admin(admin_id, True)
 
         # if it is all good, call the old handler
-        return await handler(request, admin_id, *args, **kwargs)
+        return await handler(admin_id, *args, **kwargs)
 
     return admin_route_wrapped

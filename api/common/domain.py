@@ -2,13 +2,15 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+from quart import current_app as app
 
-async def _domain_file_stats(db, domain_id, *, ignore_consented: bool = False) -> tuple:
+
+async def _domain_file_stats(domain_id, *, ignore_consented: bool = False) -> tuple:
     """Get domain file stats (count and sum of all bytes)."""
 
     consented_clause = "" if ignore_consented else "AND users.consented = true"
 
-    row = await db.fetchrow(
+    row = await app.db.fetchrow(
         f"""
     SELECT COUNT(*), SUM(file_size)
     FROM files
@@ -24,9 +26,9 @@ async def _domain_file_stats(db, domain_id, *, ignore_consented: bool = False) -
     return row["count"], int(row["sum"] or 0)
 
 
-async def get_domain_info(db, domain_id) -> dict:
+async def get_domain_info(domain_id) -> dict:
     """Get domain information."""
-    raw_info = await db.fetchrow(
+    raw_info = await app.db.fetchrow(
         """
     SELECT domain, official, admin_only, permissions
     FROM domains
@@ -40,7 +42,7 @@ async def get_domain_info(db, domain_id) -> dict:
 
     stats = {}
 
-    stats["users"] = await db.fetchval(
+    stats["users"] = await app.db.fetchval(
         """
     SELECT COUNT(*)
     FROM users
@@ -49,7 +51,7 @@ async def get_domain_info(db, domain_id) -> dict:
         domain_id,
     )
 
-    stats["files"] = await db.fetchval(
+    stats["files"] = await app.db.fetchval(
         """
     SELECT COUNT(*)
     FROM files
@@ -58,10 +60,10 @@ async def get_domain_info(db, domain_id) -> dict:
         domain_id,
     )
 
-    filestats = await _domain_file_stats(db, domain_id, ignore_consented=True)
+    filestats = await _domain_file_stats(domain_id, ignore_consented=True)
     stats["files"], stats["size"] = filestats
 
-    stats["shortens"] = await db.fetchval(
+    stats["shortens"] = await app.db.fetchval(
         """
     SELECT COUNT(*)
     FROM shortens
@@ -70,7 +72,7 @@ async def get_domain_info(db, domain_id) -> dict:
         domain_id,
     )
 
-    owner_id = await db.fetchval(
+    owner_id = await app.db.fetchval(
         """
     SELECT user_id
     FROM domain_owners
@@ -79,7 +81,7 @@ async def get_domain_info(db, domain_id) -> dict:
         domain_id,
     )
 
-    owner_data = await db.fetchrow(
+    owner_data = await app.db.fetchrow(
         """
     SELECT username, active, consented, admin, paranoid
     FROM users
@@ -96,15 +98,15 @@ async def get_domain_info(db, domain_id) -> dict:
     return {
         "info": {**dinfo, **{"owner": downer}},
         "stats": stats,
-        "public_stats": await get_domain_public(db, domain_id),
+        "public_stats": await get_domain_public(domain_id),
     }
 
 
-async def get_domain_public(db, domain_id) -> dict:
+async def get_domain_public(domain_id) -> dict:
     """Get public information about a domain."""
     public_stats = {}
 
-    public_stats["users"] = await db.fetchval(
+    public_stats["users"] = await app.db.fetchval(
         """
     SELECT COUNT(*)
     FROM users
@@ -113,10 +115,10 @@ async def get_domain_public(db, domain_id) -> dict:
         domain_id,
     )
 
-    filestats = await _domain_file_stats(db, domain_id)
+    filestats = await _domain_file_stats(domain_id)
     public_stats["files"], public_stats["size"] = filestats
 
-    public_stats["shortens"] = await db.fetchval(
+    public_stats["shortens"] = await app.db.fetchval(
         """
     SELECT COUNT(*)
     FROM shortens

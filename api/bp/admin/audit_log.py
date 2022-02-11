@@ -5,6 +5,9 @@ import copy
 import logging
 import asyncio
 
+from quart import request, current_app as app
+from quart.ctx import copy_current_app_context
+
 from api.common.email import send_user_email
 from api.common.utils import find_different_keys
 
@@ -14,9 +17,8 @@ log = logging.getLogger(__name__)
 class Action:
     """Represents a generic action taken by an admin."""
 
-    def __init__(self, request):
-        self.app = request.app
-        self.admin_id = request["ctx"][1]
+    def __init__(self):
+        self.admin_id = request._user[1]
         self.context = {}
 
     async def details(self):
@@ -53,7 +55,7 @@ class Action:
 
         # get admin via request ctx
         admin_id = self.admin_id
-        admin_username = await self.app.storage.get_username(admin_id)
+        admin_username = await app.storage.get_username(admin_id)
         lines.append(f"admin that performed the action: {admin_username} ({admin_id})")
 
         return "\n".join(lines)
@@ -66,7 +68,7 @@ class Action:
         # only notify when there are no errors happening inside the context
         log.debug("exiting context, action %s, exc=%s", self, value)
         if type is None and value is None and traceback is None:
-            return await self.app.audit_log.push(self)
+            return await app.audit_log.push(self)
 
         return False
 
@@ -83,9 +85,9 @@ class Action:
 class EditAction(Action):
     """An action which describes an object is edited."""
 
-    def __init__(self, request, id):
-        super().__init__(request)
-        self.id = id
+    def __init__(self, object_id):
+        super().__init__()
+        self.id = object_id
         self.before = None
         self.after = None
 
@@ -116,8 +118,8 @@ class EditAction(Action):
 class DeleteAction(Action):
     """An action which describes the removal of an object."""
 
-    def __init__(self, request, id):
-        super().__init__(request)
+    def __init__(self, id):
+        super().__init__()
         self.id = id
         self.object = None
 
@@ -139,8 +141,7 @@ class AuditLog:
     after a minute of queue inactivity.
     """
 
-    def __init__(self, app):
-        self.app = app
+    def __init__(self):
         self.actions = []
         self._sender_task = None
 
@@ -149,7 +150,11 @@ class AuditLog:
         if self._sender_task:
             self._sender_task.cancel()
 
-        self._sender_task = self.app.loop.create_task(self._sender())
+        @copy_current_app_context
+        async def _wrap():
+            await self._sender()
+
+        self._sender_task = app.loop.create_task(_wrap())
 
     async def push(self, action: Action):
         """Push an action to the queue."""
@@ -203,7 +208,7 @@ class AuditLog:
 
     async def send_email(self, subject, full_text):
         """Send an email to all admins."""
-        admins = await self.app.db.fetch(
+        admins = await app.db.fetch(
             """
         SELECT users.user_id
         FROM users
@@ -221,4 +226,4 @@ class AuditLog:
         log.info("sending audit log event to %d admins", len(admins))
 
         for admin_id in admins:
-            await send_user_email(self.app, admin_id, subject, full_text)
+            await send_user_email(admin_id, subject, full_text)

@@ -32,7 +32,7 @@ ALPHABET = string.ascii_lowercase + string.digits
 
 async def main():
     pool = await asyncpg.create_pool(**config.db)
-    redis = await aioredis.create_redis(config.redis)
+    redis = aioredis.from_url(config.redis)
 
     impath = Path("./images")
 
@@ -97,8 +97,6 @@ async def main():
     print(f"renamed {renamed} out of {total} to rename")
 
     await pool.close()
-    redis.close()
-    await redis.wait_closed()
     print("OK")
 
 

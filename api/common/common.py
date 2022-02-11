@@ -9,6 +9,7 @@ import logging
 import time
 from pathlib import Path
 
+from quart import current_app as app, request
 import asyncpg
 
 from ..errors import FailedAuth, NotFound
@@ -32,16 +33,21 @@ class FileNameType:
     SHORTEN = 1
 
 
-def get_ip_addr(request) -> str:
+def get_ip_addr() -> str:
     """Fetch the IP address for a request.
 
     Handles the cloudflare headers responsible to set
     the client's IP.
     """
-    if request.app.econfig.CLOUDFLARE and CF_HEADER in request.headers:
+    remote_addr = request.remote_addr
+    if remote_addr == "<local>":
+        remote_addr = "127.0.0.1"
+
+    use_header = app.econfig.CLOUDFLARE and CF_HEADER in request.headers
+    if use_header:
         return request.headers[CF_HEADER]
     else:
-        return request.ip
+        return remote_addr
 
 
 def _gen_fname(length) -> str:
@@ -49,7 +55,7 @@ def _gen_fname(length) -> str:
     return "".join(secrets.choice(ALPHABET) for _ in range(length))
 
 
-async def gen_filename(request, length=3, table="files", _curc=0) -> str:
+async def gen_filename(length=3, table="files", _curc=0) -> str:
     """Generate a unique random filename.
 
     To guarantee that the generated shortnames will
@@ -58,9 +64,6 @@ async def gen_filename(request, length=3, table="files", _curc=0) -> str:
 
     Parameters
     ----------
-    request: sanic.Request
-        So the function can call the database.
-
     length, optional: int
         Minimal amount of characters to use, default 3.
         Grows with the amount of failed generations.
@@ -90,7 +93,7 @@ async def gen_filename(request, length=3, table="files", _curc=0) -> str:
     for try_count in range(10):
         random_fname = _gen_fname(length)
 
-        filerow = await request.app.db.fetchrow(
+        filerow = await app.db.fetchrow(
             f"""
         SELECT {field}
         FROM {table}
@@ -105,7 +108,7 @@ async def gen_filename(request, length=3, table="files", _curc=0) -> str:
             return random_fname, total
 
     # if 10 tries didnt work, try generating with length+1
-    return await gen_filename(request, length + 1, table, _curc + try_count + 1)
+    return await gen_filename(length + 1, table, _curc + try_count + 1)
 
 
 def _calculate_hash(fhandler) -> str:
@@ -141,7 +144,7 @@ def _calculate_hash(fhandler) -> str:
     return hash_obj.hexdigest()
 
 
-async def calculate_hash(app, fhandle) -> str:
+async def calculate_hash(fhandle) -> str:
     """Calculate a hash of the given file handle.
 
     Uses run_in_executor to do the job asynchronously so
@@ -151,7 +154,7 @@ async def calculate_hash(app, fhandle) -> str:
     return await fut
 
 
-async def remove_fspath(app, shortname: str):
+async def remove_fspath(shortname: str):
     if shortname is None:
         return
 
@@ -192,7 +195,7 @@ async def remove_fspath(app, shortname: str):
         )
 
 
-async def delete_file(app, file_name: str, user_id, set_delete=True):
+async def delete_file(file_name: str, user_id, set_delete=True):
     """Delete a file, purging it from Cloudflare's cache.
 
     Parameters
@@ -241,9 +244,9 @@ async def delete_file(app, file_name: str, user_id, set_delete=True):
         if exec_out == "UPDATE 0":
             raise NotFound("You have no files with this name.")
 
-        await remove_fspath(app, file_name)
+        await remove_fspath(file_name)
     else:
-        await remove_fspath(app, file_name)
+        await remove_fspath(file_name)
 
         if user_id:
             await app.db.execute(
@@ -278,7 +281,7 @@ async def delete_file(app, file_name: str, user_id, set_delete=True):
     await app.storage.raw_invalidate(f"fspath:{domain_id}:{file_name}")
 
 
-async def delete_shorten(app, shortname: str, user_id: int):
+async def delete_shorten(shortname: str, user_id: int):
     """Remove a shorten from the system"""
     exec_out = await app.db.execute(
         """
@@ -301,7 +304,7 @@ async def delete_shorten(app, shortname: str, user_id: int):
     await app.storage.raw_invalidate(f"redir:{domain_id}:{shortname}")
 
 
-async def check_bans(request, user_id: int):
+async def check_bans(user_id: int):
     """Check if the current user is already banned.
 
     Raises
@@ -311,18 +314,18 @@ async def check_bans(request, user_id: int):
         IP address is banned.
     """
     if user_id is not None:
-        reason = await request.app.storage.get_ban(user_id)
+        reason = await app.storage.get_ban(user_id)
 
         if reason:
             raise FailedAuth(f"User is banned. {reason}")
 
-    ip_addr = get_ip_addr(request)
-    ip_ban_reason = await request.app.storage.get_ipban(ip_addr)
+    ip_addr = get_ip_addr()
+    ip_ban_reason = await app.storage.get_ipban(ip_addr)
     if ip_ban_reason:
         raise FailedAuth(f"IP address is banned. {ip_ban_reason}")
 
 
-async def get_domain_info(request, user_id: int, dtype=FileNameType.FILE) -> tuple:
+async def get_domain_info(user_id: int, dtype=FileNameType.FILE) -> tuple:
     """Get information about a user's selected domain.
 
     Parameters
@@ -340,7 +343,7 @@ async def get_domain_info(request, user_id: int, dtype=FileNameType.FILE) -> tup
     tuple
         with 3 values: domain id, subdomain and the domain string
     """
-    domain_id, subdomain_name = await request.app.db.fetchrow(
+    domain_id, subdomain_name = await app.db.fetchrow(
         """
     SELECT domain, subdomain
     FROM users
@@ -349,7 +352,7 @@ async def get_domain_info(request, user_id: int, dtype=FileNameType.FILE) -> tup
         user_id,
     )
 
-    domain = await request.app.db.fetchval(
+    domain = await app.db.fetchval(
         """
     SELECT domain
     FROM domains
@@ -359,7 +362,7 @@ async def get_domain_info(request, user_id: int, dtype=FileNameType.FILE) -> tup
     )
 
     if dtype == FileNameType.SHORTEN:
-        shorten_domain_id, shorten_subdomain = await request.app.db.fetchrow(
+        shorten_domain_id, shorten_subdomain = await app.db.fetchrow(
             """
         SELECT shorten_domain, shorten_subdomain
         FROM users
@@ -369,7 +372,7 @@ async def get_domain_info(request, user_id: int, dtype=FileNameType.FILE) -> tup
         )
 
         if shorten_domain_id is not None:
-            shorten_domain = await request.app.db.fetchval(
+            shorten_domain = await app.db.fetchval(
                 """
             SELECT domain
             FROM domains

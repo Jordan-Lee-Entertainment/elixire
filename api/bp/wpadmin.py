@@ -5,11 +5,10 @@
 import logging
 import random
 
-from sanic import Blueprint
-from sanic import response
+from quart import Blueprint, redirect
 
 
-bp = Blueprint("wpadmin")
+bp = Blueprint("wpadmin", __name__)
 log = logging.getLogger(__name__)
 
 # Inspired by:
@@ -25,18 +24,16 @@ memes = [
 ]
 
 
-@bp.get("ajaxproxy/proxy.php")
-@bp.get("bitrix/admin/index.php")
-@bp.get("magmi/web/magmi.php")
-@bp.get("wp-admin/admin-ajax.php")
-@bp.get("wp-admin/includes/themes.php")
-@bp.get("wp-admin/options-link.php")
-@bp.get("wp-admin/post-new.php")
-@bp.get("wp-login.php")
-@bp.get("xmlrpc.php")
-async def wpadmin(request):
+@bp.get("/ajaxproxy/proxy.php")
+@bp.get("/bitrix/admin/index.php")
+@bp.get("/magmi/web/magmi.php")
+@bp.get("/wp-admin/admin-ajax.php")
+@bp.get("/wp-admin/includes/themes.php")
+@bp.get("/wp-admin/options-link.php")
+@bp.get("/wp-admin/post-new.php")
+@bp.get("/wp-login.php")
+@bp.get("/xmlrpc.php")
+async def wpadmin():
     """Redirect bots to memes."""
-
     url = random.choice(memes)
-
-    return response.redirect(url)
+    return redirect(url)

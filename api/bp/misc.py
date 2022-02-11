@@ -6,22 +6,22 @@
 elixire - misc routes
 """
 import datetime
-from sanic import Blueprint, response
+from quart import Blueprint, jsonify, current_app as app
 from ..version import VERSION, API_VERSION
 
-bp = Blueprint("misc")
+bp = Blueprint("misc", __name__)
 
 
 def _owo(string: str) -> str:
     return string.replace("0", "0w0").replace("r", "w")
 
 
-@bp.get("/api/hello")
-async def hello_route(request):
+@bp.get("/hello")
+async def hello_route():
     """Give basic information about the instance."""
-    cfg = request.app.econfig
+    cfg = app.econfig
 
-    return response.json(
+    return jsonify(
         {
             "name": cfg.INSTANCE_NAME,
             "version": VERSION,
@@ -36,46 +36,46 @@ async def hello_route(request):
     )
 
 
-@bp.get("/api/hewwo")
-async def h_hewwo(request):
+@bp.get("/hewwo")
+async def h_hewwo():
     """owo"""
-    return response.json(
+    return jsonify(
         {
-            "name": _owo(request.app.econfig.INSTANCE_NAME),
+            "name": _owo(app.econfig.INSTANCE_NAME),
             "version": _owo(VERSION),
             "api": _owo(API_VERSION),
         }
     )
 
 
-@bp.get("/api/science")
-async def science_route(request):
+@bp.get("/science")
+async def science_route():
     """*insert b4nzyblob*"""
-    return response.text("Hewoo! We'we nyot discowd we don't spy on nyou :3")
+    return "Hewoo! We'we nyot discowd we don't spy on nyou :3"
 
 
-@bp.get("/api/boron")
-async def ipek_yolu(request):
+@bp.get("/boron")
+async def ipek_yolu():
     """calculates days until 100th year anniversary of treaty of lausanne"""
     world_power_deadline = datetime.date(2023, 7, 24)
     days_to_wp = (world_power_deadline - datetime.date.today()).days
     is_world_power = days_to_wp <= 0
-    return response.json(
+    return jsonify(
         {"world_power": is_world_power, "days_until_world_power": days_to_wp}
     )
 
 
-@bp.get("/api/features")
-async def fetch_features(request):
+@bp.get("/features")
+async def fetch_features():
     """Fetch instance features.
 
     So that the frontend can e.g disable the
     register button when the instance's registration enabled
     flag is set to false.
     """
-    cfg = request.app.econfig
+    cfg = app.econfig
 
-    return response.json(
+    return jsonify(
         {
             "uploads": cfg.UPLOADS_ENABLED,
             "shortens": cfg.SHORTENS_ENABLED,

@@ -5,8 +5,8 @@
 import os
 import logging
 
-from sanic import Blueprint
-from sanic import response
+from quart import Blueprint, current_app as app, jsonify, request
+from quart.ctx import copy_current_app_context
 
 from ..common import delete_file, delete_shorten
 from ..common.auth import token_check, password_check
@@ -14,13 +14,13 @@ from ..decorators import auth_route
 from ..errors import BadInput
 from .profile import delete_file_task
 
-bp = Blueprint("files")
+bp = Blueprint("files", __name__)
 log = logging.getLogger(__name__)
 
 
-async def domain_list(request):
+async def domain_list():
     """Returns a dictionary with domain IDs mapped to domain names"""
-    domain_info = await request.app.db.fetch(
+    domain_info = await app.db.fetch(
         """
         SELECT domain_id, domain
         FROM domains
@@ -29,8 +29,8 @@ async def domain_list(request):
     return dict(domain_info)
 
 
-@bp.get("/api/list")
-async def list_handler(request):
+@bp.get("/list")
+async def list_handler():
     """Get list of files."""
     # TODO: simplify this code
     try:
@@ -38,10 +38,10 @@ async def list_handler(request):
     except (TypeError, ValueError, KeyError, IndexError):
         raise BadInput("Page parameter needs to be supplied correctly.")
 
-    user_id = await token_check(request)
-    domains = await domain_list(request)
+    user_id = await token_check()
+    domains = await domain_list()
 
-    user_files = await request.app.db.fetch(
+    user_files = await app.db.fetch(
         """
     SELECT file_id, filename, file_size, fspath, domain, mimetype
     FROM files
@@ -56,7 +56,7 @@ async def list_handler(request):
         page,
     )
 
-    user_shortens = await request.app.db.fetch(
+    user_shortens = await app.db.fetch(
         """
     SELECT shorten_id, filename, redirto, domain
     FROM shortens
@@ -71,7 +71,7 @@ async def list_handler(request):
         page,
     )
 
-    use_https = request.app.econfig.USE_HTTPS
+    use_https = app.econfig.USE_HTTPS
     prefix = "https://" if use_https else "http://"
 
     filenames = {}
@@ -114,56 +114,64 @@ async def list_handler(request):
             "url": shorten_url,
         }
 
-    return response.json({"success": True, "files": filenames, "shortens": shortens})
+    return jsonify({"success": True, "files": filenames, "shortens": shortens})
 
 
-@bp.delete("/api/delete")
-async def delete_handler(request):
+@bp.delete("/delete")
+async def delete_handler():
     """Invalidate a file."""
-    user_id = await token_check(request)
-    file_name = str(request.json["filename"])
+    user_id = await token_check()
+    # TODO validation
+    j = await request.get_json()
+    file_name = str(j["filename"])
 
-    await delete_file(request.app, file_name, user_id)
+    await delete_file(file_name, user_id)
 
-    return response.json({"success": True})
+    return jsonify({"success": True})
 
 
-@bp.post("/api/delete_all")
+@bp.post("/delete_all")
 @auth_route
-async def delete_all(request, user_id):
+async def delete_all(user_id):
     """Delete all files for the user"""
-    app = request.app
+
+    j = await request.get_json()
 
     try:
-        password = request.json["password"]
+        password = j["password"]
     except KeyError:
         raise BadInput("password not provided")
 
-    await password_check(request, user_id, password)
+    await password_check(user_id, password)
 
     # create task to delete all files in the background
-    app.sched.spawn(delete_file_task(app, user_id, False), f"delete_files_{user_id}")
+    @copy_current_app_context
+    async def _wrap(*args):
+        await delete_file_task(*args)
 
-    return response.json(
+    app.sched.spawn(_wrap(user_id, False), f"delete_files_{user_id}")
+
+    return jsonify(
         {
             "success": True,
         }
     )
 
 
-@bp.route("/api/delete/<shortname>", methods=["GET", "DELETE"])
+@bp.route("/delete/<shortname>", methods=["GET", "DELETE"])
 @auth_route
-async def delete_single(request, user_id, shortname):
-    await delete_file(request.app, shortname, user_id)
-    return response.json({"success": True})
+async def delete_single(user_id, shortname):
+    await delete_file(shortname, user_id)
+    return jsonify({"success": True})
 
 
-@bp.delete("/api/shortendelete")
-async def shortendelete_handler(request):
+@bp.delete("/shortendelete")
+async def shortendelete_handler():
     """Invalidate a shorten."""
-    user_id = await token_check(request)
-    file_name = str(request.json["filename"])
+    user_id = await token_check()
+    j = await request.get_json()
+    file_name = str(j["filename"])
 
-    await delete_shorten(request.app, file_name, user_id)
+    await delete_shorten(file_name, user_id)
 
-    return response.json({"success": True})
+    return jsonify({"success": True})

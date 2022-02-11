@@ -13,6 +13,9 @@ import zipfile
 import pathlib
 import os.path
 
+from quart import current_app as app
+from quart.ctx import copy_current_app_context
+
 from api.common.email import gen_email_token, send_user_email
 
 log = logging.getLogger(__name__)
@@ -23,7 +26,7 @@ def _dump_json(zipdump, filepath, obj):
     zipdump.writestr(filepath, objstr)
 
 
-async def open_zipdump(app, user_id, resume=False) -> zipfile.ZipFile:
+async def open_zipdump(user_id, resume=False) -> zipfile.ZipFile:
     """Open the zip file relating to your dump."""
     user_name = await app.db.fetchval(
         """
@@ -51,7 +54,7 @@ async def open_zipdump(app, user_id, resume=False) -> zipfile.ZipFile:
     return zipfile.ZipFile(zip_path, "a", compression=zipfile.ZIP_DEFLATED), user_name
 
 
-async def dump_user_data(app, zipdump, user_id):
+async def dump_user_data(zipdump, user_id):
     """Insert user information into the dump."""
     udata = await app.db.fetchrow(
         """
@@ -63,10 +66,12 @@ async def dump_user_data(app, zipdump, user_id):
         user_id,
     )
 
-    _dump_json(zipdump, "user_data.json", dict(udata))
+    duser = dict(udata)
+    duser["user_id"] = str(duser["user_id"])
+    _dump_json(zipdump, "user_data.json", duser)
 
 
-async def dump_user_bans(app, zipdump, user_id):
+async def dump_user_bans(zipdump, user_id):
     """Insert user bans, if any, into the dump."""
     bans = await app.db.fetch(
         """
@@ -90,7 +95,7 @@ async def dump_user_bans(app, zipdump, user_id):
     _dump_json(zipdump, "bans.json", treated)
 
 
-async def dump_user_limits(app, zipdump, user_id: int):
+async def dump_user_limits(zipdump, user_id: int):
     """Write the current limits for the user in the dump."""
     limits = await app.db.fetchrow(
         """
@@ -104,7 +109,7 @@ async def dump_user_limits(app, zipdump, user_id: int):
     _dump_json(zipdump, "limits.json", dict(limits))
 
 
-async def dump_user_files(app, zipdump, user_id):
+async def dump_user_files(zipdump, user_id):
     """Dump all information about the user's files."""
     all_files = await app.db.fetch(
         """
@@ -122,7 +127,7 @@ async def dump_user_files(app, zipdump, user_id):
     _dump_json(zipdump, "files.json", all_files_l)
 
 
-async def dump_user_shortens(app, zipdump, user_id):
+async def dump_user_shortens(zipdump, user_id):
     """Dump all information about the user's shortens."""
     all_shortens = await app.db.fetch(
         """
@@ -140,7 +145,7 @@ async def dump_user_shortens(app, zipdump, user_id):
     _dump_json(zipdump, "shortens.json", all_shortens_l)
 
 
-async def dump_files(app, zipdump, user_id, minid, files_done):
+async def dump_files(zipdump, user_id, minid, files_done):
     """Dump files into the data dump zip."""
 
     # start from minimum id
@@ -206,14 +211,14 @@ async def dump_files(app, zipdump, user_id, minid, files_done):
         )
 
 
-async def dispatch_dump(app, user_id: int, user_name: str):
+async def dispatch_dump(user_id: int, user_name: str):
     """Dispatch the data dump to a user."""
     log.info(f"Dispatching dump for {user_id} {user_name!r}")
 
     _inst_name = app.econfig.INSTANCE_NAME
     _support = app.econfig.SUPPORT_EMAIL
 
-    dump_token = await gen_email_token(app, user_id, "email_dump_tokens")
+    dump_token = await gen_email_token(user_id, "email_dump_tokens")
 
     await app.db.execute(
         """
@@ -240,7 +245,7 @@ Do not reply to this automated email.
     """
 
     resp_tup, user_email = await send_user_email(
-        app, user_id, f"{_inst_name} - Your data dump is here!", email_body
+        user_id, f"{_inst_name} - Your data dump is here!", email_body
     )
 
     resp, _ = resp_tup
@@ -260,17 +265,17 @@ Do not reply to this automated email.
         log.error(f"Failed to send email to {user_id} {user_email}")
 
 
-async def dump_static(app, zipdump, user_id):
+async def dump_static(zipdump, user_id):
     """Dump static files. Those files are JSON encoded
     with the required information."""
-    await dump_user_data(app, zipdump, user_id)
-    await dump_user_bans(app, zipdump, user_id)
-    await dump_user_limits(app, zipdump, user_id)
-    await dump_user_files(app, zipdump, user_id)
-    await dump_user_shortens(app, zipdump, user_id)
+    await dump_user_data(zipdump, user_id)
+    await dump_user_bans(zipdump, user_id)
+    await dump_user_limits(zipdump, user_id)
+    await dump_user_files(zipdump, user_id)
+    await dump_user_shortens(zipdump, user_id)
 
 
-async def do_dump(app, user_id: int):
+async def do_dump(user_id: int):
     """Make a data dump for the user."""
     # insert user in current dump state
     row = await app.db.fetchrow(
@@ -304,28 +309,28 @@ async def do_dump(app, user_id: int):
         total_files,
     )
 
-    zipdump, user_name = await open_zipdump(app, user_id)
+    zipdump, user_name = await open_zipdump(user_id)
 
     try:
         # those dumps just get stuff from DB
         # and write them into JSON files insize the zip
-        await dump_static(app, zipdump, user_id)
+        await dump_static(zipdump, user_id)
 
         # this is the longest operation for a dump
         # and because of that, it is resumable, so in the case
         # of an application failure, the system should be able to
         # know where it left off and continue writing to the zip file.
-        await dump_files(app, zipdump, user_id, minid, 0)
+        await dump_files(zipdump, user_id, minid, 0)
 
         # Finally, dispatch the ZIP file via email to the user.
-        await dispatch_dump(app, user_id, user_name)
+        await dispatch_dump(user_id, user_name)
     except Exception:
         log.exception("Error on dumping")
     finally:
         zipdump.close()
 
 
-async def resume_dump(app, user_id: int):
+async def resume_dump(user_id: int):
     """Resume a data dump"""
     # check the current state
     row = await app.db.fetchrow(
@@ -339,22 +344,22 @@ async def resume_dump(app, user_id: int):
 
     log.info(f'Resuming for {user_id} files_done: {row["files_done"]}')
 
-    zipdump, user_name = await open_zipdump(app, user_id, True)
+    zipdump, user_name = await open_zipdump(user_id, True)
 
     try:
         # Redump static files.
-        await dump_static(app, zipdump, user_id)
+        await dump_static(zipdump, user_id)
 
-        await dump_files(app, zipdump, user_id, row["current_id"], row["files_done"])
+        await dump_files(zipdump, user_id, row["current_id"], row["files_done"])
 
-        await dispatch_dump(app, user_id, user_name)
+        await dispatch_dump(user_id, user_name)
     except Exception:
         log.exception("error on dump files resume")
     finally:
         zipdump.close()
 
 
-async def dump_worker(app):
+async def dump_worker():
     """Main dump worker.
 
     Works dump resuming, manages the next user on the queue, etc.
@@ -369,7 +374,7 @@ async def dump_worker(app):
     )
 
     if user_id:
-        await resume_dump(app, user_id)
+        await resume_dump(user_id)
 
     # get from queue
     next_id = await app.db.fetchval(
@@ -390,7 +395,7 @@ async def dump_worker(app):
             next_id,
         )
 
-        await do_dump(app, next_id)
+        await do_dump(next_id)
 
         # use recursion so that
         # in the next call, we will fetch
@@ -398,27 +403,32 @@ async def dump_worker(app):
 
         # if no user is in the queue, the function
         # will stop.
-        return await dump_worker(app)
+        return await dump_worker()
 
 
-async def dump_worker_wrapper(app):
+async def dump_worker_wrapper():
     """Wrap the dump_worker inside a try/except block for logging."""
     try:
-        await dump_worker(app)
+        await dump_worker()
     except Exception:
         log.exception("error in dump worker task")
 
 
-def start_worker(app):
+def start_worker():
     """Start the dump worker, but not start more than 1 of them."""
+
     if app.sched.exists("dump_worker_wrapper"):
         log.info("worker wrapper exists, skipping")
         return
 
-    app.sched.spawn(dump_worker_wrapper(app))
+    @copy_current_app_context
+    async def _wrapped():
+        await dump_worker_wrapper()
+
+    app.sched.spawn(_wrapped(), name="dump_worker_wrapper")
 
 
-async def dump_janitor(app):
+async def dump_janitor():
     """Main data dump janitor task.
 
     This checks the dump folder every DUMP_JANITOR_PERIOD amount
@@ -448,9 +458,12 @@ async def dump_janitor(app):
             log.info(f"Ignoring {fpath}, life {file_life}s < 21600")
 
 
-def start_janitor(app):
+def start_janitor():
     """Start dump janitor."""
 
-    # call dump_janitor every DUMP_JANITOR_PERIOD
-    # seconds.
-    app.sched.spawn_periodic(dump_janitor, [app], app.econfig.DUMP_JANITOR_PERIOD)
+    # call dump_janitor every DUMP_JANITOR_PERIOD seconds.
+    @copy_current_app_context
+    async def _wrapped():
+        await dump_janitor()
+
+    app.sched.spawn_periodic(_wrapped, [], app.econfig.DUMP_JANITOR_PERIOD)

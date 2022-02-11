@@ -2,7 +2,10 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import pytest
 from .common import login_normal, login_admin
+
+pytestmark = pytest.mark.asyncio
 
 
 async def test_stats(test_cli):
@@ -15,8 +18,8 @@ async def test_stats(test_cli):
         },
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
 
     assert isinstance(rjson["total_files"], int)
@@ -33,8 +36,8 @@ async def test_domains(test_cli):
         "/api/stats/my_domains", headers={"Authorization": atoken}
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     assert isinstance(rjson["0"], dict)

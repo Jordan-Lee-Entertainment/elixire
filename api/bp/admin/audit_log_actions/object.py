@@ -19,8 +19,8 @@ async def _generic_get(action, object_id: int) -> dict:
 
 
 class ObjectEditAction(EditAction):
-    def __init__(self, request, object_id, object_type):
-        super().__init__(request, object_id)
+    def __init__(self, object_id, object_type):
+        super().__init__(object_id)
         self.type = object_type
 
     async def get_object(self, object_id):
@@ -36,8 +36,8 @@ class ObjectEditAction(EditAction):
 
 
 class ObjectDeleteAction(DeleteAction):
-    def __init__(self, request, object_id, object_type):
-        super().__init__(request, object_id)
+    def __init__(self, object_id, object_type):
+        super().__init__(object_id)
         self.type = object_type
 
     async def get_object(self, object_id):

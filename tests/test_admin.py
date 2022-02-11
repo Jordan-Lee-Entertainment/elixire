@@ -2,7 +2,10 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import pytest
 from .common import login_normal, login_admin
+
+pytestmark = pytest.mark.asyncio
 
 
 def _extract_uid(token) -> str:
@@ -29,7 +32,7 @@ async def test_non_admin(test_cli):
     )
 
     assert resp.status != 200
-    assert resp.status == 403
+    assert resp.status_code == 403
 
 
 async def test_admin(test_cli):
@@ -42,8 +45,8 @@ async def test_admin(test_cli):
         },
     )
 
-    assert resp.status == 200
-    data = await resp.json()
+    assert resp.status_code == 200
+    data = await resp.json
 
     assert isinstance(data, dict)
     assert data["admin"]
@@ -57,8 +60,8 @@ async def test_user_fetch(test_cli):
         f"/api/admin/users/{uid}", headers={"Authorization": atoken}
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     assert isinstance(rjson["user_id"], str)
@@ -89,8 +92,8 @@ async def test_user_activate_cycle(test_cli):
         f"/api/admin/deactivate/{uid}", headers={"Authorization": atoken}
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     assert rjson["success"]
@@ -100,8 +103,8 @@ async def test_user_activate_cycle(test_cli):
         f"/api/admin/users/{uid}", headers={"Authorization": atoken}
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
     assert not rjson["active"]
 
@@ -109,8 +112,8 @@ async def test_user_activate_cycle(test_cli):
     resp = await test_cli.post(
         f"/api/admin/activate/{uid}", headers={"Authorization": atoken}
     )
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     assert rjson["success"]
@@ -120,8 +123,8 @@ async def test_user_activate_cycle(test_cli):
         f"/api/admin/users/{uid}", headers={"Authorization": atoken}
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
     assert rjson["active"]
 
@@ -142,8 +145,8 @@ async def test_user_search(test_cli):
         },
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     assert isinstance(rjson["results"], list)
@@ -174,9 +177,9 @@ async def test_domain_search(test_cli):
         },
     )
 
-    assert resp.status == 200
+    assert resp.status_code == 200
 
-    json = await resp.json()
+    json = await resp.json
     assert_standard_response(json)
 
     # sample query
@@ -185,12 +188,12 @@ async def test_domain_search(test_cli):
         headers={
             "Authorization": token,
         },
-        params={"query": "elix"},
+        query_string={"query": "elix"},
     )
 
-    assert resp.status == 200
+    assert resp.status_code == 200
 
-    json = await resp.json()
+    json = await resp.json
     assert_standard_response(json)
 
     assert all(
@@ -204,8 +207,8 @@ async def test_domain_stats(test_cli):
 
     resp = await test_cli.get("/api/admin/domains", headers={"Authorization": atoken})
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     # not the best data validation...
     assert isinstance(rjson, dict)
@@ -230,8 +233,8 @@ async def test_domain_patch(test_cli):
         headers={"Authorization": atoken},
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
 
     fields = rjson["updated"]
@@ -249,8 +252,8 @@ async def test_domain_patch(test_cli):
         },
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     dinfo = rjson["info"]
@@ -273,8 +276,8 @@ async def test_domain_patch(test_cli):
         headers={"Authorization": atoken},
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
 
     fields = rjson["updated"]
@@ -292,8 +295,8 @@ async def test_domain_patch(test_cli):
         },
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
 
     assert isinstance(rjson, dict)
     dinfo = rjson["info"]
@@ -322,8 +325,8 @@ async def test_user_patch(test_cli):
         },
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, list)
     assert "upload_limit" in rjson
     assert "shorten_limit" in rjson
@@ -336,8 +339,8 @@ async def test_user_patch(test_cli):
         },
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, dict)
     assert isinstance(rjson["limits"], dict)
     assert rjson["limits"]["limit"] == 1000
@@ -355,8 +358,8 @@ async def test_user_patch(test_cli):
         },
     )
 
-    assert resp.status == 200
-    rjson = await resp.json()
+    assert resp.status_code == 200
+    rjson = await resp.json
     assert isinstance(rjson, list)
     assert "upload_limit" in rjson
     assert "shorten_limit" in rjson
@@ -373,9 +376,9 @@ async def test_my_stats_as_admin(test_cli):
         },
     )
 
-    assert resp.status == 200
+    assert resp.status_code == 200
 
-    rjson = await resp.json()
+    rjson = await resp.json
     assert isinstance(rjson, dict)
 
     try:

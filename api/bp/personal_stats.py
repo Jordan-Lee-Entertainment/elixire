@@ -4,19 +4,18 @@
 
 import logging
 
-from sanic import Blueprint
-from sanic import response
+from quart import Blueprint, jsonify, current_app as app
 
 from api.decorators import auth_route
 from api.common.domain import get_domain_public
 
 
-bp = Blueprint("personal_stats")
+bp = Blueprint("personal_stats", __name__)
 log = logging.getLogger(__name__)
 
 
-async def _get_counts(conn, table: str, user_id: int, extra: str = "") -> int:
-    res = await conn.fetchval(
+async def _get_counts(table: str, user_id: int, extra: str = "") -> int:
+    res = await app.db.fetchval(
         f"""
     SELECT COUNT(*)
     FROM {table}
@@ -29,14 +28,14 @@ async def _get_counts(conn, table: str, user_id: int, extra: str = "") -> int:
     return res or 0
 
 
-async def get_counts(conn, user_id: int) -> dict:
+async def get_counts(user_id: int) -> dict:
     """Get count information about a user."""
-    total_files = await _get_counts(conn, "files", user_id)
-    total_shortens = await _get_counts(conn, "shortens", user_id)
-    total_deleted = await _get_counts(conn, "files", user_id, "AND deleted = true")
+    total_files = await _get_counts("files", user_id)
+    total_shortens = await _get_counts("shortens", user_id)
+    total_deleted = await _get_counts("files", user_id, "AND deleted = true")
 
     total_bytes = (
-        await conn.fetchval(
+        await app.db.fetchval(
             """
     SELECT SUM(file_size)
     FROM files
@@ -55,19 +54,19 @@ async def get_counts(conn, user_id: int) -> dict:
     }
 
 
-@bp.get("/api/stats")
+@bp.get("", strict_slashes=False)
 @auth_route
-async def personal_stats_handler(request, user_id):
+async def personal_stats_handler(user_id):
     """Personal statistics for users."""
 
-    return response.json(await get_counts(request.app.db, user_id))
+    return jsonify(await get_counts(user_id))
 
 
-@bp.get("/api/stats/my_domains")
+@bp.get("/my_domains")
 @auth_route
-async def personal_domain_stats(request, user_id):
+async def personal_domain_stats(user_id):
     """Fetch information about the domains you own."""
-    db = request.app.db
+    db = app.db
 
     domain_ids = await db.fetch(
         """
@@ -95,10 +94,10 @@ async def personal_domain_stats(request, user_id):
         dinfo = dict(domain_info)
         dinfo["cf_enabled"] = False
 
-        public = await get_domain_public(db, domain_id)
+        public = await get_domain_public(domain_id)
         res[domain_id] = {
             "info": dinfo,
             "stats": public,
         }
 
-    return response.json(res)
+    return jsonify(res)

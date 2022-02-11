@@ -14,7 +14,7 @@ from .errors import NotFound
 log = logging.getLogger(__name__)
 
 
-def calc_ttl(dtime: datetime.datetime) -> float:
+def calc_ttl(dtime: datetime.datetime) -> int:
     """Calculate how many seconds remain
     from now to the given timestamp.
 
@@ -27,8 +27,8 @@ def calc_ttl(dtime: datetime.datetime) -> float:
         The amount of seconds from now to reach the
         given timestamp.
     """
-    now = datetime.datetime.now()
-    return (dtime - now).total_seconds()
+    now = datetime.datetime.utcnow()
+    return int((dtime - now).total_seconds())
 
 
 def check(map_data) -> dict:
@@ -101,8 +101,7 @@ class Storage:
         any: typ
             If the key fetching succeeded.
         """
-        with await self.redis as conn:
-            val = await conn.get(key)
+        val = await self.redis.get(key)
 
         log.debug(f"get {key!r}, type {typ!r}, value {val!r}")
         if typ == bool:
@@ -136,16 +135,15 @@ class Storage:
         """Set a key in Redis."""
         key = str(key)
 
-        with await self.redis as conn:
-            if isinstance(value, bool):
-                value = str(value)
+        if isinstance(value, bool):
+            value = str(value)
 
-            log.debug(f"set key {key!r} to {value!r}")
+        log.debug(f"set key {key!r} to {value!r}")
 
-            # the string false tells that whatever
-            # query the db did returned None.
-            value = "false" if value is None else value
-            await conn.set(key, value, **kwargs)
+        # the string false tells that whatever
+        # query the db did returned None.
+        value = "false" if value is None else value
+        await self.redis.set(key, value, **kwargs)
 
     async def set_with_ttl(self, key, value, ttl):
         """Set a key and set its TTL afterwards.
@@ -179,8 +177,7 @@ class Storage:
             Those represent the keys to be invalidated.
         """
         log.info(f"Invalidating {len(keys)} keys: {keys}")
-        with await self.redis as conn:
-            await conn.delete(*keys)
+        await self.redis.delete(*keys)
 
     async def invalidate(self, user_id: int, *fields: tuple):
         """Invalidate fields given a user id."""

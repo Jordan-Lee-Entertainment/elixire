@@ -2,7 +2,7 @@ image: python:3.7-alpine
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache"
-  POSTGRES_HOST_AUTH_METHOD: 'trust'
+  POSTGRES_HOST_AUTH_METHOD: "trust"
 #   GIT_SUBMODULE_STRATEGY: recursive
 
 # build_frontend:
@@ -27,14 +27,12 @@ cache:
     - /var/cache/apk
 
 run_backend:
-  image: python:3.6-alpine
   before_script:
     - python -V
-    - apk --update add build-base git python3-dev libffi-dev jpeg-dev zlib-dev freetype-dev lcms2-dev openjpeg-dev tiff-dev tk-dev tcl-dev libxml2-dev libxslt-dev libffi-dev gcc musl-dev libgcc openssl-dev curl libmagic postgresql-client
-    - pip install virtualenv wheel tox
-    - sh -c "! [ -d env ] && virtualenv env || exit 0"
-    - source env/bin/activate
-    - python -m pip install -Ur requirements.txt
+    - pip -V
+    - time apk --update add build-base git python3-dev libffi-dev jpeg-dev zlib-dev freetype-dev lcms2-dev openjpeg-dev tiff-dev tk-dev tcl-dev libxml2-dev libxslt-dev libffi-dev gcc musl-dev libgcc openssl-dev curl libmagic postgresql-client
+    - time pip install wheel tox
+    - time pip install -Ur requirements.txt
     - mkdir -p images
     - mkdir -p dumps
     - mkdir -p thumbnails

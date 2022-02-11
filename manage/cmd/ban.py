@@ -3,24 +3,25 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 # TODO: banip, unbanip
+from quart import current_app as app
 from ..utils import get_user
 
 
-async def _invalidate(ctx, user_id: int):
-    await ctx.storage.raw_invalidate(f"userban:{user_id}")
+async def _invalidate(user_id: int):
+    await app.storage.raw_invalidate(f"userban:{user_id}")
 
 
 # TODO fix ban_user
-async def ban_user(ctx, args):
+async def ban_user(args):
     """Ban a single user."""
     username = args.username
     # interval = args.interval
     reason = args.reason
-    user_id = await get_user(ctx, username)
-    await _invalidate(ctx, user_id)
+    user_id = await get_user(username)
+    await _invalidate(user_id)
 
     print(
-        await ctx.db.execute(
+        await app.db.execute(
             """
             INSERT INTO bans (user_id, reason, end_timestamp)
             VALUES ($1, $2, $3)
@@ -31,19 +32,19 @@ async def ban_user(ctx, args):
     )
 
 
-async def unban_user(ctx, args):
+async def unban_user(args):
     """Unban a single user"""
     username = args.username
-    user_id = await get_user(ctx, username)
+    user_id = await get_user(username)
 
-    exec_out = await ctx.db.execute(
+    exec_out = await app.db.execute(
         """
     DELETE FROM bans
     WHERE user_id = $1
     """,
         user_id,
     )
-    await _invalidate(ctx, user_id)
+    await _invalidate(user_id)
 
     print(f"SQL result: {exec_out}")
 

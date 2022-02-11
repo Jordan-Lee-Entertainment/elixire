@@ -8,11 +8,12 @@ elixi.re - manage.py main code
 import argparse
 import asyncio
 import logging
-import sys
+from typing import List
 
 import aiohttp
 import asyncpg
 import aioredis
+from quart import Quart
 
 # import stuff from api for our Context.
 # more info on Context @ manage/utils.py
@@ -21,9 +22,9 @@ from api.common.utils import LockStorage
 from api.jobs import JobManager
 
 from .errors import PrintException, ArgError
-from .utils import Context
 
 from manage.cmd import ban, files, find, user, migration
+from tests.conftest import setup_test_app, setup_mocks
 
 log = logging.getLogger(__name__)
 
@@ -31,19 +32,24 @@ log = logging.getLogger(__name__)
 async def connect_db(config, loop):
     """Connect to databases."""
     pool = await asyncpg.create_pool(**config.db)
-    redis = await aioredis.create_redis_pool(
-        config.redis, minsize=1, maxsize=3, loop=loop, encoding="utf-8"
+
+    redis_pool = aioredis.ConnectionPool.from_url(
+        config.redis,
+        max_connections=11,
+        encoding="utf-8",
+        decode_responses=True,
     )
+    redis = aioredis.Redis(connection_pool=redis_pool)
 
-    return pool, redis
+    return pool, redis_pool, redis
 
 
-async def close_ctx(ctx):
+async def shutdown(app):
     """Close database connections."""
-    await ctx.db.close()
-    ctx.redis.close()
-    await ctx.redis.wait_closed()
-    await ctx.session.close()
+    await app.db.close()
+    await app.redis_pool.disconnect()
+    app.sched.stop()
+    await app.session.close()
 
 
 def set_parser():
@@ -65,42 +71,46 @@ async def _make_sess(ctx):
     ctx.session = aiohttp.ClientSession()
 
 
-def main(config):
+async def amain(loop, config, argv: List[str], *, is_testing: bool = False):
     loop = asyncio.get_event_loop()
-    conn, redis = loop.run_until_complete(connect_db(config, loop))
+    conn, redis_pool, redis = await connect_db(config, loop)
+    app = Quart(__name__)
+    app.db = conn
+    app.redis_pool = redis_pool
+    app.redis = redis
+    app.loop = loop
+    app.econfig = config
 
-    # construct our context
-    ctx = Context(conn, redis, loop, LockStorage())
+    app.storage = Storage(app)
+    app.locks = LockStorage()
+    app.session = aiohttp.ClientSession()
+    app.sched = JobManager()
 
-    # this needs an actual connection to the database and redis
-    # so we first instantiate Context, then set the attribute
-    ctx.storage = Storage(ctx)
-
-    ctx.sched = JobManager(loop)
-
-    # aiohttp warns us when making ClientSession out of
-    # a coroutine, so yeah.
-    loop.run_until_complete(_make_sess(ctx))
+    if is_testing:
+        setup_test_app(loop, app)
+        setup_mocks(app)
 
     # load our setup() calls on manage/cmd files
     parser = set_parser()
 
     try:
-        if len(sys.argv) < 2:
+        if not argv:
             parser.print_help()
-            return
+            return app, 0
 
-        args = parser.parse_args()
-        loop.run_until_complete(args.func(ctx, args))
+        args = parser.parse_args(argv)
+
+        async with app.app_context():
+            await args.func(args)
     except PrintException as exc:
         print(exc.args[0])
     except ArgError as exc:
         print(f'argument error: {",".join(exc.args)}')
-        return 1
+        return app, 1
     except Exception:
         log.exception("oops.")
-        return 1
+        return app, 1
     finally:
-        loop.run_until_complete(close_ctx(ctx))
+        await shutdown(app)
 
-    return 0
+    return app, 0

@@ -3,32 +3,39 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
+import asyncio
 
 import asyncpg
 import aiohttp
 import aioredis
 
-from sanic import Sanic
-from sanic.exceptions import NotFound, FileNotFound
-from sanic import response
-from sanic_cors import CORS
+from quart import Quart, request, send_file
+
 from dns import resolver
 
 import api.bp.auth
 import api.bp.profile
+import api.bp.shorten
 import api.bp.upload
 import api.bp.files
-import api.bp.shorten
+import api.bp.cors
+
 import api.bp.fetch
 import api.bp.admin
+
 import api.bp.register
+
 import api.bp.datadump
+
 import api.bp.metrics
 import api.bp.personal_stats
+
 import api.bp.d1check
 import api.bp.wpadmin
 import api.bp.misc
+
 import api.bp.index
+
 import api.bp.ratelimit
 import api.bp.frontend
 
@@ -38,85 +45,108 @@ from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.common.utils import LockStorage
 from api.storage import Storage
 from api.jobs import JobManager
+
+import api.bp.metrics.blueprint
 from api.bp.metrics.counters import MetricsCounters
+
 from api.bp.admin.audit_log import AuditLog
 
 import config
 
-app = Sanic()
-app.econfig = config
+# == HACKY PATCH ==
+# this MUST be removed once Hypercorn gets py3.10 support.
+from asyncio import start_server as _start_server
 
-# enable cors on api, images and shortens
-CORS(
-    app,
-    resources=[r"/api/*", r"/i/*", r"/s/*", r"/t/*"],
-    automatic_options=True,
-    expose_headers=[
-        "X-Ratelimit-Scope",
-        "X-Ratelimit-Limit",
-        "X-Ratelimit-Remaining",
-        "X-Ratelimit-Reset",
-    ],
-)
+asyncio.start_server = lambda *args, loop=None, **kwargs: _start_server(*args, **kwargs)
 
-level = getattr(config, "LOGGING_LEVEL", "INFO")
-logging.basicConfig(level=level)
-logging.getLogger("aioinflux").setLevel(logging.INFO)
-
-if level == "DEBUG":
-    fh = logging.FileHandler("elixire.log")
-    fh.setLevel(logging.DEBUG)
-    logging.getLogger().addHandler(fh)
 
 log = logging.getLogger(__name__)
 
 
+def make_app() -> Quart:
+    """Make a Quart instance."""
+    app = Quart(__name__)
+
+    # actual max content length can be better determined by a reverse proxy.
+    app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
+
+    # TODO change config to app.cfg
+    # also see https://gitlab.com/elixire/elixire/-/issues/112
+    app.econfig = config
+    app.econfig.REQUIRE_ACCOUNT_APPROVALS = getattr(
+        app.econfig, "REQUIRE_ACCOUNT_APPROVALS", True
+    )
+
+    level = getattr(config, "LOGGING_LEVEL", "INFO")
+    logging.basicConfig(level=level)
+    logging.getLogger("aioinflux").setLevel(logging.INFO)
+
+    if level == "DEBUG":
+        fhandle = logging.FileHandler("elixire.log")
+        fhandle.setLevel(logging.DEBUG)
+        logging.getLogger().addHandler(fhandle)
+
+    return app
+
+
 def set_blueprints(app_):
-    # load blueprints
-    app_.blueprint(api.bp.ratelimit.bp)
-    app_.blueprint(api.bp.auth.bp)
-    app_.blueprint(api.bp.index.bp)
-    app_.blueprint(api.bp.profile.bp)
-    app_.blueprint(api.bp.upload.bp)
-    app_.blueprint(api.bp.files.bp)
-    app_.blueprint(api.bp.shorten.bp)
-    app_.blueprint(api.bp.fetch.bp)
+    # map blueprints to api routes.
+    # this is done so that we can provide both /api and /api/v2 namespaces
+    # without having to duplicate everything.
+    #
+    # None means there's no api prefix for the blueprint, so routes
+    # in it will be mapped to the root of the webapp
+    blueprints = {
+        api.bp.cors.bp: None,
+        api.bp.ratelimit.bp: None,
+        api.bp.auth.bp: "",
+        api.bp.register.bp: "",
+        api.bp.profile.bp: "",
+        api.bp.misc.bp: "",
+        api.bp.shorten.bp: None,
+        api.bp.upload.bp: "",
+        api.bp.files.bp: "",
+        api.bp.index.bp: "",
+        api.bp.personal_stats.bp: "/stats",
+        api.bp.admin.user_bp: "",
+        api.bp.admin.domain_bp: "/admin",
+        api.bp.admin.misc_bp: "/admin",
+        api.bp.admin.object_bp: "/admin",
+        api.bp.admin.settings_bp: "/admin",
+        api.bp.fetch.bp: None,
+        api.bp.frontend.bp: None,
+        api.bp.wpadmin.bp: None,
+        api.bp.d1check.bp: "",
+        api.bp.datadump.bp: "",
+        api.bp.metrics.bp: None,
+    }
 
-    # load admin blueprints
-    app_.blueprint(api.bp.admin.user_bp)
-    app_.blueprint(api.bp.admin.object_bp)
-    app_.blueprint(api.bp.admin.domain_bp)
-    app_.blueprint(api.bp.admin.misc_bp)
-    app_.blueprint(api.bp.admin.settings_bp)
+    for blueprint_object, prefix in blueprints.items():
+        root_prefixes = ["/api", "/api/v2"]
+        route_prefixes = [f'{root}{prefix or ""}' for root in root_prefixes]
 
-    app_.blueprint(api.bp.register.bp)
-    app_.blueprint(api.bp.datadump.bp)
-    app_.blueprint(api.bp.personal_stats.bp)
-    app_.blueprint(api.bp.d1check.bp)
-    app_.blueprint(api.bp.misc.bp)
-    app_.blueprint(api.bp.frontend.bp)
-    app_.blueprint(api.bp.metrics.bp)
+        if prefix is None:
+            route_prefixes = [""]
 
-    # meme blueprint
-    app_.blueprint(api.bp.wpadmin.bp)
+        log.debug(
+            "loading blueprint %r with prefixes %r",
+            blueprint_object.name,
+            route_prefixes,
+        )
+        for route in route_prefixes:
+            app_.register_blueprint(blueprint_object, url_prefix=route)
 
 
-async def options_handler(request, *args, **kwargs):
-    """Dummy OPTIONS handler for CORS stuff."""
-    return response.text("ok")
+app = make_app()
 
 
-async def _handle_ban(request, reason: str):
-    rapp = request.app
-
-    if "ctx" not in request:
-        # use the IP as banning point
-        ip_addr = get_ip_addr(request)
-
+async def _handle_ban(lock_key, lock_type: str, reason: str):
+    if lock_type == "ip":
+        ip_addr = get_ip_addr()
         log.warning(f"Banning ip address {ip_addr} with reason {reason!r}")
 
-        period = rapp.econfig.IP_BAN_PERIOD
-        await rapp.db.execute(
+        period = app.econfig.IP_BAN_PERIOD
+        await app.db.execute(
             f"""
         INSERT INTO ip_bans (ip_address, reason, end_timestamp)
         VALUES ($1, $2, now()::timestamp + interval '{period}')
@@ -125,15 +155,14 @@ async def _handle_ban(request, reason: str):
             reason,
         )
 
-        await rapp.storage.raw_invalidate(f"ipban:{ip_addr}")
-        await ip_ban_webhook(rapp, ip_addr, f"[ip ban] {reason}", period)
+        await app.storage.raw_invalidate(f"ipban:{ip_addr}")
+        await ip_ban_webhook(ip_addr, f"[ip ban] {reason}", period)
     else:
-        user_name, user_id = request["ctx"]
-
+        user_name, user_id = request._user
         log.warning(f"Banning {user_name} {user_id} with reason {reason!r}")
 
         period = app.econfig.BAN_PERIOD
-        await rapp.db.execute(
+        await app.db.execute(
             f"""
         INSERT INTO bans (user_id, reason, end_timestamp)
         VALUES ($1, $2, now()::timestamp + interval '{period}')
@@ -142,12 +171,12 @@ async def _handle_ban(request, reason: str):
             reason,
         )
 
-        await rapp.storage.raw_invalidate(f"userban:{user_id}")
-        await ban_webhook(rapp, user_id, reason, period)
+        await app.storage.raw_invalidate(f"userban:{user_id}")
+        await ban_webhook(user_id, reason, period)
 
 
-@app.exception(Banned)
-async def handle_ban(request, exception):
+@app.errorhandler(Banned)
+async def handle_ban(exception):
     """Handle the Banned exception being raised through a request.
 
     This takes care of inserting a user ban.
@@ -155,7 +184,13 @@ async def handle_ban(request, exception):
     scode = exception.status_code
     reason = exception.args[0]
 
-    lock_key = request["ctx"][0] if "ctx" in request else get_ip_addr(request)
+    try:
+        _username, lock_key = request._user
+        lock_type = "user"
+    except AttributeError:
+        lock_key = get_ip_addr()
+        lock_type = "ip"
+
     ban_lock = app.locks["bans"][lock_key]
 
     # generate error message before anything
@@ -166,96 +201,109 @@ async def handle_ban(request, exception):
     }
 
     res.update(exception.get_payload())
-    resp = response.json(res, status=scode)
+    resp = (res, scode)
 
     if ban_lock.locked():
         log.warning("Ban lock already acquired.")
         return resp
 
-    await ban_lock.acquire()
-
-    try:
-        # actual ban code is here
-        await _handle_ban(request, reason)
-    finally:
-        ban_lock.release()
+    async with ban_lock:
+        await _handle_ban(lock_key, lock_type, reason)
 
     return resp
 
 
-@app.exception(APIError)
-def handle_api_error(request, exception):
+@app.errorhandler(APIError)
+def handle_api_error(exception):
     """Handle any kind of application-level raised error."""
     log.warning(f"API error: {exception!r}")
 
     # api errors count as errors as well
-    request.app.counters.inc("error")
+    app.counters.inc("error")
 
     scode = exception.status_code
     res = {"error": True, "code": scode, "message": exception.args[0]}
 
     res.update(exception.get_payload())
-    return response.json(res, status=scode)
+    return res, scode
 
 
-@app.exception(Exception)
-def handle_exception(request, exception):
+@app.errorhandler(FileNotFoundError)
+async def handle_notfound_error(err):
+    return await handle_notfound(err)
+
+
+@app.errorhandler(404)
+async def handle_notfound(_err):
+    rule = request.url_rule
+    if rule is None:
+        return "Not found", 404
+    path = rule.rule
+
+    # TODO move frontends to nginx
+
+    # admin panel routes all 404's back to index.
+    if path.startswith("/admin"):
+        return await send_file("./admin-panel/build/index.html")
+
+    return await send_file("./frontend/output/404.html"), 404
+
+
+@app.errorhandler(500)
+def handle_exception(exception):
     """Handle any kind of exception."""
     status_code = 500
-    url = request.path
 
     try:
         status_code = exception.status_code
     except AttributeError:
         pass
 
-    if isinstance(exception, (NotFound, FileNotFound, FileNotFoundError)):
-        status_code = 404
-        log.warning(f"File not found: {exception!r}")
+    log.exception(f"Error in request: {exception!r}")
 
-        if request.app.econfig.ENABLE_FRONTEND:
-            # admin panel routes all 404's back to index.
-            if url.startswith("/admin"):
-                return response.file("./admin-panel/build/index.html")
-
-            return response.file("./frontend/output/404.html", status=404)
-    else:
-        log.exception(f"Error in request: {exception!r}")
-
-    request.app.counters.inc("error")
-
+    app.counters.inc("error")
     if status_code == 500:
-        request.app.counters.inc("error_ise")
+        app.counters.inc("error_ise")
 
-    return response.json(
-        {"error": True, "message": repr(exception)}, status=status_code
-    )
+    return {"error": True, "message": repr(exception)}, status_code
 
 
-@app.listener("before_server_start")
-async def setup_db(rapp, loop):
-    """Initialize db connection before app start"""
-    rapp.sched = JobManager()
+@app.before_serving
+async def app_before_serving():
+    try:
+        app.loop
+    except AttributeError:
+        app.loop = asyncio.get_event_loop()
 
-    rapp.session = aiohttp.ClientSession(loop=loop)
+    app.sched = JobManager()
+
+    app.session = aiohttp.ClientSession(loop=app.loop)
 
     log.info("connecting to db")
-    rapp.db = await asyncpg.create_pool(**config.db)
+    app.db = await asyncpg.create_pool(**config.db)
+    await api.bp.cors.setup()
 
     log.info("connecting to redis")
-    rapp.redis = await aioredis.create_redis_pool(
-        config.redis, minsize=3, maxsize=11, loop=loop, encoding="utf-8"
+    app.redis_pool = aioredis.ConnectionPool.from_url(
+        config.redis,
+        max_connections=11,
+        encoding="utf-8",
+        decode_responses=True,
     )
+    app.redis = aioredis.Redis(connection_pool=app.redis_pool)
 
-    rapp.storage = Storage(app)
-    rapp.locks = LockStorage()
+    app.storage = Storage(app)
+    app.locks = LockStorage()
 
     # keep an app-level resolver instead of instantiate
     # on every check_email call
-    rapp.resolv = resolver.Resolver()
+    app.resolv = resolver.Resolver()
 
+    api.bp.ratelimit.setup_ratelimits()
     # metrics stuff
-    rapp.counters = MetricsCounters()
+    app.counters = MetricsCounters()
+    await api.bp.metrics.blueprint.create_db()
+    await api.bp.metrics.blueprint.start_tasks()
 
     # only give real AuditLog when we are on production
     # a MockAuditLog instance will be in that attribute
@@ -264,46 +312,23 @@ async def setup_db(rapp, loop):
     # TODO: maybe we can make a MockMetricsManager so that we
     # don't stress InfluxDB out while running the tests.
 
-    if not getattr(rapp, "test", False):
-        rapp.audit_log = AuditLog(rapp)
+    app.audit_log = AuditLog()
+
+    api.bp.datadump.start_tasks()
 
 
-@app.listener("after_server_stop")
-async def close_db(rapp, _loop):
-    """Close all database connections."""
+@app.after_serving
+async def app_after_serving():
     log.info("closing db")
-    await rapp.db.close()
+    await app.db.close()
 
     log.info("closing redis")
-    rapp.redis.close()
-    await rapp.redis.wait_closed()
+    await app.redis_pool.disconnect()
 
-    rapp.sched.stop()
-    await rapp.session.close()
+    app.sched.stop()
+    await app.session.close()
+
+    await api.bp.metrics.blueprint.close_worker()
 
 
-# we set blueprints globally
-# and after every listener is declared.
 set_blueprints(app)
-
-
-def main():
-    """Main application entry point."""
-    # "fix" CORS.
-    routelist = list(app.router.routes_all.keys())
-    for uri in list(routelist):
-        try:
-            app.add_route(options_handler, uri, methods=["OPTIONS"])
-        except Exception:
-            pass
-
-    del routelist
-
-    app.static("/humans.txt", "./static/humans.txt")
-    app.static("/robots.txt", "./static/robots.txt")
-
-    app.run(host=config.HOST, port=config.PORT)
-
-
-if __name__ == "__main__":
-    main()

@@ -3,8 +3,10 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import random
-
+import pytest
 from .common import username
+
+pytestmark = pytest.mark.asyncio
 
 
 async def test_invalid_path(test_cli):
@@ -13,7 +15,7 @@ async def test_invalid_path(test_cli):
 
     for invalid in invalid_shit:
         resp = await test_cli.get(f"/i/{invalid}")
-        assert resp.status == 404
+        assert resp.status_code == 404
 
 
 async def test_invalid_path_thumbnail(test_cli):
@@ -23,4 +25,4 @@ async def test_invalid_path_thumbnail(test_cli):
     for invalid in invalid_shit:
         prefix = random.choice(["s", "t", "l", "m"])
         resp = await test_cli.get(f"/t/{prefix}{invalid}")
-        assert resp.status == 404
+        assert resp.status_code == 404
