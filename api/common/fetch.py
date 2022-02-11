@@ -2,10 +2,12 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+from quart import current_app as app
 
-async def get_file_id(conn, file_name):
+
+async def get_file_id(file_name: str) -> int:
     """Get a file ID, given a file shortname."""
-    return await conn.fetchval(
+    return await app.db.fetchval(
         """
     SELECT file_id
     FROM files
@@ -15,9 +17,9 @@ async def get_file_id(conn, file_name):
     )
 
 
-async def get_shorten_id(conn, shorten_name):
+async def get_shorten_id(shorten_name: str) -> int:
     """Get a shorten ID, given a shorten shortname."""
-    return await conn.fetchval(
+    return await app.db.fetchval(
         """
     SELECT shorten_id
     FROM shortens
@@ -27,9 +29,9 @@ async def get_shorten_id(conn, shorten_name):
     )
 
 
-async def get_file(conn, file_id: int) -> dict:
+async def get_file(file_id: int) -> dict:
     """Get a dictionary holding file information."""
-    row = await conn.fetchrow(
+    row = await app.db.fetchrow(
         """
     SELECT file_id, mimetype, filename, file_size,
            uploader, fspath, deleted, domain
@@ -49,14 +51,14 @@ async def get_file(conn, file_id: int) -> dict:
     return drow
 
 
-async def get_shorten(conn, shorten_id: int) -> dict:
+async def get_shorten(shorten_id: int) -> dict:
     """Get a dictionary holding shorten information."""
 
     # NOTE: this is really a copypaste from get_file.
     # the old function was unified, called generic_namefetch,
     # it was shitty... so i split it into two.
 
-    row = await conn.fetchrow(
+    row = await app.db.fetchrow(
         """
     SELECT shorten_id, filename, redirto, uploader,
            deleted, domain

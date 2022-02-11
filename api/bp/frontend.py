@@ -2,50 +2,53 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from sanic import Blueprint, response
-from sanic.router import RouteExists
+from pathlib import Path
+from quart import Blueprint, send_file, current_app as app
 
-bp = Blueprint("frontend")
+bp = Blueprint("frontend", __name__)
 
 
-async def maybe_send(app, path):
+async def maybe_send(file_path: str):
+    # TODO make better detection for hellish paths (check parenting against
+    # the preffered frontend folder)
+    if ".." in file_path:
+        return "no", 404
+
     if app.econfig.ENABLE_FRONTEND:
-        return await response.file(path)
+        return await send_file(file_path)
 
-    return response.text("frontend is not enabled")
+    return "frontend is not enabled"
+
+
+@bp.route("/<path:path>")
+async def frontend_path(path):
+    """Map requests from / to /static."""
+    static_path = Path.cwd() / Path("frontend/output") / path
+    return await maybe_send(str(static_path))
 
 
 @bp.get("/")
-async def main_frontend_index(request):
-    return await maybe_send(request.app, "./frontend/output/index.html")
+async def frontend_index():
+    """Handler for the index page."""
+    return await maybe_send("./frontend/output/index.html")
 
 
-async def main_frontend(request, **_paths):
-    return await maybe_send(request.app, f"./frontend/output/{request.path}")
+@bp.get("/admin/<path:path>")
+async def admin_path(path):
+    static_path = Path.cwd() / Path("admin-panel/build") / path
+    return await maybe_send(str(static_path))
 
 
 @bp.get("/admin")
-async def main_admin_index(request):
-    return await maybe_send(request.app, "./admin-panel/build/index.html")
+async def admin_index():
+    return await maybe_send("./admin-panel/build/index.html")
 
 
-async def main_admin(request, **paths):
-    path = "/".join([p for p in paths.values()])
-    return await maybe_send(request.app, f"./admin-panel/build/{path}")
+@bp.get("/robots.txt")
+async def robots_txt():
+    return await send_file("./static/robots.txt")
 
 
-@bp.listener("before_server_start")
-async def add_frontend_routes(app, _loop):
-    for i in range(1, 5):
-        components = [f"/<path{n}>" for n in range(i)]
-        path = "".join(components)
-
-        try:
-            app.add_route(main_frontend, path, methods=["GET"])
-        except RouteExists:
-            pass
-
-        try:
-            app.add_route(main_admin, f"/admin{path}", methods=["GET"])
-        except RouteExists:
-            pass
+@bp.get("/humans.txt")
+async def humans_txt():
+    return await send_file("./static/humans.txt")

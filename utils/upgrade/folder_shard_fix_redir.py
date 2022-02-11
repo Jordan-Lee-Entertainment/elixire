@@ -27,7 +27,7 @@ import config
 
 async def main():
     pool = await asyncpg.create_pool(**config.db)
-    redis = await aioredis.create_redis(config.redis)
+    redis = aioredis.from_url(config.redis)
 
     imroot = Path("./images")
 
@@ -76,8 +76,6 @@ async def main():
             await redis.delete(f"fspath:{domain}:{filename}")
 
     await pool.close()
-    redis.close()
-    await redis.wait_closed()
     print("OK")
 
 

@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
 
+from quart import current_app as app
 from api.common.domain import get_domain_info
 from api.bp.admin.audit_log import Action, EditAction, DeleteAction
 
@@ -13,9 +14,9 @@ class DomainAddAction(Action):
     async def details(self) -> list:
         owner_id = self["owner_id"]
         domain_id = self["domain_id"]
-        owner_name = await self.app.storage.get_username(owner_id)
+        owner_name = await app.storage.get_username(owner_id)
 
-        domain = await self.app.db.fetchrow(
+        domain = await app.db.fetchrow(
             """
         SELECT domain, admin_only, official, permissions
         FROM domains
@@ -42,7 +43,7 @@ class DomainAddAction(Action):
 
 class DomainEditAction(EditAction):
     async def get_object(self, domain_id) -> dict:
-        domain = await self.app.db.fetchrow(
+        domain = await app.db.fetchrow(
             """
         SELECT admin_only, official, domain, permissions
         FROM domains
@@ -53,7 +54,7 @@ class DomainEditAction(EditAction):
 
         domain = dict(domain) if domain is not None else {}
 
-        domain_owner = await self.app.db.fetchval(
+        domain_owner = await app.db.fetchval(
             """
         SELECT user_id
         FROM domain_owners
@@ -77,10 +78,10 @@ class DomainEditAction(EditAction):
 
         for key, old, new in self.different_keys_items():
             if key == "owner_id":
-                old_uname = await self.app.storage.get_username(old)
+                old_uname = await app.storage.get_username(old)
                 old = f"{old} {old_uname}"
 
-                new_uname = await self.app.storage.get_username(new)
+                new_uname = await app.storage.get_username(new)
                 new = f"{new} {new_uname}"
 
             lines.append(f"\t - {key}: {old} => {new}")
@@ -90,7 +91,7 @@ class DomainEditAction(EditAction):
 
 class DomainRemoveAction(DeleteAction):
     async def get_object(self, domain_id):
-        return await get_domain_info(self.app.db, domain_id)
+        return await get_domain_info(domain_id)
 
     async def details(self) -> list:
         lines = [

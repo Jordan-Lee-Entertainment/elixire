@@ -11,6 +11,7 @@ import logging
 import bcrypt
 import itsdangerous
 
+from quart import request, current_app as app
 from .common import TokenType, check_bans, gen_filename
 from ..errors import FailedAuth, NotFound
 from ..schema import validate, LOGIN_SCHEMA
@@ -18,55 +19,55 @@ from ..schema import validate, LOGIN_SCHEMA
 log = logging.getLogger(__name__)
 
 
-async def gen_shortname(request, user_id: int, table: str = "files") -> tuple:
+async def gen_shortname(user_id: int, table: str = "files") -> tuple:
     """Generate a shortname for a file.
 
     Checks if the user is in paranoid mode.
     """
-    is_paranoid = await check_paranoid(request, user_id)
-    shortname_len = 8 if is_paranoid else request.app.econfig.SHORTNAME_LEN
-    return await gen_filename(request, shortname_len, table)
+    is_paranoid = await check_paranoid(user_id)
+    shortname_len = 8 if is_paranoid else app.econfig.SHORTNAME_LEN
+    return await gen_filename(shortname_len, table)
 
 
-def get_token(request) -> str:
+def get_token() -> str:
     """Get a token from the request.
 
     Fetches a token from the url arguments,
     if it fails, will fetch from the Authorization header.
     """
     try:
-        return request.raw_args["token"]
+        return request.args["token"]
     except KeyError:
         return request.headers["Authorization"]
 
 
-async def pwd_hash(request, password: str) -> str:
+async def pwd_hash(password: str) -> str:
     """Generate a hash for any given password"""
     password_bytes = bytes(password, "utf-8")
-    hashed = request.app.loop.run_in_executor(
+    hashed = app.loop.run_in_executor(
         None, bcrypt.hashpw, password_bytes, bcrypt.gensalt(14)
     )
 
     return (await hashed).decode("utf-8")
 
 
-async def pwd_check(request, stored: str, password: str):
+async def pwd_check(stored: str, password: str):
     """Raw version of password_check."""
     pwd_bytes = bytes(password, "utf-8")
     pwd_orig = bytes(stored, "utf-8")
 
-    future = request.app.loop.run_in_executor(None, bcrypt.checkpw, pwd_bytes, pwd_orig)
+    future = app.loop.run_in_executor(None, bcrypt.checkpw, pwd_bytes, pwd_orig)
 
     if not await future:
         raise FailedAuth("User or password invalid")
 
 
-async def password_check(request, user_id: int, password: str):
+async def password_check(user_id: int, password: str):
     """Query password hash from user_id and compare with given.
 
     Raises FailedAuth on invalid password.
     """
-    stored = await request.app.db.fetchval(
+    stored = await app.db.fetchval(
         """
         select password_hash
         from users
@@ -75,10 +76,10 @@ async def password_check(request, user_id: int, password: str):
         user_id,
     )
 
-    await pwd_check(request, stored, password)
+    await pwd_check(stored, password)
 
 
-async def check_admin(request, user_id: int, error_on_nonadmin: bool = True) -> bool:
+async def check_admin(user_id: int, error_on_nonadmin: bool = True) -> bool:
     """Checks if the given user is an admin.
 
     Returns
@@ -93,7 +94,7 @@ async def check_admin(request, user_id: int, error_on_nonadmin: bool = True) -> 
     FailedAuth
         When user is not an admin and error_on_nonadmin is set to True.
     """
-    is_admin = await request.app.db.fetchval(
+    is_admin = await app.db.fetchval(
         """
         select admin
         from users
@@ -108,12 +109,12 @@ async def check_admin(request, user_id: int, error_on_nonadmin: bool = True) -> 
     return is_admin
 
 
-async def check_paranoid(request, user_id: int) -> bool:
+async def check_paranoid(user_id: int) -> bool:
     """If the user is in paranoid mode.
 
     Returns None if user does not exist.
     """
-    is_paranoid = await request.app.db.fetchval(
+    is_paranoid = await app.db.fetchval(
         """
         select paranoid
         from users
@@ -125,7 +126,7 @@ async def check_paranoid(request, user_id: int) -> bool:
     return is_paranoid
 
 
-async def check_domain(request, domain_name: str, error_on_nodomain=True) -> dict:
+async def check_domain(domain_name: str, error_on_nodomain=True) -> dict:
     """Checks if a domain exists, by domain
 
     returns its record it if does, returns None if it doesn't"""
@@ -135,7 +136,7 @@ async def check_domain(request, domain_name: str, error_on_nodomain=True) -> dic
     subd_wildcard_name = domain_name.replace(domain_name.split(".")[0], "*")
     domain_wildcard_name = "*." + domain_name
 
-    domain_info = await request.app.db.fetchrow(
+    domain_info = await app.db.fetchrow(
         """
         SELECT *
         FROM domains
@@ -155,11 +156,11 @@ async def check_domain(request, domain_name: str, error_on_nodomain=True) -> dic
 
 
 # TODO: reduce code repetition
-async def check_domain_id(request, domain_id: int, error_on_nodomain=True):
+async def check_domain_id(domain_id: int, error_on_nodomain=True):
     """Checks if a domain exists, by id
 
     returns its record it if does, returns None if it doesn't"""
-    domain_info = await request.app.db.fetchrow(
+    domain_info = await app.db.fetchrow(
         """
         SELECT *
         FROM domains
@@ -174,27 +175,28 @@ async def check_domain_id(request, domain_id: int, error_on_nodomain=True):
     return domain_info
 
 
-async def login_user(request):
+async def login_user():
     """
     Log in a user, given their username and password.
 
     Returns a partial user row.
     """
-    payload = validate(request.json, LOGIN_SCHEMA)
+    j = await request.get_json()
+    payload = validate(j, LOGIN_SCHEMA)
 
     # always treat usernames as all-lowercase
     username = payload["user"].lower()
     password = payload["password"]
 
     # know more about actx over Storage.actx_username (api/storage.py)
-    user = await request.app.storage.actx_username(username)
+    user = await app.storage.actx_username(username)
 
     if not user:
         log.info(f"login: {username!r} does not exist")
         raise FailedAuth("User or password invalid")
 
-    await check_bans(request, user["user_id"])
-    await pwd_check(request, user["password_hash"], password)
+    await check_bans(user["user_id"])
+    await pwd_check(user["password_hash"], password)
 
     if not user["active"]:
         log.warning(f"login: {username!r} is not active")
@@ -228,16 +230,16 @@ def _try_unsign(signer, token, token_age=None):
         raise FailedAuth("invalid or expired token")
 
 
-async def token_check(request) -> int:
+async def token_check() -> int:
     """Check if a token is valid. Returns user ID upon success.
 
     This will check if the token given in the request is an API token or not,
     performing proper validation depending on its type.
     """
-    cfg = request.app.econfig
+    cfg = app.econfig
 
     try:
-        token = get_token(request)
+        token = get_token()
 
         # make sure we get something that isn't empty
         assert token
@@ -247,9 +249,9 @@ async def token_check(request) -> int:
     # decrease calls to storage in half by checking context beforehand
     # (request['ctx'] is set by the ratelimiter on api/bp/ratelimit.py)
     try:
-        _, uid = request["ctx"]
+        _, uid = request._user
         return uid
-    except KeyError:
+    except AttributeError:
         pass
 
     data = token.split(".")
@@ -265,7 +267,7 @@ async def token_check(request) -> int:
     else:
         user_id = _try_int(block_1)
 
-    user = await request.app.storage.actx_userid(user_id)
+    user = await app.storage.actx_userid(user_id)
 
     if not user:
         raise FailedAuth("unknown user ID")
@@ -273,7 +275,7 @@ async def token_check(request) -> int:
     if not user["active"]:
         raise FailedAuth("inactive user")
 
-    await check_bans(request, user_id)
+    await check_bans(user_id)
 
     salt = user["password_hash"]
 
@@ -323,7 +325,7 @@ async def token_check(request) -> int:
     return user_id
 
 
-def gen_token(app, user: dict, token_type=TokenType.TIMED) -> str:
+def gen_token(user: dict, token_type=TokenType.TIMED) -> str:
     """Generate one token."""
     cfg = app.econfig
 

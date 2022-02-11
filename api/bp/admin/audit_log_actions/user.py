@@ -3,15 +3,16 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import logging
 
+from quart import current_app as app
 from api.bp.personal_stats import get_counts
 from api.bp.admin.audit_log import EditAction, DeleteAction
 
 log = logging.getLogger(__name__)
 
 
-async def get_user(conn, user_id) -> dict:
+async def get_user(user_id) -> dict:
     """Get a user as a dictionary."""
-    user = await conn.fetchrow(
+    user = await app.db.fetchrow(
         """
     SELECT username, active, email, consented, admin, paranoid,
         subdomain, domain,
@@ -27,7 +28,7 @@ async def get_user(conn, user_id) -> dict:
 
     duser = dict(user)
 
-    limits = await conn.fetchrow(
+    limits = await app.db.fetchrow(
         """
     SELECT blimit, shlimit
     FROM limits
@@ -43,7 +44,7 @@ async def get_user(conn, user_id) -> dict:
 
 class UserEditAction(EditAction):
     async def get_object(self, user_id):
-        return await get_user(self.app.db, user_id)
+        return await get_user(user_id)
 
     async def details(self):
         if not self.different_keys():
@@ -59,8 +60,8 @@ class UserEditAction(EditAction):
 
 class UserDeleteAction(DeleteAction):
     async def get_object(self, user_id):
-        user = await get_user(self.app.db, user_id)
-        user.update(await get_counts(self.app.db, user_id))
+        user = await get_user(user_id)
+        user.update(await get_counts(user_id))
         return user
 
     async def details(self) -> list:

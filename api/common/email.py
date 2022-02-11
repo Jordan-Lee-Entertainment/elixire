@@ -10,6 +10,7 @@ import logging
 from collections import namedtuple
 
 import aiohttp
+from quart import current_app as app
 
 from ..errors import BadInput
 
@@ -17,7 +18,7 @@ log = logging.getLogger(__name__)
 Error = namedtuple("Error", "status")
 
 
-async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
+async def gen_email_token(user_id, table: str, count: int = 0) -> str:
     """Generate a token for email usage.
 
     Calls the database to give an unique token.
@@ -62,7 +63,7 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
 
     if other_id:
         # retry with count + 1
-        await gen_email_token(app, user_id, table, count + 1)
+        await gen_email_token(user_id, table, count + 1)
 
     hashes = await app.db.fetchval(
         f"""
@@ -81,7 +82,7 @@ async def gen_email_token(app, user_id, table: str, count: int = 0) -> str:
     return possible
 
 
-async def send_email(app, user_email: str, subject: str, email_body: str) -> tuple:
+async def send_email(user_email: str, subject: str, email_body: str) -> tuple:
     """Send an email to a user using the Mailgun API."""
     econfig = app.econfig
     mailgun_url = f"https://api.mailgun.net/v3/{econfig.MAILGUN_DOMAIN}" "/messages"
@@ -94,15 +95,15 @@ async def send_email(app, user_email: str, subject: str, email_body: str) -> tup
         "to": [user_email],
         # make sure everything passes through fmt_email
         # before sending
-        "subject": fmt_email(app, subject),
-        "text": fmt_email(app, email_body),
+        "subject": fmt_email(subject),
+        "text": fmt_email(email_body),
     }
 
     async with app.session.post(mailgun_url, auth=auth, data=data) as resp:
         return resp, await resp.text()
 
 
-async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
+async def send_user_email(user_id: int, subject: str, body: str) -> tuple:
     """Send an email to a user, given user ID."""
     user_email = await app.db.fetchval(
         """
@@ -116,14 +117,14 @@ async def send_user_email(app, user_id: int, subject: str, body: str) -> tuple:
     if not user_email:
         return (Error(6969), None), None
 
-    resp = await send_email(app, user_email, subject, body)
+    resp = await send_email(user_email, subject, body)
 
     log.info(f"Sent {len(body)} bytes email to {user_id} " f"{user_email} {subject!r}")
 
     return resp, user_email
 
 
-def fmt_email(app, string, **kwargs):
+def fmt_email(string, **kwargs):
     """Format an email"""
     base = {
         "inst_name": app.econfig.INSTANCE_NAME,
@@ -137,7 +138,7 @@ def fmt_email(app, string, **kwargs):
     return string.replace("{}", "{{}}").format(**base)
 
 
-async def uid_from_email(app, token: str, table: str, raise_err: bool = True) -> int:
+async def uid_from_email(token: str, table: str, raise_err: bool = True) -> int:
     """Get user ID from email."""
     user_id = await app.db.fetchval(
         f"""
@@ -154,7 +155,7 @@ async def uid_from_email(app, token: str, table: str, raise_err: bool = True) ->
     return user_id
 
 
-async def get_owner(app, domain_id: int) -> int:
+async def get_owner(domain_id: int) -> int:
     return await app.db.fetchval(
         """
     SELECT user_id
@@ -165,7 +166,7 @@ async def get_owner(app, domain_id: int) -> int:
     )
 
 
-async def clean_etoken(app, token: str, table: str) -> bool:
+async def clean_etoken(token: str, table: str) -> bool:
     res = await app.db.execute(
         f"""
     DELETE FROM {table}
@@ -177,8 +178,8 @@ async def clean_etoken(app, token: str, table: str) -> bool:
     return res == "DELETE 1"
 
 
-async def activate_email_send(app, user_id: int):
-    token = await gen_email_token(app, user_id, "email_activation_tokens")
+async def activate_email_send(user_id: int):
+    token = await gen_email_token(user_id, "email_activation_tokens")
 
     await app.db.execute(
         """
@@ -189,10 +190,9 @@ async def activate_email_send(app, user_id: int):
         user_id,
     )
 
-    token_url = fmt_email(app, "{main_url}/api/activate_email?key={key}", key=token)
+    token_url = fmt_email("{main_url}/api/activate_email?key={key}", key=token)
 
     body = fmt_email(
-        app,
         """
 This is an automated email from {inst_name}
 about your account activation.
@@ -213,5 +213,5 @@ Do not reply to this automated email.
         token_url=token_url,
     )
 
-    subject = fmt_email(app, "{inst_name} - account activation")
-    return await send_user_email(app, user_id, subject, body)
+    subject = fmt_email("{inst_name} - account activation")
+    return await send_user_email(user_id, subject, body)

@@ -2,7 +2,11 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from .common import token, username, login_normal
+import pytest
+from pathlib import Path
+from .common import token, username, login_normal, login_admin
+
+pytestmark = pytest.mark.asyncio
 
 
 async def test_invalid_shorten(test_cli):
@@ -10,7 +14,7 @@ async def test_invalid_shorten(test_cli):
 
     for invalid in invalid_shit:
         resp = await test_cli.get(f"/s/{invalid}")
-        assert resp.status == 404
+        assert resp.status_code == 404
 
 
 async def test_shorten(test_cli):
@@ -22,10 +26,20 @@ async def test_shorten(test_cli):
         json={"url": "https://elixi.re"},
     )
 
-    assert resp.status == 200
-    data = await resp.json()
+    assert resp.status_code == 200
+    data = await resp.json
     assert isinstance(data, dict)
     assert isinstance(data["url"], str)
+    shortname = data["shortname"]
+
+    atoken = await login_admin(test_cli)
+    resp = await test_cli.get(
+        f"/api/admin/shorten/{shortname}",
+        headers={"authorization": atoken},
+    )
+    assert resp.status_code == 200
+    rjson = await resp.json
+    assert rjson["filename"] == shortname
 
 
 async def test_shorten_complete(test_cli):
@@ -42,18 +56,15 @@ async def test_shorten_complete(test_cli):
         },
     )
 
-    assert resp.status == 200
-    data = await resp.json()
+    assert resp.status_code == 200
+    data = await resp.json
     assert isinstance(data, dict)
     assert isinstance(data["url"], str)
 
-    given_shorten = data["url"].split("/")[-1]
+    shorten_url = Path(data["url"])
+    domain = shorten_url.parts[1]
+    shortname = shorten_url.parts[-1]
 
-    # No, we can't call GET /s/whatever to test this route.
-    # and probably that won't happen to GET /i/whatever too.
-    # because since this is a test server, it runs in an entirely
-    # different domain (127.0.0.1:random_port), instead of
-    # localhost:8081.
     listdata = await test_cli.get(
         "/api/list?page=0",
         headers={
@@ -61,18 +72,19 @@ async def test_shorten_complete(test_cli):
         },
     )
 
-    assert listdata.status == 200
+    assert listdata.status_code == 200
 
-    listdata = await listdata.json()
+    listdata = await listdata.json
 
-    shortens = listdata["shortens"]
-    try:
-        key = next(k for k in shortens if k == given_shorten)
-        shorten = shortens[key]
-    except StopIteration:
-        raise RuntimeError("shorten not found")
+    shorten_data = listdata["shortens"][shortname]
+    assert shorten_data["redirto"] == url
 
-    assert shorten["redirto"] == url
+    resp = await test_cli.get(f"/s/{shortname}", headers={"host": domain})
+    assert resp.status_code == 302
+    assert resp.headers["location"] == url
+
+    resp = await test_cli.get(f"/s/{shortname}", headers={"host": "undefined.com"})
+    assert resp.status_code == 404
 
 
 async def test_shorten_wrong_scheme(test_cli):
@@ -99,4 +111,4 @@ async def test_shorten_wrong_scheme(test_cli):
             },
         )
 
-        assert resp.status == 400
+        assert resp.status_code == 400

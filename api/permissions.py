@@ -5,6 +5,7 @@
 """
 elixi.re - domain permission helper
 """
+from quart import current_app as app
 from .errors import BadInput, FeatureDisabled
 
 
@@ -16,7 +17,7 @@ class Permissions:
 
 
 async def domain_permissions(
-    app, domain_id: int, permission: Permissions, raise_on_err=True
+    domain_id: int, permission: Permissions, raise_on_err=True
 ) -> bool:
     """Check if the given domain matches a given permission.
 

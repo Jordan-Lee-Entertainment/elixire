@@ -2,81 +2,91 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import io
+import functools
 import logging
 import mimetypes
-from collections import namedtuple
+from pathlib import Path
+from dataclasses import dataclass
+from typing import Optional
+
 import magic
+from quart import current_app as app
 
 from api.bp.upload.exif import clear_exif
 from api.bp.upload.virus import scan_file
 from api.common.webhook import jpeg_toobig_webhook
 from api.errors import BadImage, FeatureDisabled, QuotaExploded
+from .file import UploadFile
 
 __all__ = ["UploadContext"]
 log = logging.getLogger(__name__)
 
 
-class UploadContext(
-    namedtuple(
-        "UploadContext",
-        [
-            "file",  # the UploadFile that is being uploaded
-            "user_id",  # user id that is uploading
-            "shortname",  # shortname of the file
-            "do_checks",  # True if checks will be performed
-            "start_timestamp",  # the start timestamp of this upload
-        ],
-    )
-):
-    async def strip_exif(self, app) -> io.BytesIO:
+@dataclass
+class UploadContext:
+    file: UploadFile
+    user_id: int
+    shortname: str
+    do_checks: bool
+    start_timestamp: int
+    _computed_mime: Optional[str] = None
+
+    async def strip_exif(self, filepath: str) -> None:
         if not app.econfig.CLEAR_EXIF or self.file.mime != "image/jpeg":
             log.debug("not stripping exif, disabled or not jpeg")
-            return self.file.io
+            return
 
         log.debug("going to clear exif now")
         ratio_limit = app.econfig.EXIF_INCREASELIMIT
-        noexif_body = await clear_exif(self.file.io, loop=app.loop)
 
-        noexif_len = len(noexif_body.getvalue())
+        # Pillow is not async, so it is better to run
+        # its relevant code on a thread
+        blocking_exif_call = functools.partial(clear_exif, filepath)
+        await app.loop.run_in_executor(None, blocking_exif_call)
+
+        noexif_len = Path(filepath).stat().st_size
         ratio = noexif_len / self.file.size
 
-        # if this is an admin upload or the file hasn't grown big, return the
-        # stripped exif buffer
-        #
-        # (admins get to always have their jpegs stripped of exif data)
-        if not self.do_checks or ratio < ratio_limit:
-            return noexif_body
-
         # or else... send a webhook about what happened
-        elif ratio > ratio_limit:
-            await jpeg_toobig_webhook(app, self, noexif_len)
+        if self.do_checks and ratio > ratio_limit:
+            await jpeg_toobig_webhook(self, noexif_len)
             raise BadImage("jpeg-bomb attempt detected")
 
-        return self.file.io
+    @property
+    async def mime(self) -> str:
+        if self._computed_mime is None:
+            self.file.stream.seek(0)
+            chunk = self.file.stream.read(1024)
+            self.file.stream.seek(0)
 
-    def get_mime(self, file_body):
-        return magic.from_buffer(file_body, mime=True)
+            # TODO check failure, return None
+            mime_function = functools.partial(magic.from_buffer, mime=True)
+            self._computed_mime = await app.loop.run_in_executor(
+                None, mime_function, chunk
+            )
+            log.debug("computed mime: %r", self._computed_mime)
 
-    async def perform_checks(self, app) -> str:
+        return self._computed_mime
+
+    async def perform_checks(self) -> str:
         given_extension = self.file.given_extension
 
         if not app.econfig.UPLOADS_ENABLED:
             raise FeatureDisabled("Uploads are currently disabled")
 
         # Get file's mimetype
-        mimetype_future = app.loop.run_in_executor(None, self.get_mime, self.file.body)
-        mimetype = await mimetype_future
+        # TODO add error validation if self.mime is None
+        mimetype = await self.mime
 
         # Check if file's mimetype is in allowed mimetypes
         if mimetype not in app.econfig.ACCEPTED_MIMES:
             raise BadImage(f"Bad mime type: {mimetype!r}")
 
         # check file upload limits
-        await self.check_limits(app)
+        await self.check_limits()
 
         # check the file for viruses
-        await scan_file(app, self)
+        await scan_file(self)
 
         # default to last part of mimetype
         extension = f".{self.file.mime.split('/')[-1]}"
@@ -101,7 +111,7 @@ class UploadContext(
 
         return mimetype, extension
 
-    async def check_limits(self, app):
+    async def check_limits(self):
         user_id = self.user_id
 
         # check user's limits

@@ -9,10 +9,11 @@ import bcrypt
 
 from api.snowflake import get_snowflake
 from api.bp.profile import delete_user
+from quart import current_app as app
 from ..utils import get_user
 
 
-async def adduser(ctx, args):
+async def adduser(args):
     """Add a user."""
     email = args.email
     username = args.username
@@ -24,7 +25,7 @@ async def adduser(ctx, args):
 
     user_id = get_snowflake()
 
-    await ctx.db.execute(
+    await app.db.execute(
         """
     INSERT INTO users (user_id, username, password_hash, email)
     VALUES ($1, $2, $3, $4)
@@ -35,7 +36,7 @@ async def adduser(ctx, args):
         email,
     )
 
-    await ctx.db.execute(
+    await app.db.execute(
         """
     INSERT INTO limits (user_id)
     VALUES ($1)
@@ -43,7 +44,7 @@ async def adduser(ctx, args):
         user_id,
     )
 
-    await ctx.redis.delete(f"uid:{username}")
+    await app.redis.delete(f"uid:{username}")
 
     print(
         f"""
@@ -54,28 +55,28 @@ async def adduser(ctx, args):
     )
 
 
-async def del_user(ctx, args):
+async def del_user(args):
     """Delete a user."""
     username = args.username
 
-    userid = await get_user(ctx, username)
+    userid = await get_user(username)
 
-    task = await delete_user(ctx, userid, True)
+    task = await delete_user(userid, True)
     await asyncio.shield(task)
 
     print("OK")
 
 
-async def resetpass(ctx, args):
+async def resetpass(args):
     username = args.username
-    user_id = await get_user(ctx, username)
+    user_id = await get_user(username)
     password = secrets.token_urlsafe(25)
 
     _pwd = bytes(password, "utf-8")
     hashed = bcrypt.hashpw(_pwd, bcrypt.gensalt(14))
 
     # insert on db
-    dbout = await ctx.db.execute(
+    dbout = await app.db.execute(
         """
     UPDATE users
     SET password_hash = $1
@@ -86,8 +87,8 @@ async def resetpass(ctx, args):
     )
 
     # invalidate
-    await ctx.redis.delete(f"uid:{user_id}:password_hash")
-    await ctx.redis.delete(f"uid:{user_id}:active")
+    await app.redis.delete(f"uid:{user_id}:password_hash")
+    await app.redis.delete(f"uid:{user_id}:active")
 
     # print the user & password
     print(

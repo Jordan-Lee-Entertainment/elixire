@@ -2,22 +2,23 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import io
 import os
 from pathlib import Path
 from typing import Optional
 
+from quart import request, current_app as app
 from api.common import calculate_hash
 from api.errors import BadUpload
 
 
 class UploadFile:
     def __init__(self, data):
-        self.name: str = data.name
-        self.body = data.body
-        self.size: int = len(self.body)
-        self.io = io.BytesIO(self.body)
-        self.mime: str = data.type
+        self.storage = data
+        self.name: str = data.filename
+        self.size: int = data.content_length
+        assert self.size is not None
+        self.stream = data.stream
+        self.mime: str = data.mimetype
 
         self.hash: Optional[str] = None
         self.path: Optional[Path] = None
@@ -42,27 +43,30 @@ class UploadFile:
         necessary.
         """
         file_size = self.size
+        # TODO self.path can be optional, check for it in here
         if self.path.exists():
             file_size *= multiplier
         return file_size
 
     @classmethod
-    def from_request(cls, request):
+    async def from_request(cls):
         # get the first file in the request
+        files = await request.files
         try:
-            key = next(iter(request.files.keys()))
+            key = next(iter(files.keys()))
         except StopIteration:
             raise BadUpload("No images given")
 
-        data = next(iter(request.files[key]))
+        return cls(files[key])
 
-        return cls(data)
+    async def _hash_file(self):
+        self.stream.seek(0)
+        self.hash = await calculate_hash(self.stream)
+        self.stream.seek(0)
 
-    async def hash_file(self, app):
-        self.hash = await calculate_hash(app, io.BytesIO(self.body))
-
-    async def resolve(self, app, extension):
+    async def resolve(self, extension: str) -> None:
+        await self._hash_file()
+        assert self.hash is not None
         folder = app.econfig.IMAGE_FOLDER
-
         raw_path = f"{folder}/{self.hash[0]}/{self.hash}{extension}"
         self.path = Path(raw_path)

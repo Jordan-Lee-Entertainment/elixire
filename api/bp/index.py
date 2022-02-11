@@ -8,15 +8,15 @@ elixire - index routes
     because those provide public functionality (where as /api/hello
     isn't used by a client).
 """
-from sanic import Blueprint, response
+from quart import Blueprint, jsonify, request, current_app as app
 
 from ..common.auth import token_check, check_admin
 
-bp = Blueprint("index")
+bp = Blueprint("index", __name__)
 
 
-@bp.get("/api/domains")
-async def domainlist_handler(request):
+@bp.get("/domains")
+async def domainlist_handler():
     """Gets the domain list.
 
     Returns admin-only domains if an
@@ -27,11 +27,11 @@ async def domainlist_handler(request):
     # if they gave authorization.
     is_admin = False
     if "Authorization" in request.headers:
-        user_id = await token_check(request)
-        is_admin = await check_admin(request, user_id, False)
+        user_id = await token_check()
+        is_admin = await check_admin(user_id, False)
 
     adm_string = "" if is_admin else "WHERE admin_only = false"
-    domain_records = await request.app.db.fetch(
+    domain_records = await app.db.fetch(
         f"""
     SELECT domain_id, domain
     FROM domains
@@ -41,7 +41,7 @@ async def domainlist_handler(request):
     )
 
     adm_string_official = "" if is_admin else "AND admin_only = false"
-    official_domains = await request.app.db.fetch(
+    official_domains = await app.db.fetch(
         f"""
     SELECT domain_id
     FROM domains
@@ -53,6 +53,6 @@ async def domainlist_handler(request):
     # dear god
     official_domains = [x[0] for x in official_domains]
 
-    return response.json(
+    return jsonify(
         {"domains": dict(domain_records), "officialdomains": official_domains}
     )

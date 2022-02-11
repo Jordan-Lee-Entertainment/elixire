@@ -7,6 +7,9 @@ import logging
 import os
 import time
 
+from quart import current_app as app
+from quart.ctx import copy_current_app_context
+
 from api.common import delete_file
 from api.common.webhook import scan_webhook
 from api.errors import BadImage
@@ -14,7 +17,7 @@ from api.errors import BadImage
 log = logging.getLogger(__name__)
 
 
-async def run_scan(app, ctx):
+async def run_scan(ctx):
     """Scan a file for viruses using clamdscan.
 
     Raises BadImage on any non-successful scan.
@@ -45,14 +48,14 @@ async def run_scan(app, ctx):
     if "OK" not in out:
         # Oops.
         log.warning(f"user id {ctx.user_id} did a dumb")
-        await scan_webhook(app, ctx, out)
+        await scan_webhook(ctx, out)
         raise BadImage("Image contains a virus.")
 
 
-async def scan_background(app, coro, ctx):
+async def scan_background(ctx):
     """Run an existing scanning task in the background."""
     try:
-        await coro
+        await scan_file(ctx)
     except BadImage:
         # let's nuke this image
 
@@ -73,7 +76,7 @@ async def scan_background(app, coro, ctx):
         except OSError:
             log.warning(f"File path {fspath!r} was deleted")
 
-        await delete_file(app, ctx.shortname, None, False)
+        await delete_file(ctx.shortname, None, False)
         log.info(f"Deleted file {ctx.shortname}")
     except Exception:
         log.exception("Error during background scan")
@@ -81,20 +84,23 @@ async def scan_background(app, coro, ctx):
         log.info("Background scan completed without problems")
 
 
-async def scan_file(app, ctx):
+async def scan_file(ctx) -> None:
     """Run a scan on a file.
 
     This function schedules the scanning on the background if it takes too
     long to scan.
     """
-    coro = run_scan(app, ctx)
+
+    @copy_current_app_context
+    async def wrapper_task(scan_function, ctx):
+        await scan_function(ctx)
 
     try:
-        await asyncio.wait_for(coro, timeout=app.econfig.SCAN_WAIT_THRESHOLD)
+        await asyncio.wait_for(
+            wrapper_task(run_scan, ctx), timeout=app.econfig.SCAN_WAIT_THRESHOLD
+        )
         log.info("scan file done")
     except asyncio.TimeoutError:
         # the scan took too long, reschedule it on the background
         log.info(f"Scheduled background scan on {ctx.file.name} ({ctx.shortname})")
-
-        new_coro = run_scan(app, ctx)
-        app.loop.create_task(scan_background(app, new_coro, ctx))
+        app.loop.create_task(wrapper_task(scan_background, ctx))

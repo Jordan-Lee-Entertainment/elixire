@@ -27,12 +27,16 @@ def png_data():
     )
 
 
+def hexs(len: int = 5) -> str:
+    return secrets.token_hex(len)
+
+
 def token():
     return secrets.token_urlsafe(random.randint(100, 300))
 
 
 def username():
-    return token()
+    return hexs(10)
 
 
 def email():
@@ -51,8 +55,8 @@ async def login_normal(test_cli) -> str:
         },
     )
 
-    assert resp.status == 200
-    data = await resp.json()
+    assert resp.status_code == 200
+    data = await resp.json
     assert isinstance(data, dict)
 
     return data["token"]
@@ -67,8 +71,8 @@ async def login_admin(test_cli) -> str:
         },
     )
 
-    assert resp.status == 200
-    data = await resp.json()
+    assert resp.status_code == 200
+    data = await resp.json
     assert isinstance(data, dict)
 
     return data["token"]
