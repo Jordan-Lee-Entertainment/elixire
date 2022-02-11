@@ -23,7 +23,8 @@ class UploadFile:
 
         # initialize size with real stream position
         current_position = self.stream.tell()
-        self.size = self.stream.seek(0, 2)
+        self.stream.seek(0, 2)
+        self.size = self.stream.tell()
         self.stream.seek(current_position, 0)
 
     @property
