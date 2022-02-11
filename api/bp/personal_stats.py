@@ -47,10 +47,10 @@ async def get_counts(user_id: int) -> dict:
     )
 
     return {
-        "total_files": total_files,
-        "total_deleted_files": total_deleted,
-        "total_bytes": total_bytes,
-        "total_shortens": total_shortens,
+        "total_files": int(total_files),
+        "total_deleted_files": int(total_deleted),
+        "total_bytes": int(total_bytes),
+        "total_shortens": int(total_shortens),
     }
 
 
