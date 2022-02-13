@@ -33,8 +33,12 @@ async def _run_scan(ctx):
         stdin=asyncio.subprocess.PIPE,
     )
 
-    # if returncode is available before we actually run clamdscan, we have
-    # a problem. most likely clamdscan is unavailable
+    # if returncode is set before we submit the file bytes, it's possible
+    # there is a deeper system problem, likely an unavailable clamdscan.
+    #
+    # we could still send the entirety of the file and still get an invalid
+    # returncode (out of the 0,1,2 range), so we must also verify such values
+    # afterwards
     if process.returncode is not None:
         log.error(
             "return code %d before clamdscan, is it installed?", process.returncode
@@ -78,8 +82,6 @@ async def _run_scan(ctx):
         process.returncode,
     )
 
-    assert process.returncode in (0, 1, 2)
-
     if process.returncode == 0:
         log.debug("clamdscan said ok")
         return
@@ -90,6 +92,15 @@ async def _run_scan(ctx):
     elif process.returncode == 2:
         log.warning("clamdscan FAILED: %r", total_out)
         raise BadImage(f"clamdscan failed: {total_out}")
+    else:
+        log.error(
+            "clamdscan ERRORED with exit code %d (preserving file), output is %r",
+            process.returncode,
+            total_out,
+        )
+
+        # we let the upload pass on clamdscan errors
+        return
 
 
 async def scan_background(ctx):
