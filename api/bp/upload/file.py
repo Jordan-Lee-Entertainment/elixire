@@ -37,7 +37,8 @@ class UploadFile:
 
         # initialize size with real stream position
         with self.io_block():
-            self.stream.seek(0, 2)
+            # find the size by seeking to 0 bytes from the end of the file
+            self.stream.seek(0, os.SEEK_END)
             self.size = self.stream.tell()
 
     @property
