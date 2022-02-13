@@ -45,20 +45,16 @@ async def _run_scan(ctx):
         return
 
     log.debug("writing file body to clamdscan")
-    old_seekpos = ctx.file.stream.tell()
-    ctx.file.stream.seek(0)
-
-    buffer_size = 16384
-    data = ctx.file.stream.read(buffer_size)
-    while data != b"":
-        log.debug("write %d byte chunk", len(data))
-        process.stdin.write(data)
-        await process.stdin.drain()
+    with ctx.file.io_block():
+        buffer_size = 16384
         data = ctx.file.stream.read(buffer_size)
+        while data != b"":
+            log.debug("write %d byte chunk", len(data))
+            process.stdin.write(data)
+            await process.stdin.drain()
+            data = ctx.file.stream.read(buffer_size)
 
-    process.stdin.write_eof()
-
-    ctx.file.stream.seek(old_seekpos)
+        process.stdin.write_eof()
 
     # stdout and stderr here are for the webhook, not for parsing
     out, err = map(lambda s: s.decode(), await process.communicate())
