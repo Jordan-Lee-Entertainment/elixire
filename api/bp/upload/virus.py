@@ -56,6 +56,8 @@ async def _run_scan(ctx):
         await process.stdin.drain()
         data = ctx.file.stream.read(buffer_size)
 
+    process.stdin.write_eof()
+
     ctx.file.stream.seek(old_seekpos)
 
     # stdout and stderr here are for the webhook, not for parsing
@@ -83,6 +85,7 @@ async def _run_scan(ctx):
     assert process.returncode in (0, 1, 2)
 
     if process.returncode == 0:
+        log.debug("clamdscan said ok")
         return
     elif process.returncode == 1:
         log.warning("user id %d got caught in virus scan", ctx.user_id)
