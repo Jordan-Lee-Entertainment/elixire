@@ -2,6 +2,8 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import io
+import asyncio
 import pytest
 import os.path
 from urllib.parse import urlparse
@@ -88,11 +90,12 @@ async def check_exists(test_cli, shortname, utoken, not_exists=False):
     assert resp.headers["content-length"] == "10"
 
 
-def png_request():
+def png_request(data=None):
+    data = data or png_data()
     body, headers = make_test_body_with_headers(
         files={
             "file": FileStorage(
-                stream=png_data(),
+                stream=data,
                 filename=f"{hexs(10)}.png",
                 name="file",
                 content_type="image/png",
@@ -169,3 +172,29 @@ async def test_delete_nonexist(test_cli):
     )
 
     assert resp_del.status_code == 404
+
+
+EICAR = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+
+
+async def test_eicar_upload(test_cli):
+    if not test_cli.app.econfig.UPLOAD_SCAN:
+        return
+
+    utoken = await login_normal(test_cli)
+
+    # without this, asyncio subprocess just hangs on communicate(), even
+    # though the process already finished. its so fuckin weird
+    #
+    # fix found on https://github.com/python/asyncio/issues/478#issuecomment-268476438
+    asyncio.get_child_watcher().attach_loop(test_cli.app.loop)
+
+    test_cli.app.econfig.SCAN_WAIT_THRESHOLD = 5
+
+    kwargs = png_request(data=io.BytesIO(EICAR.encode()))
+    kwargs["headers"]["authorization"] = utoken
+    resp = await test_cli.post(
+        "/api/upload",
+        **kwargs,
+    )
+    assert resp.status_code == 415
