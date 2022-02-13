@@ -2,10 +2,17 @@ all: frontend admin-panel
 
 .PHONY: all frontend admin-panel
 
+# we can use docker to build frontend as it doesn't build on latest node
+# at the moment. useful for development
 frontend:
 	echo "Building frontend"
+ifeq ($(DOCKER),1)
+	docker run --mount type=bind,source=$(shell pwd)/frontend,target=/frontend -it \
+	    --rm mhart/alpine-node:10 sh -c "cd frontend && yarn install && yarn build:production"
+else
 	cd frontend; yarn
 	cd frontend; yarn build:production
+endif
 
 admin-panel:
 	echo "Building admin-panel"
