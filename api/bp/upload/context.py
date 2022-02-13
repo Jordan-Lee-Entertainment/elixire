@@ -55,9 +55,8 @@ class UploadContext:
     @property
     async def mime(self) -> str:
         if self._computed_mime is None:
-            self.file.stream.seek(0)
-            chunk = self.file.stream.read(1024)
-            self.file.stream.seek(0)
+            with self.file.io_block():
+                chunk = self.file.stream.read(1024)
 
             # TODO check failure, return None
             mime_function = functools.partial(magic.from_buffer, mime=True)
