@@ -55,7 +55,7 @@ class UploadContext:
     @property
     async def mime(self) -> str:
         if self._computed_mime is None:
-            with self.file.io_block():
+            with self.file.save_file_stream_position:
                 chunk = self.file.stream.read(1024)
 
             # TODO check failure, return None

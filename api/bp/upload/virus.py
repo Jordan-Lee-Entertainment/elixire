@@ -49,7 +49,7 @@ async def _run_scan(ctx):
         return
 
     log.debug("writing file body to clamdscan")
-    with ctx.file.io_block():
+    with ctx.file.save_file_stream_position:
         buffer_size = 16384
         data = ctx.file.stream.read(buffer_size)
         while data:

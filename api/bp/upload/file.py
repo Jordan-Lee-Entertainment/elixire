@@ -11,7 +11,7 @@ from api.common import calculate_hash
 from api.errors import BadUpload
 
 
-class IOBlockContext:
+class SavedFilePositionContext:
     def __init__(self, stream):
         self.stream = stream
         self.current_seek_position = None
@@ -36,7 +36,7 @@ class UploadFile:
         self.path: Optional[Path] = None
 
         # initialize size with real stream position
-        with self.io_block():
+        with self.save_file_stream_position:
             # find the size by seeking to 0 bytes from the end of the file
             self.stream.seek(0, os.SEEK_END)
             self.size = self.stream.tell()
@@ -78,7 +78,7 @@ class UploadFile:
         return cls(files[key])
 
     async def _hash_file(self):
-        with self.io_block():
+        with self.save_file_stream_position:
             self.hash = await calculate_hash(self.stream)
 
     async def resolve(self, extension: str) -> None:
@@ -88,5 +88,6 @@ class UploadFile:
         raw_path = f"{folder}/{self.hash[0]}/{self.hash}{extension}"
         self.path = Path(raw_path)
 
-    def io_block(self) -> IOBlockContext:
-        return IOBlockContext(self.stream)
+    @property
+    def save_file_stream_position(self) -> SavedFilePositionContext:
+        return SavedFilePositionContext(self.stream)
