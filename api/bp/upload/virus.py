@@ -135,7 +135,7 @@ async def scan_file(ctx) -> None:
     long to scan.
     """
     if not app.econfig.UPLOAD_SCAN:
-        log.warning("Scans are disabled, not scanning this file.")
+        log.debug("Scans are disabled, not scanning this file.")
         return
 
     @copy_current_app_context
