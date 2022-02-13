@@ -11,6 +11,20 @@ from api.common import calculate_hash
 from api.errors import BadUpload
 
 
+class SavedFilePositionContext:
+    def __init__(self, stream):
+        self.stream = stream
+        self.current_seek_position = None
+
+    def __enter__(self):
+        self.current_seek_position = self.stream.tell()
+        self.stream.seek(0)
+
+    def __exit__(self, type, value, traceback):
+        assert self.current_seek_position is not None
+        self.stream.seek(self.current_seek_position)
+
+
 class UploadFile:
     def __init__(self, data):
         self.storage = data
@@ -22,10 +36,10 @@ class UploadFile:
         self.path: Optional[Path] = None
 
         # initialize size with real stream position
-        current_position = self.stream.tell()
-        self.stream.seek(0, 2)
-        self.size = self.stream.tell()
-        self.stream.seek(current_position, 0)
+        with self.save_file_stream_position:
+            # find the size by seeking to 0 bytes from the end of the file
+            self.stream.seek(0, os.SEEK_END)
+            self.size = self.stream.tell()
 
     @property
     def given_extension(self):
@@ -64,9 +78,8 @@ class UploadFile:
         return cls(files[key])
 
     async def _hash_file(self):
-        self.stream.seek(0)
-        self.hash = await calculate_hash(self.stream)
-        self.stream.seek(0)
+        with self.save_file_stream_position:
+            self.hash = await calculate_hash(self.stream)
 
     async def resolve(self, extension: str) -> None:
         await self._hash_file()
@@ -74,3 +87,7 @@ class UploadFile:
         folder = app.econfig.IMAGE_FOLDER
         raw_path = f"{folder}/{self.hash[0]}/{self.hash}{extension}"
         self.path = Path(raw_path)
+
+    @property
+    def save_file_stream_position(self) -> SavedFilePositionContext:
+        return SavedFilePositionContext(self.stream)

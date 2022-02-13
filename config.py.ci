@@ -31,3 +31,5 @@ RATELIMITS = {
         'second': 1
     },
 }
+
+UPLOAD_SCAN = True
