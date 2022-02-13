@@ -48,7 +48,7 @@ async def _run_scan(ctx):
     with ctx.file.io_block():
         buffer_size = 16384
         data = ctx.file.stream.read(buffer_size)
-        while data != b"":
+        while data:
             log.debug("write %d byte chunk", len(data))
             process.stdin.write(data)
             await process.stdin.drain()
