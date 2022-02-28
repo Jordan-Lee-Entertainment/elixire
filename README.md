@@ -1,5 +1,4 @@
-Elixire
-==========
+# Elixire
 
 ```
 "elixirae is the futureae"
@@ -12,7 +11,7 @@ The first iteration of Elixire was written in PHP,
 then rewritten in Python and this is the main language
 we are working on.
 
-*(no, we won't write Elixir, read BACKEND.md for the reason)*
+_(no, we won't write Elixir, read BACKEND.md for the reason)_
 
 # Installation and Running
 
@@ -20,17 +19,19 @@ we are working on.
 (Merge Requests "fixing" them will be closed.)**
 
 Requirements:
- - Python 3.7+ (3.8 recommended)
- - PostgreSQL
- - Redis
- - A decent version of Node
+
+- Python 3.7+ (3.8 recommended)
+- PostgreSQL
+- Redis
+- A decent version of Node
 
 Optional requirements:
- - ClamAV, for virus scanning of uploads.
- - InfluxDB, for metrics (look into `docs/MANAGE.md` for more detail).
- - Mailgun, so that the instance becomes able to send emails to users.
- - Discord webhooks (so that the admins know when a malicious
-    file was uploaded, etc).
+
+- ClamAV, for virus scanning of uploads.
+- InfluxDB, for metrics (look into `docs/MANAGE.md` for more detail).
+- Mailgun, so that the instance becomes able to send emails to users.
+- Discord webhooks (so that the admins know when a malicious
+  file was uploaded, etc).
 
 ```bash
 git clone https://gitlab.com/elixire/elixire.git
@@ -68,10 +69,10 @@ cp config.py.example config.py
 make update
 
 # Build the frontend and the admin-panel.
-make 
+make
 
 # Run application, also works under external process managers.
-python3.7 run.py
+hypercorn run.py --access-log - --bind 0.0.0.0:8081
 ```
 
 # Operator's Manual
@@ -111,6 +112,7 @@ Create these users:
 After creating the users, enter the PSQL Shell:
 
 ## Setting admin to actual admin
+
 ```sql
 UPDATE users
 SET admin = true
@@ -118,6 +120,7 @@ WHERE username = 'admin';
 ```
 
 ## Fetch admin ID and setting it as owner
+
 ```sql
 SELECT user_id
 FROM users
@@ -137,7 +140,9 @@ the test battery, 1000/1s should be enough for both user ratelimits
 and IP based ratelimits.**
 
 ## Running
+
 Then, run the tests with tox.
+
 ```bash
 tox
 ```
