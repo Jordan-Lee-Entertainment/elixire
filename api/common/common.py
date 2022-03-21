@@ -387,7 +387,7 @@ async def get_domain_info(user_id: int, dtype=FileNameType.FILE) -> tuple:
     return domain_id, subdomain_name, domain
 
 
-async def get_random_domain(app) -> int:
+async def get_random_domain() -> int:
     """Get a random domain from the table."""
     return await app.db.fetchval(
         """
