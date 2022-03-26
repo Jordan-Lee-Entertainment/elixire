@@ -391,7 +391,9 @@ async def get_random_domain() -> int:
     """Get a random domain from the table."""
     return await app.db.fetchval(
         """
-    SELECT domain_id FROM domains
+    SELECT domain_id
+    FROM domains
+    WHERE admin_only = false
     ORDER BY RANDOM()
     LIMIT 1
     """
