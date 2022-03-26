@@ -198,3 +198,22 @@ async def test_eicar_upload(test_cli):
         **kwargs,
     )
     assert resp.status_code == 415
+
+
+async def test_upload_random_domain(test_cli):
+    utoken = await login_normal(test_cli)
+    kwargs = png_request()
+    kwargs["headers"]["authorization"] = utoken
+    resp = await test_cli.post(
+        "/api/upload",
+        **kwargs,
+    )
+
+    assert resp.status_code == 200
+    respjson = await resp.json
+    assert isinstance(respjson, dict)
+    assert isinstance(respjson["url"], str)
+    assert isinstance(respjson["delete_url"], str)
+
+    shortname = respjson["shortname"]
+    await check_exists(test_cli, shortname, utoken)
