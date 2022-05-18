@@ -12,7 +12,7 @@ aioredis==2.0.0
 # The worst idea ever is to add aiohttp to a project.
 # and I did it.
 # fuck aiohttp.
-aiohttp==3.5.4
+aiohttp==3.8.1
 
 # May god have mercy on my soul
 Pillow==8.4.0
