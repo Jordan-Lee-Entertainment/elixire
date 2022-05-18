@@ -37,4 +37,4 @@ python-magic==0.4.25
 parsedatetime==2.6
 
 # for email checking
-dnspython==1.16.0
+dnspython==2.2.1
