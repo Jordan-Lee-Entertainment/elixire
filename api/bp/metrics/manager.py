@@ -141,11 +141,11 @@ class MetricsManager:
         current = time.time()
 
         # extract all precision we can, then convert to int
-        current = int(current * (10 ** 6))
+        current = int(current * (10**6))
 
         # then raise it to how many missing orders
         # of magnitude to get a nanosecond timestamp
-        current = current * (10 ** 3)
+        current = current * (10**3)
 
         value_converted = self._convert_value(value)
         self.points[timestamp] = f"{title} value={value_converted} {current}"

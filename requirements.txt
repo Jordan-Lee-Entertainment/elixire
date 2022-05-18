@@ -1,9 +1,5 @@
-quart==0.16.2
-hypercorn==0.11.2
-
-# pin some quart deps
-jinja2==3.0.3
-markupsafe==2.1.1
+quart==0.17.0
+hypercorn==0.13.2
 
 asyncpg==0.24.0
 bcrypt==3.2.0
@@ -26,7 +22,7 @@ pytest==6.2.5
 pytest-cov==3.0.0
 pytest-asyncio==0.16.0
 pyflakes==2.4.0
-black==21.9b0
+black==22.3.0
 
 aioinflux==0.9.0
 
