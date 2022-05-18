@@ -105,7 +105,7 @@ async def list_handler():
         filename = ushorten["filename"]
         domain = domains[ushorten["domain"]].replace("*.", "wildcard.")
 
-        shorten_url = service_url(domain, f"/s/{fullname}")
+        shorten_url = service_url(domain, f"/s/{filename}")
 
         shortens[filename] = {
             "snowflake": str(ushorten["shorten_id"]),
