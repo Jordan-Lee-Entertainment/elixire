@@ -2,11 +2,11 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import pathlib
 import urllib.parse
 
 from quart import Blueprint, jsonify, redirect, current_app as app, request
 
+from ..common.utils import service_url
 from ..common.auth import gen_shortname, token_check, check_admin
 from ..errors import NotFound, QuotaExploded, BadInput, FeatureDisabled
 from ..common import get_domain_info, transform_wildcard, FileNameType
@@ -126,8 +126,6 @@ async def shorten_handler():
         domain_id,
     )
 
-    # appended to generated filename
-    dpath = pathlib.Path(domain)
-    fpath = dpath / "s" / f"{redir_rname}"
-
-    return jsonify({"url": f"https://{str(fpath)}", "shortname": redir_rname})
+    return jsonify(
+        {"url": service_url(domain, f"/s/{redir_rname}"), "shortname": redir_rname}
+    )

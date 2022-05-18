@@ -10,6 +10,7 @@ from quart.ctx import copy_current_app_context
 
 from ..common import delete_file, delete_shorten
 from ..common.auth import token_check, password_check
+from ..common.utils import service_url
 from ..decorators import auth_route
 from ..errors import BadInput
 from .profile import delete_file_task
@@ -71,9 +72,6 @@ async def list_handler():
         page,
     )
 
-    use_https = app.econfig.USE_HTTPS
-    prefix = "https://" if use_https else "http://"
-
     filenames = {}
     for ufile in user_files:
         filename = ufile["filename"]
@@ -84,11 +82,13 @@ async def list_handler():
         ext = basename.split(".")[-1]
 
         fullname = f"{filename}.{ext}"
-        file_url = f"{prefix}{domain}/i/{fullname}"
+        file_url = service_url(domain, f"/i/{fullname}")
 
         # default thumb size is small
         file_url_thumb = (
-            f"{prefix}{domain}/t/s{fullname}" if mime.startswith("image/") else file_url
+            service_url(domain, f"/t/s{fullname}")
+            if mime.startswith("image/")
+            else file_url
         )
 
         filenames[filename] = {
@@ -105,7 +105,7 @@ async def list_handler():
         filename = ushorten["filename"]
         domain = domains[ushorten["domain"]].replace("*.", "wildcard.")
 
-        shorten_url = f"{prefix}{domain}/s/{filename}"
+        shorten_url = service_url(domain, f"/s/{fullname}")
 
         shortens[filename] = {
             "snowflake": str(ushorten["shorten_id"]),

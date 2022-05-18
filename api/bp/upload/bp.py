@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
-import pathlib
 import time
 from typing import Any, Dict, Optional
 
@@ -16,6 +15,7 @@ from api.permissions import Permissions, domain_permissions
 from api.snowflake import get_snowflake
 from api.common.common import delete_file
 from api.errors import BadImage
+from api.common.utils import service_url
 from .context import UploadContext
 from .file import UploadFile
 from ..metrics import is_consenting
@@ -25,10 +25,7 @@ log = logging.getLogger(__name__)
 
 
 def _construct_url(domain, shortname, extension):
-    dpath = pathlib.Path(domain)
-    final_path = dpath / "i" / f"{shortname}{extension}"
-
-    return f"https://{final_path!s}"
+    return service_url(domain, f"/i/{shortname}{extension}")
 
 
 async def check_repeat(

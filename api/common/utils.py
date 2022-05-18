@@ -4,6 +4,7 @@
 
 import asyncio
 from collections import defaultdict
+from quart import current_app as app
 
 
 def int_(val, default=None):
@@ -45,3 +46,10 @@ def find_different_keys(dict1: dict, dict2: dict) -> list:
             keys.append(key)
 
     return keys
+
+
+def service_url(domain: str, path: str = None) -> str:
+    path = path or ""
+    use_https = app.econfig.USE_HTTPS
+    prefix = "https://" if use_https else "http://"
+    return f"{prefix}{domain}{path}"
