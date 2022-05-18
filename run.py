@@ -53,12 +53,6 @@ from api.bp.admin.audit_log import AuditLog
 
 import config
 
-# == HACKY PATCH ==
-# this MUST be removed once Hypercorn gets py3.10 support.
-from asyncio import start_server as _start_server
-
-asyncio.start_server = lambda *args, loop=None, **kwargs: _start_server(*args, **kwargs)
-
 
 log = logging.getLogger(__name__)
 
