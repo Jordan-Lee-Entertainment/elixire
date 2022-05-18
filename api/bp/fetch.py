@@ -61,6 +61,16 @@ async def send_file(path: str, *, mimetype: Optional[str] = None):
 @bp.get("/i/<filename>")
 async def file_handler(filename):
     """Handles file serves."""
+
+    # validate that the file exists before doing any further processing
+    # this is done before discordbot user agent validation so that discord
+    # doesn't attempt to load the url first, see that it has an embed,
+    # and then when it tries to refetch with ?raw=1, it fails as the file
+    # does not exist.
+    #
+    # by the end, you'd get a confusing embed that is empty inside the client.
+    filepath, shortname = await filecheck(filename)
+
     # Account for requests from Discord to preserve URL
     # TODO: maybe give this a separate func and also call from thumbs?
     is_raw = request.args.get("raw")
@@ -90,8 +100,6 @@ async def file_handler(filename):
             200,
             {"Content-Type": "text/html"},
         )
-
-    filepath, shortname = await filecheck(filename)
 
     # fetch the file's mimetype from the database
     # which should be way more reliable than sanic
