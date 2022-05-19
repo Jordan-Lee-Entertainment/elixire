@@ -26,8 +26,8 @@ cache:
     - .cache/
     - /var/cache/apk
 
-main_test_suite:
-  before_script:
+.setup_elixire:
+  script:
     - python -V
     - pip -V
     - time apk --update add build-base git python3-dev libffi-dev jpeg-dev zlib-dev freetype-dev lcms2-dev openjpeg-dev tiff-dev tk-dev tcl-dev libxml2-dev libxslt-dev libffi-dev gcc musl-dev libgcc openssl-dev curl libmagic postgresql-client
@@ -38,11 +38,11 @@ main_test_suite:
     - mkdir -p thumbnails
     - cat config.py.example config.py.ci > config.py
     - python ./utils/upgrade/folder_sharding.py
-  script:
     - mkdir frontend/output admin-panel/dist -p
     - touch frontend/output/index.html admin-panel/dist/index.html
-    - ls -la
-    - pwd
+
+.setup_elixire_for_testing:
+  script:
     - psql -h postgres -U postgres -f schema.sql
     - python ./manage.py migrate
     - python ./manage.py adduser h@h.co hi hihihihi
@@ -51,37 +51,26 @@ main_test_suite:
     - python ./manage.py adduser q@q.co quotareached quotareached
     - psql -h postgres -U postgres -c "UPDATE users SET admin = true WHERE username = 'admin'"
     - psql -h postgres -U postgres -c "INSERT INTO domain_owners (domain_id, user_id) VALUES (0, (SELECT user_id FROM users WHERE username = 'admin'))"
+
+main_test_suite:
+  before_script:
+    - !reference [.setup_elixire, script]
+  script:
+    - !reference [.setup_elixire_for_testing, script]
     - tox
 
 clamav_enabled_test_suite:
   before_script:
-    - python -V
-    - pip -V
-    - time apk --update add build-base git python3-dev libffi-dev jpeg-dev zlib-dev freetype-dev lcms2-dev openjpeg-dev tiff-dev tk-dev tcl-dev libxml2-dev libxslt-dev libffi-dev gcc musl-dev libgcc openssl-dev curl libmagic postgresql-client
-    - time pip install wheel tox
-    - time pip install -Ur requirements.txt
-    - mkdir -p images
-    - mkdir -p dumps
-    - mkdir -p thumbnails
-    - cat config.py.example config.py.ci > config.py
-    - python ./utils/upgrade/folder_sharding.py
+    - !reference [.setup_elixire, script]
 
     # install and setup clamav
     - time apk --update add clamav
     - freshclam --config-file=ci/freshclam.conf
     - clamd --foreground=false --config-file=ci/clamd.conf
+
+    # enable UPLOAD_SCAN "dynamically"
     - echo "UPLOAD_SCAN = True" >> config.py.ci
+    - cat config.py.example config.py.ci > config.py
   script:
-    - mkdir frontend/output admin-panel/dist -p
-    - touch frontend/output/index.html admin-panel/dist/index.html
-    - ls -la
-    - pwd
-    - psql -h postgres -U postgres -f schema.sql
-    - python ./manage.py migrate
-    - python ./manage.py adduser h@h.co hi hihihihi
-    - python ./manage.py adduser a@a.co admin adminadmin
-    - python ./manage.py adduser n@n.co nousage nousagenousage
-    - python ./manage.py adduser q@q.co quotareached quotareached
-    - psql -h postgres -U postgres -c "UPDATE users SET admin = true WHERE username = 'admin'"
-    - psql -h postgres -U postgres -c "INSERT INTO domain_owners (domain_id, user_id) VALUES (0, (SELECT user_id FROM users WHERE username = 'admin'))"
+    - !reference [.setup_elixire_for_testing, script]
     - tox tests/test_upload.py::test_eicar_upload
