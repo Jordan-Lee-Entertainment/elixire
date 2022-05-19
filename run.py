@@ -264,7 +264,7 @@ def handle_exception(exception):
     return {"error": True, "message": repr(exception)}, status_code
 
 
-async def _setup_working_directory_folders():
+def _setup_working_directory_folders():
     (Path.cwd() / "images").mkdir(exist_ok=True)
     (Path.cwd() / "dumps").mkdir(exist_ok=True)
     (Path.cwd() / "thumbnails").mkdir(exist_ok=True)
@@ -276,7 +276,7 @@ async def _setup_working_directory_folders():
 
 @app.before_serving
 async def app_before_serving():
-    await _setup_working_directory_folders()
+    _setup_working_directory_folders()
 
     try:
         app.loop
