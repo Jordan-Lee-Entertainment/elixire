@@ -269,7 +269,7 @@ def _setup_working_directory_folders():
     (Path.cwd() / "dumps").mkdir(exist_ok=True)
     (Path.cwd() / "thumbnails").mkdir(exist_ok=True)
 
-    hexadecimal_alphabet = string.ascii_lowercase + "abcdef"
+    hexadecimal_alphabet = string.digits + "abcdef"
     for letter in hexadecimal_alphabet:
         (Path.cwd() / "images" / letter).mkdir(exist_ok=True)
 
