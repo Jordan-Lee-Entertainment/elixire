@@ -384,7 +384,7 @@ Do not reply to this email specifically, it will not work.
     return jsonify({"success": resp.status == 200})
 
 
-async def _delete_file_wrapper(app, shortname, user_id):
+async def _delete_file_wrapper(shortname, user_id):
     lock = app.locks["delete_files"][user_id]
     await lock.acquire()
 
