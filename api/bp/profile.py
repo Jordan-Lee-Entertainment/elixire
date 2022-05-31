@@ -431,7 +431,7 @@ async def delete_file_task(user_id: int, delete=False):
         tasks.append(task)
 
     if tasks:
-        await asyncio.wait(tasks)
+        await asyncio.gather(*tasks)
 
     log.info(f"finished waiting for {len(tasks)} tasks")
     log.info(f"delete? {delete}")
