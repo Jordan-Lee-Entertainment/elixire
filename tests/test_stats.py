@@ -3,20 +3,13 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .common import login_normal, login_admin
+from .common import login_admin
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_stats(test_cli):
-    utoken = await login_normal(test_cli)
-
-    resp = await test_cli.get(
-        "/api/stats",
-        headers={
-            "Authorization": utoken,
-        },
-    )
+async def test_stats(test_cli_user):
+    resp = await test_cli_user.get("/api/stats")
 
     assert resp.status_code == 200
     rjson = await resp.json
