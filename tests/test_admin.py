@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .common import login_admin
 
 pytestmark = pytest.mark.asyncio
 
@@ -26,15 +25,8 @@ async def test_non_admin(test_cli_user):
     assert resp.status_code == 403
 
 
-async def test_admin(test_cli):
-    utoken = await login_admin(test_cli)
-
-    resp = await test_cli.get(
-        "/api/admin/test",
-        headers={
-            "Authorization": utoken,
-        },
-    )
+async def test_admin(test_cli_admin):
+    resp = await test_cli_admin.get("/api/admin/test")
 
     assert resp.status_code == 200
     data = await resp.json
@@ -43,13 +35,8 @@ async def test_admin(test_cli):
     assert data["admin"]
 
 
-async def test_user_fetch(test_cli):
-    atoken = await login_admin(test_cli)
-    uid = _extract_uid(atoken)
-
-    resp = await test_cli.get(
-        f"/api/admin/users/{uid}", headers={"Authorization": atoken}
-    )
+async def test_user_fetch(test_cli_admin):
+    resp = await test_cli_admin.get(f"/api/admin/users/{test_cli_admin.id}")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -67,20 +54,17 @@ async def test_user_fetch(test_cli):
     assert isinstance(rjson["limits"], dict)
 
 
-async def test_user_activate_cycle(test_cli, test_cli_user):
+async def test_user_activate_cycle(test_cli_admin, test_cli_user):
     # logic here is to:
     # - deactivate user
     # - check the user's profile, make sure its deactivated
     # - activate user
     # - check profile again, making sure its activated
-    atoken = await login_admin(test_cli)
 
     user_id = test_cli_user.id
 
     # deactivate
-    resp = await test_cli.post(
-        f"/api/admin/deactivate/{user_id}", headers={"Authorization": atoken}
-    )
+    resp = await test_cli_admin.post(f"/api/admin/deactivate/{user_id}")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -89,9 +73,7 @@ async def test_user_activate_cycle(test_cli, test_cli_user):
     assert rjson["success"]
 
     # check profile for deactivation
-    resp = await test_cli.get(
-        f"/api/admin/users/{user_id}", headers={"Authorization": atoken}
-    )
+    resp = await test_cli_admin.get(f"/api/admin/users/{user_id}")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -99,9 +81,7 @@ async def test_user_activate_cycle(test_cli, test_cli_user):
     assert not rjson["active"]
 
     # activate
-    resp = await test_cli.post(
-        f"/api/admin/activate/{user_id}", headers={"Authorization": atoken}
-    )
+    resp = await test_cli_admin.post(f"/api/admin/activate/{user_id}")
     assert resp.status_code == 200
     rjson = await resp.json
 
@@ -109,9 +89,7 @@ async def test_user_activate_cycle(test_cli, test_cli_user):
     assert rjson["success"]
 
     # check profile
-    resp = await test_cli.get(
-        f"/api/admin/users/{user_id}", headers={"Authorization": atoken}
-    )
+    resp = await test_cli_admin.get(f"/api/admin/users/{user_id}")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -119,21 +97,15 @@ async def test_user_activate_cycle(test_cli, test_cli_user):
     assert rjson["active"]
 
 
-async def test_user_search(test_cli):
+async def test_user_search(test_cli_admin):
     """Test seaching of users."""
     # there isnt much other testing than calling the route
     # and checking for the data types...
 
     # no idea how we would test all the query arguments
     # in the route.
-    atoken = await login_admin(test_cli)
 
-    resp = await test_cli.get(
-        "/api/admin/users/search",
-        headers={
-            "Authorization": atoken,
-        },
-    )
+    resp = await test_cli_admin.get("/api/admin/users/search")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -147,9 +119,7 @@ async def test_user_search(test_cli):
     assert isinstance(pag["current"], int)
 
 
-async def test_domain_search(test_cli):
-    token = await login_admin(test_cli)
-
+async def test_domain_search(test_cli_admin):
     def assert_standard_response(json):
         assert isinstance(json, dict)
         assert isinstance(json["results"], dict)
@@ -160,12 +130,7 @@ async def test_domain_search(test_cli):
         assert isinstance(pag["current"], int)
 
     # no query -- returns all users, paginated
-    resp = await test_cli.get(
-        "/api/admin/domains/search",
-        headers={
-            "Authorization": token,
-        },
-    )
+    resp = await test_cli_admin.get("/api/admin/domains/search")
 
     assert resp.status_code == 200
 
@@ -173,11 +138,8 @@ async def test_domain_search(test_cli):
     assert_standard_response(json)
 
     # sample query
-    resp = await test_cli.get(
+    resp = await test_cli_admin.get(
         "/api/admin/domains/search",
-        headers={
-            "Authorization": token,
-        },
         query_string={"query": "elix"},
     )
 
@@ -191,11 +153,9 @@ async def test_domain_search(test_cli):
     )
 
 
-async def test_domain_stats(test_cli):
+async def test_domain_stats(test_cli_admin):
     """Get instance-wide domain stats."""
-    atoken = await login_admin(test_cli)
-
-    resp = await test_cli.get("/api/admin/domains", headers={"Authorization": atoken})
+    resp = await test_cli_admin.get("/api/admin/domains")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -204,14 +164,11 @@ async def test_domain_stats(test_cli):
     assert isinstance(rjson, dict)
 
 
-async def test_domain_patch(test_cli, test_cli_user):
+async def test_domain_patch(test_cli_admin, test_cli_user):
     """Test editing of a single domain."""
-    atoken = await login_admin(test_cli)
-
-    admin_id = _extract_uid(atoken)
     user_id = test_cli_user.id
 
-    resp = await test_cli.patch(
+    resp = await test_cli_admin.patch(
         "/api/admin/domains/0",
         json={
             "owner_id": user_id,
@@ -219,7 +176,6 @@ async def test_domain_patch(test_cli, test_cli_user):
             "official": True,
             "permissions": 666,
         },
-        headers={"Authorization": atoken},
     )
 
     assert resp.status_code == 200
@@ -234,12 +190,7 @@ async def test_domain_patch(test_cli, test_cli_user):
     assert "permissions" in fields
 
     # fetch domain info
-    resp = await test_cli.get(
-        "/api/admin/domains/0",
-        headers={
-            "Authorization": atoken,
-        },
-    )
+    resp = await test_cli_admin.get("/api/admin/domains/0")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -254,15 +205,14 @@ async def test_domain_patch(test_cli, test_cli_user):
 
     # reset the domain properties
     # to sane defaults
-    resp = await test_cli.patch(
+    resp = await test_cli_admin.patch(
         "/api/admin/domains/0",
         json={
-            "owner_id": admin_id,
+            "owner_id": test_cli_admin.id,
             "admin_only": False,
             "official": False,
             "permissions": 3,
         },
-        headers={"Authorization": atoken},
     )
 
     assert resp.status_code == 200
@@ -277,12 +227,7 @@ async def test_domain_patch(test_cli, test_cli_user):
     assert "permissions" in fields
 
     # fetch domain info, again, to make sure.
-    resp = await test_cli.get(
-        "/api/admin/domains/0",
-        headers={
-            "Authorization": atoken,
-        },
-    )
+    resp = await test_cli_admin.get("/api/admin/domains/0")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -290,26 +235,21 @@ async def test_domain_patch(test_cli, test_cli_user):
     assert isinstance(rjson, dict)
     dinfo = rjson["info"]
     assert isinstance(dinfo, dict)
-    assert dinfo["owner"]["user_id"] == admin_id
+    assert dinfo["owner"]["user_id"] == str(test_cli_admin.id)
     assert not dinfo["admin_only"]
     assert not dinfo["official"]
     assert dinfo["permissions"] == 3
 
 
-async def test_user_patch(test_cli, test_cli_user):
-    atoken = await login_admin(test_cli)
-
+async def test_user_patch(test_cli_admin, test_cli_user):
     user_id = test_cli_user.id
 
     # request 1: change default user to admin, etc
-    resp = await test_cli.patch(
+    resp = await test_cli_admin.patch(
         f"/api/admin/user/{user_id}",
         json={
             "upload_limit": 1000,
             "shorten_limit": 1000,
-        },
-        headers={
-            "Authorization": atoken,
         },
     )
 
@@ -320,12 +260,7 @@ async def test_user_patch(test_cli, test_cli_user):
     assert "shorten_limit" in rjson
 
     # request 2: check by getting user info
-    resp = await test_cli.get(
-        f"/api/admin/users/{user_id}",
-        headers={
-            "Authorization": atoken,
-        },
-    )
+    resp = await test_cli_admin.get(f"/api/admin/users/{user_id}")
 
     assert resp.status_code == 200
     rjson = await resp.json
@@ -335,14 +270,11 @@ async def test_user_patch(test_cli, test_cli_user):
     assert rjson["limits"]["shortenlimit"] == 1000
 
     # request 3: changing it back
-    resp = await test_cli.patch(
+    resp = await test_cli_admin.patch(
         f"/api/admin/user/{user_id}",
         json={
             "upload_limit": 104857600,
             "shorten_limit": 100,
-        },
-        headers={
-            "Authorization": atoken,
         },
     )
 
@@ -353,16 +285,9 @@ async def test_user_patch(test_cli, test_cli_user):
     assert "shorten_limit" in rjson
 
 
-async def test_my_stats_as_admin(test_cli):
+async def test_my_stats_as_admin(test_cli_admin):
     """Test the personal domain stats route but as an admin."""
-    utoken = await login_admin(test_cli)
-
-    resp = await test_cli.get(
-        "/api/stats/my_domains",
-        headers={
-            "Authorization": utoken,
-        },
-    )
+    resp = await test_cli_admin.get("/api/stats/my_domains")
 
     assert resp.status_code == 200
 
