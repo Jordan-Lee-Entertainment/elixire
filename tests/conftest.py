@@ -7,6 +7,8 @@ import asyncio
 import sys
 import os
 
+from quart import current_app
+
 sys.path.append(os.getcwd())
 
 # we import the app so that we can inject our own things
@@ -74,13 +76,19 @@ def test_cli_fixture(app):
     return app.test_client()
 
 
-async def _create_test_user() -> dict:
+async def _create_test_user(*, admin: bool = False) -> dict:
     username = f"elixire-test-user-{hexs(6)}"
     password = hexs(6)
     user_email = email()
 
     user = await create_user(username, password, user_email, active=True)
     user_token = gen_token(user)
+
+    if admin:
+
+        await current_app.db.execute(
+            "UPDATE users SET admin = true WHERE user_id = $1", user["user_id"]
+        )
 
     return {
         **user,
@@ -116,10 +124,56 @@ async def test_user_fixture(app):
         await _delete_test_user(user)
 
 
+@pytest.fixture(name="test_user_admin", scope="session")
+async def test_user_admin_fixture(app):
+    """Yield a randomly generated test user that is an admin."""
+    async with app.app_context():
+        user = await _create_test_user(admin=True)
+
+    yield user
+
+    async with app.app_context():
+        await _delete_test_user(user)
+
+
 @pytest.fixture(scope="function")
 async def test_cli_user(test_cli, test_user):
     """Yield a TestClient instance that contains a randomly generated
     user."""
     client = TestClientWithUser(test_cli, test_user)
     yield client
+    await client.cleanup()
+
+
+async def _set_owner(domain_id, user_id):
+    await current_app.db.execute(
+        """
+        INSERT INTO domain_owners (domain_id, user_id)
+        VALUES ($1, $2)
+        ON CONFLICT ON CONSTRAINT domain_owners_pkey
+        DO UPDATE
+            SET user_id = $2
+            WHERE domain_owners.domain_id = $1
+        """,
+        domain_id,
+        user_id,
+    )
+
+
+@pytest.fixture(scope="function")
+async def test_cli_admin(test_cli, test_user_admin):
+    """Yield a TestClient instance that contains a randomly generated
+    admin user."""
+    client = TestClientWithUser(test_cli, test_user_admin)
+    async with client.app.app_context():
+        old_owner_id = await current_app.db.fetchval(
+            "SELECT user_id FROM domain_owners WHERE domain_id=0"
+        )
+        await _set_owner(0, client.id)
+
+    yield client
+
+    async with client.app.app_context():
+        await _set_owner(0, old_owner_id)
+
     await client.cleanup()
