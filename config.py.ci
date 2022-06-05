@@ -32,4 +32,4 @@ RATELIMITS = {
     },
 }
 
-UPLOAD_SCAN = True
+UPLOAD_SCAN = False
