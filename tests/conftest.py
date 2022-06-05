@@ -17,7 +17,14 @@ sys.path.append(os.getcwd())
 # automatic startup and shutdown in the pytest lifetime cycle.
 from run import app as real_app, _setup_working_directory_folders
 
-# load mocking utils
+from api.common.user import create_user
+from api.common.auth import gen_token
+from api.bp.profile import delete_user
+
+from tests.util.client import TestClientWithUser
+from tests.common import hexs, email
+
+# load mocking utils (automatically monkeypatches)
 import tests.util.mock  # noqa
 
 
@@ -65,3 +72,54 @@ async def app_fixture(event_loop):
 @pytest.fixture(name="test_cli")
 def test_cli_fixture(app):
     return app.test_client()
+
+
+async def _create_test_user() -> dict:
+    username = f"elixire-test-user-{hexs(6)}"
+    password = hexs(6)
+    user_email = email()
+
+    user = await create_user(username, password, user_email, active=True)
+    user_token = gen_token(user)
+
+    return {
+        **user,
+        **{
+            "token": user_token,
+            "email": user_email,
+            "username": username,
+            "password": password,
+        },
+    }
+
+
+async def _delete_test_user(user: dict):
+    task = await delete_user(user["user_id"], delete=True)
+    await asyncio.shield(task)
+
+
+@pytest.fixture(name="test_user", scope="session")
+async def test_user_fixture(app):
+    """Yield a randomly generated test user.
+
+    As an optimization, the test user is set to be in session scope,
+    the test client's cleanup() method then proceeds to reset the test user
+    back to a wanted initial state, which is faster than creating/destroying
+    the user on every single test.
+    """
+    async with app.app_context():
+        user = await _create_test_user()
+
+    yield user
+
+    async with app.app_context():
+        await _delete_test_user(user)
+
+
+@pytest.fixture(scope="function")
+async def test_cli_user(test_cli, test_user):
+    """Yield a TestClient instance that contains a randomly generated
+    user."""
+    client = TestClientWithUser(test_cli, test_user)
+    yield client
+    await client.cleanup()
