@@ -126,10 +126,6 @@ INSERT INTO domain_owners (domain_id, user_id)
 VALUES (0, ADMIN_USER_ID_YOU_JUST_SEARCHED);
 ```
 
-**Make sure to insert some big ratelimits to be able to run
-the test battery, 1000/1s should be enough for both user ratelimits
-and IP based ratelimits.**
-
 ## Running
 
 Then, run the tests with tox.
