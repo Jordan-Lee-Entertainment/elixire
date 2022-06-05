@@ -4,7 +4,7 @@
 
 import pytest
 from pathlib import Path
-from .common import token, username, login_admin
+from .common import token, username
 
 pytestmark = pytest.mark.asyncio
 
@@ -17,7 +17,7 @@ async def test_invalid_shorten(test_cli):
         assert resp.status_code == 404
 
 
-async def test_shorten(test_cli, test_cli_user):
+async def test_shorten(test_cli_user, test_cli_admin):
     resp = await test_cli_user.post(
         "/api/shorten",
         json={"url": "https://elixi.re"},
@@ -29,11 +29,7 @@ async def test_shorten(test_cli, test_cli_user):
     assert isinstance(data["url"], str)
     shortname = data["shortname"]
 
-    atoken = await login_admin(test_cli)
-    resp = await test_cli.get(
-        f"/api/admin/shorten/{shortname}",
-        headers={"authorization": atoken},
-    )
+    resp = await test_cli_admin.get(f"/api/admin/shorten/{shortname}")
     assert resp.status_code == 200
     rjson = await resp.json
     assert rjson["filename"] == shortname

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .common import token, username, email, login_admin
+from .common import token, username, email
 from api.bp.profile import delete_user
 
 pytestmark = pytest.mark.asyncio
@@ -25,18 +25,12 @@ async def test_login(test_cli_user):
     assert isinstance(resp_json["token"], str)
 
 
-async def test_login_deactivated(test_cli, test_cli_user):
+async def test_login_deactivated(test_cli, test_cli_user, test_cli_admin):
     # login using the hi user
     user_id = test_cli_user.id
 
     # login admin to deactivate the account
-    admin_token = await login_admin(test_cli)
-    resp = await test_cli.post(
-        f"/api/admin/deactivate/{user_id}",
-        headers={
-            "Authorization": admin_token,
-        },
-    )
+    resp = await test_cli_admin.post(f"/api/admin/deactivate/{user_id}")
     test_cli_user.must_reset()
 
     assert resp.status_code == 200

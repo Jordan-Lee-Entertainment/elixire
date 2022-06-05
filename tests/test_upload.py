@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from quart.testing import make_test_body_with_headers
 from quart.datastructures import FileStorage
 
-from .common import login_admin, png_data, hexs
+from .common import png_data, hexs
 
 pytestmark = pytest.mark.asyncio
 
@@ -110,7 +110,7 @@ def png_request(data=None):
     return {"data": body, "headers": headers}
 
 
-async def test_upload_png(test_cli_user):
+async def test_upload_png(test_cli_user, test_cli_admin):
     """Test that the upload route works given test data"""
     kwargs = png_request()
     resp = await test_cli_user.post(
@@ -128,12 +128,7 @@ async def test_upload_png(test_cli_user):
     await check_exists(test_cli_user, shortname)
 
     # -- test fetching file on admin api
-    atoken = await login_admin(test_cli_user)
-    resp = await test_cli_user.get(
-        f"/api/admin/file/{shortname}",
-        do_token=False,
-        headers={"authorization": atoken},
-    )
+    resp = await test_cli_admin.get(f"/api/admin/file/{shortname}")
     assert resp.status_code == 200
     rjson = await resp.json
     assert rjson["filename"] == shortname
