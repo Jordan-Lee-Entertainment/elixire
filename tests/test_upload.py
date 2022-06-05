@@ -179,6 +179,7 @@ EICAR = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
 
 async def test_eicar_upload(test_cli):
     if not test_cli.app.econfig.UPLOAD_SCAN:
+        pytest.skip("upload scans disabled")
         return
 
     utoken = await login_normal(test_cli)

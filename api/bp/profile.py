@@ -384,7 +384,7 @@ Do not reply to this email specifically, it will not work.
     return jsonify({"success": resp.status == 200})
 
 
-async def _delete_file_wrapper(app, shortname, user_id):
+async def _delete_file_wrapper(shortname, user_id):
     lock = app.locks["delete_files"][user_id]
     await lock.acquire()
 
@@ -431,7 +431,7 @@ async def delete_file_task(user_id: int, delete=False):
         tasks.append(task)
 
     if tasks:
-        await asyncio.wait(tasks)
+        await asyncio.gather(*tasks)
 
     log.info(f"finished waiting for {len(tasks)} tasks")
     log.info(f"delete? {delete}")
