@@ -37,6 +37,10 @@ class TestClientWithUser:
             await self._reset_user()
 
     @property
+    def id(self):
+        return self.user["user_id"]
+
+    @property
     def password(self):
         return self.user["password"]
 

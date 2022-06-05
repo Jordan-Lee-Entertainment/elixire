@@ -3,20 +3,19 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .creds import USERNAME, PASSWORD
-from .common import token, username, email, login_normal, login_admin
-from .test_admin import _extract_uid
+from .common import token, username, email, login_admin
 from api.bp.profile import delete_user
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_login(test_cli):
-    response = await test_cli.post(
+async def test_login(test_cli_user):
+    response = await test_cli_user.post(
         "/api/login",
+        do_token=False,
         json={
-            "user": USERNAME,
-            "password": PASSWORD,
+            "user": test_cli_user.username,
+            "password": test_cli_user.password,
         },
     )
 
@@ -26,20 +25,19 @@ async def test_login(test_cli):
     assert isinstance(resp_json["token"], str)
 
 
-async def test_login_deactivated(test_cli):
+async def test_login_deactivated(test_cli, test_cli_user):
     # login using the hi user
-    hi_token = await login_normal(test_cli)
-    user_id = _extract_uid(hi_token)
+    user_id = test_cli_user.id
 
     # login admin to deactivate the account
     admin_token = await login_admin(test_cli)
-
     resp = await test_cli.post(
         f"/api/admin/deactivate/{user_id}",
         headers={
             "Authorization": admin_token,
         },
     )
+    test_cli_user.must_reset()
 
     assert resp.status_code == 200
 
@@ -47,8 +45,8 @@ async def test_login_deactivated(test_cli):
     resp = await test_cli.post(
         "/api/login",
         json={
-            "user": USERNAME,
-            "password": PASSWORD,
+            "user": test_cli_user.username,
+            "password": test_cli_user.password,
         },
     )
 
@@ -60,7 +58,7 @@ async def test_login_deactivated(test_cli):
     resp = await test_cli.post(
         "/api/login",
         json={
-            "user": USERNAME,
+            "user": test_cli_user.username,
             "password": "notthepassword",
         },
     )
@@ -69,46 +67,35 @@ async def test_login_deactivated(test_cli):
     json = await resp.json
     assert json["message"] == "User or password invalid"
 
-    # reactivate user
-    resp = await test_cli.post(
-        f"/api/admin/activate/{user_id}",
-        headers={
-            "Authorization": admin_token,
-        },
-    )
 
-    assert resp.status_code == 200
-
-
-async def test_login_badinput(test_cli):
-    response = await test_cli.post(
+async def test_login_badinput(test_cli_user):
+    response = await test_cli_user.post(
         "/api/login",
+        do_token=False,
         json={
-            "user": USERNAME,
+            "user": test_cli_user.username,
         },
     )
 
     assert response.status_code == 400
 
-
-async def test_login_badpwd(test_cli):
-    response = await test_cli.post(
+    response = await test_cli_user.post(
         "/api/login",
+        do_token=False,
         json={
-            "user": USERNAME,
+            "user": test_cli_user.username,
             "password": token(),
         },
     )
 
     assert response.status_code == 403
 
-
-async def test_login_baduser(test_cli):
-    response = await test_cli.post(
+    response = await test_cli_user.post(
         "/api/login",
+        do_token=False,
         json={
             "user": username(),
-            "password": PASSWORD,
+            "password": test_cli_user.password,
         },
     )
 
@@ -125,50 +112,29 @@ async def test_invalid_token(test_cli):
     """Test invalid token."""
     response = await test_cli.get(
         "/api/profile",
-        headers={
-            "Authorization": token(),
-        },
+        headers={"Authorization": token()},
     )
     assert response.status_code == 403
 
 
-async def test_valid_token(test_cli):
-    token = await login_normal(test_cli)
-    response_valid = await test_cli.get(
-        "/api/profile",
-        headers={
-            "Authorization": token,
+async def test_valid_token(test_cli_user):
+    resp = await test_cli_user.get("/api/profile")
+    assert resp.status_code == 200
+
+
+async def test_revoke(test_cli_user):
+    revoke_call = await test_cli_user.post(
+        "/api/revoke",
+        json={
+            "user": test_cli_user.username,
+            "password": test_cli_user.password,
         },
     )
-
-    assert response_valid.status_code == 200
-
-
-async def test_revoke(test_cli):
-    token = await login_normal(test_cli)
-
-    response_valid = await test_cli.get(
-        "/api/profile",
-        headers={
-            "Authorization": token,
-        },
-    )
-
-    assert response_valid.status_code == 200
-
-    revoke_call = await test_cli.post(
-        "/api/revoke", json={"user": USERNAME, "password": PASSWORD}
-    )
+    test_cli_user.must_reset()
 
     assert revoke_call.status_code == 200
 
-    response_invalid = await test_cli.get(
-        "/api/profile",
-        headers={
-            "Authorization": token,
-        },
-    )
-
+    response_invalid = await test_cli_user.get("/api/profile")
     assert response_invalid.status_code == 403
 
 
