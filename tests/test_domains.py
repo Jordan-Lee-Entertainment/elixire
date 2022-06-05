@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .common import login_normal, login_admin
+from .common import login_admin
 
 pytestmark = pytest.mark.asyncio
 
@@ -21,15 +21,8 @@ async def test_domains_nouser(test_cli):
     await assert_domains(resp)
 
 
-async def test_domains_user(test_cli):
-    utoken = await login_normal(test_cli)
-    resp = await test_cli.get(
-        "/api/domains",
-        headers={
-            "Authorization": utoken,
-        },
-    )
-
+async def test_domains_user(test_cli_user):
+    resp = await test_cli_user.get("/api/domains")
     await assert_domains(resp)
 
 
