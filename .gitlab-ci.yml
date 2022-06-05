@@ -41,7 +41,7 @@ cache:
   script:
     - psql -h postgres -U postgres -f schema.sql
     - python ./manage.py migrate
-    - python ./manage.py adduser h@h.co hi hihihihi
+    # - python ./manage.py adduser h@h.co hi hihihihi
     - python ./manage.py adduser a@a.co admin adminadmin
     - python ./manage.py adduser n@n.co nousage nousagenousage
     - python ./manage.py adduser q@q.co quotareached quotareached
