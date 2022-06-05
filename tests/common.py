@@ -8,8 +8,6 @@ import io
 import base64
 import string
 
-from .creds import ADMIN_USER, ADMIN_PASSWORD
-
 EMAIL_ALPHABET = string.ascii_lowercase
 
 
@@ -44,19 +42,3 @@ def email():
     domain = choice_repeat(string.ascii_lowercase, 16)
 
     return f"{name}@{domain}.com"
-
-
-async def login_admin(test_cli) -> str:
-    resp = await test_cli.post(
-        "/api/login",
-        json={
-            "user": ADMIN_USER,
-            "password": ADMIN_PASSWORD,
-        },
-    )
-
-    assert resp.status_code == 200
-    data = await resp.json
-    assert isinstance(data, dict)
-
-    return data["token"]
