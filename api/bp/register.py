@@ -8,17 +8,16 @@ elixi.re backend source code - register route
 This also includes routes like recovering username from email.
 """
 
-import bcrypt
 import asyncpg
 
 from quart import Blueprint, jsonify, current_app as app, request
 from dns import resolver
 
-from ..snowflake import get_snowflake
 from ..errors import BadInput, FeatureDisabled
 from ..schema import validate, REGISTRATION_SCHEMA, RECOVER_USERNAME
 from ..common.email import send_email, fmt_email
 from ..common.webhook import register_webhook
+from api.common.user import create_user
 
 bp = Blueprint("register", __name__)
 
@@ -87,32 +86,12 @@ async def register_user():
 
     await check_email(email)
 
-    # borrowed from utils/adduser
-    user_id = get_snowflake()
-
-    _pwd = bytes(password, "utf-8")
-    hashed = bcrypt.hashpw(_pwd, bcrypt.gensalt(14))
-
     try:
-        await app.db.execute(
-            """
-        INSERT INTO users (user_id, username, password_hash, email, active)
-        VALUES ($1, $2, $3, $4, false)
-        """,
-            user_id,
-            username,
-            hashed.decode("utf-8"),
-            email,
-        )
+        user = await create_user(username, password, email)
     except asyncpg.exceptions.UniqueViolationError:
         raise BadInput("Username or email already exist.")
 
-    await app.db.execute(
-        """
-    INSERT INTO limits (user_id) VALUES ($1)
-    """,
-        user_id,
-    )
+    user_id = user["user_id"]
 
     # invalidate if anything happened before
     # just to make sure.
