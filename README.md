@@ -44,11 +44,6 @@ git submodule update
 # You are able to use a virtual enviroment if you want.
 python3.7 -m pip install -Ur requirements.txt
 
-# make sure those folders exist
-mkdir images
-mkdir dumps
-mkdir thumbnails
-
 # Please edit schema.sql before continuing.
 # Specially the "INSERT INTO domains" line.
 psql -U postgres -f schema.sql
@@ -59,10 +54,6 @@ cp config.py.example config.py
 
 # Edit frontend/config.json and admin-panel/config.json
 # so they're pointing to your domain.
-
-# This sets up the folder structure in ./images for you.
-# Do not run 'cd utils/upgrade' then run the script.
-./utils/upgrade/folder_sharding.py
 
 # Update frontend and admin-panel repositories.
 # Use this makefile task to update your instance.

@@ -15,7 +15,7 @@ sys.path.append(os.getcwd())
 # of those variables, naming here dictates that main_app is the actual
 # app object that everyone uses, while app is the test fixture that has
 # automatic startup and shutdown in the pytest lifetime cycle.
-from run import app as real_app
+from run import app as real_app, _setup_working_directory_folders
 
 # load mocking utils
 import tests.util.mock  # noqa
@@ -29,6 +29,8 @@ def event_loop_fixture():
 
 
 def setup_test_app(event_loop, given_app) -> None:
+    _setup_working_directory_folders()
+
     given_app.loop = event_loop
     given_app.econfig.CLOUDFLARE = False
     given_app.econfig.DUMP_ENABLED = True

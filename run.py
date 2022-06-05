@@ -4,6 +4,8 @@
 
 import logging
 import asyncio
+import string
+from pathlib import Path
 
 import asyncpg
 import aiohttp
@@ -262,8 +264,24 @@ def handle_exception(exception):
     return {"error": True, "message": repr(exception)}, status_code
 
 
+def _setup_working_directory_folders():
+    image_dir = Path(app.econfig.IMAGE_FOLDER)
+    thumbnail_dir = Path(app.econfig.THUMBNAIL_FOLDER)
+    dump_dir = Path(app.econfig.DUMP_FOLDER)
+
+    image_dir.mkdir(exist_ok=True)
+    thumbnail_dir.mkdir(exist_ok=True)
+    dump_dir.mkdir(exist_ok=True)
+
+    hexadecimal_alphabet = string.digits + "abcdef"
+    for letter in hexadecimal_alphabet:
+        (image_dir / letter).mkdir(exist_ok=True)
+
+
 @app.before_serving
 async def app_before_serving():
+    _setup_working_directory_folders()
+
     try:
         app.loop
     except AttributeError:
