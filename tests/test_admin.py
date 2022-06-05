@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import pytest
-from .common import login_normal, login_admin
+from .common import login_admin
 
 pytestmark = pytest.mark.asyncio
 
@@ -21,17 +21,8 @@ def _extract_uid(token) -> str:
     return uid
 
 
-async def test_non_admin(test_cli):
-    utoken = await login_normal(test_cli)
-
-    resp = await test_cli.get(
-        "/api/admin/test",
-        headers={
-            "Authorization": utoken,
-        },
-    )
-
-    assert resp.status != 200
+async def test_non_admin(test_cli_user):
+    resp = await test_cli_user.get("/api/admin/test")
     assert resp.status_code == 403
 
 
@@ -76,20 +67,19 @@ async def test_user_fetch(test_cli):
     assert isinstance(rjson["limits"], dict)
 
 
-async def test_user_activate_cycle(test_cli):
+async def test_user_activate_cycle(test_cli, test_cli_user):
     # logic here is to:
     # - deactivate user
     # - check the user's profile, make sure its deactivated
     # - activate user
     # - check profile again, making sure its activated
-    ntoken = await login_normal(test_cli)
     atoken = await login_admin(test_cli)
 
-    uid = _extract_uid(ntoken)
+    user_id = test_cli_user.id
 
     # deactivate
     resp = await test_cli.post(
-        f"/api/admin/deactivate/{uid}", headers={"Authorization": atoken}
+        f"/api/admin/deactivate/{user_id}", headers={"Authorization": atoken}
     )
 
     assert resp.status_code == 200
@@ -100,7 +90,7 @@ async def test_user_activate_cycle(test_cli):
 
     # check profile for deactivation
     resp = await test_cli.get(
-        f"/api/admin/users/{uid}", headers={"Authorization": atoken}
+        f"/api/admin/users/{user_id}", headers={"Authorization": atoken}
     )
 
     assert resp.status_code == 200
@@ -110,7 +100,7 @@ async def test_user_activate_cycle(test_cli):
 
     # activate
     resp = await test_cli.post(
-        f"/api/admin/activate/{uid}", headers={"Authorization": atoken}
+        f"/api/admin/activate/{user_id}", headers={"Authorization": atoken}
     )
     assert resp.status_code == 200
     rjson = await resp.json
@@ -120,7 +110,7 @@ async def test_user_activate_cycle(test_cli):
 
     # check profile
     resp = await test_cli.get(
-        f"/api/admin/users/{uid}", headers={"Authorization": atoken}
+        f"/api/admin/users/{user_id}", headers={"Authorization": atoken}
     )
 
     assert resp.status_code == 200
@@ -214,13 +204,12 @@ async def test_domain_stats(test_cli):
     assert isinstance(rjson, dict)
 
 
-async def test_domain_patch(test_cli):
+async def test_domain_patch(test_cli, test_cli_user):
     """Test editing of a single domain."""
     atoken = await login_admin(test_cli)
-    utoken = await login_normal(test_cli)
 
     admin_id = _extract_uid(atoken)
-    user_id = _extract_uid(utoken)
+    user_id = test_cli_user.id
 
     resp = await test_cli.patch(
         "/api/admin/domains/0",
@@ -258,7 +247,7 @@ async def test_domain_patch(test_cli):
     assert isinstance(rjson, dict)
     dinfo = rjson["info"]
     assert isinstance(dinfo, dict)
-    assert dinfo["owner"]["user_id"] == user_id
+    assert dinfo["owner"]["user_id"] == str(user_id)
     assert dinfo["admin_only"]
     assert dinfo["official"]
     assert dinfo["permissions"] == 666
@@ -307,11 +296,10 @@ async def test_domain_patch(test_cli):
     assert dinfo["permissions"] == 3
 
 
-async def test_user_patch(test_cli):
+async def test_user_patch(test_cli, test_cli_user):
     atoken = await login_admin(test_cli)
-    utoken = await login_normal(test_cli)
 
-    user_id = _extract_uid(utoken)
+    user_id = test_cli_user.id
 
     # request 1: change default user to admin, etc
     resp = await test_cli.patch(
