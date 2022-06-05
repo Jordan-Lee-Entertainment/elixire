@@ -87,48 +87,17 @@ Both the Client API and the Admin API are documented there.
 
 # Setting and running a test environment
 
-**NOTE: DO NOT RUN TESTS IN YOUR PRODUCTION ENVIRONMENT. AT ALL.**
+**NOTE: It is not recommended to run the test suite in production environments,
+as it will run against the currently configured database.**
 
-Install `tox` manually (the python package, not the messenger).
+Install `tox` globally, as that will take care of creating a dedicated
+virtual environment for testing:
 
-Create these users:
-
-```bash
-./manage.py adduser h@h.co hi hihihihi
-./manage.py adduser a@a.co admin adminadmin
-./manage.py adduser n@n.co nousage nousagenousage
-./manage.py adduser q@q.co quotareached quotareached
+```
+python3 -m pip install tox
 ```
 
-After creating the users, enter the PSQL Shell:
-
-## Setting admin to actual admin
-
-```sql
-UPDATE users
-SET admin = true
-WHERE username = 'admin';
-```
-
-## Fetch admin ID and setting it as owner
-
-```sql
-SELECT user_id
-FROM users
-WHERE username = 'admin';
-```
-
-```sql
--- repeat this operation for any domains
--- you added in your development environment
-
-INSERT INTO domain_owners (domain_id, user_id)
-VALUES (0, ADMIN_USER_ID_YOU_JUST_SEARCHED);
-```
-
-## Running
-
-Then, run the tests with tox.
+Then, run it.
 
 ```bash
 tox
