@@ -87,7 +87,7 @@ async def register_user():
     await check_email(email)
 
     try:
-        user = await create_user(username, password, email)
+        user = await create_user(username=username, password=password, email=email)
     except asyncpg.exceptions.UniqueViolationError:
         raise BadInput("Username or email already exist.")
 

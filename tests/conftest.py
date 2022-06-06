@@ -81,7 +81,9 @@ async def _create_test_user(*, admin: bool = False) -> dict:
     password = hexs(6)
     user_email = email()
 
-    user = await create_user(username, password, user_email, active=True)
+    user = await create_user(
+        username=username, password=password, email=user_email, active=True
+    )
     user_token = gen_token(user)
 
     if admin:

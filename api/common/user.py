@@ -11,7 +11,7 @@ from api.snowflake import get_snowflake
 
 
 async def create_user(
-    username: str, password: str, email: str, *, active: bool = True
+    *, username: str, password: str, email: str, active: bool = True
 ) -> Dict[str, Union[str, int]]:
     """Creates a single user. Outputs a dictionary containing the user's
     newly generated ID and password hash."""
