@@ -15,16 +15,14 @@ from api.bp.datadump.tasks import dump_janitor
 
 from tests.test_upload import png_request
 from tests.util.helpers import extract_first_url
-from tests.common import login_normal
 
 pytestmark = pytest.mark.asyncio
 
 log = logging.getLogger(__name__)
 
 
-async def upload_test_png(test_cli, utoken: str):
+async def upload_test_png(test_cli):
     kwargs = png_request()
-    kwargs["headers"]["authorization"] = utoken
     resp = await test_cli.post(
         "/api/upload",
         **kwargs,
@@ -33,10 +31,9 @@ async def upload_test_png(test_cli, utoken: str):
     return await resp.json
 
 
-async def create_test_shorten(test_cli, utoken: str):
+async def create_test_shorten(test_cli):
     resp = await test_cli.post(
         "/api/shorten",
-        headers={"Authorization": utoken},
         json={"url": "https://elixi.re"},
     )
     assert resp.status_code == 200
@@ -50,37 +47,21 @@ async def wait_for_finished_dump(app, current_email_count):
             raise AssertionError("Timed out waiting for dump results")
         if len(app._test_email_list) > current_email_count:
             break
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.3)
         count += 1
 
 
-async def test_datadump(test_cli):
-    utoken = await login_normal(test_cli)
-
-    # -- cleanup test user
-    profile_resp = await test_cli.get("/api/profile", headers={"authorization": utoken})
-    assert profile_resp.status_code == 200
-    profile_json = await profile_resp.json
-    await test_cli.app.db.execute(
-        "delete from current_dump_state where user_id = $1",
-        int(profile_json["user_id"]),
-    )
-    await test_cli.app.db.execute(
-        "delete from email_dump_tokens where user_id = $1",
-        int(profile_json["user_id"]),
-    )
-
-    # know the datadump path beforehand so we know which file to possibly delete
-    normal_user_id = profile_json["user_id"]
-    filename = f"{normal_user_id}_{profile_json['username']}.zip"
-    zip_path = Path(test_cli.app.econfig.DUMP_FOLDER) / filename
+async def test_datadump(test_cli, test_cli_user):
+    # know the datadump path beforehand so we know which file to remove
+    filename = f"{test_cli_user.id}_{test_cli_user.username}.zip"
+    zip_path = Path(test_cli_user.app.econfig.DUMP_FOLDER) / filename
 
     # -- add file and shorten to test user
-    elixire_file = await upload_test_png(test_cli, utoken)
-    elixire_shorten = await create_test_shorten(test_cli, utoken)
+    elixire_file = await upload_test_png(test_cli_user)
+    elixire_shorten = await create_test_shorten(test_cli_user)
 
-    current_email_count = len(test_cli.app._test_email_list)
-    resp = await test_cli.post("/api/dump/request", headers={"authorization": utoken})
+    current_email_count = len(test_cli_user.app._test_email_list)
+    resp = await test_cli_user.post("/api/dump/request")
     assert resp.status_code == 200
 
     zipdump = None
@@ -98,7 +79,7 @@ async def test_datadump(test_cli):
         zipdump = zipfile.ZipFile(zip_path, "r")
         with zipdump.open("user_data.json") as user_data_file:
             user_data = json.load(user_data_file)
-            assert user_data["user_id"] == profile_json["user_id"]
+            assert user_data["user_id"] == str(test_cli_user.id)
 
         with zipdump.open("shortens.json") as shortens_file:
             shortens = json.load(shortens_file)

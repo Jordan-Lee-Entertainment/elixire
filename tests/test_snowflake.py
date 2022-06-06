@@ -28,7 +28,7 @@ def test_sflake_overflow():
     generating ~4096 snowflakes."""
     last_id = get_snowflake()
 
-    for _ in range(4097):
+    for _ in range(5000):
         new_id = get_snowflake()
 
         # the difference between last_id and new_id can't be too great.

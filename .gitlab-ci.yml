@@ -41,12 +41,12 @@ cache:
   script:
     - psql -h postgres -U postgres -f schema.sql
     - python ./manage.py migrate
-    - python ./manage.py adduser h@h.co hi hihihihi
-    - python ./manage.py adduser a@a.co admin adminadmin
-    - python ./manage.py adduser n@n.co nousage nousagenousage
-    - python ./manage.py adduser q@q.co quotareached quotareached
-    - psql -h postgres -U postgres -c "UPDATE users SET admin = true WHERE username = 'admin'"
-    - psql -h postgres -U postgres -c "INSERT INTO domain_owners (domain_id, user_id) VALUES (0, (SELECT user_id FROM users WHERE username = 'admin'))"
+    # - python ./manage.py adduser h@h.co hi hihihihi
+    # - python ./manage.py adduser a@a.co admin adminadmin
+    # - python ./manage.py adduser n@n.co nousage nousagenousage
+    # - python ./manage.py adduser q@q.co quotareached quotareached
+    # - psql -h postgres -U postgres -c "UPDATE users SET admin = true WHERE username = 'admin'"
+    # - psql -h postgres -U postgres -c "INSERT INTO domain_owners (domain_id, user_id) VALUES (0, (SELECT user_id FROM users WHERE username = 'admin'))"
 
 main_test_suite:
   before_script:
