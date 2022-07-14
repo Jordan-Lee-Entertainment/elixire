@@ -18,7 +18,12 @@ from ..common.auth import (
     check_admin,
     check_domain_id,
 )
-from ..common.email import gen_email_token, send_email, uid_from_email, clean_etoken
+from api.common.email import (
+    gen_email_token,
+    send_user_email,
+    uid_from_email,
+    clean_etoken,
+)
 from ..schema import (
     validate,
     PROFILE_SCHEMA,
@@ -375,11 +380,12 @@ Do not reply to this email specifically, it will not work.
 """
 
     # TODO: change this to send user email?
-    resp, _ = await send_email(
-        user_email,
+    res, _ = await send_user_email(
+        user_id,
         f"{_inst_name} - account deactivation request",
         email_body,
     )
+    resp, _ = res
 
     return jsonify({"success": resp.status == 200})
 
@@ -578,9 +584,10 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {app.econfig.MAIN_URL}
 """
 
-    resp, _ = await send_email(
+    res, _ = await send_user_email(
         user_email, f"{_inst_name} - password reset request", email_body
     )
+    resp, _ = res
 
     return jsonify({"success": resp.status == 200})
 
