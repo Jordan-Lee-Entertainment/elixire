@@ -87,7 +87,6 @@ async def _create_test_user(*, admin: bool = False) -> dict:
     user_token = gen_token(user)
 
     if admin:
-
         await current_app.db.execute(
             "UPDATE users SET admin = true WHERE user_id = $1", user["user_id"]
         )
@@ -126,6 +125,20 @@ async def test_user_fixture(app):
         await _delete_test_user(user)
 
 
+@pytest.fixture(name="quick_test_user", scope="function")
+async def quick_test_user_fixture(app):
+    """Same as test_user but on function scope, only use for tests that are
+    highly destructive to the test user in ways that can't be reset (like
+    a user deletion test)."""
+    async with app.app_context():
+        user = await _create_test_user()
+
+    yield user
+
+    async with app.app_context():
+        await _delete_test_user(user)
+
+
 @pytest.fixture(name="test_user_admin", scope="session")
 async def test_user_admin_fixture(app):
     """Yield a randomly generated test user that is an admin."""
@@ -143,6 +156,19 @@ async def test_cli_user(test_cli, test_user):
     """Yield a TestClient instance that contains a randomly generated
     user."""
     client = TestClientWithUser(test_cli, test_user)
+    yield client
+    await client.cleanup()
+
+
+@pytest.fixture(scope="function")
+async def test_cli_quick_user(test_cli, quick_test_user):
+    """Yield a TestClient instance that contains a randomly generated
+    user that will be destroyed after the test (instead of reset).
+
+    Use this sparingly, as creating/deleting users is expensive in terms
+    of test suite time.
+    """
+    client = TestClientWithUser(test_cli, quick_test_user)
     yield client
     await client.cleanup()
 
