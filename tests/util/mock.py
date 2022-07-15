@@ -2,6 +2,7 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
+
 from quart import current_app as app
 from collections import namedtuple
 
@@ -21,6 +22,7 @@ async def mocked_send_email(user_email: str, subject: str, email_body: str) -> t
 
 
 api.common.email.send_email = mocked_send_email
+assert api.common.email.send_email == mocked_send_email
 
 
 async def mocked_post_webhook(webhook_url: str, json_payload: str) -> None:
