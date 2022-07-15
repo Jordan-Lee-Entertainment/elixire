@@ -53,6 +53,8 @@ class JobManager:
         This is meant for relatively short-lived tasks.
         """
         name = name or coro.__name__
+        if name in self.jobs:
+            raise ValueError("Can not spawn two jobs with the same name")
 
         task = self.loop.create_task(self._wrapper(name, coro))
 
@@ -63,6 +65,8 @@ class JobManager:
         """Spawn a background task that will be run
         every ``period`` seconds."""
         name = name or func.__name__
+        if name in self.jobs:
+            raise ValueError("Can not spawn two jobs with the same name")
 
         task = self.loop.create_task(self._wrapper_bg(name, func, args, period))
 
