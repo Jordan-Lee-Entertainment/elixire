@@ -476,6 +476,17 @@ async def delete_user(user_id: int, delete=False):
         log.warning("Not deleting dummy user")
         return
 
+    old_active = await app.db.fetchval(
+        """
+        SELECT active FROM users WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+    if not old_active:
+        log.warning("User %d is already deactivated", user_id)
+        return
+
     await app.db.execute(
         """
     UPDATE users
