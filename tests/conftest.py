@@ -104,7 +104,8 @@ async def _create_test_user(*, admin: bool = False) -> dict:
 
 async def _delete_test_user(user: dict):
     task = await delete_user(user["user_id"], delete=True)
-    await asyncio.shield(task)
+    if task:
+        await asyncio.shield(task)
 
 
 @pytest.fixture(name="test_user", scope="session")
