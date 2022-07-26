@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS files (
     filename text UNIQUE NOT NULL,
 
     file_size bigint,
-    uploader bigint REFERENCES users (user_id) ON DELETE CASCADE,
+    uploader bigint REFERENCES users (user_id) ON DELETE RESTRICT,
     
     -- where is the file, inside our filesystem structure
     fspath text,
@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS shortens (
     -- link this shortened url will redirect to
     redirto text,
 
-    uploader bigint REFERENCES users (user_id) ON DELETE CASCADE,
+    uploader bigint REFERENCES users (user_id) ON DELETE RESTRICT,
     deleted boolean DEFAULT false,
     domain bigint REFERENCES domains (domain_id) DEFAULT 0
 );
