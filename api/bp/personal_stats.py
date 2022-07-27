@@ -58,6 +58,7 @@ async def get_counts(user_id: int) -> dict:
 @auth_route
 async def personal_stats_handler(user_id):
     """Personal statistics for users."""
+    log.error("THIS IS A CI TEST")
 
     return jsonify(await get_counts(user_id))
 
