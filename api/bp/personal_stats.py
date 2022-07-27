@@ -59,6 +59,7 @@ async def get_counts(user_id: int) -> dict:
 async def personal_stats_handler(user_id):
     """Personal statistics for users."""
     log.error("THIS IS A CI TEST")
+    raise Exception("did we hit this line lmao")
 
     return jsonify(await get_counts(user_id))
 
