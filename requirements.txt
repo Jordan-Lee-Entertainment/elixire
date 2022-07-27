@@ -1,5 +1,6 @@
 quart==0.17.0
 hypercorn==0.13.2
+werkzeug==2.1.2
 
 asyncpg==0.25.0
 bcrypt==3.2.2
