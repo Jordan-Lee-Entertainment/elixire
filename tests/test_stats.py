@@ -12,6 +12,7 @@ async def test_stats(test_cli_user):
 
     assert resp.status_code == 200
     rjson = await resp.json
+    raise Exception(repr(rjson))
     assert isinstance(rjson, dict)
 
     assert isinstance(rjson["total_files"], int)
