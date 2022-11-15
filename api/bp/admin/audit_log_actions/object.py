@@ -13,7 +13,7 @@ async def _generic_get(action, object_id: int) -> dict:
     """Fetches an object (shorten or file) from the database from an action."""
     try:
         _, getter = OBJ_MAPPING[action.type]
-        return await getter(action.app.db, object_id)
+        return await getter(object_id)
     except KeyError:
         raise TypeError("Object type specified in Action is invalid.")
 
