@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 import asyncpg
-import aioredis
+from redis import asyncio as aioredis
 
 p = Path(".")
 sys.path.append(str(p.cwd()))

@@ -20,7 +20,7 @@ p = Path(".")
 sys.path.append(str(p.cwd()))
 
 import asyncpg
-import aioredis
+from redis import asyncio as aioredis
 
 import config
 

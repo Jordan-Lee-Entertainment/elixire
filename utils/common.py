@@ -5,7 +5,7 @@
 import sys
 
 import asyncpg
-import aioredis
+from redis import asyncio as aioredis
 
 sys.path.append("..")
 import config

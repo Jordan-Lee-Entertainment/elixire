@@ -9,7 +9,7 @@ from pathlib import Path
 
 import asyncpg
 import aiohttp
-import aioredis
+from redis import asyncio as aioredis
 
 from quart import Quart, request, send_file
 

@@ -12,7 +12,7 @@ from typing import List
 
 import aiohttp
 import asyncpg
-import aioredis
+from redis import asyncio as aioredis
 from quart import Quart
 
 # import stuff from api for our Context.
