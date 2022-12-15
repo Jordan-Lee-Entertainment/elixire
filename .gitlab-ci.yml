@@ -69,4 +69,4 @@ clamav_enabled_test_suite:
     - cat config.py.example config.py.ci > config.py
   script:
     - !reference [.setup_elixire_for_testing, script]
-    - tox tests/test_upload.py::test_eicar_upload
+    - tox -- tests/test_upload.py::test_eicar_upload
