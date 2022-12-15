@@ -17,6 +17,7 @@ from quart import (
 from PIL import Image
 
 from ..errors import NotFound
+from ..common.utils import service_url
 
 bp = Blueprint("fetch", __name__)
 log = logging.getLogger(__name__)
@@ -85,7 +86,11 @@ async def file_handler(filename):
     if is_discordbot and is_image and not is_raw:
         # Generate a ?raw=true URL
         # Use & if there's already a query string
-        raw_url = request.url + ("&" if request.args else "?") + "raw=true"
+        raw_url = (
+            service_url(request.host, request.path)
+            + ("&" if request.args else "?")
+            + "raw=true"
+        )
 
         return (
             """
