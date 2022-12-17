@@ -131,7 +131,7 @@ async def thumbnail_handler(filename):
     # if thumbnails are disabled, just return
     # the same file
     if not appcfg.THUMBNAILS:
-        return await send_file(fspath)
+        return await send_file(fspath, domain=request.host)
 
     thb_folder = appcfg.THUMBNAIL_FOLDER
     thumbpath = os.path.join(thb_folder, f"{thumbtype}{filename}")
@@ -152,4 +152,4 @@ async def thumbnail_handler(filename):
 
     # yes, we are doing more I/O by using response.file
     # and not sending the bytes ourselves.
-    return await send_file(thumbpath)
+    return await send_file(thumbpath, domain=request.host)
