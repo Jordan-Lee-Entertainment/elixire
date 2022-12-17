@@ -43,6 +43,7 @@ async def check_exists(test_cli, shortname, not_exists=False):
         relative_image_path, do_token=False, headers={"host": url.netloc}
     )
     assert resp.status_code == 200
+    assert url.netloc in resp.headers["access-control-allow-origin"]
 
     # check the file isn't available on other domains
     resp = await test_cli.get(

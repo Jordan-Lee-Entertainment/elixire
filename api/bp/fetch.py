@@ -47,14 +47,18 @@ async def filecheck(filename):
     return filepath, shortname
 
 
-async def send_file(path: str, *, mimetype: Optional[str] = None):
+async def send_file(
+    path: str, *, mimetype: Optional[str] = None, domain: Optional[str] = None
+):
     """Helper function to send files while also supporting Ranged Requests."""
+    domain = domain or app._root_domain
     response = await quart_send_file(path, mimetype=mimetype, conditional=True)
 
     filebody = response.response
     response.headers["content-length"] = filebody.end - filebody.begin
     response.headers["content-disposition"] = "inline"
     response.headers["content-security-policy"] = "sandbox; frame-src 'None'"
+    response.headers["Access-Control-Allow-Origin"] = domain
 
     return response
 
@@ -114,7 +118,7 @@ async def file_handler(filename):
     if mimetype == "text/plain":
         mimetype = "text/plain; charset=utf-8"
 
-    return await send_file(filepath, mimetype=mimetype)
+    return await send_file(filepath, mimetype=mimetype, domain=request.host)
 
 
 @bp.get("/t/<filename>")

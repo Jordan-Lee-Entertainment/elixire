@@ -27,7 +27,9 @@ async def set_cors_headers(resp):
     else:
         allowed_origin = app._root_domain
 
-    resp.headers["Access-Control-Allow-Origin"] = allowed_origin
+    resp.headers["Access-Control-Allow-Origin"] = (
+        resp.headers.get("Access-Control-Allow-Origin") or allowed_origin
+    )
 
     resp.headers[
         "Access-Control-Allow-Headers"
