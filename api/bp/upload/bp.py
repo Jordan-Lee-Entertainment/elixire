@@ -141,6 +141,11 @@ async def upload_handler(user_id):
     mime = ctx.file.mime
     if do_checks:
         mime, extension = await ctx.perform_checks()
+    else:
+        # if admins upload something and it is on an useless content type
+        # like 'application/octet-stream', attempt to extract a real one
+        if mime == "application/octet-stream":
+            mime = await ctx.mime
 
     # hash the file and give it a path on the filesystem
     # (this sets the path and hash attributes)
