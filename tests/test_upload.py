@@ -3,9 +3,12 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import io
+import os
+import time
 import asyncio
 import pytest
 import os.path
+from pathlib import Path
 from urllib.parse import urlparse
 
 
@@ -13,6 +16,7 @@ from quart.testing import make_test_body_with_headers
 from quart.datastructures import FileStorage
 
 from .common import png_data, hexs
+from api.common import thumbnail_janitor_tick
 
 pytestmark = pytest.mark.asyncio
 
@@ -207,3 +211,35 @@ async def test_upload_random_domain(test_cli_user):
 
     shortname = respjson["shortname"]
     await check_exists(test_cli_user, shortname)
+
+
+async def test_thumbnail_janitor(test_cli_user):
+    kwargs = png_request()
+    resp = await test_cli_user.post("/api/upload", **kwargs)
+
+    assert resp.status_code == 200
+    respjson = await resp.json
+
+    # TODO use Path
+    url = urlparse(respjson["url"])
+    _, extension = os.path.splitext(url.path.split("/")[-1])
+
+    shortname = respjson["shortname"]
+
+    filesystem_thumbnail_path = Path(test_cli_user.app.econfig.THUMBNAIL_FOLDER) / (
+        "s" + shortname + extension
+    )
+
+    api_thumbnail_path = f"/t/s{shortname}{extension}"
+    resp_thumbnail = await test_cli_user.get(
+        api_thumbnail_path, do_token=False, headers={"host": url.netloc}
+    )
+    assert resp_thumbnail.status_code == 200
+
+    old_mtime = time.time() + 60 * 60
+    os.utime(filesystem_thumbnail_path, (old_mtime, old_mtime))
+
+    assert filesystem_thumbnail_path.exists()
+    async with test_cli_user.app.app_context():
+        await thumbnail_janitor_tick()
+    assert not filesystem_thumbnail_path.exists()
