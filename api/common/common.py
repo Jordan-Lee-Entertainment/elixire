@@ -423,3 +423,27 @@ def transform_wildcard(domain: str, subdomain_name: str) -> str:
             domain = domain.replace("*.", "")
 
     return domain
+
+
+async def thumbnail_janitor_tick():
+    deleted_count = 0
+    for path in (p for p in Path(app.econfig.THUMBNAIL_FOLDER).iterdir() if p.is_file):
+        stat = path.stat()
+        now = time.time()
+        life = now - stat.st_mtime
+        # thumbnails get 30 minutes max life
+        if life < 30 * 60:
+            continue
+
+        log.debug("removing thumbnail %r", path)
+        path.unlink()
+        deleted_count += 1
+
+    if deleted_count > 0:
+        log.info("deleted %d thumbnails", deleted_count)
+
+
+async def spawn_thumbnail_janitor():
+    app.sched.spawn_periodic(
+        thumbnail_janitor_tick, [], 30 * 60, name="thumbnail_janitor"
+    )

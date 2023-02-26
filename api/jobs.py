@@ -9,18 +9,31 @@ import logging
 log = logging.getLogger(__name__)
 
 
+class EmptyAsyncContext:
+    def __init__(self):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, type, value, traceback):
+        return None
+
+
 class JobManager:
     """Manage background jobs."""
 
-    def __init__(self, loop=None):
+    def __init__(self, loop=None, *, context_function=None):
         log.debug("job manager start")
         self.loop = loop or asyncio.get_event_loop()
         self.jobs = {}
+        self.context_creator = context_function or EmptyAsyncContext
 
     async def _wrapper(self, job_name, coro):
         try:
             log.debug("running job: %r", job_name)
-            await coro
+            async with self.context_creator():
+                await coro
             log.debug("job finish: %r", job_name)
         except asyncio.CancelledError:
             log.warning("cancelled job: %r", job_name)
@@ -33,10 +46,11 @@ class JobManager:
         log.debug("wrapped %r in periodic %dsec", job_name, period)
 
         try:
-            while True:
-                log.debug("background tick for %r", job_name)
-                await func(*args)
-                await asyncio.sleep(period)
+            async with self.context_creator():
+                while True:
+                    log.debug("background tick for %r", job_name)
+                    await func(*args)
+                    await asyncio.sleep(period)
         except asyncio.CancelledError:
             log.warning("cancelled job: %r", job_name)
         except Exception:

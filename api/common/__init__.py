@@ -14,6 +14,7 @@ from .common import (
     get_domain_info,
     get_random_domain,
     transform_wildcard,
+    spawn_thumbnail_janitor,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "get_domain_info",
     "get_random_domain",
     "transform_wildcard",
+    "spawn_thumbnail_janitor",
 ]
