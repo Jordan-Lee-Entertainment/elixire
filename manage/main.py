@@ -84,7 +84,7 @@ async def amain(loop, config, argv: List[str], *, is_testing: bool = False):
     app.storage = Storage(app)
     app.locks = LockStorage()
     app.session = aiohttp.ClientSession()
-    app.sched = JobManager()
+    app.sched = JobManager(context_function=app.app_context)
 
     if is_testing:
         setup_test_app(loop, app)
