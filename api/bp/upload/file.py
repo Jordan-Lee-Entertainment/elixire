@@ -53,6 +53,7 @@ class UploadFile:
         """
         Returns the path to this file on the filesystem as a str.
         """
+        assert self.path
         return str(self.path.resolve())
 
     def calculate_size(self, multiplier) -> int:
@@ -61,7 +62,7 @@ class UploadFile:
         necessary.
         """
         file_size = self.size
-        # TODO self.path can be optional, check for it in here
+        assert self.path
         if self.path.exists():
             file_size *= multiplier
         return file_size
