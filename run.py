@@ -287,7 +287,7 @@ async def app_before_serving():
     except AttributeError:
         app.loop = asyncio.get_event_loop()
 
-    app.sched = JobManager()
+    app.sched = JobManager(context_function=app.app_context)
 
     app.session = aiohttp.ClientSession(loop=app.loop)
 
@@ -327,6 +327,7 @@ async def app_before_serving():
     app.audit_log = AuditLog()
 
     api.bp.datadump.start_tasks()
+    await api.common.spawn_thumbnail_janitor()
 
 
 @app.after_serving

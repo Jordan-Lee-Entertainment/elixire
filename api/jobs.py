@@ -12,15 +12,17 @@ log = logging.getLogger(__name__)
 class JobManager:
     """Manage background jobs."""
 
-    def __init__(self, loop=None):
+    def __init__(self, *, context_function, loop=None):
         log.debug("job manager start")
         self.loop = loop or asyncio.get_event_loop()
         self.jobs = {}
+        self.context_creator = context_function
 
     async def _wrapper(self, job_name, coro):
         try:
             log.debug("running job: %r", job_name)
-            await coro
+            async with self.context_creator():
+                await coro
             log.debug("job finish: %r", job_name)
         except asyncio.CancelledError:
             log.warning("cancelled job: %r", job_name)
@@ -33,10 +35,11 @@ class JobManager:
         log.debug("wrapped %r in periodic %dsec", job_name, period)
 
         try:
-            while True:
-                log.debug("background tick for %r", job_name)
-                await func(*args)
-                await asyncio.sleep(period)
+            async with self.context_creator():
+                while True:
+                    log.debug("background tick for %r", job_name)
+                    await func(*args)
+                    await asyncio.sleep(period)
         except asyncio.CancelledError:
             log.warning("cancelled job: %r", job_name)
         except Exception:
@@ -47,6 +50,7 @@ class JobManager:
             except KeyError:
                 pass
 
+    # TODO make name a required kwarg
     def spawn(self, coro, name: str = None):
         """Spawn a backgrund task once.
 
@@ -61,14 +65,15 @@ class JobManager:
         self.jobs[name] = task
         return task
 
-    def spawn_periodic(self, func, args, period: int, name: str = None):
+    # TODO make period and name required kwargs
+    def spawn_periodic(self, function, args, period: int, name: str = None):
         """Spawn a background task that will be run
         every ``period`` seconds."""
-        name = name or func.__name__
+        name = name or function.__name__
         if name in self.jobs:
             raise ValueError("Can not spawn two jobs with the same name")
 
-        task = self.loop.create_task(self._wrapper_bg(name, func, args, period))
+        task = self.loop.create_task(self._wrapper_bg(name, function, args, period))
 
         self.jobs[name] = task
         return task
