@@ -42,8 +42,6 @@ import api.bp.ratelimit
 import api.bp.frontend
 
 from api.errors import APIError, Banned
-from api.common import get_ip_addr
-from api.common.webhook import ban_webhook, ip_ban_webhook
 from api.common.utils import LockStorage
 from api.storage import Storage
 from api.jobs import JobManager
@@ -136,77 +134,13 @@ def set_blueprints(app_):
 app = make_app()
 
 
-async def _handle_ban(lock_key, lock_type: str, reason: str):
-    if lock_type == "ip":
-        ip_addr = get_ip_addr()
-        log.warning(f"Banning ip address {ip_addr} with reason {reason!r}")
-
-        period = app.econfig.IP_BAN_PERIOD
-        await app.db.execute(
-            f"""
-        INSERT INTO ip_bans (ip_address, reason, end_timestamp)
-        VALUES ($1, $2, now()::timestamp + interval '{period}')
-        """,
-            ip_addr,
-            reason,
-        )
-
-        await app.storage.raw_invalidate(f"ipban:{ip_addr}")
-        await ip_ban_webhook(ip_addr, f"[ip ban] {reason}", period)
-    else:
-        user_name, user_id = request._user
-        log.warning(f"Banning {user_name} {user_id} with reason {reason!r}")
-
-        period = app.econfig.BAN_PERIOD
-        await app.db.execute(
-            f"""
-        INSERT INTO bans (user_id, reason, end_timestamp)
-        VALUES ($1, $2, now()::timestamp + interval '{period}')
-        """,
-            user_id,
-            reason,
-        )
-
-        await app.storage.raw_invalidate(f"userban:{user_id}")
-        await ban_webhook(user_id, reason, period)
-
-
 @app.errorhandler(Banned)
 async def handle_ban(exception):
     """Handle the Banned exception being raised through a request.
 
     This takes care of inserting a user ban.
     """
-    scode = exception.status_code
-    reason = exception.args[0]
-
-    try:
-        _username, lock_key = request._user
-        lock_type = "user"
-    except AttributeError:
-        lock_key = get_ip_addr()
-        lock_type = "ip"
-
-    ban_lock = app.locks["bans"][lock_key]
-
-    # generate error message before anything
-    res = {
-        "error": True,
-        "code": scode,
-        "message": reason,
-    }
-
-    res.update(exception.get_payload())
-    resp = (res, scode)
-
-    if ban_lock.locked():
-        log.warning("Ban lock already acquired.")
-        return resp
-
-    async with ban_lock:
-        await _handle_ban(lock_key, lock_type, reason)
-
-    return resp
+    return await api.common.banning.on_ban(exception)
 
 
 @app.errorhandler(APIError)

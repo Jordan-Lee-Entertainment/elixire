@@ -12,7 +12,7 @@ from pathlib import Path
 from quart import current_app as app, request
 import asyncpg
 
-from ..errors import FailedAuth, NotFound
+from ..errors import NotFound
 
 ALPHABET = string.ascii_lowercase + string.digits
 CF_HEADER = "CF-Connecting-IP"
@@ -302,27 +302,6 @@ async def delete_shorten(shortname: str, user_id: int):
 
     domain_id = await app.storage.get_domain_shorten(shortname)
     await app.storage.raw_invalidate(f"redir:{domain_id}:{shortname}")
-
-
-async def check_bans(user_id: int):
-    """Check if the current user is already banned.
-
-    Raises
-    ------
-    FailedAuth
-        When a user is banned, or their
-        IP address is banned.
-    """
-    if user_id is not None:
-        reason = await app.storage.get_ban(user_id)
-
-        if reason:
-            raise FailedAuth(f"User is banned. {reason}")
-
-    ip_addr = get_ip_addr()
-    ip_ban_reason = await app.storage.get_ipban(ip_addr)
-    if ip_ban_reason:
-        raise FailedAuth(f"IP address is banned. {ip_ban_reason}")
 
 
 async def get_domain_info(user_id: int, dtype=FileNameType.FILE) -> tuple:
