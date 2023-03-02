@@ -16,7 +16,7 @@ import os.path
 from quart import current_app as app
 from quart.ctx import copy_current_app_context
 
-from api.common.email import gen_email_token, send_user_email
+from api.common.email import make_email_token, EmailTokenType, send_user_email
 
 log = logging.getLogger(__name__)
 
@@ -218,17 +218,7 @@ async def dispatch_dump(user_id: int, user_name: str):
     _inst_name = app.econfig.INSTANCE_NAME
     _support = app.econfig.SUPPORT_EMAIL
 
-    dump_token = await gen_email_token(user_id, "email_dump_tokens")
-
-    await app.db.execute(
-        """
-    INSERT INTO email_dump_tokens (hash, user_id)
-    VALUES ($1, $2)
-    """,
-        dump_token,
-        user_id,
-    )
-
+    dump_token = await make_email_token(user_id, EmailTokenType.datadump_result)
     email_body = f"""This is an automated email from {_inst_name}
 about your data dump.
 
@@ -243,6 +233,9 @@ Do not reply to this automated email.
 
 - {_inst_name}, {app.econfig.MAIN_URL}
     """
+
+    # TODO add a dedicated job queue system so that email delivery can be
+    # retried, outside of the logic of this function
 
     resp_tup, user_email = await send_user_email(
         user_id, f"{_inst_name} - Your data dump is here!", email_body

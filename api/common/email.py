@@ -8,6 +8,7 @@ elixi.re - email functions
 import secrets
 import logging
 from collections import namedtuple
+from enum import Enum, auto
 
 import aiohttp
 from quart import current_app as app
@@ -18,8 +19,23 @@ log = logging.getLogger(__name__)
 Error = namedtuple("Error", "status")
 
 
-async def gen_email_token(user_id, table: str, count: int = 0) -> str:
-    """Generate a token for email usage.
+class EmailTokenType(Enum):
+    password_reset = auto()
+    account_deletion = auto()
+    account_activation = auto()
+    datadump_result = auto()
+
+    def to_table_name(self) -> str:
+        return {
+            self.__class__.password_reset: "email_pwd_reset_tokens",
+            self.__class__.account_deletion: "email_deletion_tokens",
+            self.__class__.account_activation: "email_activation_tokens",
+            self.__class__.datadump_result: "email_dump_tokens",
+        }[self]
+
+
+async def make_email_token(user_id, token_type: EmailTokenType, count: int = 0) -> str:
+    """Generate a token for email usage and inserts it on the relevant database.
 
     Calls the database to give an unique token.
 
@@ -44,46 +60,69 @@ async def gen_email_token(user_id, table: str, count: int = 0) -> str:
         or there are more than 3 tokens issued in the span
         of a time window (defined by the table)
     """
+
+    table_name = token_type.to_table_name()
+
     if count == 11:
         # it really shouldn't happen,
         # but we better be ready for it.
         raise BadInput("Failed to generate an email hash.")
 
-    possible = secrets.token_hex(32)
+    possible_token = secrets.token_hex(32)
 
     # check if hash already exists
     other_id = await app.db.fetchval(
         f"""
     SELECT user_id
-    FROM {table}
+    FROM {table_name}
     WHERE hash = $1 AND now() < expiral
     """,
-        possible,
+        possible_token,
     )
 
     if other_id:
         # retry with count + 1
-        await gen_email_token(user_id, table, count + 1)
+        return await make_email_token(user_id, token_type, count=count + 1)
 
     hashes = await app.db.fetchval(
         f"""
     SELECT COUNT(*)
-    FROM {table}
+    FROM {table_name}
     WHERE user_id = $1 AND now() < expiral
     """,
         user_id,
     )
 
     if hashes > 3:
-        raise BadInput(
-            "You already generated more than 3 tokens " "in the time period."
-        )
+        raise BadInput("You already generated more than 3 tokens in the time period.")
 
-    return possible
+    log.info("generated email token %r for type %r", possible_token, token_type)
+
+    await app.db.execute(
+        f"""
+    INSERT INTO {table_name} (hash, user_id)
+    VALUES ($1, $2)
+    """,
+        possible_token,
+        user_id,
+    )
+
+    return possible_token
 
 
+# TODO this is a weird interface. errors are not bubbled up as exceptions
+# to the callers, requiring them to do if checks and fail if they want to.
+#
+# this also does not handle actual failure. we should retry on email failure
+#
+# this also ties us to mailgun's HTTP API. this should be SMTP
+#
+# all of these would be more nicely handled with a dedicated email job queue.
 async def send_email(user_email: str, subject: str, email_body: str) -> tuple:
-    """Send an email to a user using the Mailgun API."""
+    """Send an email to a user using the Mailgun API.
+
+    Prefer using the send_user_email interface instead of this one.
+    """
     econfig = app.econfig
     mailgun_url = f"https://api.mailgun.net/v3/{econfig.MAILGUN_DOMAIN}" "/messages"
 
@@ -179,7 +218,7 @@ async def clean_etoken(token: str, table: str) -> bool:
 
 
 async def activate_email_send(user_id: int):
-    token = await gen_email_token(user_id, "email_activation_tokens")
+    token = await make_email_token(user_id, EmailTokenType.account_activation)
 
     await app.db.execute(
         """
