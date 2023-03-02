@@ -435,7 +435,7 @@ async def thumbnail_janitor_tick():
         now = time.time()
         life = now - stat.st_mtime
         # thumbnails get 30 minutes max life
-        if life > 30 * 60:
+        if life < 30 * 60:
             continue
 
         log.debug("removing thumbnail %r", path)

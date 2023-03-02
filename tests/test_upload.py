@@ -236,8 +236,8 @@ async def test_thumbnail_janitor(test_cli_user):
     )
     assert resp_thumbnail.status_code == 200
 
-    old_mtime = time.time() + 60 * 60
-    os.utime(filesystem_thumbnail_path, (old_mtime, old_mtime))
+    very_old_mtime = time.time() - (60 * 60)
+    os.utime(filesystem_thumbnail_path, (very_old_mtime, very_old_mtime))
 
     assert filesystem_thumbnail_path.exists()
     async with test_cli_user.app.app_context():
