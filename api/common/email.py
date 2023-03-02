@@ -152,15 +152,18 @@ async def send_user_email(user_id: int, subject: str, body: str) -> tuple:
     """,
         user_id,
     )
+    if user_email is None:
+        raise AssertionError("User ID not found")
 
-    if not user_email:
-        return (Error(6969), None), None
+    bundled_response = await send_email(user_email, subject, body)
+    resp, _body = bundled_response
 
-    resp = await send_email(user_email, subject, body)
+    if resp.status != 200:
+        log.error("failed to send email to %r %r, got %r", user_id, user_email, resp)
+        raise Exception("Failed to send email.")
 
-    log.info(f"Sent {len(body)} bytes email to {user_id} " f"{user_email} {subject!r}")
-
-    return resp, user_email
+    log.info("sent %d bytes email to %d %r %r", len(body), user_id, user_email, subject)
+    return bundled_response, user_email
 
 
 def fmt_email(string, **kwargs):

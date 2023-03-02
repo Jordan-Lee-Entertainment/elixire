@@ -357,15 +357,10 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {app.econfig.MAIN_URL}
 """
 
-    # TODO: change this to send user email?
-    res, _ = await send_user_email(
-        user_id,
-        f"{_inst_name} - account deactivation request",
-        email_body,
+    await send_user_email(
+        user_id, f"{_inst_name} - account deactivation request", email_body
     )
-    resp, _ = res
-
-    return jsonify({"success": resp.status == 200})
+    return jsonify({"success": True})
 
 
 async def _delete_file_wrapper(shortname, user_id):
@@ -561,12 +556,8 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {app.econfig.MAIN_URL}
 """
 
-    res, _ = await send_user_email(
-        user_email, f"{_inst_name} - password reset request", email_body
-    )
-    resp, _ = res
-
-    return jsonify({"success": resp.status == 200})
+    await send_user_email(user_id, f"{_inst_name} - password reset request", email_body)
+    return jsonify({"success": True})
 
 
 @bp.post("/reset_password_confirm")
