@@ -6,10 +6,10 @@ from setuptools import setup
 
 setup(
     name="elixire",
-    version="2018-2019.2.0.0",
+    version="2019.2.12.1",
     description="Image host",
     url="https://elixi.re",
     author="Ave Ozkal, Luna Mendes, Mary Strodl, slice",
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     py_modules=[],
 )
