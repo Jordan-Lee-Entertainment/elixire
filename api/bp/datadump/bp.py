@@ -17,7 +17,7 @@ bp = Blueprint("datadump", __name__)
 def start_tasks():
     """Start the dump worker on application startup
     so we can resume if any is there to resume."""
-    if app.econfig.DUMP_ENABLED:
+    if not app.econfig.DUMP_ENABLED:
         log.info("data dumps are disabled!")
         return
 
