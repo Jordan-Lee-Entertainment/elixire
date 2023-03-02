@@ -427,7 +427,10 @@ def transform_wildcard(domain: str, subdomain_name: str) -> str:
 
 async def thumbnail_janitor_tick():
     deleted_count = 0
-    for path in (p for p in Path(app.econfig.THUMBNAIL_FOLDER).iterdir() if p.is_file):
+    for path in Path(app.econfig.THUMBNAIL_FOLDER).iterdir():
+        if not path.is_file():
+            continue
+
         stat = path.stat()
         now = time.time()
         life = now - stat.st_mtime
