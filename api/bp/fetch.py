@@ -63,6 +63,56 @@ async def send_file(
     return response
 
 
+def request_is_from_discord() -> bool:
+    """Returns if we should generate an HTML response to make Discord links
+    not disappear with the message when posted.
+
+    This works by returning HTML to Discord with a Twitter card, which makes
+    the Discord client to generate a rich embed with an image, preventing
+    the link from being removed from the display.
+
+    The HTML points to the same request url but with `?raw=true` appended
+    (see discord_response()), so that we can still return image bytes when
+    Discord requests it (all client requests are proxied through Discord's
+    "media proxy" component)
+
+    See https://gitlab.com/elixire/elixire/-/issues/161
+    """
+    is_raw = request.args.get("raw")
+    is_discordbot = "Discordbot" in request.headers.get("User-Agent", "")
+    is_image = os.path.splitext(request.path)[-1].lower() in [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+    ]
+    return is_discordbot and is_image and not is_raw
+
+
+def discord_response():
+    # Generate a ?raw=true URL
+    # Use & if there's already a query string
+    raw_url = (
+        service_url(request.host, request.path)
+        + ("&" if request.args else "?")
+        + "raw=true"
+    )
+
+    return (
+        """
+<html>
+<head>
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:image" content="{}">
+</head>
+</html>""".format(
+            raw_url
+        ),
+        200,
+        {"Content-Type": "text/html"},
+    )
+
+
 @bp.get("/i/<filename>")
 async def file_handler(filename):
     """Handles file serves."""
@@ -76,39 +126,9 @@ async def file_handler(filename):
     # by the end, you'd get a confusing embed that is empty inside the client.
     filepath, shortname = await filecheck(filename)
 
-    # Account for requests from Discord to preserve URL
-    # TODO: maybe give this a separate func and also call from thumbs?
-    is_raw = request.args.get("raw")
-    is_discordbot = "Discordbot" in request.headers.get("User-Agent", "")
-    is_image = os.path.splitext(request.path)[-1].lower() in [
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".webp",
-    ]
-
-    if is_discordbot and is_image and not is_raw:
-        # Generate a ?raw=true URL
-        # Use & if there's already a query string
-        raw_url = (
-            service_url(request.host, request.path)
-            + ("&" if request.args else "?")
-            + "raw=true"
-        )
-
-        return (
-            """
-<html>
-    <head>
-        <meta property="twitter:card" content="summary_large_image">
-        <meta property="twitter:image" content="{}">
-    </head>
-</html>""".format(
-                raw_url
-            ),
-            200,
-            {"Content-Type": "text/html"},
-        )
+    # Account for requests from Discord to preserve URL when pasted in a message
+    if request_is_from_discord():
+        return discord_response()
 
     # fetch the file's mimetype from the database
     # which should be way more reliable than sanic
@@ -127,6 +147,10 @@ async def thumbnail_handler(filename):
     appcfg = app.econfig
     thumbtype, filename = filename[0], filename[1:]
     fspath, _shortname = await filecheck(filename)
+
+    # Account for requests from Discord to preserve URL when pasted in a message
+    if request_is_from_discord():
+        return discord_response()
 
     # if thumbnails are disabled, just return
     # the same file
