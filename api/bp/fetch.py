@@ -63,7 +63,21 @@ async def send_file(
     return response
 
 
-def is_discord_request() -> bool:
+def request_is_from_discord() -> bool:
+    """Returns if we should generate an HTML response to make Discord links
+    not disappear with the message when posted.
+
+    This works by returning HTML to Discord with a Twitter card, which makes
+    the Discord client to generate a rich embed with an image, preventing
+    the link from being removed from the display.
+
+    The HTML points to the same request url but with `?raw=true` appended
+    (see discord_response()), so that we can still return image bytes when
+    Discord requests it (all client requests are proxied through Discord's
+    "media proxy" component)
+
+    See https://gitlab.com/elixire/elixire/-/issues/161
+    """
     is_raw = request.args.get("raw")
     is_discordbot = "Discordbot" in request.headers.get("User-Agent", "")
     is_image = os.path.splitext(request.path)[-1].lower() in [
@@ -113,7 +127,7 @@ async def file_handler(filename):
     filepath, shortname = await filecheck(filename)
 
     # Account for requests from Discord to preserve URL when pasted in a message
-    if is_discord_request():
+    if request_is_from_discord():
         return discord_response()
 
     # fetch the file's mimetype from the database
@@ -135,7 +149,7 @@ async def thumbnail_handler(filename):
     fspath, _shortname = await filecheck(filename)
 
     # Account for requests from Discord to preserve URL when pasted in a message
-    if is_discord_request():
+    if request_is_from_discord():
         return discord_response()
 
     # if thumbnails are disabled, just return
