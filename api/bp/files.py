@@ -149,7 +149,7 @@ async def delete_all(user_id):
     async def _wrap(*args):
         await delete_file_task(*args)
 
-    app.sched.spawn(_wrap(user_id, False), f"delete_files_{user_id}")
+    app.sched.spawn(_wrap(user_id, False), name=f"delete_files_{user_id}")
 
     return jsonify(
         {

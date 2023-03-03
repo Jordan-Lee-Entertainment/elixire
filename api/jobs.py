@@ -50,8 +50,7 @@ class JobManager:
             except KeyError:
                 pass
 
-    # TODO make name a required kwarg
-    def spawn(self, coro, name: str = None):
+    def spawn(self, coro, *, name: str = None):
         """Spawn a backgrund task once.
 
         This is meant for relatively short-lived tasks.
@@ -65,8 +64,7 @@ class JobManager:
         self.jobs[name] = task
         return task
 
-    # TODO make period and name required kwargs
-    def spawn_periodic(self, function, args, period: int, name: str = None):
+    def spawn_periodic(self, function, args, *, period: int, name: str = None):
         """Spawn a background task that will be run
         every ``period`` seconds."""
         name = name or function.__name__

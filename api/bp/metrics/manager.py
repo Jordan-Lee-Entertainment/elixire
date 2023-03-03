@@ -44,7 +44,7 @@ class MetricsManager:
 
         if app.econfig.ENABLE_METRICS:
             self.app.sched.spawn_periodic(
-                self._work, [], self._period, "metrics_worker"
+                self._work, [], period=self._period, name="metrics_worker"
             )
 
     def _start_influx(self):

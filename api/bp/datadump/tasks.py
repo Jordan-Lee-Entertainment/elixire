@@ -466,4 +466,4 @@ def start_janitor():
     async def _wrapped():
         await dump_janitor()
 
-    app.sched.spawn_periodic(_wrapped, [], app.econfig.DUMP_JANITOR_PERIOD)
+    app.sched.spawn_periodic(_wrapped, [], period=app.econfig.DUMP_JANITOR_PERIOD)
