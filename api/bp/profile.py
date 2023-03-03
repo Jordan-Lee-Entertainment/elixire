@@ -516,13 +516,13 @@ async def delete_user(user_id: int, delete=False):
 
     await app.storage.invalidate(user_id, "active", "password_hash")
 
-    @copy_current_app_context
-    async def _wrap(*args):
-        await delete_file_task(*args)
-
     # since there is a lot of db load
     # when calling delete_file, we create a task that deletes them.
-    return app.sched.spawn(_wrap(user_id, delete), name=f"delete_files_{user_id}")
+    return app.sched.spawn_once(
+        delete_file_task,
+        args=[user_id, delete],
+        name=f"delete_files_{user_id}",
+    )
 
 
 @bp.post("/delete_confirm")

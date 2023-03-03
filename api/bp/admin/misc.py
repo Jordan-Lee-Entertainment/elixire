@@ -75,6 +75,6 @@ async def email_broadcast(admin_id):
     subject, body = fmt_email(subject), fmt_email(body)
 
     # we do it in the background for webscale
-    app.sched.spawn(_do_broadcast(subject, body), name="admin_broadcast")
+    app.sched.spawn_once(_do_broadcast, args=[subject, body], name="admin_broadcast")
 
     return jsonify({"success": True})

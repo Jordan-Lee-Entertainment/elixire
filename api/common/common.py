@@ -448,5 +448,5 @@ async def thumbnail_janitor_tick():
 
 async def spawn_thumbnail_janitor():
     app.sched.spawn_periodic(
-        thumbnail_janitor_tick, args=[], period=30 * 60, name="thumbnail_janitor"
+        thumbnail_janitor_tick, every=30 * 60, name="thumbnail_janitor"
     )

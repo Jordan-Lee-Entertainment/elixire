@@ -6,7 +6,6 @@ import os
 import logging
 
 from quart import Blueprint, current_app as app, jsonify, request
-from quart.ctx import copy_current_app_context
 
 from ..common import delete_file, delete_shorten
 from ..common.auth import token_check, password_check
@@ -145,11 +144,9 @@ async def delete_all(user_id):
     await password_check(user_id, password)
 
     # create task to delete all files in the background
-    @copy_current_app_context
-    async def _wrap(*args):
-        await delete_file_task(*args)
-
-    app.sched.spawn(_wrap(user_id, False), name=f"delete_files_{user_id}")
+    app.sched.spawn_once(
+        delete_file_task, args=[user_id, False], name=f"delete_files_{user_id}"
+    )
 
     return jsonify(
         {

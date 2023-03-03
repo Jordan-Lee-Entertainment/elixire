@@ -48,15 +48,10 @@ async def start_tasks():
     if not app.econfig.ENABLE_METRICS:
         return
 
-    app.sched.spawn_periodic(second_tasks, [app], period=1)
-
-    app.sched.spawn_periodic(hourly_tasks, [app], period=3600)
-
-    app.sched.spawn_periodic(upload_uniq_task, [app], period=86400)
-
-    app.sched.spawn_periodic(
-        compact_task, [app], period=app.econfig.METRICS_COMPACT_GENERALIZE
-    )
+    app.sched.spawn_periodic(second_tasks, every=1)
+    app.sched.spawn_periodic(hourly_tasks, every=3600)
+    app.sched.spawn_periodic(upload_uniq_task, every=86400)
+    app.sched.spawn_periodic(compact_task, every=app.econfig.METRICS_COMPACT_GENERALIZE)
 
 
 async def close_worker():
