@@ -21,8 +21,11 @@ from api.common import thumbnail_janitor_tick
 pytestmark = pytest.mark.asyncio
 
 
-async def check_exists(test_cli, shortname, not_exists=False):
-    """Check if a file exists, given the shortname, token, etc."""
+async def check_exists(test_cli, shortname, deleted: bool = False):
+    """Check if a file exists, given the shortname, token, etc.
+
+    Set `deleted` to true to verify if a file is actually deleted
+    """
     resp = await test_cli.get("/api/list?page=0")
 
     assert resp.status_code == 200
@@ -30,7 +33,7 @@ async def check_exists(test_cli, shortname, not_exists=False):
 
     assert isinstance(rjson["files"], dict)
 
-    if not_exists:
+    if deleted:
         assert shortname not in rjson["files"]
         return
     else:
@@ -161,6 +164,30 @@ async def test_delete_file(test_cli_user):
     assert rdel_json["success"]
 
     await check_exists(test_cli_user, respjson["shortname"], True)
+
+
+async def test_delete_all_files(test_cli_user):
+    kwargs = png_request()
+    resp = await test_cli_user.post("/api/upload", **kwargs)
+
+    assert resp.status_code == 200
+    respjson = await resp.json
+
+    resp = await test_cli_user.post(
+        "/api/delete_all",
+        json={"password": test_cli_user.user["password"]},
+    )
+
+    assert resp.status_code == 200
+    rjson_deleteall = await resp.json
+    assert rjson_deleteall["success"]
+
+    await asyncio.wait_for(
+        test_cli_user.app.sched.jobs[f'delete_files_{test_cli_user.user["user_id"]}'],
+        timeout=5,
+    )
+
+    await check_exists(test_cli_user, respjson["shortname"], deleted=True)
 
 
 async def test_delete_nonexist(test_cli_user):
