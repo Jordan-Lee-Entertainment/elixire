@@ -26,7 +26,7 @@ async def d1_check():
     except (TypeError, KeyError):
         raise BadInput("Invalid json")
 
-    fernet = Fernet(app.econfig.SECRET_KEY)
+    fernet = Fernet(app.cfg.SECRET_KEY)
 
     try:
         data = fernet.decrypt(ciphertext.encode()).decode()

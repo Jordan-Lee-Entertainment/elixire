@@ -14,7 +14,7 @@ async def maybe_send(file_path: str):
     if ".." in file_path:
         return "no", 404
 
-    if app.econfig.ENABLE_FRONTEND:
+    if app.cfg.ENABLE_FRONTEND:
         return await send_file(file_path)
 
     return "frontend is not enabled"

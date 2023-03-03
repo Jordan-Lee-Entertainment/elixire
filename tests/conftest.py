@@ -41,14 +41,14 @@ def setup_test_app(event_loop, given_app) -> None:
     _setup_working_directory_folders()
 
     given_app.loop = event_loop
-    given_app.econfig.CLOUDFLARE = False
-    given_app.econfig.DUMP_ENABLED = True
-    given_app.econfig.NOTIFY_ACTIVATION_EMAILS = True
+    given_app.cfg.CLOUDFLARE = False
+    given_app.cfg.DUMP_ENABLED = True
+    given_app.cfg.NOTIFY_ACTIVATION_EMAILS = True
 
-    given_app.econfig.RATELIMITS = {"*": (10000, 1)}
+    given_app.cfg.RATELIMITS = {"*": (10000, 1)}
 
     # TODO mock metrics manager so we don't have to disable metrics here
-    given_app.econfig.ENABLE_METRICS = False
+    given_app.cfg.ENABLE_METRICS = False
 
     given_app._test_email_list = []
 

@@ -50,6 +50,6 @@ def find_different_keys(dict1: dict, dict2: dict) -> list:
 
 def service_url(domain: str, path: str = None) -> str:
     path = path or ""
-    use_https = app.econfig.USE_HTTPS
+    use_https = app.cfg.USE_HTTPS
     prefix = "https://" if use_https else "http://"
     return f"{prefix}{domain}{path}"

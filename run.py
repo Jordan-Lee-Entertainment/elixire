@@ -53,7 +53,7 @@ from api.bp.metrics.counters import MetricsCounters
 
 from api.bp.admin.audit_log import AuditLog
 
-import config
+import config as elixire_config_file
 
 
 log = logging.getLogger(__name__)
@@ -66,14 +66,14 @@ def make_app() -> Quart:
     # actual max content length can be better determined by a reverse proxy.
     app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
 
-    # TODO change config to app.cfg
-    # also see https://gitlab.com/elixire/elixire/-/issues/112
-    app.econfig = config
-    app.econfig.REQUIRE_ACCOUNT_APPROVALS = getattr(
-        app.econfig, "REQUIRE_ACCOUNT_APPROVALS", True
+    # TODO hot-reloadable config
+    #  https://gitlab.com/elixire/elixire/-/issues/112
+    app.cfg = elixire_config_file
+    app.cfg.REQUIRE_ACCOUNT_APPROVALS = getattr(
+        app.cfg, "REQUIRE_ACCOUNT_APPROVALS", True
     )
 
-    level = getattr(config, "LOGGING_LEVEL", "INFO")
+    level = getattr(app.cfg, "LOGGING_LEVEL", "INFO")
     logging.basicConfig(level=level)
     logging.getLogger("aioinflux").setLevel(logging.INFO)
 
@@ -141,7 +141,7 @@ async def _handle_ban(lock_key, lock_type: str, reason: str):
         ip_addr = get_ip_addr()
         log.warning(f"Banning ip address {ip_addr} with reason {reason!r}")
 
-        period = app.econfig.IP_BAN_PERIOD
+        period = app.cfg.IP_BAN_PERIOD
         await app.db.execute(
             f"""
         INSERT INTO ip_bans (ip_address, reason, end_timestamp)
@@ -157,7 +157,7 @@ async def _handle_ban(lock_key, lock_type: str, reason: str):
         user_name, user_id = request._user
         log.warning(f"Banning {user_name} {user_id} with reason {reason!r}")
 
-        period = app.econfig.BAN_PERIOD
+        period = app.cfg.BAN_PERIOD
         await app.db.execute(
             f"""
         INSERT INTO bans (user_id, reason, end_timestamp)
@@ -265,9 +265,9 @@ def handle_exception(exception):
 
 
 def _setup_working_directory_folders():
-    image_dir = Path(app.econfig.IMAGE_FOLDER)
-    thumbnail_dir = Path(app.econfig.THUMBNAIL_FOLDER)
-    dump_dir = Path(app.econfig.DUMP_FOLDER)
+    image_dir = Path(app.cfg.IMAGE_FOLDER)
+    thumbnail_dir = Path(app.cfg.THUMBNAIL_FOLDER)
+    dump_dir = Path(app.cfg.DUMP_FOLDER)
 
     image_dir.mkdir(exist_ok=True)
     thumbnail_dir.mkdir(exist_ok=True)
@@ -292,12 +292,12 @@ async def app_before_serving():
     app.session = aiohttp.ClientSession(loop=app.loop)
 
     log.info("connecting to db")
-    app.db = await asyncpg.create_pool(**config.db)
+    app.db = await asyncpg.create_pool(**app.cfg.db)
     await api.bp.cors.setup()
 
     log.info("connecting to redis")
     app.redis_pool = aioredis.ConnectionPool.from_url(
-        config.redis,
+        app.cfg.redis,
         max_connections=11,
         encoding="utf-8",
         decode_responses=True,

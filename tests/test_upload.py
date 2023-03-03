@@ -170,7 +170,7 @@ EICAR = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
 
 
 async def test_eicar_upload(test_cli_user):
-    if not test_cli_user.app.econfig.UPLOAD_SCAN:
+    if not test_cli_user.app.cfg.UPLOAD_SCAN:
         pytest.skip("upload scans disabled")
         return
 
@@ -180,7 +180,7 @@ async def test_eicar_upload(test_cli_user):
     # fix found on https://github.com/python/asyncio/issues/478#issuecomment-268476438
     asyncio.get_child_watcher().attach_loop(test_cli_user.app.loop)
 
-    test_cli_user.app.econfig.SCAN_WAIT_THRESHOLD = 5
+    test_cli_user.app.cfg.SCAN_WAIT_THRESHOLD = 5
 
     kwargs = png_request(data=io.BytesIO(EICAR.encode()))
     resp = await test_cli_user.post(
@@ -220,7 +220,7 @@ async def test_thumbnail_janitor(test_cli_user):
 
     shortname = respjson["shortname"]
 
-    filesystem_thumbnail_path = Path(test_cli_user.app.econfig.THUMBNAIL_FOLDER) / (
+    filesystem_thumbnail_path = Path(test_cli_user.app.cfg.THUMBNAIL_FOLDER) / (
         "s" + shortname + extension
     )
 

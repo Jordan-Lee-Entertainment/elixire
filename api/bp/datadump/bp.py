@@ -17,7 +17,7 @@ bp = Blueprint("datadump", __name__)
 def start_tasks():
     """Start the dump worker on application startup
     so we can resume if any is there to resume."""
-    if not app.econfig.DUMP_ENABLED:
+    if not app.cfg.DUMP_ENABLED:
         log.info("data dumps are disabled!")
         return
 
@@ -47,7 +47,7 @@ async def request_data_dump():
     After resume_dump or do_dump finish they call dispatch_dump() which sends
     an email to the user containing the dump.
     """
-    if not app.econfig.DUMP_ENABLED:
+    if not app.cfg.DUMP_ENABLED:
         raise FeatureDisabled("Data dumps are disabled in this instance")
 
     user_id = await token_check()
@@ -200,7 +200,7 @@ async def get_dump():
     )
 
     zip_path = os.path.join(
-        app.econfig.DUMP_FOLDER,
+        app.cfg.DUMP_FOLDER,
         f"{user_id}_{user_name}.zip",
     )
 

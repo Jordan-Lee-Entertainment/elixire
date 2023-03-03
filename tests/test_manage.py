@@ -11,11 +11,11 @@ pytestmark = pytest.mark.asyncio
 
 
 async def _run(test_cli, args):
-    return await amain(test_cli.app.loop, test_cli.app.econfig, args, is_testing=True)
+    return await amain(test_cli.app.loop, test_cli.app.cfg, args, is_testing=True)
 
 
 async def test_help(event_loop, app):
-    _, status = await amain(event_loop, app.econfig, [])
+    _, status = await amain(event_loop, app.cfg, [])
     assert status == 0
 
 

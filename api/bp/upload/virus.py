@@ -141,7 +141,7 @@ async def scan_file(ctx) -> None:
     This function schedules the scanning on the background if it takes too
     long to scan.
     """
-    if not app.econfig.UPLOAD_SCAN:
+    if not app.cfg.UPLOAD_SCAN:
         log.debug("Scans are disabled, not scanning this file.")
         return
 
@@ -151,7 +151,7 @@ async def scan_file(ctx) -> None:
 
     try:
         await asyncio.wait_for(
-            wrapper_task(_run_scan, ctx), timeout=app.econfig.SCAN_WAIT_THRESHOLD
+            wrapper_task(_run_scan, ctx), timeout=app.cfg.SCAN_WAIT_THRESHOLD
         )
         log.info("scan file done")
     except asyncio.TimeoutError:

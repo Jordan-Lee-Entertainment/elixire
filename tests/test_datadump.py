@@ -54,7 +54,7 @@ async def wait_for_finished_dump(app, current_email_count):
 async def test_datadump(test_cli, test_cli_user):
     # know the datadump path beforehand so we know which file to remove
     filename = f"{test_cli_user.id}_{test_cli_user.username}.zip"
-    zip_path = Path(test_cli_user.app.econfig.DUMP_FOLDER) / filename
+    zip_path = Path(test_cli_user.app.cfg.DUMP_FOLDER) / filename
 
     # -- add file and shorten to test user
     elixire_file = await upload_test_png(test_cli_user)

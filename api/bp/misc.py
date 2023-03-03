@@ -19,7 +19,7 @@ def _owo(string: str) -> str:
 @bp.get("/hello")
 async def hello_route():
     """Give basic information about the instance."""
-    cfg = app.econfig
+    cfg = app.cfg
 
     return jsonify(
         {
@@ -41,7 +41,7 @@ async def h_hewwo():
     """owo"""
     return jsonify(
         {
-            "name": _owo(app.econfig.INSTANCE_NAME),
+            "name": _owo(app.cfg.INSTANCE_NAME),
             "version": _owo(VERSION),
             "api": _owo(API_VERSION),
         }
@@ -73,7 +73,7 @@ async def fetch_features():
     register button when the instance's registration enabled
     flag is set to false.
     """
-    cfg = app.econfig
+    cfg = app.cfg
 
     return jsonify(
         {

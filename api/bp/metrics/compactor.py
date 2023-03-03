@@ -396,7 +396,7 @@ async def compact_task(app):
         log.debug("compacting %s -> %s", meas, target)
 
         ctx = CompactorContext(
-            app.metrics.influx, meas, target, app.econfig.METRICS_COMPACT_GENERALIZE
+            app.metrics.influx, meas, target, app.cfg.METRICS_COMPACT_GENERALIZE
         )
 
         await compact_single(ctx)

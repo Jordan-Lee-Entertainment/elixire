@@ -38,7 +38,7 @@ async def open_zipdump(user_id, resume=False) -> zipfile.ZipFile:
     )
 
     zip_path = os.path.join(
-        app.econfig.DUMP_FOLDER,
+        app.cfg.DUMP_FOLDER,
         f"{user_id}_{user_name}.zip",
     )
 
@@ -215,8 +215,8 @@ async def dispatch_dump(user_id: int, user_name: str):
     """Dispatch the data dump to a user."""
     log.info(f"Dispatching dump for {user_id} {user_name!r}")
 
-    _inst_name = app.econfig.INSTANCE_NAME
-    _support = app.econfig.SUPPORT_EMAIL
+    _inst_name = app.cfg.INSTANCE_NAME
+    _support = app.cfg.SUPPORT_EMAIL
 
     dump_token = await gen_email_token(user_id, "email_dump_tokens")
 
@@ -232,7 +232,7 @@ async def dispatch_dump(user_id: int, user_name: str):
     email_body = f"""This is an automated email from {_inst_name}
 about your data dump.
 
-Visit {app.econfig.MAIN_URL}/api/dump_get?key={dump_token} to fetch your
+Visit {app.cfg.MAIN_URL}/api/dump_get?key={dump_token} to fetch your
 data dump.
 
 The URL will be invalid in 6 hours.
@@ -241,7 +241,7 @@ Do not share this URL. Nobody will ask you for this URL.
 Send an email to {_support} if any questions arise.
 Do not reply to this automated email.
 
-- {_inst_name}, {app.econfig.MAIN_URL}
+- {_inst_name}, {app.cfg.MAIN_URL}
     """
 
     resp_tup, user_email = await send_user_email(
@@ -436,7 +436,7 @@ async def dump_janitor():
 
     If there is a file that is more than 6 hours old, it gets deleted.
     """
-    dumps = pathlib.Path(app.econfig.DUMP_FOLDER)
+    dumps = pathlib.Path(app.cfg.DUMP_FOLDER)
 
     # iterate over all zip files inside the dump folder
     for fpath in dumps.glob("*.zip"):
@@ -466,4 +466,4 @@ def start_janitor():
     async def _wrapped():
         await dump_janitor()
 
-    app.sched.spawn_periodic(_wrapped, [], app.econfig.DUMP_JANITOR_PERIOD)
+    app.sched.spawn_periodic(_wrapped, [], app.cfg.DUMP_JANITOR_PERIOD)

@@ -37,7 +37,7 @@ def _check_bucket(bucket: RatelimitBucket):
     retry_after = bucket.update_rate_limit()
     ctx = request.ratelimit_context
     ctx.bucket = bucket
-    if bucket.retries > app.econfig.RL_THRESHOLD:
+    if bucket.retries > app.cfg.RL_THRESHOLD:
         raise Banned("Reached retry limit on ratelimiting.")
 
     if retry_after:
@@ -126,7 +126,7 @@ async def rl_header_set(response):
 
 
 def setup_ratelimits():
-    rtls = app.econfig.RATELIMITS
+    rtls = app.cfg.RATELIMITS
     app.ratelimits = {}
 
     for endpoint, ratelimit in rtls.items():

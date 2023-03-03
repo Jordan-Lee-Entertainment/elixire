@@ -71,7 +71,7 @@ async def _post_webhook(
 
 async def ban_webhook(user_id: int, reason: str, period: str):
     """Send a webhook containing banning information."""
-    wh_url = getattr(app.econfig, "USER_BAN_WEBHOOK", None)
+    wh_url = getattr(app.cfg, "USER_BAN_WEBHOOK", None)
     if not wh_url:
         return
 
@@ -108,7 +108,7 @@ async def ban_webhook(user_id: int, reason: str, period: str):
 
 async def ip_ban_webhook(ip_address: str, reason: str, period: str):
     """Send a webhook containing banning information."""
-    wh_url = getattr(app.econfig, "IP_BAN_WEBHOOK", None)
+    wh_url = getattr(app.cfg, "IP_BAN_WEBHOOK", None)
     if not wh_url:
         return
 
@@ -167,7 +167,7 @@ async def jpeg_toobig_webhook(ctx, size_after):
     """Dispatch a webhook when the EXIF checking raised
     stuff.
     """
-    wh_url = getattr(app.econfig, "EXIF_TOOBIG_WEBHOOK", None)
+    wh_url = getattr(app.cfg, "EXIF_TOOBIG_WEBHOOK", None)
     if not wh_url:
         return
 
@@ -228,4 +228,4 @@ async def scan_webhook(ctx, scan_out: str):
         ],
     }
 
-    await _post_webhook(app.econfig.UPLOAD_SCAN_WEBHOOK, embed=payload)
+    await _post_webhook(app.cfg.UPLOAD_SCAN_WEBHOOK, embed=payload)

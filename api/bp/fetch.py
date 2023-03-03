@@ -144,7 +144,7 @@ async def file_handler(filename):
 @bp.get("/t/<filename>")
 async def thumbnail_handler(filename):
     """Handles thumbnail serves."""
-    appcfg = app.econfig
+    appcfg = app.cfg
     thumbtype, filename = filename[0], filename[1:]
     fspath, _shortname = await filecheck(filename)
 

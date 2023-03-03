@@ -79,7 +79,7 @@ async def amain(loop, config, argv: List[str], *, is_testing: bool = False):
     app.redis_pool = redis_pool
     app.redis = redis
     app.loop = loop
-    app.econfig = config
+    app.cfg = config
 
     app.storage = Storage(app)
     app.locks = LockStorage()

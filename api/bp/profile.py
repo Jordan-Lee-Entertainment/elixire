@@ -127,7 +127,7 @@ async def profile_handler():
 @bp.patch("/profile")
 async def change_profile():
     """Change a user's profile."""
-    if not app.econfig.PATCH_API_PROFILE_ENABLED:
+    if not app.cfg.PATCH_API_PROFILE_ENABLED:
         raise FeatureDisabled("changes on profile are currently disabled")
 
     user_id = await token_check()
@@ -345,8 +345,8 @@ async def deactive_own_user():
     if not user_email:
         raise BadInput("No email was found.")
 
-    _inst_name = app.econfig.INSTANCE_NAME
-    _support = app.econfig.SUPPORT_EMAIL
+    _inst_name = app.cfg.INSTANCE_NAME
+    _support = app.cfg.SUPPORT_EMAIL
 
     email_token = await gen_email_token(user_id, "email_deletion_tokens")
 
@@ -364,7 +364,7 @@ async def deactive_own_user():
     email_body = f"""This is an automated email from {_inst_name}
 about your account deletion.
 
-Please visit {app.econfig.MAIN_URL}/deleteconfirm.html#{email_token} to
+Please visit {app.cfg.MAIN_URL}/deleteconfirm.html#{email_token} to
 confirm the deletion of your account.
 
 The link will be invalid in 12 hours. Do not share it with anyone.
@@ -376,7 +376,7 @@ might be compromised.
 
 Do not reply to this email specifically, it will not work.
 
-- {_inst_name}, {app.econfig.MAIN_URL}
+- {_inst_name}, {app.cfg.MAIN_URL}
 """
 
     # TODO: change this to send user email?
@@ -565,8 +565,8 @@ async def reset_password_req():
     user_email = udata["email"]
     user_id = udata["user_id"]
 
-    _inst_name = app.econfig.INSTANCE_NAME
-    _support = app.econfig.SUPPORT_EMAIL
+    _inst_name = app.cfg.INSTANCE_NAME
+    _support = app.cfg.SUPPORT_EMAIL
 
     email_token = await gen_email_token(user_id, "email_pwd_reset_tokens")
 
@@ -582,7 +582,7 @@ async def reset_password_req():
     email_body = f"""This is an automated email from {_inst_name}
 about your password reset.
 
-Please visit {app.econfig.MAIN_URL}/password_reset.html#{email_token} to
+Please visit {app.cfg.MAIN_URL}/password_reset.html#{email_token} to
 reset your password.
 
 The link will be invalid in 30 minutes. Do not share the link with anyone else.
@@ -592,7 +592,7 @@ Reply to {_support} if you have any questions.
 
 Do not reply to this email specifically, it will not work.
 
-- {_inst_name}, {app.econfig.MAIN_URL}
+- {_inst_name}, {app.cfg.MAIN_URL}
 """
 
     res, _ = await send_user_email(

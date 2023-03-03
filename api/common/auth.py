@@ -25,7 +25,7 @@ async def gen_shortname(user_id: int, table: str = "files") -> tuple:
     Checks if the user is in paranoid mode.
     """
     is_paranoid = await check_paranoid(user_id)
-    shortname_len = 8 if is_paranoid else app.econfig.SHORTNAME_LEN
+    shortname_len = 8 if is_paranoid else app.cfg.SHORTNAME_LEN
     return await gen_filename(shortname_len, table)
 
 
@@ -236,7 +236,7 @@ async def token_check() -> int:
     This will check if the token given in the request is an API token or not,
     performing proper validation depending on its type.
     """
-    cfg = app.econfig
+    cfg = app.cfg
 
     try:
         token = get_token()
@@ -327,7 +327,7 @@ async def token_check() -> int:
 
 def gen_token(user: dict, token_type=TokenType.TIMED) -> str:
     """Generate one token."""
-    cfg = app.econfig
+    cfg = app.cfg
 
     salt = user["password_hash"]
 

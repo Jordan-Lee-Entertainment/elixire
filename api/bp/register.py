@@ -24,7 +24,7 @@ bp = Blueprint("register", __name__)
 
 async def send_register_email(email: str) -> bool:
     """Send an email about the signup."""
-    _inst_name = app.econfig.INSTANCE_NAME
+    _inst_name = app.cfg.INSTANCE_NAME
 
     email_body = fmt_email(
         """This is an automated email from {inst_name}
@@ -74,7 +74,7 @@ async def register_user():
 
     Look into /api/admin/activate for registration acceptance.
     """
-    if not app.econfig.REGISTRATIONS_ENABLED:
+    if not app.cfg.REGISTRATIONS_ENABLED:
         raise FeatureDisabled("Registrations are currently disabled")
 
     payload = validate(await request.get_json(), REGISTRATION_SCHEMA)
@@ -99,7 +99,7 @@ async def register_user():
 
     succ = await send_register_email(email)
     succ_wb = await register_webhook(
-        app.econfig.USER_REGISTER_WEBHOOK, user_id, username, discord_user, email
+        app.cfg.USER_REGISTER_WEBHOOK, user_id, username, discord_user, email
     )
 
     return jsonify(

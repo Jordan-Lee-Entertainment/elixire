@@ -34,10 +34,10 @@ async def create_db():
     """Create InfluxDB database"""
     app.metrics = MetricsManager(app, app.loop)
 
-    if not app.econfig.ENABLE_METRICS:
+    if not app.cfg.ENABLE_METRICS:
         return
 
-    dbname = app.econfig.METRICS_DATABASE
+    dbname = app.cfg.METRICS_DATABASE
 
     log.info(f"Creating database {dbname}")
     await app.metrics.influx.create_database(db=dbname)
@@ -45,7 +45,7 @@ async def create_db():
 
 async def start_tasks():
     """Spawn various metric-related tasks."""
-    if not app.econfig.ENABLE_METRICS:
+    if not app.cfg.ENABLE_METRICS:
         return
 
     app.sched.spawn_periodic(second_tasks, [app], 1)
@@ -54,9 +54,7 @@ async def start_tasks():
 
     app.sched.spawn_periodic(upload_uniq_task, [app], 86400)
 
-    app.sched.spawn_periodic(
-        compact_task, [app], app.econfig.METRICS_COMPACT_GENERALIZE
-    )
+    app.sched.spawn_periodic(compact_task, [app], app.cfg.METRICS_COMPACT_GENERALIZE)
 
 
 async def close_worker():
@@ -65,7 +63,7 @@ async def close_worker():
 
 @bp.before_app_request
 async def on_request():
-    if not app.econfig.ENABLE_METRICS:
+    if not app.cfg.ENABLE_METRICS:
         return
 
     # increase the counter on every request
@@ -77,7 +75,7 @@ async def on_request():
 
 @bp.after_app_request
 async def on_response(response):
-    if not app.econfig.ENABLE_METRICS:
+    if not app.cfg.ENABLE_METRICS:
         return response
 
     # increase the counter on every response from server

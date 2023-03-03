@@ -43,7 +43,7 @@ def get_ip_addr() -> str:
     if remote_addr == "<local>":
         remote_addr = "127.0.0.1"
 
-    use_header = app.econfig.CLOUDFLARE and CF_HEADER in request.headers
+    use_header = app.cfg.CLOUDFLARE and CF_HEADER in request.headers
     if use_header:
         return request.headers[CF_HEADER]
     else:
@@ -427,7 +427,7 @@ def transform_wildcard(domain: str, subdomain_name: str) -> str:
 
 async def thumbnail_janitor_tick():
     deleted_count = 0
-    for path in Path(app.econfig.THUMBNAIL_FOLDER).iterdir():
+    for path in Path(app.cfg.THUMBNAIL_FOLDER).iterdir():
         if not path.is_file():
             continue
 

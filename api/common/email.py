@@ -84,7 +84,7 @@ async def gen_email_token(user_id, table: str, count: int = 0) -> str:
 
 async def send_email(user_email: str, subject: str, email_body: str) -> tuple:
     """Send an email to a user using the Mailgun API."""
-    econfig = app.econfig
+    econfig = app.cfg
     mailgun_url = f"https://api.mailgun.net/v3/{econfig.MAILGUN_DOMAIN}" "/messages"
 
     _inst_name = econfig.INSTANCE_NAME
@@ -127,10 +127,10 @@ async def send_user_email(user_id: int, subject: str, body: str) -> tuple:
 def fmt_email(string, **kwargs):
     """Format an email"""
     base = {
-        "inst_name": app.econfig.INSTANCE_NAME,
-        "support": app.econfig.SUPPORT_EMAIL,
-        "main_url": app.econfig.MAIN_URL,
-        "main_invite": app.econfig.MAIN_INVITE,
+        "inst_name": app.cfg.INSTANCE_NAME,
+        "support": app.cfg.SUPPORT_EMAIL,
+        "main_url": app.cfg.MAIN_URL,
+        "main_invite": app.cfg.MAIN_INVITE,
     }
 
     base.update(kwargs)

@@ -37,18 +37,18 @@ class MetricsManager:
         self._start_influx()
 
         # make sure we default to a sane ratelimit
-        metrics_limit = getattr(app.econfig, "METRICS_LIMIT", (100, 3))
+        metrics_limit = getattr(app.cfg, "METRICS_LIMIT", (100, 3))
         self._timestamps, self._period = metrics_limit
 
         log.info("starting metrics worker")
 
-        if app.econfig.ENABLE_METRICS:
+        if app.cfg.ENABLE_METRICS:
             self.app.sched.spawn_periodic(
                 self._work, [], self._period, "metrics_worker"
             )
 
     def _start_influx(self):
-        cfg = self.app.econfig
+        cfg = self.app.cfg
 
         if not cfg.ENABLE_METRICS:
             log.info("Metrics are disabled")
@@ -129,7 +129,7 @@ class MetricsManager:
     async def submit(self, title, value):
         """Submit a new datapoint to be sent
         to InfluxDB."""
-        if not self.app.econfig.ENABLE_METRICS:
+        if not self.app.cfg.ENABLE_METRICS:
             return
 
         #: this is relative to the app, NOT

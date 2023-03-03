@@ -53,7 +53,7 @@ async def get_user_handler(admin_id, user_id: int):
 
 async def notify_activate(user_id: int):
     """Inform user that they got an account."""
-    if not app.econfig.NOTIFY_ACTIVATION_EMAILS:
+    if not app.cfg.NOTIFY_ACTIVATION_EMAILS:
         return
 
     log.info(f"Sending activation email to {user_id}")

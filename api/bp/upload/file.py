@@ -85,7 +85,7 @@ class UploadFile:
     async def resolve(self, extension: str) -> None:
         await self._hash_file()
         assert self.hash is not None
-        folder = app.econfig.IMAGE_FOLDER
+        folder = app.cfg.IMAGE_FOLDER
         raw_path = f"{folder}/{self.hash[0]}/{self.hash}{extension}"
         self.path = Path(raw_path)
 

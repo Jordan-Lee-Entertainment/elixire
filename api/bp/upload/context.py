@@ -32,12 +32,12 @@ class UploadContext:
     _computed_mime: Optional[str] = None
 
     async def strip_exif(self, filepath: str) -> None:
-        if not app.econfig.CLEAR_EXIF or self.file.mime != "image/jpeg":
+        if not app.cfg.CLEAR_EXIF or self.file.mime != "image/jpeg":
             log.debug("not stripping exif, disabled or not jpeg")
             return
 
         log.debug("going to clear exif now")
-        ratio_limit = app.econfig.EXIF_INCREASELIMIT
+        ratio_limit = app.cfg.EXIF_INCREASELIMIT
 
         # Pillow is not async, so it is better to run
         # its relevant code on a thread
@@ -70,7 +70,7 @@ class UploadContext:
     async def perform_checks(self) -> str:
         given_extension = self.file.given_extension
 
-        if not app.econfig.UPLOADS_ENABLED:
+        if not app.cfg.UPLOADS_ENABLED:
             raise FeatureDisabled("Uploads are currently disabled")
 
         # Get file's mimetype
@@ -78,7 +78,7 @@ class UploadContext:
         mimetype = await self.mime
 
         # Check if file's mimetype is in allowed mimetypes
-        if mimetype not in app.econfig.ACCEPTED_MIMES:
+        if mimetype not in app.cfg.ACCEPTED_MIMES:
             raise BadImage(f"Bad mime type: {mimetype!r}")
 
         # check file upload limits

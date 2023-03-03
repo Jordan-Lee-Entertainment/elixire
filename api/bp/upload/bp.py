@@ -62,7 +62,7 @@ async def check_repeat(
     # since files.subdomain isn't a thing.
     domain = transform_wildcard(domain, "i")
 
-    instance_url = app.econfig.MAIN_URL
+    instance_url = app.cfg.MAIN_URL
     shortname = ufile["filename"]
     return {
         "url": _construct_url(domain, shortname, extension),
@@ -219,7 +219,7 @@ async def upload_handler(user_id):
 
     # calculate the new file size, with the dupe decrease factor multiplied in
     # if necessary
-    file_size = ctx.file.calculate_size(app.econfig.DUPE_DECREASE_FACTOR)
+    file_size = ctx.file.calculate_size(app.cfg.DUPE_DECREASE_FACTOR)
 
     # invalidating any existing file before
     await app.storage.raw_invalidate(f"fspath:{domain_id}:{shortname}")
@@ -253,7 +253,7 @@ async def upload_handler(user_id):
     # upload file latency metrics
     await upload_metrics(ctx)
 
-    instance_url = app.econfig.MAIN_URL
+    instance_url = app.cfg.MAIN_URL
 
     return jsonify(
         {

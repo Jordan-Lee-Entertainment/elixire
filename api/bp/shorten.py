@@ -48,10 +48,10 @@ async def shorten_handler():
             "Only https and http are allowed."
         )
 
-    if len(url_toredir) > app.econfig.MAX_SHORTEN_URL_LEN:
+    if len(url_toredir) > app.cfg.MAX_SHORTEN_URL_LEN:
         raise BadInput(
             f"Your URL is way too long ({len(url_toredir)} "
-            f"> {app.econfig.MAX_SHORTEN_URL_LEN})."
+            f"> {app.cfg.MAX_SHORTEN_URL_LEN})."
         )
 
     # Check if admin is set in get values, if not, do checks
@@ -65,7 +65,7 @@ async def shorten_handler():
 
     # Skip checks for admins
     if do_checks:
-        if not app.econfig.SHORTENS_ENABLED:
+        if not app.cfg.SHORTENS_ENABLED:
             raise FeatureDisabled("shortens are currently disabled")
 
         shortens_used = await app.db.fetch(
