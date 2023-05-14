@@ -2,118 +2,18 @@
 # Copyright 2018-2019, elixi.re Team and the elixire contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import os
 import logging
 
 from quart import Blueprint, current_app as app, jsonify, request
 
 from ..common import delete_file, delete_shorten
 from ..common.auth import token_check, password_check
-from ..common.utils import service_url
 from ..decorators import auth_route
 from ..errors import BadInput
 from .profile import delete_file_task
 
 bp = Blueprint("files", __name__)
 log = logging.getLogger(__name__)
-
-
-async def domain_list():
-    """Returns a dictionary with domain IDs mapped to domain names"""
-    domain_info = await app.db.fetch(
-        """
-        SELECT domain_id, domain
-        FROM domains
-    """
-    )
-    return dict(domain_info)
-
-
-@bp.get("/list")
-async def list_handler():
-    """Get list of files."""
-    # TODO: simplify this code
-    try:
-        page = int(request.args["page"][0])
-    except (TypeError, ValueError, KeyError, IndexError):
-        raise BadInput("Page parameter needs to be supplied correctly.")
-
-    user_id = await token_check()
-    domains = await domain_list()
-
-    user_files = await app.db.fetch(
-        """
-    SELECT file_id, filename, file_size, fspath, domain, mimetype
-    FROM files
-    WHERE uploader = $1
-    AND deleted = false
-    ORDER BY file_id DESC
-
-    LIMIT 100
-    OFFSET ($2 * 100)
-    """,
-        user_id,
-        page,
-    )
-
-    user_shortens = await app.db.fetch(
-        """
-    SELECT shorten_id, filename, redirto, domain
-    FROM shortens
-    WHERE uploader = $1
-    AND deleted = false
-    ORDER BY shorten_id DESC
-
-    LIMIT 100
-    OFFSET ($2 * 100)
-    """,
-        user_id,
-        page,
-    )
-
-    filenames = {}
-    for ufile in user_files:
-        filename = ufile["filename"]
-        mime = ufile["mimetype"]
-        domain = domains[ufile["domain"]].replace("*.", "wildcard.")
-
-        basename = os.path.basename(ufile["fspath"])
-        ext = basename.split(".")[-1]
-
-        fullname = f"{filename}.{ext}"
-        file_url = service_url(domain, f"/i/{fullname}")
-
-        # default thumb size is small
-        file_url_thumb = (
-            service_url(domain, f"/t/s{fullname}")
-            if mime.startswith("image/")
-            else file_url
-        )
-
-        filenames[filename] = {
-            "snowflake": str(ufile["file_id"]),
-            "shortname": filename,
-            "size": ufile["file_size"],
-            "mimetype": mime,
-            "url": file_url,
-            "thumbnail": file_url_thumb,
-        }
-
-    shortens = {}
-    for ushorten in user_shortens:
-        filename = ushorten["filename"]
-        domain = domains[ushorten["domain"]].replace("*.", "wildcard.")
-
-        shorten_url = service_url(domain, f"/s/{filename}")
-
-        shortens[filename] = {
-            "snowflake": str(ushorten["shorten_id"]),
-            "shortname": filename,
-            "redirto": ushorten["redirto"],
-            "url": shorten_url,
-        }
-
-    return jsonify({"success": True, "files": filenames, "shortens": shortens})
 
 
 @bp.delete("/delete")

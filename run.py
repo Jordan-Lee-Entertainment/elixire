@@ -20,24 +20,18 @@ import api.bp.profile
 import api.bp.shorten
 import api.bp.upload
 import api.bp.files
+import api.bp.list
 import api.bp.cors
-
 import api.bp.fetch
 import api.bp.admin
-
 import api.bp.register
-
 import api.bp.datadump
-
 import api.bp.metrics
 import api.bp.personal_stats
-
 import api.bp.d1check
 import api.bp.wpadmin
 import api.bp.misc
-
 import api.bp.index
-
 import api.bp.ratelimit
 import api.bp.frontend
 
@@ -100,6 +94,7 @@ def set_blueprints(app_):
         api.bp.shorten.bp: None,
         api.bp.upload.bp: "",
         api.bp.files.bp: "",
+        api.bp.list.bp: "",
         api.bp.index.bp: "",
         api.bp.personal_stats.bp: "/stats",
         api.bp.admin.user_bp: "",
