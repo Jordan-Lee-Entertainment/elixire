@@ -4,6 +4,7 @@
 
 
 import logging
+from typing import Dict
 
 from quart import Blueprint, current_app as app, jsonify, request
 from pathlib import Path
@@ -17,7 +18,7 @@ bp = Blueprint("list", __name__)
 log = logging.getLogger(__name__)
 
 
-async def domain_list():
+async def domain_list() -> Dict[int, str]:
     """Returns a dictionary with domain IDs mapped to domain names"""
     domain_info = await app.db.fetch(
         """
@@ -28,7 +29,7 @@ async def domain_list():
     return dict(domain_info)
 
 
-def web_domain_from_entity(domains: dict, entity: dict) -> str:
+def web_domain_from_entity(domains: Dict[int, str], entity: dict) -> str:
     """Construct a full domain, given the list of domains and the object to
     put subdomains on. the default is "wildcard"."""
     domain = domains[entity["domain"]]
@@ -43,7 +44,7 @@ def create_entity_url(domain: str, url_basename: str, *, scope: str = "i") -> st
     return service_url(domain, f"/{scope}/{url_basename}")
 
 
-def file_from_row(domains: dict, row: dict) -> dict:
+def file_from_row(domains: Dict[int, str], row: dict) -> dict:
     domain = web_domain_from_entity(domains, row)
     suffix = Path(row["fspath"]).suffix
 
@@ -68,7 +69,7 @@ def file_from_row(domains: dict, row: dict) -> dict:
     }
 
 
-def shorten_from_row(domains, row) -> dict:
+def shorten_from_row(domains: Dict[int, str], row: dict) -> dict:
     domain = web_domain_from_entity(domains, row)
     filename = row["filename"]
     shorten_url = create_entity_url(domain, filename, scope="s")
