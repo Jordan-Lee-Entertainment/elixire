@@ -25,12 +25,13 @@ class EmailTokenType(Enum):
     account_activation = auto()
     datadump_result = auto()
 
-    def to_table_name(self) -> str:
+    @property
+    def table_name(self) -> str:
         return {
-            self.__class__.password_reset: "email_pwd_reset_tokens",
-            self.__class__.account_deletion: "email_deletion_tokens",
-            self.__class__.account_activation: "email_activation_tokens",
-            self.__class__.datadump_result: "email_dump_tokens",
+            self.password_reset: "email_pwd_reset_tokens",
+            self.account_deletion: "email_deletion_tokens",
+            self.account_activation: "email_activation_tokens",
+            self.datadump_result: "email_dump_tokens",
         }[self]
 
 
@@ -61,7 +62,7 @@ async def make_email_token(user_id, token_type: EmailTokenType, count: int = 0) 
         of a time window (defined by the table)
     """
 
-    table_name = token_type.to_table_name()
+    table_name = token_type.table_name
 
     if count == 11:
         # it really shouldn't happen,
