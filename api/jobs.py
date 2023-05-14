@@ -72,7 +72,7 @@ class JobManager:
         kwargs: Optional[dict] = None,
         name: str = None
     ) -> asyncio.Task:
-        """Spawn a backgrund task that runs only once.
+        """Spawn a background task that runs only once.
 
         This is meant for short-lived tasks.
 
