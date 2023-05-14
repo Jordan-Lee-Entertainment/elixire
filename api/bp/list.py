@@ -86,7 +86,7 @@ async def list_handler():
     try:
         page = int(request.args["page"][0])
     except (TypeError, ValueError, KeyError, IndexError):
-        raise BadInput("Page parameter needs to be supplied correctly.")
+        raise BadInput("Invalid page parameter.")
 
     user_id = await token_check()
     domains = await domain_list()
