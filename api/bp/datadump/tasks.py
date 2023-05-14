@@ -14,7 +14,6 @@ import pathlib
 import os.path
 
 from quart import current_app as app
-from quart.ctx import copy_current_app_context
 
 from api.common.email import gen_email_token, send_user_email
 
@@ -421,11 +420,7 @@ def start_worker():
         log.info("worker wrapper exists, skipping")
         return
 
-    @copy_current_app_context
-    async def _wrapped():
-        await dump_worker_wrapper()
-
-    app.sched.spawn(_wrapped(), name="dump_worker_wrapper")
+    app.sched.spawn_once(dump_worker_wrapper, name="dump_worker_wrapper")
 
 
 async def dump_janitor():
@@ -460,10 +455,7 @@ async def dump_janitor():
 
 def start_janitor():
     """Start dump janitor."""
-
-    # call dump_janitor every DUMP_JANITOR_PERIOD seconds.
-    @copy_current_app_context
-    async def _wrapped():
-        await dump_janitor()
-
-    app.sched.spawn_periodic(_wrapped, [], app.econfig.DUMP_JANITOR_PERIOD)
+    app.sched.spawn_periodic(
+        dump_janitor,
+        every=app.econfig.DUMP_JANITOR_PERIOD,
+    )

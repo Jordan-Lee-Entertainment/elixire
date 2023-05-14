@@ -3,14 +3,24 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import asyncio
-
 import logging
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
 
 class JobManager:
-    """Manage background jobs."""
+    """Manage background jobs.
+
+    This manager class does not implement retry logic with error handling.
+    """
+
+    # Adding retry logic to this class would require some form of storage in it
+    # which would turn it into a dedicated job queue.
+    #
+    # this codebase is not ready for that yet (see v3 experiments and the
+    # violet library), but it is in the roadmap, as email delivery is something
+    # we'd want to make more consistent in the error case
 
     def __init__(self, *, context_function, loop=None):
         log.debug("job manager start")
@@ -18,11 +28,13 @@ class JobManager:
         self.jobs = {}
         self.context_creator = context_function
 
-    async def _wrapper(self, job_name, coro):
+    async def _wrapper_single_shot_task(
+        self, function, args: list, kwargs: dict, job_name: str
+    ):
         try:
             log.debug("running job: %r", job_name)
             async with self.context_creator():
-                await coro
+                await function(*args, **kwargs)
             log.debug("job finish: %r", job_name)
         except asyncio.CancelledError:
             log.warning("cancelled job: %r", job_name)
@@ -31,15 +43,17 @@ class JobManager:
         finally:
             self.jobs.pop(job_name)
 
-    async def _wrapper_bg(self, job_name, func, args, period: int):
-        log.debug("wrapped %r in periodic %dsec", job_name, period)
+    async def _wrapper_periodic(
+        self, function, every: int, args: list, kwargs: dict, job_name: str
+    ):
+        log.debug("wrapped %r in periodic %d seconds", job_name, every)
 
         try:
             async with self.context_creator():
                 while True:
                     log.debug("background tick for %r", job_name)
-                    await func(*args)
-                    await asyncio.sleep(period)
+                    await function(*args, **kwargs)
+                    await asyncio.sleep(every)
         except asyncio.CancelledError:
             log.warning("cancelled job: %r", job_name)
         except Exception:
@@ -50,37 +64,66 @@ class JobManager:
             except KeyError:
                 pass
 
-    # TODO make name a required kwarg
-    def spawn(self, coro, name: str = None):
-        """Spawn a backgrund task once.
+    def spawn_once(
+        self,
+        function,
+        *,
+        args: Optional[list] = None,
+        kwargs: Optional[dict] = None,
+        name: str = None
+    ) -> asyncio.Task:
+        """Spawn a background task that runs only once.
 
-        This is meant for relatively short-lived tasks.
+        This is meant for short-lived tasks.
+
+        `name` is the GLOBAL name of this task in the job manager. you may
+        use it across job runs, but if the job is already running, reusing it
+        will raise a ValueError.
         """
-        name = name or coro.__name__
-        if name in self.jobs:
-            raise ValueError("Can not spawn two jobs with the same name")
-
-        task = self.loop.create_task(self._wrapper(name, coro))
-
-        self.jobs[name] = task
-        return task
-
-    # TODO make period and name required kwargs
-    def spawn_periodic(self, function, args, period: int, name: str = None):
-        """Spawn a background task that will be run
-        every ``period`` seconds."""
+        args = args or []
+        kwargs = kwargs or {}
         name = name or function.__name__
         if name in self.jobs:
             raise ValueError("Can not spawn two jobs with the same name")
 
-        task = self.loop.create_task(self._wrapper_bg(name, function, args, period))
+        task = self.loop.create_task(
+            self._wrapper_single_shot_task(function, args, kwargs, name)
+        )
+
+        self.jobs[name] = task
+        return task
+
+    def spawn_periodic(
+        self,
+        function,
+        *,
+        every: int,
+        args: Optional[list] = None,
+        kwargs: Optional[dict] = None,
+        name: str = None
+    ) -> asyncio.Task:
+        """Spawn a background task that will be run periodically.
+
+        `every` represents the amount of seconds waited between "ticks" of
+        the given task.
+
+        `name` is the same meaning as spawn().
+        """
+        args = args or []
+        kwargs = kwargs or []
+        name = name or function.__name__
+        if name in self.jobs:
+            raise ValueError("Can not spawn two jobs with the same name")
+
+        task = self.loop.create_task(
+            self._wrapper_periodic(function, every, args, kwargs, name)
+        )
 
         self.jobs[name] = task
         return task
 
     def exists(self, job_name: str):
-        """Return if a given job name exists
-        in the job manager."""
+        """Return if a given job name exists in the job manager."""
         return job_name in self.jobs
 
     def stop_job(self, job_name: str):
@@ -101,8 +144,7 @@ class JobManager:
                 pass
 
     def stop(self):
-        """Stop the job manager by
-        cancelling all jobs."""
+        """Call stop_job for all registered jobs."""
         log.debug("cancelling %d jobs", len(self.jobs))
 
         for job_name in list(self.jobs.keys()):
