@@ -19,7 +19,8 @@ from ..common.auth import (
     check_domain_id,
 )
 from api.common.email import (
-    gen_email_token,
+    make_email_token,
+    EmailTokenType,
     send_user_email,
     uid_from_email,
     clean_etoken,
@@ -333,33 +334,10 @@ async def deactive_own_user():
     payload = validate(j, DEACTIVATE_USER_SCHEMA)
     await password_check(user_id, payload["password"])
 
-    user_email = await app.db.fetchval(
-        """
-    SELECT email
-    FROM users
-    WHERE user_id = $1
-    """,
-        user_id,
-    )
-
-    if not user_email:
-        raise BadInput("No email was found.")
-
     _inst_name = app.econfig.INSTANCE_NAME
     _support = app.econfig.SUPPORT_EMAIL
 
-    email_token = await gen_email_token(user_id, "email_deletion_tokens")
-
-    log.info(f"Generated email hash {email_token} for account deactivation")
-
-    await app.db.execute(
-        """
-    INSERT INTO email_deletion_tokens(hash, user_id)
-    VALUES ($1, $2)
-    """,
-        email_token,
-        user_id,
-    )
+    email_token = await make_email_token(user_id, EmailTokenType.account_deletion)
 
     email_body = f"""This is an automated email from {_inst_name}
 about your account deletion.
@@ -379,15 +357,10 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {app.econfig.MAIN_URL}
 """
 
-    # TODO: change this to send user email?
-    res, _ = await send_user_email(
-        user_id,
-        f"{_inst_name} - account deactivation request",
-        email_body,
+    await send_user_email(
+        user_id, f"{_inst_name} - account deactivation request", email_body
     )
-    resp, _ = res
-
-    return jsonify({"success": resp.status == 200})
+    return jsonify({"success": True})
 
 
 async def _delete_file_wrapper(shortname, user_id):
@@ -550,34 +523,22 @@ async def reset_password_req():
     payload = validate(j, PASSWORD_RESET_SCHEMA)
     username = payload["username"].lower()
 
-    udata = await app.db.fetchrow(
+    user_id = await app.db.fetchval(
         """
-    SELECT email, user_id
+    SELECT user_id
     FROM users
     WHERE username = $1
     """,
         username,
     )
 
-    if not udata:
+    if not user_id:
         raise BadInput("User not found")
-
-    user_email = udata["email"]
-    user_id = udata["user_id"]
 
     _inst_name = app.econfig.INSTANCE_NAME
     _support = app.econfig.SUPPORT_EMAIL
 
-    email_token = await gen_email_token(user_id, "email_pwd_reset_tokens")
-
-    await app.db.execute(
-        """
-    INSERT INTO email_pwd_reset_tokens (hash, user_id)
-    VALUES ($1, $2)
-    """,
-        email_token,
-        user_id,
-    )
+    email_token = await make_email_token(user_id, EmailTokenType.password_reset)
 
     email_body = f"""This is an automated email from {_inst_name}
 about your password reset.
@@ -595,12 +556,8 @@ Do not reply to this email specifically, it will not work.
 - {_inst_name}, {app.econfig.MAIN_URL}
 """
 
-    res, _ = await send_user_email(
-        user_email, f"{_inst_name} - password reset request", email_body
-    )
-    resp, _ = res
-
-    return jsonify({"success": resp.status == 200})
+    await send_user_email(user_id, f"{_inst_name} - password reset request", email_body)
+    return jsonify({"success": True})
 
 
 @bp.post("/reset_password_confirm")
