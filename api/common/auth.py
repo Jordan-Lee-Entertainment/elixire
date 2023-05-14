@@ -11,8 +11,9 @@ import logging
 import bcrypt
 import itsdangerous
 
+from api.common.banning import check_bans
 from quart import request, current_app as app
-from .common import TokenType, check_bans, gen_filename
+from .common import TokenType, gen_filename
 from ..errors import FailedAuth, NotFound
 from ..schema import validate, LOGIN_SCHEMA
 

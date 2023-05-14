@@ -21,6 +21,18 @@ from api.common import thumbnail_janitor_tick
 pytestmark = pytest.mark.asyncio
 
 
+async def _assert_discord_html(test_cli, path: str, host: str):
+    resp = await test_cli.get(
+        path,
+        do_token=False,
+        headers={"host": host, "user-agent": "Discordbot"},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "text/html"
+    response_text = (await resp.get_data()).decode()
+    assert "twitter:card" in response_text
+
+
 async def check_exists(test_cli, shortname, deleted: bool = False):
     """Check if a file exists, given the shortname, token, etc.
 
@@ -59,33 +71,15 @@ async def check_exists(test_cli, shortname, deleted: bool = False):
     assert resp.status_code == 404
 
     # check thumbnail can be generated successfully
+    thumbnail_web_path = f"/t/s{shortname}{extension}"
     resp = await test_cli.get(
-        f"/t/s{shortname}{extension}", do_token=False, headers={"host": url.netloc}
+        thumbnail_web_path, do_token=False, headers={"host": url.netloc}
     )
     assert resp.status_code == 200
 
-    # check that Discordbot receives html
-    resp = await test_cli.get(
-        relative_image_path,
-        do_token=False,
-        headers={"host": url.netloc, "user-agent": "Discordbot"},
-    )
-    assert resp.status_code == 200
-    assert resp.headers["content-type"] == "text/html"
-    response_text = (await resp.get_data()).decode()
-    assert "twitter" in response_text
-
-    # check that Discordbot receives html (on thumbnails too)
-    # TODO(quart): port v3 thumbnailing behavior to here
-    #
-    # resp = await test_cli.get(
-    #     f"/t/s{shortname}{extension}",
-    #     headers={"host": url.netloc, "user-agent": "Discordbot"},
-    # )
-    # assert resp.status_code == 200
-    # assert resp.headers["content-type"] == "text/html"
-    # response_text = (await resp.get_data()).decode()
-    # assert "twitter" in response_text
+    # check that Discordbot user agents receive html
+    await _assert_discord_html(test_cli, relative_image_path, url.netloc)
+    await _assert_discord_html(test_cli, thumbnail_web_path, url.netloc)
 
     # -- test HEAD and Ranged requests to the file
     resp = await test_cli.head(

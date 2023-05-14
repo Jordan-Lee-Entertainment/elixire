@@ -9,7 +9,8 @@ from typing import Optional
 from quart import Blueprint, request, current_app as app
 from ..ratelimit import RatelimitManager, RatelimitBucket
 from ..errors import Ratelimited, Banned, FailedAuth
-from ..common import check_bans, get_ip_addr
+from ..common import get_ip_addr
+from ..common.banning import check_bans
 from ..common.auth import token_check
 
 log = logging.getLogger(__name__)
