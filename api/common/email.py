@@ -35,7 +35,7 @@ class EmailTokenType(Enum):
 
 
 async def make_email_token(user_id, token_type: EmailTokenType, count: int = 0) -> str:
-    """Generate a token for email usage and inserts it on the relevant database.
+    """Generate a secret token intended for triggering potentially destructive/dangerous actions via email, inserting it into relevant database.
 
     Calls the database to give an unique token.
 
