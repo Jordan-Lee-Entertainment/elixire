@@ -110,7 +110,7 @@ class JobManager:
         `name` is the same meaning as spawn().
         """
         args = args or []
-        kwargs = kwargs or []
+        kwargs = kwargs or {}
         name = name or function.__name__
         if name in self.jobs:
             raise ValueError("Can not spawn two jobs with the same name")
