@@ -220,7 +220,7 @@ USER_REGISTER_WEBHOOK = ""
 #
 RATELIMITS = {
     # global ratelimit
-    "*": (7, 5),
+    "*": (15, 2),
     "fetch.file_handler": (50, 6),
     "fetch.thumbnail_handler": (80, 10),
 }
