@@ -100,7 +100,6 @@ class DomainRemoveAction(DeleteAction):
         ]
 
         for key, val in self.object["info"].items():
-
             # special case for owner since its another dict
             if key == "owner" and val is not None:
                 uid = val["user_id"]

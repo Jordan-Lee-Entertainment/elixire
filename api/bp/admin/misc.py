@@ -29,7 +29,6 @@ async def test_admin(admin_id):
 
 
 async def _do_broadcast(subject, body):
-
     uids = await app.db.fetch(
         """
     SELECT user_id

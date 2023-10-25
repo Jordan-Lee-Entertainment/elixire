@@ -365,7 +365,6 @@ async def _pu_check(db, db_name, user_id, payload, updated_fields, field, col=No
     # check if field exists
     val = payload.get(field)
     if val is not None:
-
         # if it does exist, update on database
         await db.execute(
             f"""

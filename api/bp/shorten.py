@@ -15,6 +15,7 @@ from ..permissions import Permissions, domain_permissions
 
 bp = Blueprint("shorten", __name__)
 
+
 # TODO move this into fetch bp
 @bp.get("/s/<filename>")
 async def shorten_serve_handler(filename):
