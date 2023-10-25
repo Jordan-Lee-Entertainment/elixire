@@ -20,7 +20,7 @@ _(no, we won't write Elixir, read BACKEND.md for the reason)_
 
 Requirements:
 
-- Python 3.7+ (3.8 recommended)
+- Python 3.9+
 - PostgreSQL
 - Redis
 - A decent version of Node
