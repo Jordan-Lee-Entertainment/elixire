@@ -4,10 +4,12 @@
 
 import logging
 
+from quart import current_app as app
+
 log = logging.getLogger(__name__)
 
 
-async def second_tasks(app):
+async def second_tasks():
     """Quick submission of per-second metrics."""
     metrics = app.metrics
     counters = app.counters
@@ -20,7 +22,7 @@ async def second_tasks(app):
         await counters.auto_submit(metrics, counter)
 
 
-async def file_upload_counts(app):
+async def file_upload_counts():
     """Submit the counters for total amount of uploads."""
     metrics = app.metrics
     counters = app.counters
@@ -29,7 +31,7 @@ async def file_upload_counts(app):
     await counters.auto_submit(metrics, "file_upload_hour_pub")
 
 
-async def file_total_counts(app):
+async def file_total_counts():
     """Submit total file count."""
     total_files = await app.db.fetchval(
         """
@@ -52,7 +54,7 @@ async def file_total_counts(app):
     await metrics.submit("total_files_public", total_files_public)
 
 
-async def file_size_counts(app):
+async def file_size_counts():
     """Submit file sizes in megabytes."""
     total_size = (
         await app.db.fetchval(
@@ -81,7 +83,7 @@ async def file_size_counts(app):
     await metrics.submit("total_size_public", total_size_public)
 
 
-async def user_counts(app):
+async def user_counts():
     """Submit information related to our users."""
     active = await app.db.fetchval(
         """
@@ -113,15 +115,15 @@ async def user_counts(app):
     await metrics.submit("inactive_users", inactive)
 
 
-async def hourly_tasks(app):
+async def hourly_tasks():
     """Functions to be run hourly."""
-    await file_upload_counts(app)
-    await file_total_counts(app)
-    await file_size_counts(app)
-    await user_counts(app)
+    await file_upload_counts()
+    await file_total_counts()
+    await file_size_counts()
+    await user_counts()
 
 
-async def upload_uniq_task(app):
+async def upload_uniq_task():
     """Count the amount of unique uploads and uploaders
     in the past 24 hours."""
     metrics = app.metrics

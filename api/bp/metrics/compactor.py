@@ -74,6 +74,7 @@ Steps:
 
 """
 import logging
+from quart import current_app as app
 
 log = logging.getLogger(__name__)
 
@@ -386,7 +387,7 @@ async def compact_single(ctx: CompactorContext):
     del after
 
 
-async def compact_task(app):
+async def compact_task():
     """Main compact task.
 
     Calls compact_single for each

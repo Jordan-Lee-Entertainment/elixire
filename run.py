@@ -47,7 +47,6 @@ from api.bp.admin.audit_log import AuditLog
 
 import config
 
-
 log = logging.getLogger(__name__)
 
 
@@ -123,7 +122,15 @@ def set_blueprints(app_):
             route_prefixes,
         )
         for route in route_prefixes:
-            app_.register_blueprint(blueprint_object, url_prefix=route)
+            if route.startswith("/api/v2"):
+                # quickfix for quart 0.19
+                app_.register_blueprint(
+                    blueprint_object,
+                    name=f"v2.{blueprint_object.name}",
+                    url_prefix=route,
+                )
+            else:
+                app_.register_blueprint(blueprint_object, url_prefix=route)
 
 
 app = make_app()
